@@ -762,6 +762,7 @@ div.jcard{cursor:default}
 .jc-lv{flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--action);color:var(--action-ink);font:800 30px/1 var(--display);border:0;cursor:pointer}
 .jc-t{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
 .jc-t b{font-family:var(--display);font-size:20px}
+.jc-t .meter,.jprog .meter{flex:none}
 .jc-t .meter{max-width:320px}
 .jladder{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:0 0 16px}
 .jl{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;position:relative;font:inherit}

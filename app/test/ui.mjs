@@ -40,19 +40,34 @@ async function run(vp, tag) {
   await page.click('[data-act=draftBand][data-arg="8-10"]');
   await page.click('[data-act=draftAv][data-arg="panda"]');
   await page.click('[data-act=createKid]');
-  await page.waitForSelector('[data-act=startPlace]');
-  // placement: answer the first four right, then two wrong
-  await page.click('[data-act=startPlace]');
-  for (let i = 0; i < 6; i++) {
-    const s = await R();
-    if (s.run.over) break;
-    if (i < 4) await typeAns(s.run.q.ans); else { await typeAns('1'); await page.keyboard.press('Enter'); await page.waitForTimeout(150); if (!(await R()).run.over) await page.keyboard.press('Enter'); }
-    await page.waitForTimeout(750);
+  await page.waitForSelector('[data-act=startLevelTest]');
+  await shot('02a-start');
+  // the level test: a child secure up to Level 3 and lost above it must be placed at Level 4
+  await page.click('[data-act=startLevelTest]');
+  for (let i = 0; i < 40; i++) {
+    const s = await page.evaluate(() => { const r = window.__bzm.R.run; const q = r && r.items[r.i]; return r && { over: r.over, fb: r.fb, q: q && { ans: q.ans, choices: q.choices, L: q.tlevel } }; });
+    if (!s || s.over) break;
+    if (s.fb) { await page.keyboard.press('Enter'); await page.waitForTimeout(250); continue; }
+    const know = s.q.L <= 3;
+    if (s.q.choices) { const idx = s.q.choices.indexOf(s.q.ans); await page.keyboard.press(String(know ? idx + 1 : ((idx + 1) % s.q.choices.length) + 1)); }
+    else { await typeAns(know ? String(s.q.ans).replace('−', '-') : '98765'); if (!know) await page.keyboard.press('Enter'); }
+    if (i === 1) await shot('02b-leveltest');
+    await page.waitForTimeout(know ? 800 : 300);
   }
-  await page.waitForTimeout(1600);
-  ok((await R()).run && (await R()).run.over, 'placement stops after two misses in a row');
+  await page.waitForTimeout(600);
+  ok((await R()).run && (await R()).run.over, 'the level test finishes');
+  ok(await page.evaluate(() => window.__bzm.R.h.kids[0].journey.level) === 4, 'a child secure to Level 3 is placed on Level 4');
   await shot('02-placed');
+  ok(!/of \d+ right/.test(await page.locator('.end-card').innerText()), 'finding a level is never scored');
   await page.click('[data-act=endRun]');
+  await page.waitForSelector('.jsteps');
+  ok(await page.evaluate(() => document.querySelector('.jprog .meter').getBoundingClientRect().height) > 4, 'the journey progress bar is drawn');
+  await page.waitForTimeout(200); await shot('02c-journey');
+  ok(await page.locator('.jsteps li').count() >= 12 && await page.locator('.jl').count() === 10, 'the journey page shows ten levels and this level\'s steps');
+  // the first journey step opens its stop with the journey's drill level chosen
+  await page.click('.jsteps li.next button'); await page.waitForSelector('.stop-page');
+  ok(await page.evaluate(() => !!window.__bzm.R.ui.jstep), 'a journey step opens as a journey step');
+  await page.evaluate(() => window.__bzm.go('atlas'));
   await page.waitForSelector('.map-board');
   await page.waitForTimeout(400);
   await shot('03-atlas');

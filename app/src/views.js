@@ -455,14 +455,14 @@ function feedback(q, fb) {
 
 function viewRunEnd(run) {
   const right = run.results.filter((r) => r.right).length, n = run.results.length;
-  const s = run.summary || {};
+  const s = run.summary || {}, placing = run.kind === 'leveltest' || run.kind === 'place';   // finding a place is never scored
   return `<section class="narrow">
     ${pageHead(esc(run.title), '', back('endRun', 'Done'))}
     <div class="card end-card">
       ${s.stars != null ? starRow(s.stars, 3, true) : ''}
-      <h2>${right} of ${n} right</h2>
+      ${placing ? '' : `<h2>${right} of ${n} right</h2>`}
       ${(s.lines || []).map((l) => `<p>${l}</p>`).join('')}
-      ${run.missed && run.missed.length ? `<div class="missed"><p class="kicker">Worth another look</p><ul>${run.missed.map((q) => `<li><b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>${q.why ? ` <span class="why-chip">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul></div>` : ''}
+      ${!placing && run.missed && run.missed.length ? `<div class="missed"><p class="kicker">Worth another look</p><ul>${run.missed.map((q) => `<li><b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>${q.why ? ` <span class="why-chip">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul></div>` : ''}
       <div class="row gap center">${(s.buttons || []).join('')}${btn('Done', 'endRun', '', s.buttons && s.buttons.length ? '' : 'primary')}</div>
     </div>
   </section>`;
