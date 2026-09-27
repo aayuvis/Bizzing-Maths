@@ -172,7 +172,7 @@ export const TRICKS = [
     why: [
       'Draw two overlapping circles. The 5 who play both stand in the middle, where the circles cross. Cricket-only is 14 − 5 = 9, chess-only is 11 − 5 = 6. Everybody in a circle: 9 + 5 + 6 = 20.',
       'Or quicker: 14 + 11 = 25 counts every child in the middle twice — once as a cricketer, once as a chess player. Take the 5 away once and 20 is left. That rule has a grand name, inclusion–exclusion: include both sets, exclude the overlap.',
-      'It runs backwards too. If there are 30 in the class and 4 play neither, then 26 are in the circles. 14 + 11 = 25 is one short of 26… no — if the circles hold 20 but 25 was counted, the overlap is 25 − 20 = 5. Whichever number is missing, the same equation finds it.',
+      'It runs backwards too. In a class of 24 where 4 play neither, 20 children are inside the circles. Adding the circles gave 25 — five too many — and the only children counted twice are the ones in the middle. So 5 play both. Whichever number is missing, the same equation finds it.',
     ],
     alg: 'n(A ∪ B) = n(A) + n(B) − n(A ∩ B)',
     ex: { kind: 'union', la: 'Cricket', lb: 'Chess', A: 14, B: 11, I: 5 },
@@ -226,7 +226,7 @@ export const TRICKS = [
           return this.q({ kind: 'sq', a: 1, b: int(1, 20, r), n });
         }
         const a = int(2, 9, r), b = int(-9, -1, r);
-        return pick([() => this.q({ kind: 'two', a: int(2, 6, r), c: int(2, 6, r), x: int(1, 9, r), y: b }), () => this.q({ kind: 'sq', a, b: int(-20, 20, r), n: b })], r)();
+        return pick([() => this.q({ kind: 'two', a: int(2, 6, r), c: int(2, 6, r), x: int(1, 9, r), y: b }), () => this.q({ kind: 'sq', a, b: int(-20, 20, r) || 7, n: b })], r)();
       });
     },
     q(o) {
@@ -305,7 +305,7 @@ export const TRICKS = [
         const right = `${term(X, 'x')} + ${term(Y, 'y')}`;
         const wrong = [`${X + Y}xy`, `${term(X, 'x')} + ${Y}`, `${term(a + b, 'x')} + ${term(c + d, 'y')}`, `${term(X + 1, 'x')} + ${term(Y, 'y')}`].filter((w) => w !== right);
         const choices = [right, ...[...new Set(wrong)].slice(0, 3)];
-        return { ...o, text: `Simplify: ${term(a, 'x')} + ${term(b, 'y')} + ${term(c, 'x')} + ${term(d, 'y')}`, choices: [choices[1], choices[0], choices[2], choices[3]].sort(), ans: right,
+        return { ...o, text: `Simplify: ${term(a, 'x')} + ${term(b, 'y')} + ${term(c, 'x')} + ${term(d, 'y')}`, choices: choices.map((_, i) => choices[(i + a + b + c + d) % 4]), ans: right,
           expr: `[${a}+${c},${b}+${d}].map((n,i)=>(n===1?'':n)+'xy'[i]).join(' + ')` };
       }
       const { a, p, c, q } = o;
@@ -347,8 +347,8 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, b, x } = o;
-      if (kind === 'add') return [{ t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
-      if (kind === 'mul') return [{ t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
+      if (kind === 'add') return [{ t: 'What has been added to x?', v: b }, { t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
+      if (kind === 'mul') return [{ t: 'How many x\'s on the left?', v: a }, { t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
       const c = a * x + b, s = [];
       if (kind === 'words') s.push({ t: `As an equation: ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} = ${M(c)}. What does ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} equal?`, v: c });
       s.push({ t: b < 0 ? `Add ${-b} to both sides` : `Take ${b} off both sides`, v: c - b });

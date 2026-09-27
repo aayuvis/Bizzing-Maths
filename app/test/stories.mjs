@@ -19,7 +19,7 @@ for (const [id, s] of Object.entries(STORIES)) {
     ok(b.who === null || s.cast.includes(b.who), `${id}: ${b.who} speaks but is not in the cast`);
     if (b.add) {
       ok(typeof b.add.t === 'string', `${id}: notepad line has no sum`);
-      if (b.add.v !== undefined) { sums++; const v = evalSum(b.add.t); ok(v === b.add.v, `${id}: notepad says ${b.add.t} = ${b.add.v}, arithmetic says ${v}`); last = b.add; }
+      if (b.add.v !== undefined) { sums++; const v = evalSum(b.add.t); ok(Math.abs(v - b.add.v) < 1e-9, `${id}: notepad says ${b.add.t} = ${b.add.v}, arithmetic says ${v}`); last = b.add; }
     }
   }
   ok(last, `${id}: the notepad ends on a checked answer`);

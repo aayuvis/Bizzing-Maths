@@ -174,7 +174,7 @@ export const TRICKS = [
       if (lv === 1) return this.q({ kind: 'last', n: int(12, 99, r) });
       if (lv === 2) return r() < 0.5 ? this.q({ kind: 'can', d: int(0, 9, r) }) : this.q({ kind: 'last', n: int(101, 999, r) });
       const n = int(20, 99, r), bad = [2, 3, 7, 8];
-      const others = [0, 1, 2].map(() => { const x = int(Math.floor(n * n / 10) - 400, Math.floor(n * n / 10) + 400, r); return String(Math.max(x, 50) * 10 + pick(bad, r)); });
+      const others = [0, 1, 2].map(() => { const c = Math.floor(n * n / 10), x = int(Math.max(10, c - 60), c + 60, r); return String(x * 10 + pick(bad, r)); });
       const opts = [...new Set([String(n * n), ...others])];
       if (opts.length < 4) return this.q({ kind: 'last', n });
       return this.q({ kind: 'which', opts: shuffle(opts, r), sq: String(n * n) });
@@ -263,7 +263,7 @@ export const TRICKS = [
     },
     work({ a, e }) {
       const s = [{ t: `How many ${a}s are multiplied?`, v: e }];
-      if (e <= 5) { for (let k = 2; k <= e; k++) s.push({ t: `${a}${sup(k - 1)} × ${a}`, v: a ** k }); return s; }
+      if (e <= 5) { for (let k = 2; k <= e; k++) s.push({ t: `${a ** (k - 1)} × ${a}`, v: a ** k }); return s; }
       const h = Math.floor(e / 2);
       s.push({ t: `Half the index: ${a}${sup(h)}`, v: a ** h });
       s.push({ t: `${a ** h} × ${a ** h}`, v: a ** (2 * h) });
@@ -378,7 +378,7 @@ export const TRICKS = [
       let m, d;
       if (lv === 1) { m = int(11, 19, r); d = int(1, 3, r); }
       else if (lv === 2) { m = int(2, 9, r) * 10; d = int(1, 9, r); }
-      else { m = int(1, 9, r) * 10 + 5; d = int(1, 6, r); if (d >= m) d = 1; }
+      else { m = int(1, 9, r) * 10 + 5; d = pick([1, 2, 3, 4, 6, 7], r); if (d >= m) d = 1; }
       return r() < 0.5 ? this.q({ a: m + d, b: m - d }) : this.q({ a: m - d, b: m + d });
     },
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
