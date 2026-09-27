@@ -16,13 +16,13 @@
    thing to know; subtraction and division are their own facts, because 56÷8
    and 56÷7 are not. */
 
-export const OPS = ['+', '-', '×', '÷'];
-export const OP_NAME = { '+': 'Adding', '-': 'Taking away', '×': 'Times tables', '÷': 'Sharing' };
-export const OP_WORD = { '+': 'add', '-': 'sub', '×': 'mul', '÷': 'div' };
+export const OPS = ['+', '-', '×', '÷', '²'];
+export const OP_NAME = { '+': 'Adding', '-': 'Taking away', '×': 'Times tables', '÷': 'Sharing', '²': 'Squares to 20' };
+export const OP_WORD = { '+': 'add', '-': 'sub', '×': 'mul', '÷': 'div', '²': 'sq' };
 
 export const key = (f) => `${f.a}${f.op}${f.b}`;
 export function parseKey(k) {
-  const m = /^(\d+)([+\-×÷])(\d+)$/.exec(k);
+  const m = /^(\d+)([+\-×÷²])(\d+)$/.exec(k);
   return m ? { a: +m[1], op: m[2], b: +m[3] } : null;
 }
 
@@ -32,16 +32,17 @@ export function answer(f) {
     case '-': return f.a - f.b;
     case '×': return f.a * f.b;
     case '÷': return f.a / f.b;
+    case '²': return f.a * f.a;
   }
   return NaN;
 }
 
-export const text = (f) => `${f.a} ${f.op === '-' ? '−' : f.op} ${f.b}`;
+export const text = (f) => (f.op === '²' ? `${f.a}²` : `${f.a} ${f.op === '-' ? '−' : f.op} ${f.b}`);
 
 /* ---------- the bank ---------- */
 
 function build() {
-  const all = { '+': [], '-': [], '×': [], '÷': [] };
+  const all = { '+': [], '-': [], '×': [], '÷': [], '²': [] };
   for (let a = 0; a <= 10; a++) for (let b = a; b <= 10; b++) all['+'].push({ op: '+', a, b });
   // subtraction: every fact the addition bank implies, a − b with b ≤ 10 and result ≤ 10
   for (let a = 0; a <= 20; a++) for (let b = 0; b <= 10; b++) {
@@ -50,6 +51,8 @@ function build() {
   for (let a = 0; a <= 12; a++) for (let b = a; b <= 12; b++) all['×'].push({ op: '×', a, b });
   // division: the inverse of every times fact with a divisor 1–12, never ÷0
   for (let d = 1; d <= 12; d++) for (let q = 0; q <= 12; q++) all['÷'].push({ op: '÷', a: d * q, b: d });
+  // squares 1² to 20², which the parent asked every child to know by heart
+  all['²'] = []; for (let a = 1; a <= 20; a++) all['²'].push({ op: '²', a, b: 2 });
   return all;
 }
 export const BANK = build();
@@ -93,6 +96,14 @@ export function tricky(f) {
       if (s === 10) t -= 0.6;                                 // number bonds to ten
       if (hi === 10) t = 0.9;
       return +Math.max(0.3, t).toFixed(3);
+    }
+    case '²': {
+      // 1²–10² are the times table's diagonal; 11²–19² need (10 + b)²;
+      // 15² has the ends-in-5 trick, 20² is 2 × 2 and two noughts
+      if (a <= 10) return +(0.3 + (a >= 6 && a <= 9 ? 1.4 : 0) + a * 0.08).toFixed(3);
+      if (a === 20) return 0.9;
+      if (a === 15) return 1.8;
+      return +(2 + (a - 10) * 0.28 - (a <= 12 ? 0.6 : 0)).toFixed(3);
     }
     case '-': {
       const r = a - b;
@@ -143,6 +154,11 @@ export function why(f) {
       if (hi === 9) return 'adding nine: add ten, take one away';
       if (a + b > 10) return 'crosses ten — make ten first';
       return 'count on from the bigger number';
+    case '²':
+      if (a <= 10) return `a square: ${a} times itself`;
+      if (a === 20) return 'two twos, then two noughts';
+      if (a === 15) return 'ends in 5: front digit times the next one up, then 25';
+      return `split it: (10 + ${a - 10})² — a hundred, plus twenty ${a - 10}s, plus ${a - 10}²`;
     case '-':
       if (b === 0) return 'taking nothing leaves it the same';
       if (b === a - b) return 'a half — undo a double';

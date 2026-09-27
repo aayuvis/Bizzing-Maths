@@ -105,23 +105,47 @@ export const nodeBand = (n) => (n.kind === 'stop' ? byId[n.id].band : WORLDS.fin
    wait on them — an eight-year-old's "next stop" is never Make ten first. */
 export const optional = (k, n, i) => (k.placed != null && i < k.placed) || bandRank(nodeBand(n)) < bandRank(k.band);
 
-/* The frontier: the first node on the route that is neither passed nor
-   optional for this child. */
-export function frontier(k) {
-  const i = ROUTE.findIndex((n, j) => !nodeDone(k, n) && !optional(k, n, j));
+/* ---- gating: worlds open by age band, or when the place before them is done.
+
+   Fourteen worlds cannot be one road: a six-year-old would stand behind the
+   Mental Workshop and never reach Time and Money. So a WORLD opens when its
+   age band is at or below the child's, or when its prerequisite world's
+   checkpoint is passed (or placement put the child past it). Inside a world
+   the stops still open one at a time, in order — a world teaches in order. */
+export const NEEDS = {
+  workshop: 'market', forest: 'market', observatory: 'workshop', palace: 'market',
+  dock: 'bakery', setisland: 'forest', harbour: 'observatory',
+};
+const firstIndex = (wid) => ROUTE.findIndex((n) => n.world === wid);
+
+export function worldOpen(h, k, wid) {
+  if (h.parent.tester) return true;
+  const w = WORLDS.find((x) => x.id === wid); if (!w) return false;
+  if (firstIndex(wid) === 0 || bandRank(w.band) <= bandRank(k.band)) return true;
+  if (k.placed != null && firstIndex(wid) <= k.placed) return true;
+  const need = NEEDS[wid];
+  return !!(need && k.checks[need] && k.checks[need].passed) || ROUTE.some((n) => n.world === wid && nodeDone(k, n));
+}
+
+/* The next thing to do: the first node, in road order, in an open world,
+   that is neither passed nor optional for this child. */
+export function frontier(k, h = null) {
+  const hh = h || { parent: {} };
+  const i = ROUTE.findIndex((n, j) => !nodeDone(k, n) && !optional(k, n, j) && worldOpen(hh, k, n.world));
   return i < 0 ? ROUTE.length : i;
 }
 
-/* A node is open if it is passed, if it is the frontier, if placement put the
-   child past it, or if its stop's age band is BELOW the child's (an eleven-
-   year-old may wander the Ten Gardens freely). Tester mode opens everything —
-   and changes nothing else about the child. */
+/* A node is open if it is passed, optional for this child (a younger band's
+   stop, or placement put them past it), or it is the first unpassed stop of
+   an open world. Tester mode opens everything — and changes nothing else. */
 export function isOpen(h, k, i) {
   if (h.parent.tester) return true;
   const node = ROUTE[i]; if (!node) return false;
-  if (nodeDone(k, node) || i <= frontier(k)) return true;
-  if (k.placed != null && i <= k.placed) return true;
-  return optional(k, node, i);
+  if (nodeDone(k, node)) return true;
+  if (!worldOpen(h, k, node.world)) return false;
+  if (optional(k, node, i)) return true;
+  const first = ROUTE.findIndex((n, j) => n.world === node.world && !nodeDone(k, n) && !optional(k, n, j));
+  return first === i;
 }
 
 /* Stars, three per stop, and each one says what it is for:

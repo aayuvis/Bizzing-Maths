@@ -274,6 +274,9 @@ details summary{cursor:pointer;font-weight:650;color:var(--action);margin-top:6p
 .pk:active,.pk.down{transform:translateY(2px);box-shadow:var(--sh)}
 .pk.go{background:var(--action);color:var(--action-ink);box-shadow:var(--sh-raised),inset 0 -3px 0 var(--action-deep)}
 .pk.del{background:var(--surface2);font-size:20px}
+.pad-x{grid-column:1 / -1;display:flex;gap:8px;justify-content:center}.pad-x .pk{flex:1;max-width:110px}
+.pk.alt{background:var(--action-tint);color:var(--action)}
+.long-q{font-size:clamp(18px,2.6vw,24px);font-weight:700;margin:6px 0 10px;text-wrap:balance}
 @media (hover:hover) and (pointer:fine){.pad{max-width:300px}.pk{height:50px}}
 
 /* ---------------------------------------------------------------- facts */
@@ -684,6 +687,22 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .magic{display:grid;grid-template-columns:repeat(3,64px);gap:4px;justify-content:center;margin:8px 0 14px}
 .magic span{height:64px;display:grid;place-items:center;background:var(--surface2);border-radius:10px;font:700 24px var(--mono)}
 .magic .ask{color:var(--fix);font-size:30px}
+
+/* ================================================================ the drawing kit (chapters/kit.js) */
+.dg{max-width:100%;height:auto;display:block;margin:6px auto 12px;overflow:visible}
+.dg-blank{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+.dg-fill1{fill:#9DB6F4;stroke:var(--ink);stroke-width:2}.dg-fill2{fill:#FFE3A3;stroke:var(--ink);stroke-width:2}.dg-fill3{fill:#B9E4C9;stroke:var(--ink);stroke-width:2}
+:root[data-mode=dark] .dg-fill1{fill:#2B3F7A}:root[data-mode=dark] .dg-fill2{fill:#5A4413}:root[data-mode=dark] .dg-fill3{fill:#1F4A33}
+.dg-line{stroke:var(--ink);stroke-width:2.5;fill:none;stroke-linecap:round}.dg-thin{stroke:var(--muted);stroke-width:1}
+.dg-grid{stroke:var(--line);stroke-width:1}
+.dg-arc{fill:none;stroke:var(--fix);stroke-width:3}
+.dg-hand{stroke:var(--ink);stroke-width:6;stroke-linecap:round}.dg-hand2{stroke:var(--action);stroke-width:4;stroke-linecap:round}
+.dg-dot{fill:var(--action)}.dg-dot2{fill:var(--line)}
+.dg-seta{fill:rgb(45 91 216 / .18);stroke:var(--action);stroke-width:2.5}.dg-setb{fill:rgb(240 180 41 / .25);stroke:#B7791F;stroke-width:2.5}
+.dg-text{font:600 14px var(--ui);fill:var(--ink)}.dg-small{font:600 12px var(--mono);fill:var(--muted)}
+.dg-accent{font:800 15px var(--ui);fill:var(--fix)}.dg-big{font:800 20px var(--mono);fill:var(--ink)}
+.dg-sym{font-size:22px;fill:var(--action)}.dg-sym.half{clip-path:inset(0 50% 0 0)}
+.qcard .dg{margin-bottom:14px}
 
 /* ================================================================ goals */
 .goals-card{display:flex;flex-direction:column;gap:4px}

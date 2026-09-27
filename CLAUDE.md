@@ -61,7 +61,13 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 9. **Every goal is measured from evidence** (`src/objectives.js`). "I can…" sentences in six
    strands; none is ticked for time spent or for visiting a screen. A goal for an older band
    shows as *coming later*, never as a failure. `test/objectives.mjs` proves each one moves.
-10. **The story notepad is checked.** Every sum a character writes in `src/stories.js` is
+10. **Worlds open by age band or by the place before them** (`model.js` `worldOpen`, `NEEDS`);
+    stops open in order inside a world. Fourteen worlds cannot be one road — a six-year-old
+    must reach Time and Money without first passing the Sutra Observatory.
+11. **Answers can be whole, decimal, negative or fractions** (`parseNum`), each with the keys it
+    needs on the keypad (`keys: ['.', '−', '/']`). A non-whole answer on a stop not marked
+    `decimals` or `frac` fails the test — so a rounding slip cannot quietly become a "decimal".
+12. **The story notepad is checked.** Every sum a character writes in `src/stories.js` is
     evaluated by `test/stories.mjs`. Stories star the Bee's same ten rivals and are labelled
     as stories.
 
@@ -101,7 +107,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 
 | file | owns |
 |---|---|
-| `app/src/tricks.js` | The 27 concept chapters in 5 worlds: hook, idea, `work()` steps, why, algebra, generator, figure. |
+| `app/src/tricks.js` | The first island's 27 stops, plus the aggregator: `ORDER` (the road), `WORLDS`, `TRICKS`, answer parsing (`parseNum`, `correct`, `stepRight`). |
+| `app/src/chapters/*.js` | One world per file — `WORLD`, `TRICKS`, `STORIES` — to [docs/CHAPTER-CONTRACT.md](docs/CHAPTER-CONTRACT.md). `kit.js` is the shared drawing kit (fraction bars, pies, clocks, shapes, angles, charts, Venn, coordinates). |
 | `app/src/facts.js` | The fact bank (+ − × ÷), `tricky()`, `why()`, Leitner fluency, the 20-question session builder. |
 | `app/src/model.js` | Household, child, ranks, the Atlas route and frontier, stars, placement. |
 | `app/src/contest.js` | The Mock Contest — the Bee's same ten rivals, the Bee's elimination rules. |

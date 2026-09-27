@@ -4,7 +4,7 @@
 import { R } from './runtime.js';
 import { Store } from './store.js';
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
-import { byId, drill, correct, tricksIn, worldOf } from './tricks.js';
+import { byId, drill, correct, stepRight, tricksIn, worldOf } from './tricks.js';
 import * as F from './facts.js';
 import { newHousehold, newKid, kid, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor } from './contest.js';
@@ -138,7 +138,7 @@ function typeKey(k) {
   const q = run.items[run.i]; if (q.choices) return;
   if (k === '⌫') run.input = run.input.slice(0, -1);
   else if (k === '✓') { if (run.input !== '') return submit(run.input); return; }
-  else if (/^\d$/.test(k) && run.input.length < 7) run.input += k;
+  else if ((/^\d$/.test(k) || (q.keys || []).includes(k)) && run.input.length < 9) run.input += k;
   patchAnswer(run.input);
   // right answers are taken the moment they are typed; wrong ones wait for
   // Enter, so a child is never told "wrong" halfway through typing 56
@@ -273,16 +273,17 @@ function setGuided(i) {
 function guidedKey(k) {
   const g = R.run; if (!g || g.kind !== 'guided' || g.si >= g.steps.length) return;
   const s = g.steps[g.si]; if (s.choices) return;
+  const keys = g.items[g.i].keys || byId[g.trick].keys || [];
   if (k === '⌫') g.input = g.input.slice(0, -1);
   else if (k === '✓') return guidedSubmit(g.input);
-  else if (/^\d$/.test(k) && g.input.length < 7) g.input += k;
+  else if ((/^\d$/.test(k) || keys.includes(k)) && g.input.length < 9) g.input += k;
   patchAnswer(g.input);
-  if (g.input !== '' && Number(g.input) === s.v) guidedSubmit(g.input);
+  if (g.input !== '' && stepRight(s, g.input)) guidedSubmit(g.input);
 }
 function guidedSubmit(given) {
   const g = R.run, s = g.steps[g.si];
   if (String(given) === '' ) return;
-  const right = s.choices ? given === s.v : Number(given) === s.v;
+  const right = stepRight(s, given);
   if (right) { sfx.good(); g.si++; g.tries = 0; g.input = ''; g.msg = g.si >= g.steps.length ? `<b>Done — ${escapeHtml(g.items[g.i].text)} = ${escapeHtml(g.items[g.i].ans)}.</b>` : 'Right. Next step.'; g.msgKind = 'good'; }
   else {
     g.tries++; sfx.bad(); g.input = '';
@@ -402,7 +403,8 @@ on('openStop', (id) => {
 });
 on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.level = 1; go('stop', id); });
 on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
-on('shutWorld', () => toast('Not reached yet — keep walking the road.'));
+on('shutWorld', () => toast('Not reached yet — finish the place before it on the road.'));
+on('isle', (n) => { R.ui.isle = +n; render(); });
 on('pickStop', (id) => {
   const k = kid(R.h), i = ROUTE.findIndex((n) => n.id === id);
   // a tap selects; a second tap on the selected stop goes in (the Bee's map rule)
@@ -606,6 +608,8 @@ addEventListener('keydown', (e) => {
     if (pick) { e.preventDefault(); if (gs) return guidedSubmit(pick); if (nav === 'contest') return cAnswer(pick); return submit(pick); }
   }
   if (/^\d$/.test(e.key)) { e.preventDefault(); return padKey(e.key); }
+  const alt = { '.': '.', '-': '−', '/': '/' }[e.key];
+  if (alt && ['run', 'stop', 'contest'].includes(nav)) { e.preventDefault(); return padKey(alt); }
   if (e.key === 'Backspace') { e.preventDefault(); return padKey('⌫'); }
   if (e.key === 'Enter') {
     if (nav === 'run' && run && run.fb && (!run.fb.right || run.items[run.i].puzzle)) { e.preventDefault(); return nextQ(); }

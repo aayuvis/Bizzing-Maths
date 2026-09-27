@@ -25,7 +25,7 @@ const fluentShare = (k, pred) => {
 };
 const worldShare = (k, wid) => {
   const ts = tricksIn(wid);
-  return ts.filter((t) => (k.tricks[t.id] || {}).stars >= 2).length / ts.length;
+  return ts.length ? ts.filter((t) => (k.tricks[t.id] || {}).stars >= 2).length / ts.length : 0;
 };
 const pz = (k, id) => (k.puzzles && k.puzzles[id]) || { right: 0, tries: 0, solved: {} };
 const m = (pct, bar, how) => ({ pct: Math.max(0, Math.min(1, pct)), met: pct >= 1, how, bar });
@@ -34,6 +34,7 @@ export const MISSION = {
   line: 'Fast and fearless with numbers — and knowing why the trick works.',
   body: [
     'Bizzing Maths is for children aged 6 to 14. It has one aim: that your child can work with numbers quickly, confidently and in their head — and can explain WHY each method works, not just follow it.',
+    'It covers the whole of maths from 6 to 14 — number and place value, the four operations, fractions, decimals, percentages and ratio, factors and powers, shape, angles and measurement, time and money, sets and algebra, data and chance — plus the mental methods and Vedic techniques that make it fast.',
     'Speed comes from facts they know by heart. Confidence comes from methods that make big sums small. Understanding comes from seeing why a method is true. Contest readiness comes from puzzles that need thinking, not just calculating.',
     'Every goal below is measured from what your child actually does in the app. Nothing is ticked for time spent.',
   ],
@@ -53,6 +54,8 @@ export const STRANDS = [
         measure: (k) => m(fluentShare(k, (f) => f.op === '×') / 0.8, '', 'facts:×') },
       { id: 'div', can: 'I can use my times tables backwards to divide.', bar: '70% of sharing facts fluent', band: '8-10',
         measure: (k) => m(fluentShare(k, (f) => f.op === '÷') / 0.7, '', 'facts:÷') },
+      { id: 'sq20', can: 'I know the squares of every number up to 20 by heart.', bar: '80% of squares 1² to 20² fluent', band: '8-10',
+        measure: (k) => m(fluentShare(k, (f) => f.op === '²') / 0.8, '', 'facts:²') },
     ] },
   { id: 'methods', name: 'Mental methods', glyph: '🧠',
     why: 'Big sums done in your head by making them small: make ten, split, round and fix, double and halve.',
@@ -64,6 +67,40 @@ export const STRANDS = [
       { id: 'workshop', can: 'I can multiply two-digit numbers in my head by splitting, rounding and halving.', bar: 'every Mental Workshop stop passed', band: '8-10',
         measure: (k) => m(worldShare(k, 'workshop'), '', 'world:workshop') },
     ] },
+  { id: 'number', name: 'The number system', glyph: '📚',
+    why: 'How numbers are written, ordered and built from factors — the ground everything stands on.',
+    goals: [
+      { id: 'library', can: 'I understand place value, negative numbers and the written methods.', bar: 'every Number Library stop passed',
+        measure: (k) => m(worldShare(k, 'library'), '', 'world:library') },
+      { id: 'forest', can: 'I can find factors, multiples, primes, HCF and LCM.', bar: 'every Factor Forest stop passed', band: '8-10',
+        measure: (k) => m(worldShare(k, 'forest'), '', 'world:forest') },
+      { id: 'palace', can: 'I know my squares and powers, and why (a + b)² = a² + 2ab + b².', bar: 'every Square Palace stop passed', band: '8-10',
+        measure: (k) => m(worldShare(k, 'palace'), '', 'world:palace') },
+    ] },
+  { id: 'parts', name: 'Fractions, decimals & percentages', glyph: '🥧',
+    why: 'Parts of a whole, in three languages that say the same thing — and ratio, which compares them.',
+    goals: [
+      { id: 'bakery', can: 'I can find, compare, add, multiply and divide fractions.', bar: 'every Fraction Bakery stop passed',
+        measure: (k) => m(worldShare(k, 'bakery'), '', 'world:bakery') },
+      { id: 'dock', can: 'I can work with decimals, percentages and ratio.', bar: 'every Decimal Dock stop passed', band: '8-10',
+        measure: (k) => m(worldShare(k, 'dock'), '', 'world:dock') },
+    ] },
+  { id: 'shape', name: 'Shape, space & measure', glyph: '📐',
+    why: 'Shapes and their angles, time and money, and measuring — perimeter, area and volume.',
+    goals: [
+      { id: 'shapecity', can: 'I can name shapes, work out angles and use symmetry and coordinates.', bar: 'every Shape City stop passed',
+        measure: (k) => m(worldShare(k, 'shapecity'), '', 'world:shapecity') },
+      { id: 'clocktower', can: 'I can tell the time, handle money, convert units and find perimeter, area and volume.', bar: 'every Clock Tower stop passed',
+        measure: (k) => m(worldShare(k, 'clocktower'), '', 'world:clocktower') },
+    ] },
+  { id: 'algebra', name: 'Algebra, sets & data', glyph: '⭕',
+    why: 'Letters for numbers, sets and Venn diagrams, and reading what data and chance are saying.',
+    goals: [
+      { id: 'setisland', can: 'I can use sets and Venn diagrams, and solve equations.', bar: 'every Set Island stop passed', band: '8-10',
+        measure: (k) => m(worldShare(k, 'setisland'), '', 'world:setisland') },
+      { id: 'carnival', can: 'I can read charts, find averages, work out chances and solve multi-step problems.', bar: 'every Data Carnival stop passed',
+        measure: (k) => m(worldShare(k, 'carnival'), '', 'world:carnival') },
+    ] },
   { id: 'why', name: 'Knowing why', glyph: '💡',
     why: 'A trick without its reason is a party piece. Each stop shows the reason as a picture and as algebra, and the child does the working themselves.',
     goals: [
@@ -71,7 +108,7 @@ export const STRANDS = [
         measure: (k) => m(TRICKS.filter((t) => (k.tricks[t.id] || {}).learned).length / 20, '', 'atlas') },
       { id: 'vedic', can: 'I can use the Vedic methods and say why each one works.', bar: 'every Sutra Observatory stop passed', band: '8-10',
         measure: (k) => m(worldShare(k, 'observatory'), '', 'world:observatory') },
-      { id: 'stories', can: 'I have met every trick in a story first.', bar: 'all 27 stories read',
+      { id: 'stories', can: 'I have met every trick in a story first.', bar: 'every story on the shelf read',
         measure: (k) => m(Object.keys(k.stories || {}).length / TRICKS.length, '', 'stories') },
     ] },
   { id: 'sense', name: 'Number sense', glyph: '🧭',

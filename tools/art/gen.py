@@ -89,6 +89,31 @@ TOWER = ("ONE single tall whimsical storybook tower, exactly one tower and no se
          "staircase winding up the outside, little balconies, a glass observatory dome at the very top, banners without "
          "writing, clouds drifting past the upper floors, a path leading to its door. Portrait-feeling composition "
          "centred in a wide frame, with sky and hills on both sides.")
+WORLD2 = {
+    'w-library':  "A wide panorama of a grand old library hall with towering bookshelves of blank-spined books, rolling ladders, long reading tables, globes, a great round window, stacks of counting blocks and bead frames. Warm amber light, deep green and burgundy.",
+    'w-clocktower': "A wide panorama of a sunny town square around a tall clock tower whose round clock faces show ONLY short plain tick marks and two hands — absolutely no numerals, no Roman numerals, no digits on the dial, a market scale, a tape measure strung between lamp posts, jugs and jars of different sizes on a stall, a coin fountain. Cheerful blues and warm stone.",
+    'w-bakery':   "A wide panorama of a cosy bakery kitchen: round pies and cakes cut into equal slices, pizzas in halves and quarters, trays of cookies in neat rows, measuring jugs, a big wooden table dusted with flour, copper pans. Creamy yellows, warm browns, pastel icing colours.",
+    'w-shapecity':"A wide panorama of a playful city built entirely from geometric shapes: triangle roofs, circular windows, hexagon tiles, cube and cylinder towers, a pyramid, archways, colourful polygons, shadows falling at clear angles. Bright primary colours softened, clean blue sky.",
+    'w-forest':   "A wide panorama of an enchanted forest where trees branch in neat forking patterns like factor trees, mushrooms grouped in rows and arrays, fireflies, a sparkling stream, a hollow log bridge. Deep greens, mossy golds, soft glowing light.",
+    'w-palace':   "A wide panorama of a palace courtyard built from squares: square tiled floors in growing square patterns, square pools, stepped square terraces rising like a staircase, cube-shaped topiary, a checkerboard garden, fountains. Marble white, royal blue and gold, bright day.",
+    'w-dock':     "A wide panorama of a busy wooden dock with measuring poles in the water, cargo crates of many sizes stacked by height, rope coils, a tall-masted sailing ship, lanterns, scales for weighing goods, gulls. Sea teals, warm timber, sunset orange.",
+    'w-setisland':"A wide panorama of a small island with two large overlapping circular lagoons whose overlap forms a shared pool, little bridges between them, palm trees and flowers sorted into groups on either side, a treehouse lookout. Turquoise water, coral and leaf green.",
+    'w-carnival': "A wide panorama of a cheerful carnival at dusk: striped tents, a carousel, game stalls with spinners and dice made of wood, bunting without writing, balloons in bunches of different sizes, strings of lights. Magenta, teal, warm gold.",
+}
+ATLAS2 = ("A storybook fantasy map seen from above at a gentle angle of an archipelago of NINE small separate islands in a calm sea, "
+          "each island clearly different: a library island with a domed hall, a clock tower island whose clock has only plain tick marks, an island with a round cake-shop building covered in pie-shaped roof tiles, "
+          "a city of geometric shapes, a dense forest island, a palace island of square terraces, a dock island with a ship, "
+          "an island with two overlapping round lagoons, and a carnival island with striped tents. The islands are spread out in a loose "
+          "ring with open water between them, dotted sea routes connecting them. Painted like the endpapers of a children's book.")
+SCENE2 = {
+    's-bakery':  "A bakery counter with round pies and cakes cut into slices, a tray of cookies and a pizza on a board.",
+    's-clock':   "A town square with a clock tower whose round clock face shows ONLY short plain tick marks and two hands — absolutely no numerals of any kind on the dial — benches and a flower cart.",
+    's-city':    "A park made of geometric shapes: a triangle climbing frame, a round pond, a hexagon sandpit, cube benches.",
+    's-forest':  "A sunny forest clearing with mushrooms in neat rows and a fallen log bench.",
+    's-palace':  "A palace courtyard with a floor of square tiles in a big square pattern and a square fountain.",
+    's-carnival':"A carnival stall with a spinner wheel of plain coloured sections, wooden dice and prize balloons, no writing.",
+    's-beach':   "A sunny beach with sandcastles, buckets and spades, shells in little piles, a calm sea.",
+}
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')
@@ -98,6 +123,9 @@ HERO = ("A wide, joyful storybook panorama for the top of a children's maths app
         "windmill and a little observatory dome on the hills. Bright, warm, optimistic. The left half is calmer sky, "
         "busier detail toward the right and along the bottom.")
 JOBS['home-hero'] = (HERO + ' ' + STYLE + ' Very wide banner.', '21:9')
+for k, v in WORLD2.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
+JOBS['atlas2'] = (ATLAS2 + ' ' + STYLE, '16:9')
+for k, v in SCENE2.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
 JOBS['q-tower'] = (TOWER + ' ' + STYLE + ' Wide landscape frame.', '16:9')
 for k, v in SCENE.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
 

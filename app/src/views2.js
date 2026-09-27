@@ -15,7 +15,7 @@
 import { R } from './runtime.js';
 import { esc, cls } from './ui.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn } from './tricks.js';
-import { kid, ROUTE, isOpen, frontier, nodeDone } from './model.js';
+import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen } from './model.js';
 import { STORIES } from './stories.js';
 import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
@@ -33,32 +33,45 @@ export const MAP_PINS = {
   gardens: { x: 20, y: 66 }, market: { x: 31, y: 42 }, workshop: { x: 51, y: 50 },
   observatory: { x: 63, y: 25 }, harbour: { x: 83, y: 34 },
 };
+/* The Far Isles — measured against atlas2.webp the same way. */
+export const MAP2_PINS = {
+  library: { x: 27, y: 20 }, clocktower: { x: 45, y: 17 }, bakery: { x: 62, y: 19 }, shapecity: { x: 80, y: 30 },
+  forest: { x: 83, y: 56 }, palace: { x: 63, y: 74 }, dock: { x: 44, y: 71 }, setisland: { x: 28, y: 74 }, carnival: { x: 16, y: 43 },
+};
+const ISLANDS = [
+  { n: 1, name: 'Number Island', blurb: 'Mental methods and the Vedic sutras — where the Atlas began.', img: 'atlas', pins: MAP_PINS, w: 1920, h: 1072 },
+  { n: 2, name: 'The Far Isles', blurb: 'Place value, time and money, fractions, shapes, factors, squares, decimals, sets and data.', img: 'atlas2', pins: MAP2_PINS, w: 1920, h: 1072 },
+];
 
 export function viewAtlasMap() {
-  const h = R.h, k = kid(h), f = frontier(k);
+  const h = R.h, k = kid(h), f = frontier(k, h);
   const here = ROUTE[f] ? ROUTE[f].world : WORLDS.at(-1).id;
   const stars = TRICKS.reduce((s, t) => s + ((k.tricks[t.id] || {}).stars || 0), 0);
+  const isle = R.ui.isle || (WORLDS.find((w) => w.id === here) || {}).island || 1;
+  const I = ISLANDS[isle - 1];
+  const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
-    ${pageHead('The Number Atlas', 'Five places, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
+    ${pageHead('The Number Atlas', 'Fourteen places on two islands, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
+    <div class="seg isle-seg" role="tablist" aria-label="Island">${ISLANDS.map((x) => `<button role="tab" aria-selected="${x.n === isle}" class="${x.n === isle ? 'on' : ''}" data-act="isle" data-arg="${x.n}">${esc(x.name)}</button>`).join('')}</div>
+    <p class="muted center-t">${esc(I.blurb)}</p>
     <div class="map-board">
-      <img src="art/atlas.webp" alt="A painted island with a garden, a market, a workshop village, a hilltop observatory and a harbour, joined by one road." width="1920" height="1072">
+      <img src="art/${I.img}.webp" alt="A painted map of ${esc(I.name)}." width="${I.w}" height="${I.h}">
       <div class="map-amb" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => `<i style="--i:${i}"></i>`).join('')}</div>
-      ${WORLDS.map((w) => {
-        const nodes = ROUTE.map((n, i) => ({ n, i })).filter((x) => x.n.world === w.id);
-        const open = nodes.some((x) => isOpen(h, k, x.i));
-        const done = nodes.every((x) => nodeDone(k, x.n));
-        const p = MAP_PINS[w.id];
+      ${worlds.map((w) => {
+        const open = worldOpen(h, k, w.id);
+        const done = ROUTE.filter((n) => n.world === w.id).every((n) => nodeDone(k, n));
+        const p = I.pins[w.id];
         return `<button class="map-pin${open ? '' : ' shut'}${here === w.id ? ' here' : ''}${done ? ' done' : ''}" style="left:${p.x}%;top:${p.y}%;--wi:${w.ink};--wt:${w.tint}" data-act="${open ? 'openWorld' : 'shutWorld'}" data-arg="${w.id}" aria-label="${esc(w.name)}${open ? '' : ', not reached yet'}">
           <span class="mp-g">${w.glyph}</span><span class="mp-t"><b>${esc(w.name)}</b>${here === w.id ? '<i>You are here</i>' : done ? '<i>Done ✓</i>' : open ? '' : '<i>Not reached yet</i>'}</span></button>`;
       }).join('')}
     </div>
     <div class="world-list">
-      ${WORLDS.map((w) => {
-        const ts = tricksIn(w.id); const s = ts.reduce((a, t) => a + ((k.tricks[t.id] || {}).stars || 0), 0);
-        const open = ROUTE.some((n, i) => n.world === w.id && isOpen(h, k, i));
+      ${worlds.map((w) => {
+        const ts = tricksIn(w.id); const s2 = ts.reduce((a, t) => a + ((k.tricks[t.id] || {}).stars || 0), 0);
+        const open = worldOpen(h, k, w.id);
         return `<button class="wl${open ? '' : ' shut'}" data-act="${open ? 'openWorld' : 'shutWorld'}" data-arg="${w.id}" style="--wt:${w.tint};--wi:${w.ink}">
           <img src="art/w-${w.id}.webp" alt="" loading="lazy" width="1920" height="815">
-          <span class="wl-t"><span class="kicker">Part ${w.n}</span><b>${esc(w.name)}</b><span>${esc(w.blurb)}</span><span class="wl-s">${starRow(Math.round(s / ts.length))} ${open ? '' : '· not reached yet'}</span></span></button>`;
+          <span class="wl-t"><span class="kicker">${w.glyph} ${ts.length} stops · from age ${esc(w.band.split('-')[0])}</span><b>${esc(w.name)}</b><span>${esc(w.blurb)}</span><span class="wl-s">${starRow(Math.round(s2 / Math.max(1, ts.length)))} ${open ? '' : '· not reached yet'}</span></span></button>`;
       }).join('')}
     </div>
   </section>`;
@@ -67,11 +80,13 @@ export function viewAtlasMap() {
 /* ------------------------------------------------------------- a world */
 
 /* The road across a board: a gentle wave, in the board's own 0–100 space. */
-const ROAD = { gardens: [72, 7, 1.3], market: [78, 5, 1.1], workshop: [80, 5, 1.6], observatory: [72, 6, 1.2], harbour: [82, 4, 1.4] };
-function roadY(wid, x) { const [b, a, f] = ROAD[wid]; return b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6); }
+const ROAD = { gardens: [72, 7, 1.3], market: [78, 5, 1.1], workshop: [80, 5, 1.6], observatory: [72, 6, 1.2], harbour: [82, 4, 1.4],
+  library: [80, 4, 1.2], clocktower: [80, 5, 1.4], bakery: [80, 4, 1.1], shapecity: [82, 4, 1.5], forest: [78, 5, 1.2],
+  palace: [80, 5, 1.3], dock: [80, 4, 1.2], setisland: [82, 4, 1.1], carnival: [80, 5, 1.4] };
+function roadY(wid, x) { const [b, a, f] = ROAD[wid] || [78, 5, 1.3]; return b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6); }
 
 export function viewWorld(wid) {
-  const w = worldOf(wid), h = R.h, k = kid(h), f = frontier(k);
+  const w = worldOf(wid), h = R.h, k = kid(h), f = frontier(k, h);
   const nodes = ROUTE.map((n, i) => ({ n, i })).filter((x) => x.n.world === wid);
   const xs = nodes.map((_, j) => 7 + (86 * j) / Math.max(1, nodes.length - 1));
   let path = ''; for (let x = 0; x <= 100; x += 2) path += `${x ? 'L' : 'M'}${x},${roadY(wid, x).toFixed(2)} `;

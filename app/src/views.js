@@ -250,7 +250,7 @@ export function viewHome() {
       <button class="tile2" data-act="startFacts" data-arg="${k.prefs.op}"><span class="ti" style="--c:#2D5BD8">⚡</span><span><span class="kick">Facts</span><b>${OP_NAME[k.prefs.op]}</b><span class="muted small">${t.fluent} fluent${t.trap ? ` · ${t.trap} to fix` : ''}</span></span></button>
       <button class="tile2" data-act="daily"><span class="ti" style="--c:#E0673A">🎯</span><span><span class="kick">Today’s puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span class="muted small">Same puzzle in every house</span></span></button>
       <button class="tile2" data-act="nav" data-arg="contest"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Mock contest</span><b>${k.contest.best ? `Best: ${ordinal(k.contest.best)}` : 'Ten rivals'}</b><span class="muted small">One question each, every round</span></span></button>
-      <button class="tile2" data-act="nav" data-arg="stories"><span class="ti" style="--c:#178A4C">📖</span><span><span class="kick">Story shelf</span><b>${Object.keys(k.stories || {}).length} of 27 read</b><span class="muted small">Every trick starts as a story</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="stories"><span class="ti" style="--c:#178A4C">📖</span><span><span class="kick">Story shelf</span><b>${Object.keys(k.stories || {}).length} of ${TRICKS.length} read</b><span class="muted small">Every trick starts as a story</span></span></button>
     </div>
 
     <div class="h-r4">
@@ -351,7 +351,7 @@ function learnTab(t) {
   const q = example(t), steps = t.work(q), shown = R.ui.watch || 0;
   const figure = t.fig ? fig(t.fig(q)) : '';
   return `<div class="learn">
-    <div class="card hook"><p class="kicker">Try this</p><p class="big-q mono">${esc(q.text)}</p><p>${esc(t.hook)}</p></div>
+    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p><p>${esc(t.hook)}</p></div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
       <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">So <b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>. ${btn('Your turn →', 'stopTab', 'turn', 'primary')}</p>`}</div>
@@ -375,13 +375,13 @@ function turnTab(t, rec) {
   const q = g.items[g.i], steps = g.steps;
   return `<div class="card guided">
     <p class="kicker">Question ${g.i + 1} of ${g.items.length}</p>
-    <p class="big-q mono">${esc(q.text)}</p>
+    ${q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>
     <ol class="steps live">${steps.map((s, i) => `<li class="${i < g.si ? 'shown' : i === g.si ? 'now' : ''}">
       <span class="st-t">${esc(s.t)}</span>
       ${i < g.si ? `<b class="st-v mono${g.revealed.includes(i) ? ' shown-by' : ''}">${esc(s.v)}</b>` : i === g.si ? (s.choices ? `<span class="choice-row">${s.choices.map((c, ci) => `<button class="btn" data-act="gChoice" data-arg="${esc(c)}">${esc(c)} <kbd>${ci + 1}</kbd></button>`).join('')}</span>` : `<b class="st-v mono ans" id="ans" aria-live="polite">${esc(g.input) || '&nbsp;'}</b>`) : '<b class="st-v mono">·</b>'}
     </li>`).join('')}</ol>
     <p class="msg ${g.msgKind || ''}" aria-live="polite">${g.msg || (g.si < steps.length ? 'Type the number for this step, then Enter.' : '')}</p>
-    ${g.si >= steps.length ? `<div class="row gap">${btn(g.i + 1 < g.items.length ? 'Next question →' : 'Finish', 'gNext', '', 'primary')}</div>` : (steps[g.si].choices ? '' : keypad())}
+    ${g.si >= steps.length ? `<div class="row gap">${btn(g.i + 1 < g.items.length ? 'Next question →' : 'Finish', 'gNext', '', 'primary')}</div>` : (steps[g.si].choices ? '' : keypad(q.keys || t.keys))}
   </div>`;
 }
 
@@ -409,13 +409,13 @@ export function viewRun() {
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
-      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `<p class="big-q mono" aria-live="polite">${esc(q.text)}${q.choices ? '' : ' ='}</p>`}
+      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
       ${q.choices
         ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
         : `<p class="answer mono" id="ans" aria-live="polite">${fb ? esc(fb.given) : esc(run.input) || '<span class="caret"></span>'}</p>`}
       ${fb ? feedback(q, fb) : q.choices ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
     </div>
-    ${!fb && !q.choices ? keypad() : ''}
+    ${!fb && !q.choices ? keypad(q.keys) : ''}
     ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
 }

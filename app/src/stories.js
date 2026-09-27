@@ -19,7 +19,7 @@
    Beat shape: { who: <rival id> | null (narrator), say: 'line', add?: {t, v} }.
    `scene` names a painted plate in public/art/ (s-<scene>.webp). */
 
-export const STORIES = {
+const CORE_STORIES = {
   /* ------------------------------------------------ The Ten Gardens */
   'make-ten': { title: "Pip's marbles", scene: 'garden', cast: ['pixel', 'koi'], beats: [
     { who: null, say: 'Pip has 8 marbles in a jar. Nova tips in 5 more.', add: { t: '8 + 5' } },
@@ -246,7 +246,10 @@ export const STORIES = {
   ] },
 };
 
-export const SCENES = ['garden', 'festival', 'bus', 'library', 'cricket', 'market', 'hall', 'train', 'kitchen', 'fair', 'pond', 'night', 'stadium', 'harbour', 'shop', 'room'];
+import { CHAPTERS } from './tricks.js';
+export const STORIES = Object.assign({}, CORE_STORIES, ...CHAPTERS.map((c) => c.STORIES || {}));
+export const SCENES = ['garden', 'festival', 'bus', 'library', 'cricket', 'market', 'hall', 'train', 'kitchen', 'fair', 'pond', 'night', 'stadium', 'harbour', 'shop', 'room',
+  'bakery', 'clock', 'city', 'forest', 'palace', 'carnival', 'beach'];
 
 /* Evaluate a notepad sum as plain arithmetic — the test's route, and the one
    the view never needs (it prints `v`, which the test proved). */

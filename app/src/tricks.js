@@ -34,7 +34,7 @@ export const droot = (n) => { let x = n; while (x > 9) x = dsum(x); return x; };
 
 /* ------------------------------------------------------------------ worlds */
 
-export const WORLDS = [
+const CORE_WORLDS = [
   { id: 'gardens', n: 1, name: 'The Ten Gardens', short: 'Gardens', band: '6-7',
     blurb: 'Adding and taking away, without counting on your fingers.',
     tint: '#E6F4EA', ink: '#1C6B3A', glyph: '🌱' },
@@ -66,7 +66,7 @@ export const WORLDS = [
 
 /* ---------------------------------------------------------------- chapters */
 
-export const TRICKS = [
+const CORE = [
   /* ================================================ THE TEN GARDENS */
   {
     id: 'make-ten', world: 'gardens', band: '6-7', title: 'Make ten first',
@@ -671,6 +671,33 @@ export const TRICKS = [
 
 function gcd(a, b) { return b ? gcd(b, a % b) : a; }
 
+/* ------------------------------------------------------------- the whole atlas */
+
+/* The five worlds above are the first island. The rest of the Atlas lives in
+   src/chapters/, one file per world, each exporting WORLD, TRICKS and
+   STORIES to the same contract (docs/CHAPTER-CONTRACT.md). ORDER is the road:
+   it interleaves the islands by age, so a six-year-old meets Time and Money
+   long before the Sutra Observatory. */
+import * as library from './chapters/library.js';
+import * as clocktower from './chapters/clocktower.js';
+import * as bakery from './chapters/bakery.js';
+import * as shapecity from './chapters/shapecity.js';
+import * as forest from './chapters/forest.js';
+import * as palace from './chapters/palace.js';
+import * as dock from './chapters/dock.js';
+import * as setisland from './chapters/setisland.js';
+import * as carnival from './chapters/carnival.js';
+export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival];
+
+export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'shapecity', 'workshop', 'forest',
+  'observatory', 'palace', 'dock', 'setisland', 'harbour', 'carnival'];
+export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1 };   // everything else: island 2
+
+const ALL_WORLDS = [...CORE_WORLDS, ...CHAPTERS.map((c) => c.WORLD)];
+export const WORLDS = ORDER.map((id, i) => ({ ...ALL_WORLDS.find((w) => w.id === id), n: i + 1, island: ISLAND[id] || 2 }));
+const ALL = [...CORE, ...CHAPTERS.flatMap((c) => c.TRICKS)];
+export const TRICKS = WORLDS.flatMap((w) => ALL.filter((t) => t.world === w.id));
+
 /* ------------------------------------------------------------- lookups */
 
 export const byId = Object.fromEntries(TRICKS.map((t) => [t.id, t]));
@@ -686,15 +713,36 @@ export function drill(t, n, lv, r = Math.random) {
   for (let i = 0; out.length < n && i < n * 20; i++) {
     const q = t.gen(r, lv);
     if (q.text === last) continue;
-    last = q.text; out.push(q);
+    last = q.text;
+    if (t.draw && !q.html) q.html = t.draw(q);
+    if (t.keys && !q.keys) q.keys = t.keys;
+    out.push(q);
   }
   return out;
 }
 
-/* Answers are compared as numbers when they are numbers, as text otherwise —
-   a keypad sends "1225", and "01225" is still right. */
+/* Answers: a keypad sends text. Whole numbers, decimals ("0.75"), negatives
+   ("−4", with either minus sign) and fractions ("3/4") are all read as the
+   number they mean, so "01225" is still right and 2/4 equals 1/2 — unless
+   the question asks for simplest form (q.simplest), when 2/4 is not the
+   answer to "simplify 6/12". Choice questions compare the label exactly. */
+export function parseNum(s) {
+  const t = String(s).trim().replace(/[−–]/g, '-').replace(/\s+/g, '');
+  if (/^-?\d+\/\d+$/.test(t)) { const [a, b] = t.split('/').map(Number); return b ? a / b : NaN; }
+  if (/^-?(\d+\.?\d*|\.\d+)$/.test(t)) return Number(t);
+  return NaN;
+}
 export function correct(q, given) {
   if (q.choices) return given === q.ans;
-  const v = Number(String(given).trim());
-  return String(given).trim() !== '' && Number.isFinite(v) && Math.abs(v - q.ans) < 1e-9;
+  const g = String(given).trim();
+  if (g === '') return false;
+  const v = parseNum(g), want = typeof q.ans === 'number' ? q.ans : parseNum(q.ans);
+  if (!Number.isFinite(v) || Math.abs(v - want) > 1e-9) return false;
+  if (q.simplest && g.includes('/')) { const [a, b] = g.replace(/[−–]/g, '-').split('/').map((x) => Math.abs(Number(x))); if (gcd(a, b) !== 1) return false; }
+  return true;
+}
+/* The same rule for one step of the working ("Your turn"). */
+export function stepRight(s, given) {
+  if (s.choices) return given === s.v;
+  return correct({ ans: s.v }, given);
 }
