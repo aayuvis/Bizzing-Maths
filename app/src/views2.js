@@ -21,6 +21,8 @@ import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
 import { av, starRow, pageHead } from './views.js';
 import { bot } from './contest.js';
+import * as J from './journey.js';
+import { CONCEPTS, CONCEPT_OF } from './levels.js';
 
 const back = (act, label = 'Back', arg = '') =>
   `<button class="back" data-act="${act}"${arg ? ` data-arg="${esc(arg)}"` : ''}><span aria-hidden="true">←</span> ${esc(label)}</button>`;
@@ -278,5 +280,49 @@ export function viewTool(tool, ctx) {
     ${tool.CSS ? `<style>${tool.CSS}</style>` : ''}
     ${pageHead(esc(T.name), esc(T.blurb), back('nav', 'Library', 'library'))}
     ${body}
+  </section>`;
+}
+
+/* ------------------------------------------------------------- the journey */
+
+/* Ten levels, maths age 6 to 15+. The child's own level is a path of steps;
+   any other level can be looked at (and any step opened), but only the child's
+   own level moves them on. */
+const LVNAME = ['', 'Warm-up', 'Stretch', 'Champion'];
+const conceptOf = (id) => CONCEPTS.find((c) => c.id === CONCEPT_OF[id]) || { name: '', glyph: '' };
+
+export function viewJourney() {
+  const k = kid(R.h), j = J.rec(k), p = J.progress(k);
+  if (!p) return `<section class="narrow">${pageHead('My journey', 'Ten levels, from maths age 6 to 15+')}
+    <div class="card center-card"><p class="kicker">Not placed yet</p><h2>Find your level first</h2>
+      <p>A few questions move up when you get them and down when you don't, until they find your maths age. Then your journey starts there.</p>
+      <div class="row gap center"><button class="btn primary big" data-act="startLevelTest">Find my level</button><button class="btn" data-act="startLevel1">Start at Level 1</button></div></div></section>`;
+  const show = R.ui.jlv && R.ui.jlv !== p.level ? R.ui.jlv : p.level, mine = show === p.level;
+  const L = J.levelOf(show);
+  const steps = L.steps.map((s) => ({ ...s, done: J.stepDone(j, s), t: byId[s.stop] }));
+  const next = mine ? steps.find((s) => !s.done) : null;
+  const done = steps.filter((s) => s.done).length;
+  const ladder = J.LEVELS.map((x) => {
+    const st = j.finished.includes(x.n) ? 'fin' : x.n === p.level ? 'now' : x.n < p.level ? 'past' : 'ahead';
+    return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}"><b>${x.n}</b><span>${esc(x.age)}</span>${st === 'fin' ? '<i>✓</i>' : ''}</button>`;
+  }).join('');
+  return `<section class="journey-page">
+    ${pageHead('My journey', 'Ten levels, from maths age 6 to 15+. Finish a journey and the next one opens.', '', `<button class="btn small" data-act="startLevelTest">Find my level again</button>`)}
+    <div class="jladder" role="tablist" aria-label="The ten levels">${ladder}</div>
+    <div class="card jhead">
+      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your journey' : show < p.level ? ' · behind you' : ' · ahead'}</p>
+        <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p></div>
+      <div class="jprog"><b class="mono">${done}/${steps.length}</b><span class="meter"><i style="width:${Math.round(100 * done / steps.length)}%"></i></span><span class="muted small">steps done</span></div>
+    </div>
+    ${!mine ? `<p class="muted center">You are on Level ${p.level}. You can open any step here, but only your own journey moves you on. <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to Level ${p.level}</button></p>` : ''}
+    <ol class="jsteps">${steps.map((s, i) => {
+      const c = conceptOf(s.stop), w = worldOf(s.t.world);
+      const cl = s.done ? 'done' : s === next ? 'next' : '';
+      return `<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}">
+        <span class="jn">${s.done ? '✓' : i + 1}</span>
+        <span class="jx"><b>${esc(s.t.title)}</b><span class="muted small">${w.glyph} ${esc(w.short)} · ${c.glyph} ${esc(c.name)}</span></span>
+        <span class="jlvtag lv${s.lv}">${LVNAME[s.lv]}</span>${s === next ? '<span class="btn primary small">Next</span>' : ''}</button></li>`;
+    }).join('')}</ol>
+    <p class="muted small center">A step is done when its drill is passed at that level or a harder one — here, or anywhere in the Atlas.</p>
   </section>`;
 }

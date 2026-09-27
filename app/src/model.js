@@ -46,7 +46,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 4, kids: [], active: null, parent: { pin: null, tester: false } }; }
+export function newHousehold() { return { v: 5, kids: [], active: null, parent: { pin: null, tester: false } }; }
 
 export function newKid(name, band, avatar) {
   return {
@@ -63,6 +63,7 @@ export function newKid(name, band, avatar) {
     puzzles: {},          // family id → { right, tries }; sudoku → { solved: {size: n} }
     quest: {},            // tower floor → { stars, passed }
     lib: {},              // library tool id → that tool's own record
+    journey: { level: null, done: {}, finished: [], tested: null },   // journey.js: the ten levels
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week

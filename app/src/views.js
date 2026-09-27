@@ -3,6 +3,7 @@
 
 import { R } from './runtime.js';
 import { esc, cls, nWord } from './ui.js';
+import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { BANDS, AVATARS, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
@@ -137,13 +138,13 @@ export function viewStart() {
   return `<section class="narrow">
     ${pageHead(`Hello, ${esc(k.name)}`, 'Where would you like to start?')}
     <div class="two">
-      <button class="door" data-act="startPlace">
-        <span class="door-i">🧭</span><b>Find my start</b>
-        <span>Twelve quick questions, getting harder. Stop whenever they get tricky — it only decides which parts of the Atlas open first. It is not a test and there is no score.</span>
+      <button class="door" data-act="startLevelTest">
+        <span class="door-i">🧭</span><b>Find my level</b>
+        <span>A few questions that move up when you get them and down when you don't, until they find your maths age — from 6 to 15+. Then you start that level's journey. It is not a score.</span>
       </button>
-      <button class="door" data-act="skipPlace">
-        <span class="door-i">🌱</span><b>Start at the beginning</b>
-        <span>Walk the Atlas from the first stop. ${k.band !== '6-7' ? 'Stops meant for younger children stay open, so you can skip ahead.' : 'Every stop opens as you pass the one before.'}</span>
+      <button class="door" data-act="startLevel1">
+        <span class="door-i">🌱</span><b>Start at Level 1</b>
+        <span>Walk every journey from the very first step. Each one you finish opens the next. The whole Atlas stays open to explore as well.</span>
       </button>
     </div>
   </section>`;
@@ -184,6 +185,20 @@ function ring(parts) {
     const r = R0 - i * (W + 3), c = 2 * Math.PI * r, f = Math.min(1, p.v / p.goal);
     return `<circle cx="60" cy="60" r="${r}" class="rg-bg" style="stroke:${p.tint}"/><circle cx="60" cy="60" r="${r}" class="rg-fg" style="stroke:${p.col};stroke-dasharray:${(c * f).toFixed(1)} ${c.toFixed(1)}"/>`;
   }).join('')}</svg>`;
+}
+
+/* The journey card on Home: where the child is on the ten levels, and the next step. */
+function journeyCard(k) {
+  const p = J.progress(k);
+  if (!p) return `<button class="hcard jcard" data-act="startLevelTest">
+      <span class="jc-lv">🧭</span><span class="jc-t"><span class="kick">Ten levels · maths age 6 to 15+</span><b>Find my level</b><span class="muted">A few questions find your maths age and start your journey.</span></span><span class="btn primary">Start</span></button>`;
+  const pct = Math.round(100 * p.done / p.total);
+  return `<div class="hcard jcard">
+      <button class="jc-lv" data-act="nav" data-arg="journey" aria-label="My journey">${p.level}</button>
+      <span class="jc-t"><span class="kick">Level ${p.level} · ${esc(p.age)}</span><b>${esc(p.L.name)}</b>
+        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">${p.done} of ${p.total} steps${p.next ? ` · next: ${esc(p.next.t.title)}` : ''}</span></span>
+      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : `<button class="btn" data-act="nav" data-arg="journey">See it</button>`}
+    </div>`;
 }
 
 export function viewHome() {
@@ -231,6 +246,8 @@ export function viewHome() {
         <ul>${nod.facts.map((f) => `<li>${f}</li>`).join('')}</ul>
       </div>
     </div>
+
+    ${journeyCard(k)}
 
     <div class="h-r2">
       ${next ? `<button class="journey" data-act="openStop" data-arg="${next.id}">
@@ -392,8 +409,8 @@ function turnTab(t, rec) {
 }
 
 function drillTab(t, rec, k) {
-  const lv = R.ui.level || 1;
-  return `<div class="card center-card">
+  const lv = R.ui.level || 1, js = R.ui.jstep && R.ui.jstep.stop === t.id ? R.ui.jstep : null;
+  return `${js ? `<p class="jstep-note">🧭 Journey step: pass this drill at <b>${['', 'Warm-up', 'Stretch', 'Champion'][js.lv]}</b>${js.lv > 1 ? ' or harder' : ''} to tick it off.</p>` : ''}<div class="card center-card">
     <p class="kicker">Drill</p><h2>Ten questions, using the trick</h2>
     <p>Get seven right to pass this stop and open the next. Nine right, at a good pace, is the third star: fast <i>and</i> fearless. Get one wrong and it shows you the trick on that exact question.</p>
     ${rec.best ? `<p class="muted">Your best so far: ${rec.best}%.</p>` : ''}

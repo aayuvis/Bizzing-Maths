@@ -4,6 +4,7 @@
 import { R } from './runtime.js';
 import { Store } from './store.js';
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
+import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
 import { newHousehold, newKid, kid, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
@@ -102,6 +103,7 @@ function screen() {
     case 'library': return V2.viewLibrary(SHELF);
     case 'lib': return toolById[R.ui.arg] ? V2.viewTool(toolById[R.ui.arg], libCtx(R.ui.arg)) : V2.viewLibrary(SHELF);
     case 'goals': return V2.viewGoals();
+    case 'journey': return V2.viewJourney();
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();
     case 'stop': return V.viewStop(R.ui.arg);
     case 'facts': return V.viewFacts();
@@ -177,7 +179,9 @@ function submit(given) {
   if (!right) run.missed.push(q);
   // record what this question is evidence of
   if (q.fact) F.record(k.facts[F.key(q.fact)] || (k.facts[F.key(q.fact)] = F.blank()), right, ms, k.band);
-  if (run.kind !== 'place') tick(k, right, run.kind === 'facts' ? 1 : 2);
+  if (run.kind !== 'place' && run.kind !== 'leveltest') tick(k, right, run.kind === 'facts' ? 1 : 2);
+  // the level test grows as it goes: each answer decides the next question's level
+  if (run.kind === 'leveltest' && J.answer(run.st, right)) run.items.push(J.question(run.st));
   save();
   right ? sfx.good() : sfx.bad();
   render();
@@ -220,6 +224,15 @@ function finishRun() {
       if (nx) s.buttons.push(nx.kind === 'stop' ? `<button class="btn primary" data-act="openStop" data-arg="${nx.id}">Next stop: ${escapeHtml(byId[nx.id].title)}</button>` : `<button class="btn primary" data-act="openCheck" data-arg="${nx.world}">Take the checkpoint</button>`);
       if (res.stars < 3) s.lines.push(res.pct >= 0.9 ? 'Nine or more right — do it a little quicker for the third star.' : 'Nine right at a good pace is the third star.');
       if (res.gained) { confetti(res.stars === 3 ? 60 : 36); sfx.level(); }
+      const jr = J.passed(k, run.trick, run.lv || 1), jp = J.progress(k);
+      if (jr.finished) {
+        s.lines.unshift(`<b>Level ${jr.from} journey complete!</b> ${jr.to !== jr.from ? `You are on to Level ${jr.to} — ${escapeHtml(J.levelOf(jr.to).name)}.` : 'That was the last journey. You have walked all ten.'}`);
+        s.buttons.unshift(`<button class="btn primary" data-act="nav" data-arg="journey">See my next journey</button>`);
+        confetti(90); sfx.level();
+      } else if (jr.ticked && jp) {
+        s.lines.push(`Journey step done — ${jp.done} of ${jp.total} on Level ${jp.level}.`);
+        if (jp.next) s.buttons.unshift(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next journey step: ${escapeHtml(jp.next.t.title)}</button>`);
+      }
     } else {
       s.lines.push('Seven right passes this stop. Look at the ones below, then have another go — or go back to “Your turn”.');
       s.buttons.push(`<button class="btn primary" data-act="startDrill" data-arg="${run.trick}">Try again</button>`);
@@ -266,6 +279,14 @@ function finishRun() {
     if (r) { if (r.stars != null) s.stars = r.stars; s.lines.push(...(r.lines || [])); s.buttons.push(...(r.buttons || [])); }
     else s.lines.push(right === n ? 'Every one.' : 'Try another set — it gets easier every time.');
   }
+  if (run.kind === 'leveltest') {
+    const L = J.place(k, run.st.result), lv = J.levelOf(L);
+    s.lines.push(`<span class="big-age">${escapeHtml(J.ageOf(L))}</span>`);
+    s.lines.push(`Your journey is <b>Level ${L} — ${escapeHtml(lv.name)}</b>. ${escapeHtml(lv.blurb)}`);
+    s.lines.push('<span class="muted">This is where to start, not a score. It is never shown in a report, and the journey moves you up as you finish it.</span>');
+    s.buttons.push('<button class="btn primary" data-act="nav" data-arg="journey">Start my journey</button>');
+    confetti(40);
+  }
   if (run.kind === 'place') {
     // count rungs passed before the first pair of misses in a row
     let upto = 0, miss = 0;
@@ -280,7 +301,7 @@ function finishRun() {
   const before = rankOf(k.xp - right * 2);
   save();
   render();
-  if (rankOf(k.xp).i > before.i && run.kind !== 'place') setTimeout(() => toast(`New rank: ${rankOf(k.xp).n}!`), 400);
+  if (rankOf(k.xp).i > before.i && run.kind !== 'place' && run.kind !== 'leveltest') setTimeout(() => toast(`New rank: ${rankOf(k.xp).n}!`), 400);
 }
 
 /* ------------------------------------------------------------- guided ("Your turn") */
@@ -427,7 +448,7 @@ on('openStop', (id) => {
   const k = kid(R.h);
   // a stop opens on its story until the story has been read once
   R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
-  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; go('stop', id);
+  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; R.ui.jstep = null; go('stop', id);
 });
 on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; go('stop', id); });
 on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
@@ -506,7 +527,7 @@ on('gNext', () => guidedNext());
 on('startDrill', (id) => {
   const t = byId[id], lv = R.ui.level || 1;
   const items = drill(t, 10, lv).map((q) => ({ ...q, trick: id }));
-  startRun('drill', t.title, items, { trick: id, sub: ['', 'Warm-up', 'Stretch', 'Champion'][lv] });
+  startRun('drill', t.title, items, { trick: id, lv, sub: ['', 'Warm-up', 'Stretch', 'Champion'][lv] });
 });
 on('openCheck', (wid) => {
   const k = kid(R.h), i = ROUTE.findIndex((n) => n.id === 'check:' + wid);
@@ -536,7 +557,7 @@ on('cell', (c) => { R.ui.cell = R.ui.cell === c ? null : c; render(); });
 on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
 on('nextQ', () => nextQ());
 on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
-on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && r.kind === 'leveltest') go('journey'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
 
 on('startContest', () => startContest());
 on('cChoose', (c) => cAnswer(c));
@@ -560,6 +581,16 @@ on('startPlace', () => {
   startRun('place', 'Find my start', items, { sub: 'Stop whenever they get tricky' });
 });
 on('skipPlace', () => go('atlas'));
+on('jlv', (n) => { R.ui.jlv = +n; render(); });
+on('startLevel1', () => { J.place(kid(R.h), 1); R.ui.jlv = null; save(); go('journey'); });
+on('startLevelTest', () => {
+  const k = kid(R.h), st = J.newTest(k.band);
+  startRun('leveltest', 'Find my level', [J.question(st)], { st, sub: 'It moves up and down to find where you are' });
+});
+on('openStep', (a) => {
+  const [id, lv] = a.split('|');
+  fire('openStop', id); R.ui.level = +lv || 1; R.ui.jstep = { stop: id, lv: +lv || 1 }; render();
+});
 on('switchKid', (id) => { R.h.active = id; save(); go('home'); });
 on('addKid', () => { R.ui.draft = null; go('welcome'); });
 
