@@ -64,6 +64,35 @@ A stop teaches ONE idea. Its fields, all required unless marked:
 - `say` *(optional)* — how to read it aloud if `text` reads badly (`'three quarters of twenty'`).
 - Time answers: ask for minutes (`ans: 45`), or use choices (`'3:45'`). Money: whole units or decimals with `decimals:true`.
 
+## One worked example per idea — `cases` (every stop is audited)
+
+Learn used to teach from ONE example (`ex`), so a stop that teaches three ideas — equilateral,
+isosceles AND scalene — only ever explained one. Now every stop declares its audit:
+
+- **One idea** (the method is the same for every question the drill can ask): `oneIdea: true`.
+- **Several ideas**: `cases` — one worked example per idea, which Learn clicks through in order
+  ("3 ideas in this stop · 1 of 3"), each with its own picture, steps and answer — and `caseKey`.
+
+```js
+caseKey: 'ans',            // or a question field ('mode', 'kind'), or an array of them
+cases: [
+  { label: 'Equilateral', note: 'All three sides the same — so all three angles are 60°.',
+    ex: { mode: 'sides', s: [6, 6, 6], opts: [...] } },          // ex is the argument object for q()
+  ...
+],
+```
+
+- `label` ≤ 28 characters; `note` is ONE or two sentences saying what is special about this idea
+  (the `why` paragraphs still carry the reasoning for the whole stop).
+- `caseSig(q)` = the values of `caseKey` on a question. **The test fails if the drill can generate a
+  question whose signature no case shows** — so a drill can never ask about an idea Learn skipped —
+  and if two cases show the same signature. If the idea that differs is not already a field on the
+  question object, add one in `q()` (e.g. `side: 'below'`) and use it as the key.
+- Cosmetic variety (the item bought, the colour on a spinner, the names in a Venn diagram) is NOT an
+  idea — do not key on it. A different method, a different kind of answer, a different rule, a
+  different direction (up/down, × / ÷), a different question about the same picture — those are ideas.
+- Order cases in teaching order, simplest first. The first case is the one Learn opens on.
+
 ### Rules the tests enforce
 
 - the last step equals the answer; every step value is typeable (whole number, or decimal if `decimals`, or a fraction string, or a choice);

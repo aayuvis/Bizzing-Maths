@@ -709,7 +709,16 @@ export const worldOf = (id) => WORLDS.find((w) => w.id === id);
 export const tricksIn = (wid) => TRICKS.filter((t) => t.world === wid);
 
 /* The worked example a chapter teaches from. */
-export const example = (t) => t.q(t.ex);
+/* A stop that teaches several ideas (three kinds of triangle, above and below
+   100) carries `cases`: one worked example per idea, which Learn clicks through
+   in order. `caseKey` names the question field(s) — or 'ans' — that tell the
+   ideas apart, and test/tricks.mjs fails a stop whose drill can ask about an
+   idea none of its cases shows. A stop that really is one idea says `oneIdea`. */
+export const learnCases = (t) => (t.cases && t.cases.length
+  ? t.cases.map((c) => ({ label: c.label, note: c.note || '', q: t.q(c.ex) }))
+  : [{ label: '', note: '', q: t.q(t.ex) }]);
+export const example = (t) => learnCases(t)[0].q;
+export const caseSig = (t, q) => [].concat(t.caseKey || []).map((k) => String(q[k])).join('|');
 
 /* A drill of n questions at a level, never the same question twice in a row. */
 export function drill(t, n, lv, r = Math.random) {

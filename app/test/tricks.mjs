@@ -1,7 +1,7 @@
 /* test/tricks.mjs — the trick and the arithmetic must agree, every time.
    Three independent routes to each answer: the trick's own last step, q.ans,
    and a plain evaluation of q.expr. Any disagreement fails the build. */
-import { TRICKS, WORLDS, example, correct, parseNum } from '../src/tricks.js';
+import { TRICKS, WORLDS, example, correct, parseNum, learnCases, caseSig } from '../src/tricks.js';
 import { seeded } from '../src/rand.js';
 
 let fails = 0, n = 0;
@@ -16,8 +16,15 @@ for (const t of TRICKS) {
   ok(Array.isArray(t.why) && t.why.length >= 2, `${t.id}: why needs at least two paragraphs`);
   ok(['6-7', '8-10', '11-14'].includes(t.band), `${t.id}: bad band`);
   const r = seeded(t.id);
-  const qs = [example(t)];
-  for (const lv of [1, 2, 3]) for (let i = 0; i < 700; i++) qs.push(t.gen(r, lv));
+  const lc = learnCases(t), qs = lc.map((c) => c.q);
+  // every stop has been audited: several ideas → a worked case for each; one idea → says so
+  ok(t.oneIdea === true || (t.cases && t.cases.length >= 2 && t.caseKey), `${t.id}: not audited — give it cases + caseKey, or oneIdea: true`);
+  if (t.cases) ok(t.cases.every((c) => c.label && c.label.length <= 28 && c.ex && c.note), `${t.id}: every case needs a short label, a note and an ex`);
+  const shownSigs = new Set(lc.map((c) => caseSig(t, c.q)));
+  if (t.cases) ok(shownSigs.size === lc.length, `${t.id}: two Learn cases show the same idea (${[...shownSigs].join(', ')})`);
+  const gens = [];
+  for (const lv of [1, 2, 3]) for (let i = 0; i < 700; i++) { const g = t.gen(r, lv); gens.push(g); qs.push(g); }
+  if (t.caseKey) for (const g of gens) { const sig = caseSig(t, g); if (!shownSigs.has(sig)) { ok(false, `${t.id}: the drill asks about "${sig}" but Learn never shows it`); break; } }
   for (const q of qs) {
     n++;
     const plain = Function(`return (${q.expr})`)();

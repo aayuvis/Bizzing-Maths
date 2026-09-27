@@ -739,3 +739,13 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 @media (max-width:880px){.home-r3{grid-template-columns:1fr}.strands{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.amb,.map-amb{display:none}}
 @media print{.top,.tabbar,.foot{display:none}}
+
+/* ---- Learn: one worked example per idea, clicked through in order */
+.case-bar{margin:4px 0 14px;display:flex;flex-direction:column;gap:8px}
+.case-chips{display:flex;flex-wrap:wrap;gap:8px}
+.case-chip{cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600}
+.case-chip b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface2);font-size:12px;margin-right:4px}
+.case-chip.seen b{background:var(--mastered);color:#fff}
+.case-chip.on{border-color:var(--action);background:var(--action-tint)}
+.case-chip.on b{background:var(--action);color:#fff}
+.case-note{margin:0;padding:10px 14px;border-radius:12px;background:var(--action-tint);color:var(--ink);max-width:75ch}

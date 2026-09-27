@@ -3,7 +3,7 @@
 
 import { R } from './runtime.js';
 import { esc, cls, nWord } from './ui.js';
-import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, droot } from './tricks.js';
+import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { BANDS, AVATARS, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
@@ -349,13 +349,18 @@ export function viewStop(id) {
 }
 
 function learnTab(t) {
-  const q = example(t), steps = t.work(q), shown = R.ui.watch || 0;
+  const cs = learnCases(t), ci = Math.min(R.ui.lcase || 0, cs.length - 1), c = cs[ci];
+  const q = c.q, steps = t.work(q), shown = R.ui.watch || 0, more = ci < cs.length - 1;
+  const strip = cs.length > 1 ? `<div class="case-bar"><p class="kicker">${cs.length} ideas in this stop · ${ci + 1} of ${cs.length}</p>
+      <div class="case-chips" role="tablist">${cs.map((x, i) => `<button role="tab" aria-selected="${i === ci}" class="chip case-chip${i === ci ? ' on' : ''}${i < ci ? ' seen' : ''}" data-act="learnCase" data-arg="${i}"><b>${i + 1}</b> ${esc(x.label)}</button>`).join('')}</div>
+      ${c.note ? `<p class="case-note"><b>${esc(c.label)}.</b> ${esc(c.note)}</p>` : ''}</div>` : '';
+  const next = more ? btn(`Next: ${esc(cs[ci + 1].label)} →`, 'learnCase', String(ci + 1), 'primary') : btn('Your turn →', 'stopTab', 'turn', 'primary');
   const figure = t.fig ? fig(t.fig(q)) : '';
-  return `<div class="learn">
-    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p><p>${esc(t.hook)}</p></div>
+  return `${strip}<div class="learn">
+    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${ci === 0 ? `<p>${esc(t.hook)}</p>` : ''}</div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
-      <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${btn('Your turn →', 'stopTab', 'turn', 'primary')}</p>`}</div>
+      <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${next}</p>`}</div>
     </div>
     <div class="card why"><p class="kicker">Why it works</p>
       ${t.why.map((p) => `<p>${esc(p)}</p>`).join('')}

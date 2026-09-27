@@ -322,6 +322,21 @@ export const TRICKS = [
     ],
     alg: 'a = b = c → equilateral; exactly two equal → isosceles; none equal → scalene',
     ex: { mode: 'sides', s: [5, 5, 8], opts: ['scalene', 'equilateral', 'isosceles'] },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Equilateral', note: 'All three sides are the same length — and so all three angles are the same too: 180° ÷ 3 = 60° each.',
+        ex: { mode: 'sides', s: [6, 6, 6], opts: ['isosceles', 'scalene', 'equilateral'] } },
+      { label: 'Isosceles', note: 'Exactly two sides match. The two angles at the ends of the odd side match as well, because the triangle is its own mirror image.',
+        ex: { mode: 'sides', s: [5, 5, 8], opts: ['scalene', 'equilateral', 'isosceles'] } },
+      { label: 'Scalene', note: 'No two sides match, so no two angles match either. Most triangles you draw without trying are scalene.',
+        ex: { mode: 'sides', s: [4, 6, 7], opts: ['equilateral', 'scalene', 'isosceles'] } },
+      { label: 'Right-angled', note: 'Now sort by the biggest angle instead. One angle is exactly 90° — a square corner.',
+        ex: { mode: 'angles', s: [35, 55, 90], opts: ['acute-angled', 'right-angled', 'obtuse-angled'] } },
+      { label: 'Acute-angled', note: 'Every angle is smaller than 90°. Find the third angle first — it is the one people forget to check.',
+        ex: { mode: 'angles', s: [50, 60, 70], opts: ['right-angled', 'obtuse-angled', 'acute-angled'] } },
+      { label: 'Obtuse-angled', note: 'One angle is bigger than 90°. There can only ever be one, because the three angles share just 180°.',
+        ex: { mode: 'angles', s: [25, 35, 120], opts: ['obtuse-angled', 'acute-angled', 'right-angled'] } },
+    ],
     gen(r, lv = 1) {
       if (lv === 3 && r() < 0.6) {
         const type = pick(['right-angled', 'acute-angled', 'obtuse-angled'], r); let A;

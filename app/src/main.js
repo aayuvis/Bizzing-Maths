@@ -4,7 +4,7 @@
 import { R } from './runtime.js';
 import { Store } from './store.js';
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
-import { byId, drill, correct, stepRight, tricksIn, worldOf } from './tricks.js';
+import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
 import { newHousehold, newKid, kid, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor } from './contest.js';
@@ -427,9 +427,9 @@ on('openStop', (id) => {
   const k = kid(R.h);
   // a stop opens on its story until the story has been read once
   R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
-  R.ui.watch = 0; R.ui.level = 1; R.ui.beat = 0; go('stop', id);
+  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; go('stop', id);
 });
-on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.level = 1; go('stop', id); });
+on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; go('stop', id); });
 on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
 on('shutWorld', () => toast('Not reached yet — finish the place before it on the road.'));
 on('isle', (n) => { R.ui.isle = +n; render(); });
@@ -495,6 +495,7 @@ on('goalGo', (how) => {
 on('stopTab', (t) => { if (t !== 'turn' && R.run && R.run.kind === 'guided') R.run = null; R.ui.tab = t; render(); });
 on('watch', () => { R.ui.watch = (R.ui.watch || 0) + 1; sfx.click(); render(); });
 on('watchAll', () => { R.ui.watch = 99; render(); });
+on('learnCase', (i) => { R.ui.lcase = +i || 0; R.ui.watch = 0; R.ui.tab = 'learn'; sfx.click(); render(); });
 on('worldIntro', (w) => go('intro', w));
 on('level', (l) => { R.ui.level = +l; render(); });
 
@@ -657,6 +658,12 @@ addEventListener('keydown', (e) => {
   if (nav === 'stop' && R.ui.tab === 'story') {
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fire('beatNext'); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); fire('beatBack'); }
+  }
+  // Learn: → shows the next step, then moves to the next idea; ← goes back an idea
+  if (nav === 'stop' && (R.ui.tab || 'learn') === 'learn' && !run) {
+    const t = byId[R.ui.arg], n = t ? learnCases(t).length : 1, ci = R.ui.lcase || 0;
+    if (e.key === 'ArrowRight') { e.preventDefault(); if ((R.ui.watch || 0) < t.work(learnCases(t)[ci].q).length) fire('watch'); else if (ci < n - 1) fire('learnCase', String(ci + 1)); }
+    if (e.key === 'ArrowLeft' && ci > 0) { e.preventDefault(); fire('learnCase', String(ci - 1)); }
   }
 });
 
