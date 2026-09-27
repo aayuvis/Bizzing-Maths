@@ -46,7 +46,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 2, kids: [], active: null, parent: { pin: null, tester: false } }; }
+export function newHousehold() { return { v: 3, kids: [], active: null, parent: { pin: null, tester: false } }; }
 
 export function newKid(name, band, avatar) {
   return {
@@ -60,7 +60,8 @@ export function newKid(name, band, avatar) {
     games: {},            // game id → { best, plays }
     contest: { best: null, runs: 0, wins: 0 },
     stories: {},          // trick id → true once the story has been read to the end
-    puzzles: {},          // room id → { right, tries, solved: {size: n} }
+    puzzles: {},          // family id → { right, tries }; sudoku → { solved: {size: n} }
+    quest: {},            // tower floor → { stars, passed }          // room id → { right, tries, solved: {size: n} }
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week

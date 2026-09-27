@@ -13,7 +13,7 @@ import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
 import { STORIES } from './stories.js';
-import { puzzleSet, ROOM, sudokuSize } from './puzzles.js';
+import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize } from './puzzles.js';
 
 const root = document.getElementById('app');
 
@@ -25,6 +25,14 @@ const mode = Store.loadDevice('mode', null);
 if (mode) document.documentElement.setAttribute('data-mode', mode);
 
 function save() { Store.saveHousehold(R.h); }
+
+/* Stars earned today — the gold ring on Home. Kept for a week, never more. */
+function starToday(k, n) {
+  if (!n) return;
+  const d = dayKey(); const m = k.dayStops || (k.dayStops = {});
+  m[d] = (m[d] || 0) + n;
+  for (const key of Object.keys(m)) if (key < dayKey(new Date(Date.now() - 7 * 864e5))) delete m[key];
+}
 
 /* ------------------------------------------------------------- routing */
 
@@ -70,7 +78,7 @@ function screen() {
     case 'atlas': return V2.viewAtlasMap();
     case 'world': return worldOf(R.ui.arg) ? V2.viewWorld(R.ui.arg) : V2.viewAtlasMap();
     case 'stories': return V2.viewStories();
-    case 'puzzles': return V2.viewPuzzles();
+    case 'puzzles': return V2.viewTower();
     case 'goals': return V2.viewGoals();
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();
     case 'stop': return V.viewStop(R.ui.arg);
@@ -181,6 +189,7 @@ function finishRun() {
     const t = byId[run.trick];
     const budget = (4000 + 2500 * t.work(run.items[0]).length) * (k.band === '6-7' ? 1.5 : 1);
     const res = scoreRun(k, run.trick, right, n, avg <= budget);
+    starToday(k, res.gained);
     s.stars = res.stars;
     if (res.pct >= 0.7) {
       s.lines.push(res.gained ? `<b>${res.stars === 3 ? 'Three stars — fast and fearless.' : 'Stop passed.'}</b>` : 'Passed again.');
@@ -213,7 +222,20 @@ function finishRun() {
   if (run.kind === 'puzzle') {
     s.stars = right === n ? 3 : right >= n - 2 ? 2 : right >= 2 ? 1 : 0;
     s.lines.push(right === n ? 'Every one. That is contest thinking.' : 'Each puzzle showed its rule afterwards — the next set will feel easier.');
-    s.buttons.push(`<button class="btn primary" data-act="startPuzzle" data-arg="${run.room}:${run.lv}">Six more</button>`);
+    if (run.floor) {
+      const q = k.quest[run.floor] || (k.quest[run.floor] = { stars: 0 });
+      q.stars = Math.max(q.stars, s.stars);
+      if (right >= FLOOR_PASS) {
+        const first = !q.passed; q.passed = true;
+        s.lines.unshift(first ? `<b>Floor ${run.floor} cleared — the stairs to floor ${run.floor + 1} are open.</b>` : 'Cleared again.');
+        if (first) { sfx.level(); confetti(60); }
+        if (run.floor < 12) s.buttons.push(`<button class="btn primary" data-act="climb" data-arg="${run.floor + 1}">Up to floor ${run.floor + 1}</button>`);
+      } else {
+        s.lines.unshift(`${FLOOR_PASS} of 6 opens the stairs. Every puzzle showed you its reason — try the floor again.`);
+        s.buttons.push(`<button class="btn primary" data-act="climb" data-arg="${run.floor}">Try floor ${run.floor} again</button>`);
+      }
+      s.buttons.push('<button class="btn" data-act="nav" data-arg="puzzles">The tower</button>');
+    } else s.buttons.push(`<button class="btn primary" data-act="practise" data-arg="${run.fam}:${run.lv}">Six more</button>`);
     if (s.stars >= 2) confetti(30);
   }
   if (run.kind === 'place') {
@@ -274,6 +296,7 @@ function guidedNext() {
   if (g.i + 1 < g.items.length) { setGuided(g.i + 1); return render(); }
   const k = kid(R.h), r = trickRec(k, g.trick);
   const first = !r.learned;
+  if (!r.stars) starToday(k, 1);
   r.learned = true; r.stars = Math.max(r.stars, 1);
   tick(k, true, 3); save();
   R.run = null; R.ui.tab = 'drill';
@@ -403,14 +426,27 @@ function speakBeat() {
 on('beatNext', () => beat(1));
 on('beatBack', () => beat(-1));
 on('storyRead', () => { R.ui.storyRead = !R.ui.storyRead; if (!R.ui.storyRead) hush(); render(); speakBeat(); });
-on('startPuzzle', (a) => {
-  const [id, l] = a.split(':'); const lv = +l || 1; const k = kid(R.h);
-  const room = ROOM.find((r) => r.id === id);
-  if (id === 'sudoku') {
+const sdkDone = (k, n, lv, hints) => { const p = k.puzzles.sudoku || (k.puzzles.sudoku = { right: 0, tries: 0, solved: {} }); p.tries++; p.solved[n] = (p.solved[n] || 0) + 1; tick(k, true, 5 * lv); };
+on('pickFloor', (f) => { R.ui.floor = +f; render(); });
+on('shutFloor', () => toast('Clear the floor below first.'));
+on('climb', (f) => {
+  f = +f; const k = kid(R.h); const lv = floorLevel(f, k.band);
+  if (!k.quest) k.quest = {};
+  if (isBoss(f)) {
     const n = sudokuSize(k.band, lv);
-    return G.sudoku(k, n, lv, { onEnd: (solved) => { const p = k.puzzles.sudoku || (k.puzzles.sudoku = { right: 0, tries: 0, solved: {} }); p.tries++; if (solved) { p.solved[n] = (p.solved[n] || 0) + 1; tick(k, true, 5 * lv); } save(); render(); } });
+    return G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => {
+      if (solved) { sdkDone(k, n, lv, hints); const q = k.quest[f] || (k.quest[f] = { stars: 0 }); q.stars = Math.max(q.stars, stars); if (stars >= 2 && !q.passed) { q.passed = true; confetti(60); toast(`Floor ${f} cleared — the stairs are open.`); } }
+      save(); render(); } });
   }
-  startRun('puzzle', room.name, puzzleSet(id, lv, 6), { room: id, lv, sub: ['', 'Easy', 'Medium', 'Hard'][lv] });
+  startRun('puzzle', `Floor ${f}`, floorSet(f, k.band), { floor: f, lv, sub: 'The Puzzle Tower · six puzzles, all kinds' });
+});
+on('practise', (a) => {
+  const [id, l] = a.split(':'); const lv = +l || 1;
+  startRun('puzzle', famOf(id).name, familySet(id, lv), { fam: id, lv, sub: ['', 'Easy', 'Medium', 'Hard'][lv] });
+});
+on('sudokuPlay', (l) => {
+  const k = kid(R.h), lv = +l || 1, n = sudokuSize(k.band, lv);
+  G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => { if (solved) sdkDone(k, n, lv, hints); save(); render(); } });
 });
 on('goalGo', (how) => {
   const [a, b] = how.split(':');

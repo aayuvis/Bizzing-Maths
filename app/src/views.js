@@ -164,67 +164,110 @@ export function numberOfDay() {
   return { n, facts: facts.slice(0, 3) };
 }
 
+/* Home, in the family's language (Bee's viewHome, India's V.home): a painted
+   sky, the child's own companion greeting them by name, today's ring, two
+   painted journey cards, then small tiles and an honest progress panel.
+   Three rows: who you are today · what to do next · today's reading. */
+const LINES = [
+  (n) => `Ready, ${n}? One stop, twenty facts and a puzzle — that is a great day.`,
+  (n) => `${n}, the Atlas has a new trick waiting for you.`,
+  (n) => `Every right answer moves your rank, ${n}. Nothing else does.`,
+  (n) => `Let’s make a big sum small today, ${n}.`,
+  (n) => `The tower is taller than it looks, ${n}. Shall we climb a floor?`,
+];
+
+function ring(parts) {
+  // concentric rings, one per part of today; each fills to its own goal
+  const R0 = 46, W = 9;
+  return `<svg class="ring" viewBox="0 0 120 120" aria-hidden="true">${parts.map((p, i) => {
+    const r = R0 - i * (W + 3), c = 2 * Math.PI * r, f = Math.min(1, p.v / p.goal);
+    return `<circle cx="60" cy="60" r="${r}" class="rg-bg" style="stroke:${p.tint}"/><circle cx="60" cy="60" r="${r}" class="rg-fg" style="stroke:${p.col};stroke-dasharray:${(c * f).toFixed(1)} ${c.toFixed(1)}"/>`;
+  }).join('')}</svg>`;
+}
+
 export function viewHome() {
   const k = kid(R.h), rk = rankOf(k.xp), at = atlasSummary(k);
-  const t = tally(k.facts, k.prefs.op);
   const nod = numberOfDay();
-  const today = k.days[dayKey()] || { q: 0, ok: 0 };
-  const puzzleDone = k.daily[dayKey()] && k.daily[dayKey()].puzzle;
-  const next = at.trick;
-  const w = at.world;
-  return `<section class="home">
-    <div class="home-r1">
-      <div class="card hello">
-        ${av(k.avatar, 76, '')}
-        <div>
-          <p class="kicker">${greet()}, ${esc(k.name)}</p>
-          <h1>${today.q ? `${today.ok} right today.` : 'Ready when you are.'}</h1>
-          <p class="muted">${today.q ? 'Every right answer moves your rank.' : 'A few minutes a day beats an hour on Sunday.'}</p>
+  const d = dayKey(), today = k.days[d] || { q: 0, ok: 0 };
+  const puzzleDone = k.daily[d] && k.daily[d].puzzle;
+  const t = tally(k.facts, k.prefs.op);
+  const w = at.world, next = at.trick;
+  const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
+  const stopsToday = (k.dayStops || {})[d] || 0;
+  const parts = [
+    { n: 'Right answers', v: today.ok, goal: 20, col: '#2D5BD8', tint: 'rgb(45 91 216 / .14)' },
+    { n: 'Atlas stars', v: stopsToday, goal: 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
+    { n: 'Today’s puzzle', v: puzzleDone ? 1 : 0, goal: 1, col: '#178A4C', tint: 'rgb(23 138 76 / .15)' },
+  ];
+  const line = LINES[Math.floor(seeded('line:' + d + k.id)() * LINES.length)](esc(k.name));
+  const sm = summary(k);
+  const stars = TRICKS.reduce((a, x) => a + ((k.tricks[x.id] || {}).stars || 0), 0);
+  const fluent = OPS.reduce((a, o) => a + tally(k.facts, o).fluent, 0);
+  return `<section class="home2">
+    <div class="sky" aria-hidden="true"><img src="art/home-hero.webp" alt="" width="1920" height="815"></div>
+
+    <div class="h-r1">
+      <div class="hcard hero">
+        <button class="buddy" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${av(k.avatar, 150, '')}</button>
+        <div class="hero-tx">
+          <span class="hi">${greet()},</span>
+          <b class="hname">${esc(k.name)}</b>
+          <p class="bubble2">“${line}”</p>
         </div>
       </div>
-      <button class="card rank-card" data-act="nav" data-arg="me">
-        <span class="rank-badge" aria-hidden="true">${rk.i + 1}</span>
-        <span><span class="kicker">Your rank</span><b class="rank-n">${esc(rk.n)}</b>
-        <span class="bar"><i style="width:${rk.pct}%"></i></span>
-        <span class="muted small">${rk.next ? `${rk.next.xp - k.xp} more right answers to ${esc(rk.next.n)}` : 'The top of the ladder.'}</span></span>
-      </button>
-    </div>
-
-    <div class="home-r2">
-      ${next ? `<button class="card next-stop" data-act="openStop" data-arg="${next.id}" style="--wt:${w.tint};--wi:${w.ink}">
-        <span class="kicker">Next on your Atlas · ${esc(w.name)}</span>
-        <b class="ns-t">${esc(next.title)}</b>
-        <span class="ns-hook">${esc(next.hook)}</span>
-        <span class="ns-go">Open this stop →</span>
-      </button>` : at.allDone ? `<div class="card next-stop" style="--wt:#FFF3D6;--wi:#8A5B00"><span class="kicker">The Atlas</span><b class="ns-t">Every stop passed.</b><span class="ns-hook">Go back for the third star on any stop — fast and fearless.</span></div>`
-        : `<button class="card next-stop" data-act="openCheck" data-arg="${at.node.world}" style="--wt:${w.tint};--wi:${w.ink}"><span class="kicker">Checkpoint · ${esc(w.name)}</span><b class="ns-t">Prove the ${esc(w.short)}</b><span class="ns-hook">A mixed round from every stop in this world. Pass it to open the next.</span><span class="ns-go">Take the checkpoint →</span></button>`}
-      <div class="tiles">
-        <button class="tile" data-act="startFacts" data-arg="${k.prefs.op}">
-          <span class="tile-i">⚡</span><b>Today's facts</b><span>${OP_NAME[k.prefs.op]} · ${t.fluent} fluent${t.trap ? ` · ${t.trap} trap${t.trap > 1 ? 's' : ''}` : ''}</span></button>
-        <button class="tile" data-act="daily">
-          <span class="tile-i">🎯</span><b>Today's puzzle</b><span>${puzzleDone ? 'Solved — back tomorrow' : 'Same puzzle in every house'}</span></button>
-        <button class="tile" data-act="nav" data-arg="contest">
-          <span class="tile-i">🏆</span><b>Mock contest</b><span>${k.contest.best ? `Best: ${ordinal(k.contest.best)} of 11` : 'Ten rivals are waiting'}</span></button>
-        <button class="tile" data-act="nav" data-arg="puzzles">
-          <span class="tile-i">🧩</span><b>Puzzle Room</b><span>Cube nets, sudoku, patterns, balance scales</span></button>
+      <div class="hcard today">
+        ${ring(parts)}
+        <div class="today-t">
+          <b class="ct">Today’s ring</b>
+          <ul class="legend2">${parts.map((p) => `<li><i style="background:${p.col}"></i>${p.n}<b class="mono">${Math.min(p.v, p.goal)}/${p.goal}</b></li>`).join('')}</ul>
+          <p class="muted small">Nothing expires. A day off costs nothing.</p>
+        </div>
+        <button class="today-foot" data-act="startFacts" data-arg="${k.prefs.op}"><span><span class="kick">Start with</span> Twenty facts</span><span>Go →</span></button>
+      </div>
+      <div class="hcard nod2">
+        <span class="kick gold">Number of the day</span>
+        <div class="nod-row"><span class="nod-ico" aria-hidden="true">#</span><b class="nod-n mono">${nod.n}</b></div>
+        <ul>${nod.facts.map((f) => `<li>${f}</li>`).join('')}</ul>
       </div>
     </div>
 
-    <div class="home-r3">
-      <div class="card nod">
-        <p class="kicker">Number of the day</p>
-        <div class="nod-row"><b class="nod-n mono">${nod.n}</b><ul>${nod.facts.map((f) => `<li>${f}</li>`).join('')}</ul></div>
+    <div class="h-r2">
+      ${next ? `<button class="journey" data-act="openStop" data-arg="${next.id}">
+        <span class="jb" style="background-image:url(art/w-${w.id}.webp)"><span class="jchip">${w.glyph}</span><span class="jtag">Part ${w.n} · ${esc(w.short)}</span></span>
+        <span class="jt"><span class="kick">Next on your Atlas</span><b>${esc(next.title)}</b><span class="jh">${esc(next.hook)}</span>
+        <span class="jgo"><span class="btn primary">Start</span><span class="meter"><i style="width:${Math.round(100 * at.stars / at.maxStars)}%"></i></span></span></span></button>`
+      : `<button class="journey" data-act="${at.allDone ? 'nav' : 'openCheck'}" data-arg="${at.allDone ? 'atlas' : at.node.world}">
+        <span class="jb" style="background-image:url(art/w-${w.id}.webp)"><span class="jchip">${w.glyph}</span><span class="jtag">${at.allDone ? 'Every stop passed' : 'Checkpoint'}</span></span>
+        <span class="jt"><span class="kick">${at.allDone ? 'The Atlas' : 'Checkpoint · ' + esc(w.name)}</span><b>${at.allDone ? 'Go back for three stars' : 'Prove the ' + esc(w.short)}</b><span class="jh">${at.allDone ? 'Fast and fearless on every stop.' : 'A mixed round from every stop here. Pass it to open the next place.'}</span>
+        <span class="jgo"><span class="btn primary">${at.allDone ? 'Open the Atlas' : 'Take it'}</span></span></span></button>`}
+      <button class="journey" data-act="nav" data-arg="puzzles">
+        <span class="jb tower" style="background-image:url(art/q-tower.webp)"><span class="jchip">🧩</span><span class="jtag">Floor ${Math.min(12, floors + 1)} of 12</span></span>
+        <span class="jt"><span class="kick">The Puzzle Tower</span><b>${floors ? `${floors} floor${floors > 1 ? 's' : ''} cleared` : 'Climb the first floor'}</b><span class="jh">Nets and cube stacks, magic squares, patterns, scales — every floor mixes them.</span>
+        <span class="jgo"><span class="btn">Climb</span><span class="meter"><i style="width:${Math.round(100 * floors / 12)}%"></i></span></span></span></button>
+    </div>
+
+    <div class="h-r3">
+      <button class="tile2" data-act="startFacts" data-arg="${k.prefs.op}"><span class="ti" style="--c:#2D5BD8">⚡</span><span><span class="kick">Facts</span><b>${OP_NAME[k.prefs.op]}</b><span class="muted small">${t.fluent} fluent${t.trap ? ` · ${t.trap} to fix` : ''}</span></span></button>
+      <button class="tile2" data-act="daily"><span class="ti" style="--c:#E0673A">🎯</span><span><span class="kick">Today’s puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span class="muted small">Same puzzle in every house</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="contest"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Mock contest</span><b>${k.contest.best ? `Best: ${ordinal(k.contest.best)}` : 'Ten rivals'}</b><span class="muted small">One question each, every round</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="stories"><span class="ti" style="--c:#178A4C">📖</span><span><span class="kick">Story shelf</span><b>${Object.keys(k.stories || {}).length} of 27 read</b><span class="muted small">Every trick starts as a story</span></span></button>
+    </div>
+
+    <div class="h-r4">
+      <div class="hcard tipcard">
+        ${av('aryabhatta', 64, 'Aryabhata')}
+        <div><span class="kick gold">Trick of the day</span>${trickOfDay(k)}</div>
       </div>
-      <button class="card goals-card" data-act="nav" data-arg="goals">
-        <p class="kicker">What you’re learning</p>
-        <b>${summary(k).met} of ${summary(k).total} goals reached</b>
-        <span class="muted small">Facts · methods · knowing why · number sense · problem solving · contests</span>
-        <span class="ns-go">See your goals →</span>
+      <button class="hcard yatra" data-act="nav" data-arg="goals">
+        <span class="kick">Your progress · ${sm.met} of ${sm.total} goals reached</span>
+        <span class="ycells">
+          <span class="yc"><b>${rk.i + 1}</b><span>rank · ${esc(rk.n)}<br>${rk.next ? `${rk.next.xp - k.xp} answers to ${esc(rk.next.n)}` : 'the top'}</span></span>
+          <span class="yc"><b>${stars}</b><span>Atlas stars<br>of ${at.maxStars}</span></span>
+          <span class="yc"><b>${fluent}</b><span>facts fluent<br>still fast after a week</span></span>
+          <span class="yc"><b>${floors}</b><span>tower floors<br>of 12 cleared</span></span>
+        </span>
+        <span class="jgo2">See what you’re learning →</span>
       </button>
-      <div class="card arya">
-        ${av('aryabhatta', 56, 'Aryabhata')}
-        <div><p class="kicker">From the Atlas</p>${trickOfDay(k)}</div>
-      </div>
     </div>
   </section>`;
 }

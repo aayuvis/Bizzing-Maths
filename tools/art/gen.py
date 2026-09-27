@@ -84,9 +84,21 @@ SCENE = {
     's-room':     "A sunny room with a floor being laid with square tiles in a neat grid, a stack of spare tiles.",
 }
 
+TOWER = ("ONE single tall whimsical storybook tower, exactly one tower and no second building of the same kind on a green hill at golden hour, seen from a little distance: twelve "
+         "storeys stacked like different puzzle pieces — some with round windows, some with square ones, a spiral "
+         "staircase winding up the outside, little balconies, a glass observatory dome at the very top, banners without "
+         "writing, clouds drifting past the upper floors, a path leading to its door. Portrait-feeling composition "
+         "centred in a wide frame, with sky and hills on both sides.")
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')
+HERO = ("A wide, joyful storybook panorama for the top of a children's maths app home screen: a sunny morning sky "
+        "with soft clouds, gentle hills, and floating above them small playful shapes — paper cubes, spheres, "
+        "pyramids, abacus beads, a kite shaped like a triangle — casting soft shadows. Far off, a lighthouse, a "
+        "windmill and a little observatory dome on the hills. Bright, warm, optimistic. The left half is calmer sky, "
+        "busier detail toward the right and along the bottom.")
+JOBS['home-hero'] = (HERO + ' ' + STYLE + ' Very wide banner.', '21:9')
+JOBS['q-tower'] = (TOWER + ' ' + STYLE + ' Wide landscape frame.', '16:9')
 for k, v in SCENE.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
 
 

@@ -279,21 +279,175 @@ function scaleSVG(e, sh) {
   return `<div class="scale"><div class="pan left">${items.map((s) => `<span style="color:${s.c}">${s.s}</span>`).join('')}</div><div class="beam"></div><div class="pan right"><b class="mono">${e.total}</b></div></div>`;
 }
 
-/* ================================================================ the room */
+/* ================================================================ more space */
 
-export const ROOM = [
-  { id: 'nets', name: 'Cube nets', blurb: 'Which flat shape folds into a cube — and which faces end up opposite?', glyph: '🧊', skill: 'spatial' },
-  { id: 'sudoku', name: 'Sudoku', blurb: 'Every row, column and box holds each number once. Pure logic, no guessing.', glyph: '🔢', skill: 'logic' },
-  { id: 'patterns', name: 'Patterns', blurb: 'Find the rule, then say what comes next.', glyph: '🌀', skill: 'patterns' },
-  { id: 'scales', name: 'Balance scales', blurb: 'Hidden weights. Use one scale to crack the next.', glyph: '⚖️', skill: 'algebra' },
+/* Cube stacks: count every cube. The stack only ever steps DOWN towards the
+   viewer, so every column's top is in sight and no cube can hide behind
+   another — the answer is fixed by the drawing, not by a guess about the back. */
+export function stackQuestion(lv = 1, r = Math.random) {
+  const W = lv === 1 ? 2 : 3, D = lv === 3 ? 3 : 2, maxH = lv === 1 ? 2 : 3;
+  const h = [];
+  for (let x = 0; x < W; x++) { h.push([]); for (let y = 0; y < D; y++) {
+    const cap = Math.min(x ? h[x - 1][y] : maxH, y ? h[x][y - 1] : maxH);
+    h[x].push(int(x === 0 && y === 0 ? 1 : 0, cap, r));
+  } }
+  const total = h.flat().reduce((a, b) => a + b, 0);
+  if (total < 3) return stackQuestion(lv, r);
+  return { kind: 'stack', text: 'How many cubes are in this stack?', ans: total, heights: h,
+    html: stackSVG(h), explain: `Count column by column, top to bottom: ${h.flat().filter(Boolean).join(' + ')} = ${total}. Every cube is resting on the floor or on another cube.` };
+}
+
+export function stackSVG(h) {
+  const s = 26, c = 0.866;
+  const P = (x, y, z) => [(x - y) * s * c, (x + y) * s * 0.5 - z * s];
+  const polys = [];
+  const cells = [];
+  for (let x = 0; x < h.length; x++) for (let y = 0; y < h[0].length; y++) for (let z = 0; z < h[x][y]; z++) cells.push([x, y, z]);
+  cells.sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[2] - b[2]);
+  const pts = (arr) => arr.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ');
+  for (const [x, y, z] of cells) {
+    polys.push(`<polygon class="cb-t" points="${pts([P(x, y, z + 1), P(x + 1, y, z + 1), P(x + 1, y + 1, z + 1), P(x, y + 1, z + 1)])}"/>`);
+    polys.push(`<polygon class="cb-r" points="${pts([P(x + 1, y, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + 1), P(x + 1, y, z + 1)])}"/>`);
+    polys.push(`<polygon class="cb-l" points="${pts([P(x, y + 1, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + 1), P(x, y + 1, z + 1)])}"/>`);
+  }
+  const all = cells.flatMap(([x, y, z]) => [P(x, y, z + 1), P(x + 1, y + 1, z), P(x + 1, y, z), P(x, y + 1, z), P(x, y, z)]);
+  const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+  const x0 = Math.min(...xs) - 4, y0 = Math.min(...ys) - 4, w = Math.max(...xs) - x0 + 4, hh = Math.max(...ys) - y0 + 4;
+  return `<svg class="stack" viewBox="${x0} ${y0} ${w} ${hh}" width="${w * 1.6}" height="${hh * 1.6}" aria-label="A stack of cubes">${polys.join('')}</svg>`;
+}
+
+/* Mirror and turn: a lopsided shape (it must be CHIRAL — its mirror image can
+   never be reached by turning it — or two options would both be right). */
+function chiralShape(r) {
+  for (;;) {
+    const hx = pick(HEXOMINOES.concat(HEXOMINOES), r);
+    const turns = [0, 1, 2, 3].map((k) => { let x = hx; for (let i = 0; i < k; i++) x = rot(x); return sig(x); });
+    // chiral (no turn reaches its mirror) AND no rotational symmetry (four
+    // different turns) — otherwise two options would be the same picture
+    if (!turns.includes(sig(flip(hx))) && new Set(turns).size === 4) return norm(hx);
+  }
+}
+const turnBy = (cells, k) => { let x = cells; for (let i = 0; i < k; i++) x = rot(x); return norm(x); };
+
+export function mirrorQuestion(lv = 1, r = Math.random) {
+  const base = chiralShape(r);
+  const right = norm(flip(base));
+  const wrong = shuffle([turnBy(base, 1), turnBy(base, 2), turnBy(base, 3)], r).slice(0, lv === 1 ? 2 : 3);
+  const opts = shuffle([right, ...wrong], r);
+  const L = ['A', 'B', 'C', 'D'].slice(0, opts.length);
+  return { kind: 'mirror', text: 'Which one is its reflection in the mirror?', html: `<div class="mirror-q">${gridShapeSVG(base, 'q')}<span class="mirror-line" aria-hidden="true"></span></div>`,
+    choices: L, ans: L[opts.indexOf(right)], choiceHtml: opts.map((o) => gridShapeSVG(o)),
+    explain: 'A mirror swaps left and right but keeps top and bottom. The other shapes are the same shape TURNED — and turning can never make a mirror image of a lopsided shape.', opts, base };
+}
+
+export function rotateQuestion(lv = 1, r = Math.random) {
+  const base = chiralShape(r);
+  const right = turnBy(base, int(1, 3, r));
+  const wrong = shuffle([0, 1, 2, 3].map((k) => turnBy(flip(base), k)), r).filter((o) => sig(o) !== sig(right)).slice(0, lv === 1 ? 2 : 3);
+  const opts = shuffle([right, ...wrong], r);
+  const L = ['A', 'B', 'C', 'D'].slice(0, opts.length);
+  return { kind: 'rotate', text: 'Which one is the same shape, just turned round?', html: gridShapeSVG(base, 'q'),
+    choices: L, ans: L[opts.indexOf(right)], choiceHtml: opts.map((o) => gridShapeSVG(o)),
+    explain: 'Turn it in your head a quarter at a time. The others are its mirror image — you would have to lift it off the page and flip it over to get those.', opts, base };
+}
+
+export function gridShapeSVG(cells, cls = '') {
+  const u = 22, W = (Math.max(...cells.map((c) => c[1])) + 1) * u, H = (Math.max(...cells.map((c) => c[0])) + 1) * u;
+  return `<svg class="gshape ${cls}" viewBox="-2 -2 ${W + 4} ${H + 4}" width="${W + 4}" height="${H + 4}" aria-hidden="true">${cells.map(([rr, c], i) =>
+    `<rect x="${c * u}" y="${rr * u}" width="${u}" height="${u}" rx="3" class="${i === 0 ? 'gs gs0' : 'gs'}"/>`).join('')}</svg>`;
+}
+
+/* ================================================================ counting */
+
+export const squaresIn = (n, m) => { let t = 0; for (let k = 1; k <= Math.min(n, m); k++) t += (n - k + 1) * (m - k + 1); return t; };
+
+export function squaresQuestion(lv = 1, r = Math.random) {
+  const sizes = lv === 1 ? [[2, 2], [2, 3]] : lv === 2 ? [[3, 3], [2, 4], [3, 4]] : [[4, 4], [3, 5], [4, 5]];
+  const [n, m] = pick(sizes, r);
+  const ans = squaresIn(n, m);
+  const parts = []; for (let k = 1; k <= Math.min(n, m); k++) parts.push(`${(n - k + 1) * (m - k + 1)} of size ${k}`);
+  const u = 30;
+  const svg = `<svg class="sqgrid" viewBox="-2 -2 ${m * u + 4} ${n * u + 4}" width="${m * u + 4}" height="${n * u + 4}" aria-label="A ${n} by ${m} grid">${Array.from({ length: n * m }, (_, i) => `<rect x="${(i % m) * u}" y="${Math.floor(i / m) * u}" width="${u}" height="${u}"/>`).join('')}</svg>`;
+  return { kind: 'squares', text: 'How many squares can you find — of every size?', html: svg, ans,
+    explain: `Not just the small ones: ${parts.join(', ')}. Altogether ${ans}.` };
+}
+
+/* ================================================================ magic squares */
+
+const LOSHU = [2, 7, 6, 9, 5, 1, 4, 3, 8];
+export function magicQuestion(lv = 1, r = Math.random) {
+  let g = LOSHU.slice();
+  for (let t = int(0, 3, r); t > 0; t--) g = [g[6], g[3], g[0], g[7], g[4], g[1], g[8], g[5], g[2]];   // turn
+  if (r() < 0.5) g = [g[2], g[1], g[0], g[5], g[4], g[3], g[8], g[7], g[6]];                      // mirror
+  const mul = lv === 3 ? int(2, 5, r) : 1, add = lv === 1 ? 0 : int(1, 20, r);
+  g = g.map((v) => v * mul + add);
+  const sum = g[0] + g[1] + g[2];
+  const blanks = shuffle([...Array(9).keys()], r).slice(0, lv === 1 ? 1 : lv === 2 ? 2 : 3);
+  const ask = blanks[0];
+  const cells = g.map((v, i) => (i === ask ? '<b class="ask">?</b>' : blanks.includes(i) ? '' : v));
+  return { kind: 'magic', text: `Every row, column and diagonal adds up to ${sum}. What is the ?`, ans: g[ask], sum, grid: g, blanks,
+    html: `<div class="magic">${cells.map((c) => `<span>${c}</span>`).join('')}</div>`,
+    explain: `Find a line with only the ? missing, and take the other two from ${sum}. The full square: ${g.slice(0, 3).join(' ')} / ${g.slice(3, 6).join(' ')} / ${g.slice(6).join(' ')}.` };
+}
+/* the ? must always sit on some line whose other two numbers are showing */
+export function magicSolvable(q) {
+  const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  const known = new Set([...Array(9).keys()].filter((i) => !q.blanks.includes(i)));
+  let grew = true;
+  while (grew) { grew = false; for (const l of lines) { const miss = l.filter((i) => !known.has(i)); if (miss.length === 1) { known.add(miss[0]); grew = true; } } }
+  return known.has(q.blanks[0]);
+}
+
+/* ================================================================ the tower */
+
+/* Five families of puzzle. Cube nets is not a game of its own: it is one of
+   five kinds of Shapes & Space puzzle, and every floor of the tower mixes
+   families, because a contest paper does. */
+export const FAMILIES = [
+  { id: 'space', name: 'Shapes & Space', glyph: '🧊', blurb: 'Cube nets, opposite faces, stacks of cubes, mirrors and turns.',
+    make: (lv, r) => pick([netQuestion, netQuestion, stackQuestion, mirrorQuestion, rotateQuestion], r)(lv, r) },
+  { id: 'logic', name: 'Logic', glyph: '🔢', blurb: 'Magic squares here; sudoku guards every fourth floor.',
+    make: (lv, r) => { for (;;) { const q = magicQuestion(lv, r); if (magicSolvable(q)) return q; } } },
+  { id: 'patterns', name: 'Patterns', glyph: '🌀', blurb: 'Find the rule, say what comes next.', make: (lv, r) => patternQuestion(lv, r) },
+  { id: 'balance', name: 'Balance', glyph: '⚖️', blurb: 'Hidden weights on scales — algebra before it has a name.', make: (lv, r) => scalesQuestion(lv, r) },
+  { id: 'counting', name: 'Counting', glyph: '🔍', blurb: 'How many squares are really in that grid?', make: (lv, r) => squaresQuestion(lv, r) },
 ];
+export const famOf = (id) => FAMILIES.find((f) => f.id === id);
+
+export const FLOORS = 12;
+export const isBoss = (f) => f % 4 === 0;          // floors 4, 8, 12: a sudoku guards the stair
+export const FLOOR_PASS = 4;                         // of 6
+
+/* Level for a floor: the tower gets harder as you climb, starting lower for
+   the youngest and higher for the oldest. */
+export function floorLevel(floor, band) {
+  const off = band === '6-7' ? -1 : band === '11-14' ? 1 : 0;
+  return Math.max(1, Math.min(3, Math.ceil(floor / 4) + off));
+}
+
+/* Six puzzles for a floor: every family at least once, never two of the same
+   kind back to back. */
+export function floorSet(floor, band, r = Math.random) {
+  const lv = floorLevel(floor, band);
+  const fams = shuffle(FAMILIES.map((f) => f.id), r);
+  fams.push(pick(['space', 'patterns', 'balance'], r));
+  const out = [];
+  for (const fid of fams) {
+    let q, tries = 0;
+    do { q = famOf(fid).make(lv, r); } while (tries++ < 10 && out.length && out.at(-1).kind === q.kind);
+    out.push({ ...q, puzzle: fid });
+  }
+  return out;
+}
+
+export function familySet(fid, lv, n = 6, r = Math.random) {
+  const out = [], seen = new Set();
+  for (let i = 0; out.length < n && i < n * 12; i++) {
+    const q = famOf(fid).make(lv, r); const k = q.text + (q.html || '');
+    if (!seen.has(k)) { seen.add(k); out.push({ ...q, puzzle: fid }); }
+  }
+  return out;
+}
 
 export const bandLevel = (band) => ({ '6-7': 1, '8-10': 2, '11-14': 3 }[band] || 1);
 export const sudokuSize = (band, lv) => (band === '6-7' ? 4 : band === '8-10' ? (lv >= 3 ? 9 : 6) : (lv === 1 ? 6 : 9));
-
-export function puzzleSet(id, lv, n = 6) {
-  const f = id === 'nets' ? netQuestion : id === 'patterns' ? patternQuestion : scalesQuestion;
-  const out = []; const seen = new Set();
-  for (let i = 0; out.length < n && i < n * 10; i++) { const q = f(lv); if (!seen.has(q.text + (q.html || ''))) { seen.add(q.text + (q.html || '')); out.push({ ...q, puzzle: id }); } }
-  return out;
-}

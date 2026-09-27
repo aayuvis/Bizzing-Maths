@@ -17,7 +17,7 @@ import { esc, cls } from './ui.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn } from './tricks.js';
 import { kid, ROUTE, isOpen, frontier, nodeDone } from './model.js';
 import { STORIES } from './stories.js';
-import { ROOM, bandLevel, sudokuSize } from './puzzles.js';
+import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
 import { av, starRow, pageHead } from './views.js';
 import { bot } from './contest.js';
@@ -162,22 +162,53 @@ export function viewStories() {
   </section>`;
 }
 
-/* ------------------------------------------------------------- puzzles */
+/* ------------------------------------------------------------- the puzzle tower */
 
-export function viewPuzzles() {
-  const k = kid(R.h), lv = bandLevel(k.band);
-  const p = (id) => (k.puzzles && k.puzzles[id]) || { right: 0, solved: {} };
+/* One game, twelve floors. Every floor mixes the five families — a contest
+   paper does not hand you six cube nets in a row — and every fourth floor is
+   guarded by a sudoku. Floor pins sit on the painted tower, MEASURED against
+   q-tower.webp in its own 0–100 space. */
+export const TOWER_Y = [84, 79, 74, 69, 64, 59, 54, 49, 44, 39, 34, 27];
+export const towerOpen = (k, f, tester) => tester || f === 1 || !!((k.quest || {})[f - 1] || {}).passed;
+
+export function viewTower() {
+  const k = kid(R.h), q = k.quest || {}, tester = R.h.parent.tester;
+  const top = Array.from({ length: FLOORS }, (_, i) => i + 1).filter((f) => towerOpen(k, f, tester)).pop();
+  const sel = R.ui.floor && towerOpen(k, R.ui.floor, tester) ? R.ui.floor : top;
+  const fam = (id) => FAMILIES.find((f) => f.id === id);
+  const passed = Object.values(q).filter((x) => x.passed).length;
   return `<section>
-    ${pageHead('The Puzzle Room', 'Thinking, not just calculating — the kind of maths contests are made of. Every puzzle is checked by the app before you see it.')}
-    <div class="room">${ROOM.map((r) => {
-      const rec = p(r.id);
-      const count = r.id === 'sudoku' ? Object.values(rec.solved || {}).reduce((a, b) => a + b, 0) : rec.right;
-      return `<div class="pz-card pz-${r.id}">
-        <span class="pz-g" aria-hidden="true">${r.glyph}</span>
-        <div><h2>${esc(r.name)}</h2><p>${esc(r.blurb)}</p><p class="muted small">${count ? `${count} ${r.id === 'sudoku' ? 'solved' : 'right'} so far` : 'Not tried yet'}</p></div>
-        <div class="seg small" role="group" aria-label="Level">${[1, 2, 3].map((l) => `<button class="${l === lv ? 'on' : ''}" data-act="startPuzzle" data-arg="${r.id}:${l}">${['', 'Easy', 'Medium', 'Hard'][l]}${r.id === 'sudoku' ? ` <span class="mono">${sudokuSize(k.band, l)}×${sudokuSize(k.band, l)}</span>` : ''}</button>`).join('')}</div>
-      </div>`;
-    }).join('')}</div>
+    ${pageHead('The Puzzle Tower', 'Twelve floors of thinking puzzles — the kind contests are made of. Clear a floor to open the stairs to the next.', '', `<span class="chip gold">🏁 ${passed} floor${passed === 1 ? '' : 's'} cleared</span>`)}
+    <div class="tower-wrap">
+      <div class="tower-board">
+        <img src="art/q-tower.webp" alt="A tall storybook tower of twelve floors on a green hill." width="1920" height="1072">
+        ${Array.from({ length: FLOORS }, (_, i) => {
+          const f = i + 1, open = towerOpen(k, f, tester), r = q[f] || {};
+          return `<button class="fpin${open ? '' : ' shut'}${r.passed ? ' done' : ''}${f === sel ? ' sel' : ''}${isBoss(f) ? ' boss' : ''}" style="top:${TOWER_Y[i]}%;left:${i % 2 ? 57.5 : 42.5}%" data-act="${open ? 'pickFloor' : 'shutFloor'}" data-arg="${f}" aria-label="Floor ${f}${isBoss(f) ? ', sudoku' : ''}${open ? '' : ', locked'}">
+            ${isBoss(f) ? '🔢' : open ? f : '🔒'}${r.stars ? `<em>${'★'.repeat(r.stars)}</em>` : ''}</button>`;
+        }).join('')}
+      </div>
+      <div class="card floor-card">
+        <p class="kicker">Floor ${sel} of ${FLOORS} · ${['', 'Easy', 'Medium', 'Hard'][floorLevel(sel, k.band)]}</p>
+        ${isBoss(sel)
+          ? `<h2>The sudoku door</h2><p>Every fourth floor is guarded by a sudoku — ${sudokuSize(k.band, floorLevel(sel, k.band))} × ${sudokuSize(k.band, floorLevel(sel, k.band))}. Solve it with two hints or fewer to open the stairs.</p>`
+          : `<h2>Six puzzles, all kinds</h2><p>One from each family and one more. Get ${FLOOR_PASS} of 6 right to open the stairs; all 6 for three stars.</p>
+             <div class="fam-row">${FAMILIES.map((f) => `<span class="fam-chip" title="${esc(f.blurb)}">${f.glyph} ${esc(f.name)}</span>`).join('')}</div>`}
+        ${(q[sel] || {}).stars ? `<p>${starRow(q[sel].stars)} ${q[sel].passed ? 'Cleared' : ''}</p>` : ''}
+        <button class="btn primary big" data-act="climb" data-arg="${sel}">${(q[sel] || {}).passed ? 'Play this floor again' : `Climb to floor ${sel}`}</button>
+      </div>
+    </div>
+    <h2 class="sec-h">Practise one family</h2>
+    <p class="muted">Warm up on one kind before the tower mixes them.</p>
+    <div class="families">${FAMILIES.map((f) => {
+      const rec = (k.puzzles && k.puzzles[f.id]) || { right: 0 };
+      return `<div class="pz-card pz-${f.id}"><span class="pz-g" aria-hidden="true">${f.glyph}</span>
+        <div><h3>${esc(f.name)}</h3><p>${esc(f.blurb)}</p><p class="muted small">${rec.right ? `${rec.right} right so far` : 'Not tried yet'}</p></div>
+        <div class="seg small">${[1, 2, 3].map((l) => `<button class="${l === bandLevel(k.band) ? 'on' : ''}" data-act="practise" data-arg="${f.id}:${l}">${['', 'Easy', 'Medium', 'Hard'][l]}</button>`).join('')}</div></div>`;
+    }).join('')}
+      <div class="pz-card pz-logic"><span class="pz-g" aria-hidden="true">🧩</span><div><h3>Sudoku on its own</h3><p>Every row, column and box holds each number once. Pure logic, no guessing.</p></div>
+        <div class="seg small">${[1, 2, 3].map((l) => `<button class="${l === bandLevel(k.band) ? 'on' : ''}" data-act="sudokuPlay" data-arg="${l}">${['', 'Easy', 'Medium', 'Hard'][l]} <span class="mono">${sudokuSize(k.band, l)}×${sudokuSize(k.band, l)}</span></button>`).join('')}</div></div>
+    </div>
     <p class="muted small center-t">Keys: <kbd>1</kbd>–<kbd>4</kbd> to choose · digits and <kbd>Enter</kbd> to answer · in sudoku, arrows to move and digits to fill.</p>
   </section>`;
 }

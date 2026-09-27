@@ -487,7 +487,7 @@ export function sudoku(kid, n, lv, { onEnd }) {
   function win() {
     done = true; draw(); sfx.level();
     const stars = hints === 0 ? 3 : hints <= 2 ? 2 : 1;
-    onEnd(true, stars);
+    onEnd(true, stars, hints);
     setTimeout(() => resultCard(f, { title: 'Solved!', lines: [hints ? `With ${hints} hint${hints > 1 ? 's' : ''}. Try the next one with none.` : 'No hints at all — pure logic.'], stars,
       again: () => { g.quit(); sudoku(kid, n, lv, { onEnd }); }, done: () => g.quit() }), 700);
   }

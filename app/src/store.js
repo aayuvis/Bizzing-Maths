@@ -16,13 +16,25 @@
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
   0: (h) => { h.v = 1; h.kids = h.kids || []; h.parent = h.parent || { pin: null }; return h; },
   // v2: stories read and puzzles solved, per child
   1: (h) => { h.v = 2; for (const k of h.kids) { k.stories = k.stories || {}; k.puzzles = k.puzzles || {}; } return h; },
+  // v3: the Puzzle Tower. Puzzle records move from rooms to families (cube nets
+  // is one kind of Shapes & Space puzzle, balance scales are Balance).
+  2: (h) => {
+    h.v = 3;
+    for (const k of h.kids) {
+      k.quest = k.quest || {};
+      const p = k.puzzles || (k.puzzles = {});
+      if (p.nets) { p.space = p.nets; delete p.nets; }
+      if (p.scales) { p.balance = p.scales; delete p.scales; }
+    }
+    return h;
+  },
 };
 
 export function migrate(h) {

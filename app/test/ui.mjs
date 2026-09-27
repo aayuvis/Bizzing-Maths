@@ -25,6 +25,7 @@ const errors = [];
 async function run(vp, tag) {
   const page = await browser.newPage({ viewport: vp, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => errors.push(`${tag}: ${e.message}`));
+  page.on('response', (r) => { if (r.status() === 404) errors.push(`${tag} 404: ${r.url()}`); });
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${tag} console: ${m.text()}`); });
   const shot = (n) => page.screenshot({ path: `${SHOTS}/${tag}-${n}.png`, fullPage: false });
   const R = () => page.evaluate(() => { const r = window.__bzm.R; return { nav: r.ui.nav, run: r.run && { kind: r.run.kind, i: r.run.i, n: r.run.items.length, over: r.run.over, fb: r.run.fb, q: r.run.items[r.run.i] } }; });
@@ -130,25 +131,29 @@ async function run(vp, tag) {
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(350); await shot('11c-story2');
   // the puzzle room: nets, patterns, scales by keyboard; a sudoku by hints
-  await nav('puzzles'); await page.waitForSelector('.room');
-  await shot('22-puzzles');
-  for (const id of ['nets', 'patterns', 'scales']) {
-    await page.click(`[data-act=startPuzzle][data-arg="${id}:2"]`);
+  await nav('puzzles'); await page.waitForSelector('.tower-board');
+  await page.waitForTimeout(300); await shot('22-tower');
+  const answerAll = async (tag) => {
     for (let i = 0; i < 6; i++) {
       const s = await R(); if (!s.run || s.run.over) break;
-      if (s.run.q.choices) await page.keyboard.press(String(s.run.q.choices.indexOf(s.run.q.ans) + 1)); else { await typeAns(s.run.q.ans); }
+      if (s.run.q.choices) await page.keyboard.press(String(s.run.q.choices.indexOf(s.run.q.ans) + 1)); else await typeAns(s.run.q.ans);
       await page.waitForTimeout(120);
-      if (i === 0) await shot(`23-${id}`);
+      if (tag && i < 6) await shot(`23-${tag}-${s.run.q.kind}`);
       await page.keyboard.press('Enter'); await page.waitForTimeout(120);
     }
     await page.waitForTimeout(200);
-    ok((await R()).run.over, `${id}: six puzzles finish`);
-    await page.click('[data-act=endRun]');
-    await nav('puzzles');
-  }
+  };
+  await page.click('.fpin[data-arg="1"]'); await page.click('[data-act=climb][data-arg="1"]');
+  await answerAll('floor');
+  ok((await R()).run.over, 'floor 1 finishes');
+  ok(await page.evaluate(() => !!(window.__bzm.R.h.kids[0].quest[1] || {}).passed), 'six right clears floor 1');
+  await shot('23-floor-end');
+  await page.click('[data-act=endRun]'); await nav('puzzles');
+  await page.click('[data-act=practise][data-arg="space:2"]');
+  await answerAll(''); await page.click('[data-act=endRun]'); await nav('puzzles');
   const pzr = await page.evaluate(() => window.__bzm.R.h.kids[0].puzzles);
-  ok(pzr.nets.right === 6 && pzr.patterns.right === 6 && pzr.scales.right === 6, 'right puzzle answers are recorded');
-  await page.click('[data-act=startPuzzle][data-arg="sudoku:1"]'); await page.waitForSelector('.sdk');
+  ok(pzr.space && pzr.space.right >= 6, 'Shapes & Space answers are recorded under their family');
+  await page.click('[data-act=sudokuPlay][data-arg="1"]'); await page.waitForSelector('.sdk');
   await shot('24-sudoku');
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('1');
   for (let i = 0; i < 90 && await page.locator('.sdk').count() && !(await page.locator('.play-end').count()); i++) { await page.keyboard.press('h'); await page.waitForTimeout(15); }
@@ -192,7 +197,7 @@ async function run(vp, tag) {
   await shot('19-line');
   await page.keyboard.press('Escape');
   // home + grown-ups
-  await nav('home'); await page.waitForSelector('.home');
+  await nav('home'); await page.waitForSelector('.home2');
   await shot('20-home');
   await page.click('.tool[data-arg=grownups]');
   for (const k of '1234') await page.keyboard.press(k);

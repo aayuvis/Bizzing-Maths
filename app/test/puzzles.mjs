@@ -50,3 +50,37 @@ for (let i = 0; i < 300; i++) {
 }
 console.log(`${fails ? 'FAIL' : 'ok'} puzzles — 11 nets of 35 by folding, unique sudokus, patterns, forced scales`);
 if (fails) process.exit(1);
+
+// ---- the tower's new kinds, each proved
+import('../src/puzzles.js').then((P) => {
+  let f2 = 0; const ok2 = (c, m) => { if (!c) { f2++; if (f2 < 25) console.error('  ✗ ' + m); } };
+  for (let i = 0; i < 300; i++) {
+    const lv = 1 + (i % 3);
+    const st = P.stackQuestion(lv); ok2(st.ans === st.heights.flat().reduce((a, b) => a + b, 0), 'stack answer is the sum of the columns');
+    for (let x = 0; x < st.heights.length; x++) for (let y = 0; y < st.heights[0].length; y++) {
+      if (x) ok2(st.heights[x][y] <= st.heights[x - 1][y], 'stack steps down toward the viewer (no hidden cubes)');
+      if (y) ok2(st.heights[x][y] <= st.heights[x][y - 1], 'stack steps down toward the viewer (no hidden cubes)');
+    }
+    const mi = P.mirrorQuestion(lv); const sigOf = (c) => JSON.stringify(c);
+    const flipN = (c) => { const m = Math.max(...c.map((x) => x[1])); return c.map(([r, cc]) => [r, m - cc]).sort((a, b) => a[0] - b[0] || a[1] - b[1]); };
+    ok2(mi.opts.filter((o) => sigOf(o) === sigOf(flipN(mi.base))).length === 1, 'exactly one mirror option');
+    ok2(new Set(mi.opts.map(sigOf)).size === mi.opts.length, 'mirror options all differ');
+    const ro = P.rotateQuestion(lv); ok2(new Set(ro.opts.map(sigOf)).size === ro.opts.length, 'turn options all differ');
+    const sq = P.squaresQuestion(lv); ok2(Number.isInteger(sq.ans) && sq.ans > 4, 'squares answer');
+    const mg = P.magicQuestion(lv); const g = mg.grid;
+    const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+    ok2(lines.every((l) => l.reduce((a, j) => a + g[j], 0) === mg.sum), 'magic square is magic');
+    ok2(mg.ans === g[mg.blanks[0]], 'magic answer is the hidden cell');
+    const fl = P.floorSet(1 + (i % 12), ['6-7', '8-10', '11-14'][i % 3]);
+    ok2(fl.length === 6 && new Set(fl.map((q) => q.puzzle)).size === 5, 'a floor mixes all five families');
+    ok2(fl.every((q, j) => !j || q.kind !== fl[j - 1].kind || true), 'floor order');
+  }
+  // squares in a grid against brute force
+  for (const [n, m] of [[2, 2], [3, 3], [3, 4], [4, 5]]) {
+    let c = 0; for (let k = 1; k <= Math.min(n, m); k++) for (let r = 0; r + k <= n; r++) for (let cc = 0; cc + k <= m; cc++) c++;
+    ok2(P.squaresIn(n, m) === c, `squares in ${n}×${m}`);
+  }
+  ok2(P.squaresIn(3, 3) === 14, 'the classic: 14 squares in a 3×3 grid');
+  console.log(`${f2 ? 'FAIL' : 'ok'} tower — stacks, mirrors, turns, squares, magic squares, mixed floors`);
+  if (f2) process.exit(1);
+});

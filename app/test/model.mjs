@@ -33,7 +33,8 @@ for (const r of RUNGS) ok(Function(`return ${r.q.text.replace(/×/g, '*').replac
 ok(rankOf(0).n === 'Pebble' && rankOf(RANKS.at(-1).xp).n === 'Aryabhata', 'rank ends');
 tick(a, false); ok(a.xp === 0, 'a wrong answer earns nothing'); tick(a, true, 2); ok(a.xp === 2, 'a right one does');
 // store migration
-const m = migrate({ kids: [{ id: 'x' }] }); ok(m.v === 2 && m.parent && Array.isArray(m.kids) && m.kids[0].stories && m.kids[0].puzzles, 'v0 → v2 walks every step');
+const m = migrate({ kids: [{ id: 'x' }] }); ok(m.v === 3 && m.parent && Array.isArray(m.kids) && m.kids[0].stories && m.kids[0].puzzles && m.kids[0].quest, 'v0 → v3 walks every step');
+const m2 = migrate({ v: 2, kids: [{ puzzles: { nets: { right: 4 }, scales: { right: 2 } } }], parent: {} }); ok(m2.kids[0].puzzles.space.right === 4 && m2.kids[0].puzzles.balance.right === 2 && !m2.kids[0].puzzles.nets, 'v2 → v3 moves puzzle records to families');
 ok(migrate({ v: 99, x: 1 }).v === 99, 'a newer save is never downgraded');
 console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement, ranks, migration`);
 if (fails) process.exit(1);
