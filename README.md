@@ -10,7 +10,7 @@ Part of the Bizzing family with [Bizzing Bee](https://www.bizzingbee.com/),
 
 - **Facts** — adding, taking away, times tables and sharing, ordered by how *tricky* a fact is
   (7 × 8 before 12 × 12), with spaced review so "fluent" means still fast a week later.
-- **The Number Atlas** — three painted islands, 17 worlds and 147 stops covering the whole of maths from 6 to 14 (place value, the four operations, fractions, decimals, percentages, ratio, kinds of number and primes, negative numbers, money and interest, factors, squares and powers, sets and algebra, geometry, measurement, time and money, data and chance), from *Make ten first* to *Vertically and
+- **The Number Atlas** — three painted islands, 18 worlds and 157 stops covering the whole of maths from 6 to 14 (place value, the four operations, fractions, decimals, percentages, ratio, kinds of number and primes, negative numbers, money and interest, Pythagoras and trigonometry, bearings, factors, squares and powers, sets and algebra, geometry, measurement, time and money, data, scatter graphs and chance), from *Make ten first* to *Vertically and
   crosswise*. Every stop: the trick as steps, **why it works** (a picture and the algebra),
   your turn to type every step, then a drill.
 - **The Library** — nine tools a child reaches for: Number Explorer, Show Me the Working, the Times Table Explorer (5 × 5 growing to 20 × 20 on mastery, with a Squares trainer), Shape Studio, Graphing, the Maths Dictionary, the Formula Book, and the Vedic and Chinese maths journeys.

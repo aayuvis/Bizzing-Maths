@@ -48,6 +48,8 @@ for (const t of TRICKS) {
   }
 }
 // band gating must mean something: every world has a stop open to the youngest band that world is for
+// every trig ratio a Lighthouse prompt GIVES must be the true value, rounded as shown
+ok((await import('../src/chapters/lighthouse.js')).RATIOS_ARE_TRUE(), 'lighthouse: a given trig ratio is not the true value');
 for (const w of WORLDS) ok(TRICKS.filter((t) => t.world === w.id).length >= 5, `${w.id} has fewer than five stops`);
 for (const w of WORLDS) for (const f of ['name', 'short', 'blurb', 'glyph', 'tint', 'ink']) ok(w[f], `${w.id}: world missing ${f}`);
 

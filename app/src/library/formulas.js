@@ -633,7 +633,7 @@ export const CARDS = [
       { who: 'comet', say: 'Plus the 4 we started with!', add: { t: '4 + 72', v: 76 } },
       { who: 'samurai', say: 'Seventy-six cups. That is 3n + 1, with n = 25.', add: { t: '3 × 25 + 1', v: 76 } },
     ] } },
-  { id: 'pythagoras', title: 'Pythagoras’ theorem', formula: 'a² + b² = c²', topic: 'Algebra & number', band: '11-14', note: 'For 13–14', stops: ['kinds-of-triangle', 'root-of-square', 'square-up'],
+  { id: 'pythagoras', title: 'Pythagoras’ theorem', formula: 'a² + b² = c²', topic: 'Algebra & number', band: '11-14', note: 'For 13–14', stops: ['pythagoras-side', 'kinds-of-triangle', 'root-of-square', 'square-up'],
     picture: PIC.pythagoras, caption: 'The squares on the two short sides, 9 + 16, fill the square on the longest side, 25.',
     why: ['This card is for 13- and 14-year-olds. In a right-angled triangle, build a square on each side. The two squares on the shorter sides, a² and b², together have exactly the area of the square on the longest side, c².',
       'One way to see it: draw a big square of side a + b and put four copies of the triangle in its corners. Arranged one way, the space left is one tilted square, c². Arranged another way, it is two squares, a² and b². Same big square, same four triangles — so a² + b² = c². It carries the name of Pythagoras; a proof of it is Proposition 47 in Book I of Euclid’s Elements.'],
