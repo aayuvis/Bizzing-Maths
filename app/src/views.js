@@ -42,11 +42,11 @@ export function spoken(t) {
 export const TABS = [
   { k: 'home', n: 'Home', icon: 'home' },
   { k: 'atlas', n: 'Atlas', icon: 'map' },
-  { k: 'facts', n: 'Facts', icon: 'grid' },
+  { k: 'library', n: 'Library', icon: 'book' },
   { k: 'puzzles', n: 'Puzzles', icon: 'puzzle' },
   { k: 'arcade', n: 'Arcade', icon: 'play' },
 ];
-const NAV_OF = { stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'atlas', intro: 'atlas', run: null, me: 'home', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
+const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
 
 export function icon(k) {
   const p = {
@@ -54,6 +54,7 @@ export function icon(k) {
     map: '<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14" class="i2"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5" class="i2"/><rect x="4" y="13" width="7" height="7" rx="1.5" class="i2"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
     play: '<rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4" class="i2"/><circle cx="15.5" cy="11.5" r="1.1"/><circle cx="17.5" cy="13.8" r="1.1"/>',
+    book: '<path d="M4 5.5A2 2 0 0 1 6 4h5v15H6a2 2 0 0 0-2 1.5z"/><path d="M20 5.5A2 2 0 0 0 18 4h-5v15h5a2 2 0 0 1 2 1.5z" class="i2"/>',
     puzzle: '<path d="M4 8h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H4z"/><path d="M12 8h8v12h-4" class="i2"/>',
     trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a3 3 0 0 0 3 4M17 6h2.5a3 3 0 0 1-3 4M12 14v3M8.5 20h7l-1-3h-5z" class="i2"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" class="i2"/>',

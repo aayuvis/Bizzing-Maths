@@ -12,6 +12,7 @@ import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
+import { toolById, SHELF } from './library/index.js';
 import { STORIES } from './stories.js';
 import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize } from './puzzles.js';
 
@@ -25,6 +26,25 @@ const mode = Store.loadDevice('mode', null);
 if (mode) document.documentElement.setAttribute('data-mode', mode);
 
 function save() { Store.saveHousehold(R.h); }
+
+/* ---------- the Library's context: everything a tool may touch, and no more
+   (docs/LIBRARY-CONTRACT.md). ui is per-screen state, data is the child's
+   record for this tool, kept by the Store seam. */
+function libCtx(id) {
+  const k = kid(R.h); R.ui.lib = R.ui.lib || {};
+  const ui = R.ui.lib[id] || (R.ui.lib[id] = {});
+  k.lib = k.lib || {};
+  const data = k.lib[id] || (k.lib[id] = {});
+  return {
+    id, kid: k, band: k.band, ui, data, save, render, toast, sfx, confetti, say,
+    keypad: G.keypad, F,
+    tick: (right, xp = 1) => { tick(k, right, xp); save(); },
+    record: (fact, right, ms) => { F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, ms, k.band); save(); },
+    startRun: (title, items, extra = {}) => startRun('lib', title, items, { ...extra, lib: id }),
+    go: (nav, arg) => go(nav, arg),
+    openStop: (sid) => fire('openStop', sid),
+  };
+}
 
 /* Stars earned today — the gold ring on Home. Kept for a week, never more. */
 function starToday(k, n) {
@@ -79,6 +99,8 @@ function screen() {
     case 'world': return worldOf(R.ui.arg) ? V2.viewWorld(R.ui.arg) : V2.viewAtlasMap();
     case 'stories': return V2.viewStories();
     case 'puzzles': return V2.viewTower();
+    case 'library': return V2.viewLibrary(SHELF);
+    case 'lib': return toolById[R.ui.arg] ? V2.viewTool(toolById[R.ui.arg], libCtx(R.ui.arg)) : V2.viewLibrary(SHELF);
     case 'goals': return V2.viewGoals();
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();
     case 'stop': return V.viewStop(R.ui.arg);
@@ -237,6 +259,12 @@ function finishRun() {
       s.buttons.push('<button class="btn" data-act="nav" data-arg="puzzles">The tower</button>');
     } else s.buttons.push(`<button class="btn primary" data-act="practise" data-arg="${run.fam}:${run.lv}">Six more</button>`);
     if (s.stars >= 2) confetti(30);
+  }
+  if (run.kind === 'lib') {
+    const tool = toolById[run.lib];
+    const r = tool && tool.done ? tool.done(run, libCtx(run.lib)) : null;
+    if (r) { if (r.stars != null) s.stars = r.stars; s.lines.push(...(r.lines || [])); s.buttons.push(...(r.buttons || [])); }
+    else s.lines.push(right === n ? 'Every one.' : 'Try another set — it gets easier every time.');
   }
   if (run.kind === 'place') {
     // count rungs passed before the first pair of misses in a row
@@ -450,6 +478,12 @@ on('sudokuPlay', (l) => {
   const k = kid(R.h), lv = +l || 1, n = sudokuSize(k.band, lv);
   G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => { if (solved) sdkDone(k, n, lv, hints); save(); render(); } });
 });
+on('lib', (a) => {
+  const id = R.ui.arg, tool = toolById[id]; if (!tool) return;
+  const [name, ...rest] = String(a).split('|');
+  tool.act(name, rest.join('|'), libCtx(id)); render();
+});
+on('openTool', (id) => { if (id === 'facts' || id === 'stories') return go(id); go('lib', id); });
 on('goalGo', (how) => {
   const [a, b] = how.split(':');
   if (a === 'facts') { R.ui.factOp = b; return go('facts'); }
@@ -499,8 +533,8 @@ on('cell', (c) => { R.ui.cell = R.ui.cell === c ? null : c; render(); });
 
 on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
 on('nextQ', () => nextQ());
-on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
-on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
 
 on('startContest', () => startContest());
 on('cChoose', (c) => cAnswer(c));
@@ -593,6 +627,7 @@ root.addEventListener('pointerdown', (e) => {
 
 addEventListener('keydown', (e) => {
   if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
+  if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -635,6 +670,16 @@ root.addEventListener('input', (e) => {
   }
 });
 root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'kname') fire('createKid'); });
+/* a tool's text inputs (Number Explorer, Show Me the Working, Graphs): the
+   value goes into the tool's ui state and the screen re-renders; render()
+   restores focus and caret by id, so typing is never interrupted */
+let libT = null;
+root.addEventListener('input', (e) => {
+  const f = e.target.getAttribute && e.target.getAttribute('data-lib-input');
+  if (!f || R.ui.nav !== 'lib') return;
+  libCtx(R.ui.arg).ui[f] = e.target.value;
+  clearTimeout(libT); libT = setTimeout(render, 90);
+});
 
 bindRoot(root);
 

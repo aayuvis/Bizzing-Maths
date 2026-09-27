@@ -253,3 +253,26 @@ export function goalsReport(c) {
   return `<div class="rep-goals"><p class="kicker">Goals — ${sm.met} of ${sm.total} reached</p>
     ${gs.map((s) => `<p class="rg"><b>${s.glyph} ${esc(s.name)}</b> ${s.goals.filter((g) => !g.later).map((g) => `<span class="rg-${g.status}" title="${esc(g.can)}">${g.status === 'met' ? '✓' : Math.round(g.pct * 100) + '%'} ${esc(g.can.replace(/^I can |^I know |^I have /, '').replace(/\.$/, ''))}</span>`).join(' · ')}</p>`).join('')}</div>`;
 }
+
+/* ------------------------------------------------------------- the library */
+
+/* The Bee's Library, for maths: painted tiles, four across, each a tool. */
+export function viewLibrary(shelf) {
+  return `<section>
+    ${pageHead('The Maths Library', 'Tools to explore numbers, see the working, draw shapes and graphs, and look anything up.')}
+    <div class="lib-grid">${shelf.map((t) => `<button class="lib-tile" data-act="openTool" data-arg="${t.id}">
+      <span class="lib-art" style="background-image:url(art/${t.art}.webp)"></span>
+      <span class="lib-t"><b>${esc(t.name)}</b><span>${esc(t.blurb)}</span></span></button>`).join('')}</div>
+  </section>`;
+}
+
+export function viewTool(tool, ctx) {
+  const T = tool.TOOL;
+  let body;
+  try { body = tool.view(ctx); } catch (e) { console.error(e); body = '<div class="card center-card"><p>Something went wrong in this tool.</p></div>'; }
+  return `<section class="tool-page tool-${T.id}">
+    ${tool.CSS ? `<style>${tool.CSS}</style>` : ''}
+    ${pageHead(esc(T.name), esc(T.blurb), back('nav', 'Library', 'library'))}
+    ${body}
+  </section>`;
+}

@@ -114,6 +114,19 @@ SCENE2 = {
     's-carnival':"A carnival stall with a spinner wheel of plain coloured sections, wooden dice and prize balloons, no writing.",
     's-beach':   "A sunny beach with sandcastles, buckets and spades, shells in little piles, a calm sea.",
 }
+LIB = {
+    'lib-explorer': "A magnifying glass over a scattering of glowing coloured counters arranged in rows, columns and little factor rectangles on a wooden desk, a brass telescope and a notebook with blank pages.",
+    'lib-working':  "A tidy desk with a large slate showing only a neat grid of empty boxes and arrows drawn in chalk, chalk sticks, a sponge, a warm lamp.",
+    'lib-tables':   "A great wall of square glowing tiles in a perfect grid, some tiles lit in a diagonal line and some in coloured stripes, like a stained-glass window at sunset.",
+    'lib-shapes':   "An artist's studio for shapes: a large clear protractor, a compass, rulers, set-squares, paper polygons and a cardboard cube net on a drawing board.",
+    'lib-graphs':   "A large sheet of graph paper pinned to an easel on a hilltop, one bold straight line and one smooth curve drawn across the grid, kites flying in the sky beyond.",
+    'lib-dictionary': "A huge open book with blank pages on a lectern in a cosy reading nook, small paper shapes and counters fluttering out of it like butterflies.",
+    'lib-formulas': "A fan of beautifully illustrated collector cards spread on a velvet cloth, each card showing only a simple geometric picture — a square split into four parts, a triangle, a circle with a radius — no writing.",
+    'lib-vedic':    "A peaceful courtyard in old India at dawn with a stone step-well, a banyan tree, palm-leaf manuscripts with no visible writing tied with string, brass lamps and a slate with chalk dots.",
+    'lib-chinese':  "A calm old Chinese scholar's study: a wooden suanpan abacus with beads, bundles of bamboo counting rods on a table, a brush and ink stone, a round window onto a misty mountain garden, no writing anywhere.",
+    'lib-facts':    "Colourful wooden number-bond toys: bead strings, stacking rods of different lengths in a staircase, a tray of counters, on a sunny play table.",
+    'lib-stories':  "A cosy bookshelf nook with storybooks with blank spines, a reading cushion, a lamp, and small toy figures of animals peeking from the shelf.",
+}
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')
@@ -126,6 +139,7 @@ JOBS['home-hero'] = (HERO + ' ' + STYLE + ' Very wide banner.', '21:9')
 for k, v in WORLD2.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas2'] = (ATLAS2 + ' ' + STYLE, '16:9')
 for k, v in SCENE2.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
+for k, v in LIB.items(): JOBS[k] = (v + ' ' + STYLE + ' Landscape tile composition.', '4:3')
 JOBS['q-tower'] = (TOWER + ' ' + STYLE + ' Wide landscape frame.', '16:9')
 for k, v in SCENE.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
 

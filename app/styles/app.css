@@ -704,6 +704,18 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .dg-sym{font-size:22px;fill:var(--action)}.dg-sym.half{clip-path:inset(0 50% 0 0)}
 .qcard .dg{margin-bottom:14px}
 
+/* ================================================================ the library */
+.lib-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media (max-width:1000px){.lib-grid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:720px){.lib-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:420px){.lib-grid{grid-template-columns:1fr}}
+.lib-tile{display:flex;flex-direction:column;border:0;padding:0;border-radius:20px;overflow:hidden;background:var(--surface);box-shadow:0 1px 2px rgb(20 30 60 / .05),0 12px 30px rgb(20 30 60 / .09);cursor:pointer;text-align:left;transition:transform .18s,box-shadow .18s;position:relative}
+.lib-tile::before{content:"+";position:absolute;top:10px;right:12px;width:20px;height:20px;border-radius:6px;background:var(--treasure);color:#5a3d00;font:800 15px/20px var(--ui);text-align:center;z-index:1}
+.lib-tile:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgb(20 30 60 / .16)}
+.lib-art{aspect-ratio:4/3;background-size:cover;background-position:center}
+.lib-t{padding:12px 16px 16px;display:flex;flex-direction:column;gap:4px}
+.lib-t b{font:800 19px var(--display)}.lib-t span{color:var(--muted);font-size:var(--fs-label)}
+
 /* ================================================================ goals */
 .goals-card{display:flex;flex-direction:column;gap:4px}
 .goals-card b{font-family:var(--display);font-size:22px}

@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/tricks.mjs && node test/facts.mjs && node test/contest.mjs && node test/games.mjs && node test/model.mjs && node test/stories.mjs && node test/puzzles.mjs && node test/objectives.mjs",
+    "test": "node test/tricks.mjs && node test/facts.mjs && node test/contest.mjs && node test/games.mjs && node test/model.mjs && node test/stories.mjs && node test/puzzles.mjs && node test/objectives.mjs && node test/library.mjs",
     "check": "node test/ui.mjs",
     "deploy": "./deploy.sh"
   },

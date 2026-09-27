@@ -16,7 +16,7 @@
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 3;
+export const SCHEMA = 4;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -35,6 +35,9 @@ const STEPS = {
     }
     return h;
   },
+  // v4: the Library. Each tool keeps its own record on the child (Times Table
+  // Explorer levels, journeys walked, formula cards collected).
+  3: (h) => { h.v = 4; for (const k of h.kids) k.lib = k.lib || {}; return h; },
 };
 
 export function migrate(h) {
