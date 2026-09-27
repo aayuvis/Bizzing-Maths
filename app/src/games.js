@@ -14,6 +14,7 @@
 import { ramp, key as fkey, answer, text as ftext, state as fstate } from './facts.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
 import { esc, sfx, confetti } from './ui.js';
+import { makeSudoku, conflicts, SUDOKU } from './puzzles.js';
 
 /* ------------------------------------------------------------ the frame */
 
@@ -428,5 +429,79 @@ export function numberLine(kid, { onTick, onEnd }) {
   g.quit = () => end(g);
   current = g;
   next();
+  return g;
+}
+
+/* ================================================================ SUDOKU */
+
+/* Tap a square (or move with the arrows), then a number (tap or type). A
+   number that breaks a rule turns red at once — that is the rule, not the
+   answer: a number that is merely wrong, but breaks nothing yet, is not
+   flagged, because telling would be solving it for them. Every grid has
+   exactly one answer (puzzles.js proves it), so a full grid with no red is
+   solved. */
+
+export function sudoku(kid, n, lv, { onEnd }) {
+  const f = frame('Sudoku', `${n}×${n} — each row, column and box holds 1 to ${n} once`, () => g.quit());
+  const g = { f };
+  const p = makeSudoku(n, lv);
+  const given = p.grid.map(Boolean);
+  const cur = p.grid.slice();
+  let sel = cur.findIndex((v) => !v), hints = 0, done = false;
+  const { br, bc } = SUDOKU[n];
+
+  function draw() {
+    const bad = conflicts(cur, n);
+    const selV = cur[sel];
+    f.hud.innerHTML = `<span class="chip">Hints <b>${hints}</b></span>`;
+    f.body.innerHTML = `<div class="sdk-wrap">
+      <div class="sdk n${n}" role="grid" style="--n:${n}">${cur.map((v, i) => {
+        const r = Math.floor(i / n), c = i % n;
+        const edge = `${c % bc === bc - 1 && c < n - 1 ? ' er' : ''}${r % br === br - 1 && r < n - 1 ? ' eb' : ''}`;
+        const same = selV && v === selV && i !== sel ? ' same' : '';
+        const peer = sel >= 0 && (Math.floor(sel / n) === r || sel % n === c) ? ' peer' : '';
+        return `<button class="sc${given[i] ? ' given' : ''}${i === sel ? ' sel' : ''}${bad.has(i) ? ' bad' : ''}${edge}${same}${peer}" data-i="${i}" aria-label="Row ${r + 1}, column ${c + 1}${v ? ', ' + v : ', empty'}">${v || ''}</button>`;
+      }).join('')}</div>
+      <div class="sdk-nums">${Array.from({ length: n }, (_, i) => `<button class="pk" data-v="${i + 1}">${i + 1}</button>`).join('')}<button class="pk del" data-v="0" aria-label="Clear">⌫</button></div>
+      <div class="row gap center"><button class="btn ghost" data-t="hint">Hint <kbd>H</kbd></button></div>
+      <p class="mt-keys">Keys: arrows move · <kbd>1</kbd>–<kbd>${n}</kbd> fill · <kbd>⌫</kbd> clear · <kbd>H</kbd> hint</p>
+    </div>`;
+    f.body.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sel = +b.dataset.i; draw(); });
+    f.body.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => put(+b.dataset.v));
+    f.body.querySelector('[data-t=hint]').onclick = hint;
+  }
+  function put(v) {
+    if (done || sel < 0 || given[sel] || v > n) return;
+    cur[sel] = v; sfx.click();
+    if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
+    draw();
+  }
+  function hint() {
+    if (done) return;
+    let i = sel >= 0 && !given[sel] && cur[sel] !== p.solution[sel] ? sel : cur.findIndex((v, j) => v !== p.solution[j]);
+    if (i < 0) return;
+    cur[i] = p.solution[i]; given[i] = true; hints++; sel = i; sfx.coin();
+    if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
+    draw();
+  }
+  function win() {
+    done = true; draw(); sfx.level();
+    const stars = hints === 0 ? 3 : hints <= 2 ? 2 : 1;
+    onEnd(true, stars);
+    setTimeout(() => resultCard(f, { title: 'Solved!', lines: [hints ? `With ${hints} hint${hints > 1 ? 's' : ''}. Try the next one with none.` : 'No hints at all — pure logic.'], stars,
+      again: () => { g.quit(); sudoku(kid, n, lv, { onEnd }); }, done: () => g.quit() }), 700);
+  }
+  g.key = (e) => {
+    if (e.key === 'Escape') { g.quit(); return true; }
+    const mv = { ArrowUp: -n, ArrowDown: n, ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (mv) { const j = sel + mv; if (j >= 0 && j < n * n && !(mv === -1 && sel % n === 0) && !(mv === 1 && sel % n === n - 1)) { sel = j; draw(); } return true; }
+    if (/^[1-9]$/.test(e.key)) { put(+e.key); return true; }
+    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { put(0); return true; }
+    if (e.key === 'h' || e.key === 'H') { hint(); return true; }
+    return false;
+  };
+  g.quit = () => { if (!done) onEnd(false, 0); end(g); };
+  current = g;
+  draw();
   return g;
 }

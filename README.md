@@ -10,10 +10,13 @@ Part of the Bizzing family with [Bizzing Bee](https://www.bizzingbee.com/),
 
 - **Facts** — adding, taking away, times tables and sharing, ordered by how *tricky* a fact is
   (7 × 8 before 12 × 12), with spaced review so "fluent" means still fast a week later.
-- **The Number Atlas** — 27 tricks in five worlds, from *Make ten first* to *Vertically and
+- **The Number Atlas** — a painted island of five worlds and 27 tricks, from *Make ten first* to *Vertically and
   crosswise*. Every stop: the trick as steps, **why it works** (a picture and the algebra),
   your turn to type every step, then a drill.
 - **The Sutra Observatory** — the Vedic methods, with an honest account of where they come from.
+- **Stories** — every trick starts as an illustrated story with the Bee's ten rivals, on painted scenes.
+- **The Puzzle Room** — cube nets, sudoku (4×4 to 9×9), number patterns and balance scales; every puzzle proved by the app before it is shown.
+- **Goals** — 19 "I can…" goals in six strands, measured from what the child actually does.
 - **Mock Contest** — you and the Bee's ten rivals, one question each per round.
 - **Arcade** — Number Rush, Make the Target, Number Line, and a daily puzzle. Keyboard and touch.
 - **Grown-ups** — what was learned, what slipped, what's worth a hand. Behind a PIN.

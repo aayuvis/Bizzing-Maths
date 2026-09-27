@@ -33,7 +33,7 @@ for (const r of RUNGS) ok(Function(`return ${r.q.text.replace(/×/g, '*').replac
 ok(rankOf(0).n === 'Pebble' && rankOf(RANKS.at(-1).xp).n === 'Aryabhata', 'rank ends');
 tick(a, false); ok(a.xp === 0, 'a wrong answer earns nothing'); tick(a, true, 2); ok(a.xp === 2, 'a right one does');
 // store migration
-const m = migrate({ kids: [] }); ok(m.v === 1 && m.parent && Array.isArray(m.kids), 'v0 → v1');
+const m = migrate({ kids: [{ id: 'x' }] }); ok(m.v === 2 && m.parent && Array.isArray(m.kids) && m.kids[0].stories && m.kids[0].puzzles, 'v0 → v2 walks every step');
 ok(migrate({ v: 99, x: 1 }).v === 99, 'a newer save is never downgraded');
 console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement, ranks, migration`);
 if (fails) process.exit(1);

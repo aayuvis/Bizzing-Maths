@@ -9,6 +9,8 @@ import { BANDS, AVATARS, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, 
 import { RIVALS, bot, live, timeFor } from './contest.js';
 import { keypad } from './games.js';
 import { fig } from './figs.js';
+import { storyTab, goalsReport } from './views2.js';
+import { summary } from './objectives.js';
 import { seeded, int, dayKey } from './rand.js';
 
 /* ------------------------------------------------------------- helpers */
@@ -41,10 +43,10 @@ export const TABS = [
   { k: 'home', n: 'Home', icon: 'home' },
   { k: 'atlas', n: 'Atlas', icon: 'map' },
   { k: 'facts', n: 'Facts', icon: 'grid' },
+  { k: 'puzzles', n: 'Puzzles', icon: 'puzzle' },
   { k: 'arcade', n: 'Arcade', icon: 'play' },
-  { k: 'contest', n: 'Contest', icon: 'trophy' },
 ];
-const NAV_OF = { stop: 'atlas', check: 'atlas', world: 'atlas', run: null, me: 'home', grownups: null, game: 'arcade' };
+const NAV_OF = { stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'atlas', intro: 'atlas', run: null, me: 'home', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
 
 export function icon(k) {
   const p = {
@@ -52,6 +54,7 @@ export function icon(k) {
     map: '<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14" class="i2"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5" class="i2"/><rect x="4" y="13" width="7" height="7" rx="1.5" class="i2"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
     play: '<rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4" class="i2"/><circle cx="15.5" cy="11.5" r="1.1"/><circle cx="17.5" cy="13.8" r="1.1"/>',
+    puzzle: '<path d="M4 8h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H4z"/><path d="M12 8h8v12h-4" class="i2"/>',
     trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a3 3 0 0 0 3 4M17 6h2.5a3 3 0 0 1-3 4M12 14v3M8.5 20h7l-1-3h-5z" class="i2"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" class="i2"/>',
     sound: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" class="i2"/>',
@@ -202,8 +205,8 @@ export function viewHome() {
           <span class="tile-i">🎯</span><b>Today's puzzle</b><span>${puzzleDone ? 'Solved — back tomorrow' : 'Same puzzle in every house'}</span></button>
         <button class="tile" data-act="nav" data-arg="contest">
           <span class="tile-i">🏆</span><b>Mock contest</b><span>${k.contest.best ? `Best: ${ordinal(k.contest.best)} of 11` : 'Ten rivals are waiting'}</span></button>
-        <button class="tile" data-act="nav" data-arg="arcade">
-          <span class="tile-i">🎮</span><b>Arcade</b><span>Number Rush, Make the Target, Number Line</span></button>
+        <button class="tile" data-act="nav" data-arg="puzzles">
+          <span class="tile-i">🧩</span><b>Puzzle Room</b><span>Cube nets, sudoku, patterns, balance scales</span></button>
       </div>
     </div>
 
@@ -212,6 +215,12 @@ export function viewHome() {
         <p class="kicker">Number of the day</p>
         <div class="nod-row"><b class="nod-n mono">${nod.n}</b><ul>${nod.facts.map((f) => `<li>${f}</li>`).join('')}</ul></div>
       </div>
+      <button class="card goals-card" data-act="nav" data-arg="goals">
+        <p class="kicker">What you’re learning</p>
+        <b>${summary(k).met} of ${summary(k).total} goals reached</b>
+        <span class="muted small">Facts · methods · knowing why · number sense · problem solving · contests</span>
+        <span class="ns-go">See your goals →</span>
+      </button>
       <div class="card arya">
         ${av('aryabhatta', 56, 'Aryabhata')}
         <div><p class="kicker">From the Atlas</p>${trickOfDay(k)}</div>
@@ -286,12 +295,12 @@ export function viewWorldIntro(wid) {
 export function viewStop(id) {
   const t = byId[id], k = kid(R.h), w = worldOf(t.world), rec = k.tricks[id] || { stars: 0 };
   const tab = R.ui.tab || 'learn';
-  const tabs = [['learn', '1 · Learn'], ['turn', '2 · Your turn'], ['drill', '3 · Drill']];
+  const tabs = [['story', '📖 Story'], ['learn', '1 · Learn'], ['turn', '2 · Your turn'], ['drill', '3 · Drill']];
   return `<section class="stop-page" style="--wt:${w.tint};--wi:${w.ink}">
-    ${pageHead(esc(t.title), `${w.glyph} ${esc(w.name)}`, back('nav', 'Atlas', 'atlas'), starRow(rec.stars || 0, 3, true))}
+    ${pageHead(esc(t.title), `${w.glyph} ${esc(w.name)}`, back('openWorld', worldOf(t.world).short, t.world), starRow(rec.stars || 0, 3, true))}
     ${t.sutra ? `<p class="sutra"><span lang="sa-Latn">${esc(t.sutra.sa)}</span> — “${esc(t.sutra.en)}”</p>` : ''}
     <div class="seg" role="tablist">${tabs.map(([k2, n]) => `<button role="tab" aria-selected="${tab === k2}" class="${tab === k2 ? 'on' : ''}" data-act="stopTab" data-arg="${k2}">${n}</button>`).join('')}</div>
-    ${tab === 'learn' ? learnTab(t) : tab === 'turn' ? turnTab(t, rec) : drillTab(t, rec, k)}
+    ${tab === 'story' ? storyTab(t) : tab === 'learn' ? learnTab(t) : tab === 'turn' ? turnTab(t, rec) : drillTab(t, rec, k)}
   </section>`;
 }
 
@@ -357,24 +366,24 @@ export function viewRun() {
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
-      <p class="big-q mono" aria-live="polite">${esc(q.text)}${q.choices ? '' : ' ='}</p>
+      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `<p class="big-q mono" aria-live="polite">${esc(q.text)}${q.choices ? '' : ' ='}</p>`}
       ${q.choices
-        ? `<div class="choice-row big">${q.choices.map((c, i) => `<button class="btn big${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${esc(c)} <kbd>${i + 1}</kbd></button>`).join('')}</div>`
+        ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
         : `<p class="answer mono" id="ans" aria-live="polite">${fb ? esc(fb.given) : esc(run.input) || '<span class="caret"></span>'}</p>`}
       ${fb ? feedback(q, fb) : q.choices ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
     </div>
     ${!fb && !q.choices ? keypad() : ''}
-    ${fb && !fb.right ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
+    ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
 }
 
 function feedback(q, fb) {
-  if (fb.right) return `<p class="fb good">${fb.fast ? 'Right — and quick.' : 'Right.'}</p>`;
-  let work = '';
+  if (fb.right) return `<p class="fb good">${fb.fast ? 'Right — and quick.' : 'Right.'}</p>${q.explain ? `<p class="explain">${esc(q.explain)}</p>` : ''}`;
+  let work = q.explain ? `<p class="explain">${esc(q.explain)}</p>` : '';
   if (q.trick) {
     const t = byId[q.trick];
     work = `<div class="fb-work"><p class="kicker">The trick, on this one — ${esc(t.title)}</p><ol class="steps">${t.work(q).map((s) => `<li class="shown"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${esc(s.v)}</b></li>`).join('')}</ol></div>`;
-  } else if (q.why) work = `<p class="why-chip">${esc(q.why)}</p>`;
+  } else if (q.why && !q.explain) work = `<p class="why-chip">${esc(q.why)}</p>`;
   return `<p class="fb bad">${fb.given === '' ? 'Out of time.' : 'Not this time.'} It is <b class="mono">${esc(q.ans)}</b>.</p>${work}`;
 }
 
@@ -618,6 +627,7 @@ function report(c) {
       <div><p class="kicker">Worth a hand with</p><p>${traps.length ? traps.slice(0, 8).map((f) => `<span class="mono">${esc(ftext(f))}</span>`).join(', ') : 'Nothing is tripping them up right now.'}</p>
         ${lapsed.length ? `<p class="muted small">Slipped since they were fluent: ${lapsed.slice(0, 8).map((f) => esc(ftext(f))).join(', ')}. That is normal — it comes back quickly.</p>` : ''}</div>
     </div>
+    ${goalsReport(c)}
     <p class="muted small">Talk about it: ask ${esc(c.name)} to show you one trick and explain <i>why</i> it works. Explaining it is the best practice there is.</p>
   </div>`;
 }

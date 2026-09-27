@@ -52,11 +52,25 @@ async function run(vp, tag) {
   ok((await R()).run && (await R()).run.over, 'placement stops after two misses in a row');
   await shot('02-placed');
   await page.click('[data-act=endRun]');
-  await page.waitForSelector('.atlas');
+  await page.waitForSelector('.map-board');
+  await page.waitForTimeout(400);
   await shot('03-atlas');
-  ok(await page.locator('.stop.shut').count() > 0, 'some stops are shut');
-  // open the market's "times-nine" (8–10 child may wander 6–7 stops)
-  await page.click('[data-act=openStop][data-arg="times-nine"]');
+  ok(await page.locator('.map-pin.shut').count() > 0, 'some places are not reached yet');
+  // travel to the market, pick "times-nine" on the board, tap again to go in
+  await page.click('.map-pin[data-arg=market]');
+  await page.waitForSelector('.board');
+  await page.waitForTimeout(400);
+  await shot('03b-world');
+  await page.click('.bpin[data-arg="times-nine"]'); await page.click('.bpin[data-arg="times-nine"]');
+  await page.waitForSelector('.story');
+  // the story: walk every beat by keyboard; the notepad fills
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(300);
+  await shot('03c-story');
+  ok(await page.locator('.notepad p').count() >= 2, 'the story notepad fills as it goes');
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  ok(await page.evaluate(() => !!window.__bzm.R.h.kids[0].stories['times-nine']), 'reading to the end marks the story read');
+  await page.click('.st-ctl [data-act=stopTab][data-arg=learn]');
   await page.waitForSelector('.learn');
   await page.click('[data-act=watch]'); await page.click('[data-act=watch]');
   await shot('04-learn');
@@ -104,14 +118,48 @@ async function run(vp, tag) {
   await shot('09-facts');
   // stop pages for a sutra with a figure
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; window.__bzm.render(); });
-  await nav('atlas'); await page.click('[data-act=openStop][data-arg="square-five"]'); await page.click('[data-act=watchAll]');
+  await page.evaluate(() => window.__bzm.fire('openStop', 'square-five')); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
   await shot('10-sutra');
-  await page.click('.back');
-  await page.click('[data-act=openStop][data-arg="crosswise"]'); await page.click('[data-act=watchAll]');
+  await page.evaluate(() => window.__bzm.fire('openStop', 'crosswise')); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
   await page.evaluate(() => document.querySelector('.why').scrollIntoView());
   await shot('11-crosswise');
+  // stories shelf + a sutra story
+  await page.evaluate(() => window.__bzm.go('stories')); await page.waitForSelector('.shelf');
+  await shot('11b-shelf');
+  await page.evaluate(() => window.__bzm.fire('openStory', 'nikhilam-100'));
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(350); await shot('11c-story2');
+  // the puzzle room: nets, patterns, scales by keyboard; a sudoku by hints
+  await nav('puzzles'); await page.waitForSelector('.room');
+  await shot('22-puzzles');
+  for (const id of ['nets', 'patterns', 'scales']) {
+    await page.click(`[data-act=startPuzzle][data-arg="${id}:2"]`);
+    for (let i = 0; i < 6; i++) {
+      const s = await R(); if (!s.run || s.run.over) break;
+      if (s.run.q.choices) await page.keyboard.press(String(s.run.q.choices.indexOf(s.run.q.ans) + 1)); else { await typeAns(s.run.q.ans); }
+      await page.waitForTimeout(120);
+      if (i === 0) await shot(`23-${id}`);
+      await page.keyboard.press('Enter'); await page.waitForTimeout(120);
+    }
+    await page.waitForTimeout(200);
+    ok((await R()).run.over, `${id}: six puzzles finish`);
+    await page.click('[data-act=endRun]');
+    await nav('puzzles');
+  }
+  const pzr = await page.evaluate(() => window.__bzm.R.h.kids[0].puzzles);
+  ok(pzr.nets.right === 6 && pzr.patterns.right === 6 && pzr.scales.right === 6, 'right puzzle answers are recorded');
+  await page.click('[data-act=startPuzzle][data-arg="sudoku:1"]'); await page.waitForSelector('.sdk');
+  await shot('24-sudoku');
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('1');
+  for (let i = 0; i < 90 && await page.locator('.sdk').count() && !(await page.locator('.play-end').count()); i++) { await page.keyboard.press('h'); await page.waitForTimeout(15); }
+  await page.waitForSelector('.play-end', { timeout: 5000 });
+  ok(true, 'sudoku solves'); await page.keyboard.press('Escape');
+  // goals
+  await page.evaluate(() => window.__bzm.go('goals')); await page.waitForSelector('.strands');
+  await shot('25-goals');
+  ok(await page.locator('.goals li').count() >= 15, 'the goals page lists every goal');
   // contest
-  await nav('contest'); await page.waitForSelector('.rivals');
+  await page.evaluate(() => window.__bzm.go('contest')); await page.waitForSelector('.rivals');
   await shot('12-lobby');
   await page.click('[data-act=startContest]');
   for (let r = 0; r < 60; r++) {

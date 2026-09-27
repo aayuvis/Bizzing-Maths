@@ -54,6 +54,29 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
    same rule Bizzing India and Finance keep.
 7. **Rank moves only with right answers**, never time on the app — the Bee's band rule. A rank
    that grows with minutes played would lie about the child.
+8. **Every puzzle is proved before it is shown** (`src/puzzles.js`, `test/puzzles.mjs`). Cube
+   nets by FOLDING — the rig reproduces the known result, 11 nets among 35 hexominoes — sudokus
+   by a solver that finds exactly one answer, balance scales by trying every weight. A puzzle
+   with two answers, or none, is a bug the child pays for.
+9. **Every goal is measured from evidence** (`src/objectives.js`). "I can…" sentences in six
+   strands; none is ticked for time spent or for visiting a screen. A goal for an older band
+   shows as *coming later*, never as a failure. `test/objectives.mjs` proves each one moves.
+10. **The story notepad is checked.** Every sum a character writes in `src/stories.js` is
+    evaluated by `test/stories.mjs`. Stories star the Bee's same ten rivals and are labelled
+    as stories.
+
+### Art
+
+- **Painted plates, composited characters.** `tools/art/gen.py` paints places only — no
+  people, no lettering, no digits (a model letters well and counts badly, and this is a maths
+  app). Characters are the Bee's avatars, placed by the app. The Atlas ROAD is SVG drawn by
+  `views2.js` over the painting, so a pin never depends on where a model put a path.
+- **Two prompt traps, both paid for:** naming the place ("THE TIMES MARKET") gets it lettered
+  on a sign; asking for "a calmer middle band" gets a literal translucent rectangle. Name
+  neither. Look at every plate before it ships (`tools/art/raw/`, gitignored), then run
+  `tools/art/process.py` → `app/public/art/*.webp`.
+- **`MAP_PINS` in views2.js are measured against `atlas.webp`.** Regenerate the map, re-measure.
+- The Gemini key lives at `/root/.gkey` (mode 600, `GKEY_FILE` overrides). Never in the repo.
 
 ### Product & code (inherited from the family, non-negotiable)
 
@@ -85,7 +108,11 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 | `app/src/games.js` | Number Rush, Make the Target (with a solver), Number Line; the shared keypad. |
 | `app/src/figs.js` | The pictures of *why*: number-line jumps, area splits, the crosswise grid. |
 | `app/src/views.js` · `main.js` | Every screen as `state → string`; routing, the runner, keys, `data-act`. |
-| `app/src/store.js` | The seam. |
+| `app/src/stories.js` | A story per stop, starring the Bee's rivals, with a checked notepad. |
+| `app/src/puzzles.js` | The Puzzle Room: cube nets (folding rig), sudoku (unique), patterns, balance scales. |
+| `app/src/objectives.js` | The mission and 19 measured goals in 6 strands. |
+| `app/src/views2.js` | The painted Atlas map and world boards, the story stage, shelf, Puzzle Room, Goals. |
+| `app/src/store.js` | The seam (schema v2). |
 
 ## Verify
 

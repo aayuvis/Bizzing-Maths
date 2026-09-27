@@ -16,11 +16,13 @@
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 1;
+export const SCHEMA = 2;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
   0: (h) => { h.v = 1; h.kids = h.kids || []; h.parent = h.parent || { pin: null }; return h; },
+  // v2: stories read and puzzles solved, per child
+  1: (h) => { h.v = 2; for (const k of h.kids) { k.stories = k.stories || {}; k.puzzles = k.puzzles || {}; } return h; },
 };
 
 export function migrate(h) {

@@ -109,13 +109,16 @@ function pickVoice() {
   const vs = speechSynthesis.getVoices() || [];
   return vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang)) || null;
 }
-export function say(text) {
+/* `onend` makes the voice the clock: a story beat advances when its line has
+   been SPOKEN, not on a timer hoping to match (the family's production rule). */
+export function say(text, onend) {
   if (!canSay() || !text) return false;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
     const v = pickVoice(); if (v) u.voice = v;
     u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
+    if (onend) u.onend = onend;
     speechSynthesis.speak(u);
     return true;
   } catch (e) { return false; }

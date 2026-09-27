@@ -11,6 +11,9 @@ import { newContest, childQuestion, playRound, championship, runOut, timeFor } f
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
+import * as V2 from './views2.js';
+import { STORIES } from './stories.js';
+import { puzzleSet, ROOM, sudokuSize } from './puzzles.js';
 
 const root = document.getElementById('app');
 
@@ -64,7 +67,11 @@ function screen() {
   if (n === 'start') return V.viewStart();
   if (n === 'run' && R.run) return V.viewRun();
   switch (n) {
-    case 'atlas': return V.viewAtlas();
+    case 'atlas': return V2.viewAtlasMap();
+    case 'world': return worldOf(R.ui.arg) ? V2.viewWorld(R.ui.arg) : V2.viewAtlasMap();
+    case 'stories': return V2.viewStories();
+    case 'puzzles': return V2.viewPuzzles();
+    case 'goals': return V2.viewGoals();
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();
     case 'stop': return V.viewStop(R.ui.arg);
     case 'facts': return V.viewFacts();
@@ -81,6 +88,13 @@ function render() {
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
+  // a world board opens scrolled to the stop you are standing on (phones pan it)
+  const sc = root.querySelector('.board-scroll[data-autoscroll]');
+  if (sc && R.ui.scrolled !== R.ui.arg + ':' + R.ui.pick) {
+    R.ui.scrolled = R.ui.arg + ':' + R.ui.pick;
+    const x = +sc.dataset.autoscroll / 100 * sc.scrollWidth - sc.clientWidth / 2;
+    sc.scrollLeft = Math.max(0, x);
+  }
 }
 R.render = render;
 
@@ -137,7 +151,9 @@ function submit(given) {
   save();
   right ? sfx.good() : sfx.bad();
   render();
-  if (right) setTimeout(() => { if (R.run === run && run.fb) nextQ(); }, fast ? 420 : 650);
+  // a puzzle holds on a right answer too, so its rule can be read
+  if (q.puzzle) { const p = k.puzzles[q.puzzle] || (k.puzzles[q.puzzle] = { right: 0, tries: 0, solved: {} }); p.tries++; if (right) p.right++; save(); }
+  if (right && !q.puzzle) setTimeout(() => { if (R.run === run && run.fb) nextQ(); }, fast ? 420 : 650);
   // placement stops after two misses in a row
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
@@ -193,6 +209,12 @@ function finishRun() {
       s.lines.push(`Ten of twelve passes. The questions you missed came from these stops — a drill on any of them helps.`);
       s.buttons.push(`<button class="btn primary" data-act="openCheck" data-arg="${run.world}">Try again</button>`);
     }
+  }
+  if (run.kind === 'puzzle') {
+    s.stars = right === n ? 3 : right >= n - 2 ? 2 : right >= 2 ? 1 : 0;
+    s.lines.push(right === n ? 'Every one. That is contest thinking.' : 'Each puzzle showed its rule afterwards — the next set will feel easier.');
+    s.buttons.push(`<button class="btn primary" data-act="startPuzzle" data-arg="${run.room}:${run.lv}">Six more</button>`);
+    if (s.stars >= 2) confetti(30);
   }
   if (run.kind === 'place') {
     // count rungs passed before the first pair of misses in a row
@@ -349,7 +371,54 @@ function daily() {
 /* ------------------------------------------------------------- actions */
 
 on('nav', (a) => go(a));
-on('openStop', (id) => { R.ui.tab = 'learn'; R.ui.watch = 0; R.ui.level = 1; go('stop', id); });
+on('openStop', (id) => {
+  const k = kid(R.h);
+  // a stop opens on its story until the story has been read once
+  R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
+  R.ui.watch = 0; R.ui.level = 1; R.ui.beat = 0; go('stop', id);
+});
+on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.level = 1; go('stop', id); });
+on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
+on('shutWorld', () => toast('Not reached yet — keep walking the road.'));
+on('pickStop', (id) => {
+  const k = kid(R.h), i = ROUTE.findIndex((n) => n.id === id);
+  // a tap selects; a second tap on the selected stop goes in (the Bee's map rule)
+  if (R.ui.pick === id && isOpen(R.h, k, i)) return id.startsWith('check:') ? fire('openCheck', id.slice(6)) : fire('openStop', id);
+  R.ui.pick = id; render();
+});
+function beat(d) {
+  const s = STORIES[R.ui.arg]; if (!s) return;
+  const i = Math.max(0, Math.min(s.beats.length - 1, (R.ui.beat || 0) + d));
+  if (i === (R.ui.beat || 0) && d > 0 && i === s.beats.length - 1) return;
+  R.ui.beat = i; sfx.click();
+  if (i === s.beats.length - 1) { const k = kid(R.h); if (!k.stories[R.ui.arg]) { k.stories[R.ui.arg] = true; save(); } }
+  render(); speakBeat();
+}
+function speakBeat() {
+  if (!R.ui.storyRead) return;
+  const s = STORIES[R.ui.arg], b = s && s.beats[R.ui.beat || 0]; if (!b) return;
+  const at = R.ui.beat;
+  say(b.say, () => { if (R.ui.storyRead && R.ui.beat === at && R.ui.nav === 'stop' && R.ui.tab === 'story' && at < s.beats.length - 1) setTimeout(() => { if (R.ui.beat === at) beat(1); }, 450); });
+}
+on('beatNext', () => beat(1));
+on('beatBack', () => beat(-1));
+on('storyRead', () => { R.ui.storyRead = !R.ui.storyRead; if (!R.ui.storyRead) hush(); render(); speakBeat(); });
+on('startPuzzle', (a) => {
+  const [id, l] = a.split(':'); const lv = +l || 1; const k = kid(R.h);
+  const room = ROOM.find((r) => r.id === id);
+  if (id === 'sudoku') {
+    const n = sudokuSize(k.band, lv);
+    return G.sudoku(k, n, lv, { onEnd: (solved) => { const p = k.puzzles.sudoku || (k.puzzles.sudoku = { right: 0, tries: 0, solved: {} }); p.tries++; if (solved) { p.solved[n] = (p.solved[n] || 0) + 1; tick(k, true, 5 * lv); } save(); render(); } });
+  }
+  startRun('puzzle', room.name, puzzleSet(id, lv, 6), { room: id, lv, sub: ['', 'Easy', 'Medium', 'Hard'][lv] });
+});
+on('goalGo', (how) => {
+  const [a, b] = how.split(':');
+  if (a === 'facts') { R.ui.factOp = b; return go('facts'); }
+  if (a === 'world') return fire('openWorld', b);
+  if (a === 'puzzles') return go('puzzles');
+  go(a);
+});
 on('stopTab', (t) => { if (t !== 'turn' && R.run && R.run.kind === 'guided') R.run = null; R.ui.tab = t; render(); });
 on('watch', () => { R.ui.watch = (R.ui.watch || 0) + 1; sfx.click(); render(); });
 on('watchAll', () => { R.ui.watch = 99; render(); });
@@ -503,12 +572,16 @@ addEventListener('keydown', (e) => {
   if (/^\d$/.test(e.key)) { e.preventDefault(); return padKey(e.key); }
   if (e.key === 'Backspace') { e.preventDefault(); return padKey('⌫'); }
   if (e.key === 'Enter') {
-    if (nav === 'run' && run && run.fb && !run.fb.right) { e.preventDefault(); return nextQ(); }
+    if (nav === 'run' && run && run.fb && (!run.fb.right || run.items[run.i].puzzle)) { e.preventDefault(); return nextQ(); }
     if (nav === 'contest' && R.contest && R.contest.phase === 'round') { e.preventDefault(); return cNext(); }
     if (nav === 'stop' && run && run.kind === 'guided' && run.si >= run.steps.length) { e.preventDefault(); return guidedNext(); }
     if (['run', 'contest', 'grownups'].includes(nav) || (nav === 'stop' && run)) { e.preventDefault(); return padKey('✓'); }
   }
   if (e.key === 'Escape' && nav === 'run') { fire('quitRun'); }
+  if (nav === 'stop' && R.ui.tab === 'story') {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fire('beatNext'); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); fire('beatBack'); }
+  }
 });
 
 /* draft inputs (the name field) update without a re-render — a re-render per
@@ -537,4 +610,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire };   // for the headless checks, never for the app

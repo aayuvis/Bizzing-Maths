@@ -6,6 +6,21 @@ This is product 7 of 9 in the Bizzing strategy deck (*Numbers & the World* famil
 Finance and Business). This document maps what the deck asked for to what was built, and
 records the decisions the deck left open.
 
+## 0. The objectives
+
+**One aim: a child who can work with numbers quickly, confidently and in their head — and can
+explain WHY each method works.** It is measured, in the app, as 19 "I can…" goals in six strands
+(`app/src/objectives.js`, shown on the Goals page and in the grown-ups report):
+
+| Strand | What it means | Measured by |
+|---|---|---|
+| ⚡ Facts at your fingertips | + − × ÷ facts recalled, not worked out | share of facts *fluent* (right, fast, and still fast a week later) |
+| 🧠 Mental methods | make ten, split, round-and-fix, double-and-halve | Atlas stops passed per world |
+| 💡 Knowing why | the child does the working and can say why it is true | *Your turn* finished; Observatory passed; stories read |
+| 🧭 Number sense | estimation, checking, percentages, squares | Number Line score; Harbour passed |
+| 🧩 Problem solving | patterns, logic, spatial, algebra — contest thinking | Puzzle Room: patterns, sudokus, nets, scales solved |
+| 🏆 Contest ready | keeping your head against a clock and rivals | Mock Contest placing |
+
 ## 1. What the deck asked for, and what shipped
 
 | The deck said | What shipped |
