@@ -890,15 +890,23 @@ export const example = (t) => learnCases(t)[0].q;
 export const caseSig = (t, q) => [].concat(t.caseKey || []).map((k) => String(q[k])).join('|');
 
 /* A drill of n questions at a level, never the same question twice in a row. */
+/* A generated question made ready for the runner: its picture, and the extra
+   keypad keys (. − /) its answer needs. Every path that puts a stop's question
+   in front of a child goes through here — without it a fraction answer cannot
+   be typed at all. */
+export function dress(t, q) {
+  if (t.draw && !q.html) q.html = t.draw(q);
+  if (t.keys && !q.keys) q.keys = t.keys;
+  return q;
+}
+
 export function drill(t, n, lv, r = Math.random) {
   const out = []; let last = '';
   for (let i = 0; out.length < n && i < n * 20; i++) {
     const q = t.gen(r, lv);
     if (q.text === last) continue;
     last = q.text;
-    if (t.draw && !q.html) q.html = t.draw(q);
-    if (t.keys && !q.keys) q.keys = t.keys;
-    out.push(q);
+    out.push(dress(t, q));
   }
   return out;
 }

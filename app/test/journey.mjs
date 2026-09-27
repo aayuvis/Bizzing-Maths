@@ -30,6 +30,9 @@ for (let i = 0; i < 300; i++) {
 for (const L of J.LEVELS) for (let i = 0; i < 12; i++) {
   const st = { L: L.n, at: {}, used: [] }, q = J.question(st, seeded(`q${L.n}${i}`));
   ok(q.tlevel === L.n && byId[q.trick] && correct(q, String(q.ans)), `level ${L.n}: question ${q.text} grades its own answer`);
+  // and a child can TYPE it: the keypad has every key the answer needs (caught "3/6" typed as "36")
+  const a = String(q.ans), keys = q.keys || [];
+  if (!q.choices) ok((!a.includes('/') || keys.includes('/')) && (!a.includes('.') || keys.includes('.')) && (!/^[-−]/.test(a) || keys.includes('−')), `level ${L.n}: ${q.text} needs keys the keypad does not show (${a})`);
 }
 // the journey: ticking steps, finishing a level, moving on
 const k = newKid('Ada', '8-10', 'koi');

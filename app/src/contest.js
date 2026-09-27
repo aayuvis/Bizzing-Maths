@@ -71,7 +71,7 @@ function factAt(op, lo, hi, r) {
 }
 function trickQ(id, lv, r) {
   const t = byId[id]; const q = t.gen(r, lv);
-  return { text: q.text, say: q.say, ans: q.ans, choices: q.choices, trick: id };
+  return { text: q.text, say: q.say, ans: q.ans, choices: q.choices, frac: q.frac, simplest: q.simplest, keys: q.keys || t.keys, trick: id };
 }
 
 export function questionAt(h, r = Math.random) {

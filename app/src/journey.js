@@ -14,7 +14,7 @@
    never a score: it is shown once, to place them, and never in a report. */
 
 import { LEVELS, ageOf } from './levels.js';
-import { byId } from './tricks.js';
+import { byId, dress } from './tricks.js';
 
 export const TOP = LEVELS.length;
 export const PER_LEVEL = 3, PASS_AT = 2;
@@ -71,7 +71,7 @@ export function question(st, r = Math.random) {
   const pool = steps.length ? steps : levelOf(st.L).steps;
   const s = pool[Math.floor(r() * pool.length)];
   st.used.push(s.stop);
-  const q = byId[s.stop].gen(r, s.lv);
+  const q = dress(byId[s.stop], byId[s.stop].gen(r, s.lv));
   return { ...q, trick: s.stop, tlevel: st.L };
 }
 
