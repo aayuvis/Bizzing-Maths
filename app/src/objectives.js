@@ -100,7 +100,7 @@ export const STRANDS = [
   { id: 'shape', name: 'Shape, space & measure', glyph: '📐',
     why: 'Shapes and their angles, time and money, and measuring — perimeter, area and volume.',
     goals: [
-      { id: 'shapecity', can: 'I can name shapes, work out angles and use symmetry and coordinates.', bar: 'every Shape City stop passed',
+      { id: 'shapecity', can: 'I can name shapes, work out angles, use symmetry and coordinates, and construct with ruler and compasses.', bar: 'every Shape City stop passed',
         measure: (k) => m(worldShare(k, 'shapecity'), '', 'world:shapecity') },
       { id: 'clocktower', can: 'I can tell the time, handle money, convert units and find perimeter, area and volume.', bar: 'every Clock Tower stop passed',
         measure: (k) => m(worldShare(k, 'clocktower'), '', 'world:clocktower') },
@@ -110,7 +110,7 @@ export const STRANDS = [
     goals: [
       { id: 'setisland', can: 'I can use sets and Venn diagrams, and solve equations.', bar: 'every Set Island stop passed', band: '8-10',
         measure: (k) => m(worldShare(k, 'setisland'), '', 'world:setisland') },
-      { id: 'lighthouse', can: 'I can use Pythagoras and trigonometry, bearings, scatter graphs, tree diagrams and inequalities.', bar: 'every Lighthouse stop passed', band: '11-14',
+      { id: 'lighthouse', can: 'I can use Pythagoras and trigonometry, bearings, scatter graphs, tree diagrams, expected frequency and inequalities.', bar: 'every Lighthouse stop passed', band: '11-14',
         measure: (k) => m(worldShare(k, 'lighthouse'), '', 'world:lighthouse') },
       { id: 'carnival', can: 'I can read charts, find averages, work out chances and solve multi-step problems.', bar: 'every Data Carnival stop passed',
         measure: (k) => m(worldShare(k, 'carnival'), '', 'world:carnival') },

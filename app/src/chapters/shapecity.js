@@ -151,6 +151,59 @@ function solid(kind, n, wide = 70, tall = 110) {
   return svg(2 * cx, by + ry + 16, s, kind === 'prism' ? 'A prism' : 'A pyramid');
 }
 
+/* A base AB drawn flat, with the compass radius to swing from each end
+   written above it. No arcs: whether two arcs of those radii meet IS the
+   answer, so the picture states the lengths and leaves the meeting to you. */
+function baseFig(base, fromA, fromB) {
+  const x1 = 60, x2 = 280, y = 96;
+  let s = `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" class="dg-line"/><circle cx="${x1}" cy="${y}" r="5" class="dg-dot"/><circle cx="${x2}" cy="${y}" r="5" class="dg-dot"/>`;
+  s += text(x1, y + 24, 'A', 'dg-text') + text(x2, y + 24, 'B', 'dg-text') + text((x1 + x2) / 2, y + 24, base, 'dg-text');
+  s += text(x1, y - 22, `arc ${fromA}`, 'dg-accent') + text(x2, y - 22, `arc ${fromB}`, 'dg-accent');
+  s += text((x1 + x2) / 2, 22, 'compass arcs from each end of the base', 'dg-small');
+  return svg(340, y + 40, s, `A base of ${base}; arcs of ${fromA} from A and ${fromB} from B`);
+}
+
+/* An angle of d degrees with its bisector dashed in, a label in each half and a caption underneath. */
+function bisectFig(d, l1, l2, caption) {
+  const R = 110, cx = 140, cy = 146, P = (a, rr) => [R3(cx + rr * Math.cos(a * RAD)), R3(cy - rr * Math.sin(a * RAD))];
+  const [x1, y1] = P(d, R), [bx, by] = P(d / 2, R + 8), [ax, ay] = P(d, 34);
+  let s = `<line x1="${cx}" y1="${cy}" x2="${cx + R}" y2="${cy}" class="dg-line"/><line x1="${cx}" y1="${cy}" x2="${x1}" y2="${y1}" class="dg-line"/>`;
+  s += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" class="dg-thin" stroke-dasharray="6 5"/>`;
+  s += `<path d="M${cx + 34},${cy} A34,34 0 0 0 ${ax},${ay}" class="dg-arc"/><circle cx="${cx}" cy="${cy}" r="4" class="dg-dot"/>`;
+  const lr = d / 2 < 24 ? 128 : 70;
+  if (l1) { const [x, y] = P(d / 4, lr); s += text(x, R3(y + 5), l1, 'dg-accent'); }
+  if (l2) { const [x, y] = P((3 * d) / 4, lr); s += text(x, R3(y + 5), l2, 'dg-accent'); }
+  s += text(cx, cy + 32, caption, 'dg-text');
+  return svg(300, cy + 44, s, 'An angle cut in two by its bisector');
+}
+
+/* Triangle ABC with the bisectors of B and C meeting at I (the centre of the circle that fits inside). */
+function incentreFig(A, B, C) {
+  const p = triFromAngles(A, B, C), d = (i, j) => Math.hypot(p[i][0] - p[j][0], p[i][1] - p[j][1]);
+  const a = d(1, 2), b = d(0, 2), c = d(0, 1), w = a + b + c;
+  const I = [(a * p[0][0] + b * p[1][0] + c * p[2][0]) / w, (a * p[0][1] + b * p[1][1] + c * p[2][1]) / w];
+  const xs = p.map((q) => q[0]), ys = p.map((q) => q[1]), x0 = Math.min(...xs) - 70, y0 = Math.min(...ys) - 34;
+  const W = Math.max(...xs) - x0 + 70, H = Math.max(...ys) - y0 + 34, X = (v) => R3(v[0] - x0), Y = (v) => R3(v[1] - y0);
+  const cx = (xs[0] + xs[1] + xs[2]) / 3, cy = (ys[0] + ys[1] + ys[2]) / 3;
+  let s = `<polygon points="${p.map((q) => `${X(q)},${Y(q)}`).join(' ')}" class="dg-fill2"/>`;
+  for (const k of [1, 2]) s += `<line x1="${X(p[k])}" y1="${Y(p[k])}" x2="${X(I)}" y2="${Y(I)}" class="dg-line" stroke-dasharray="6 5"/>`;
+  s += `<circle cx="${X(I)}" cy="${Y(I)}" r="4" class="dg-dot"/>`;
+  ['A', `B ${B}°`, `C ${C}°`].forEach((l, i) => {
+    const dx = p[i][0] - cx, dy = p[i][1] - cy, n = Math.hypot(dx, dy) || 1;
+    s += text(R3(p[i][0] + (dx / n) * 22 - x0), R3(p[i][1] + (dy / n) * 22 - y0 + 5), l, i ? 'dg-accent' : 'dg-text');
+  });
+  // I's label sits on the far side from BC, so it never lands inside the angle being asked about
+  const mx = (p[1][0] + p[2][0]) / 2, my = (p[1][1] + p[2][1]) / 2, ux = I[0] - mx, uy = I[1] - my, un = Math.hypot(ux, uy) || 1;
+  s += text(R3(I[0] + (ux / un) * 16 - x0), R3(I[1] + (uy / un) * 16 - y0 + 5), 'I ?', 'dg-accent');
+  return svg(R3(W), R3(H), s, 'Triangle ABC with the bisectors of angles B and C meeting at I');
+}
+
+/* Heron's formula squared: positive for a real triangle, 0 for one lying flat, negative when the sides cannot meet.
+   Written out for `expr`, so the construction's rule is checked against a different piece of mathematics. */
+const HERON = '((a,b,c)=>{const s=(a+b+c)/2;return s*(s-a)*(s-b)*(s-c);})';
+const pt = ([x, y]) => `(${x}, ${y})`;
+const sq = (P, Q) => (P[0] - Q[0]) ** 2 + (P[1] - Q[1]) ** 2;
+
 /* ------------------------------------------------------------ names */
 
 const POLY = ['triangle', 'square', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'nonagon', 'decagon'];
@@ -588,6 +641,164 @@ export const TRICKS = [
       return svg(2 * c, 2 * c, s, 'A circle');
     },
   },
+  {
+    id: 'construct-triangle', world: 'shapecity', band: '11-14', title: 'Building a triangle from three sides',
+    hook: 'Three sticks: 3 cm, 4 cm and 7 cm. Can they make a triangle? Build it with a ruler and compasses before you guess.',
+    idea: 'Draw the longest side, then swing an arc from each end for the other two: a triangle is only possible if the two shorter sides add up to MORE than the longest.',
+    why: [
+      'Draw the longest side as the base, from A to B. The third corner must be 3 cm from A, and every point 3 cm from A lies on a circle round A — so open the compasses to 3 cm and swing an arc from A. Do the same from B with 4 cm. The third corner is wherever the two arcs cross.',
+      'The arcs can only cross if the two shorter sides, laid end to end, reach further than the base. If they add up to less, the arcs never meet. If they add up to exactly the base — 3 + 4 = 7 — the arcs only touch, on the base line itself: the "triangle" lies flat and has no third corner. So the two shorter sides must add up to more than the longest one.',
+      'When the arcs do cross, the triangle is fixed: any triangle with those three sides fits exactly on top of yours. That is why a frame of three rods is rigid when four rods wobble. It also tells you what a missing third side can be: longer than the difference of the other two, shorter than their sum, and never exactly either.',
+    ],
+    alg: 'sides a ≤ b ≤ c make a triangle only if a + b > c · third side x: (b − a) < x < (a + b)',
+    ex: { mode: 'can', s: [3, 4, 7], opts: ['Yes', 'No'] },
+    gen(r, lv = 1) {
+      return fresh(() => {
+        if (lv === 3 && r() < 0.5) {
+          const p = int(3, 15, r); let q = int(2, 15, r); if (q === p) q++;
+          return this.q({ mode: pick(['max', 'min'], r), s: [p, q] });
+        }
+        // the longest side L, and two others that do (or do not) reach past it
+        const L = int(lv === 1 ? 4 : 6, lv === 1 ? 10 : 15, r), x = int(1, L - 1, r), yes = r() < 0.5;
+        const flat = lv > 1 ? 0.6 : 0.25;                        // how often a "No" is the exact, arcs-just-touch case
+        const y = yes ? int(L - x + 1, L, r) : r() < flat ? L - x : int(1, L - x, r);
+        return this.q({ mode: 'can', s: shuffle([x, y, L], r), opts: shuffle(['Yes', 'No'], r) });
+      });
+    },
+    q({ mode, s, opts }) {
+      if (mode === 'can') {
+        const [a, b, c] = s, t = [...s].sort((u, v) => u - v);
+        return { mode, s, opts, text: `Can a triangle be built with sides of ${a} cm, ${b} cm and ${c} cm?`, choices: opts,
+          ans: t[0] + t[1] > t[2] ? 'Yes' : 'No', expr: `${HERON}(${a},${b},${c})>0?'Yes':'No'` };
+      }
+      const [p, q] = s, big = mode === 'max';
+      return { mode, s, text: `Two sides of a triangle are ${p} cm and ${q} cm. The third side is a whole number of cm. What is the ${big ? 'longest' : 'shortest'} it can be, in cm?`,
+        ans: big ? p + q - 1 : Math.abs(p - q) + 1,
+        expr: `((ok)=>${big ? 'ok[ok.length-1]' : 'ok[0]'})([...Array(100).keys()].filter((x)=>${HERON}(${p},${q},x)>0))` };
+    },
+    work({ mode, s, opts, ans }) {
+      if (mode === 'can') {
+        const t = [...s].sort((u, v) => u - v);
+        return [
+          { t: 'The longest side — draw it as the base', v: t[2] },
+          { t: 'Add the other two sides', v: t[0] + t[1] },
+          { t: `The arcs cross only if that is MORE than ${t[2]}. Can the triangle be built?`, v: ans, choices: opts },
+        ];
+      }
+      const [p, q] = s;
+      if (mode === 'max') return [{ t: `The two sides end to end: ${p} + ${q}`, v: p + q }, { t: 'The third side must be shorter than that. The longest whole number it can be', v: p + q - 1 }];
+      const hi = Math.max(p, q), lo = Math.min(p, q);
+      return [{ t: `The gap the short side cannot close: ${hi} − ${lo}`, v: hi - lo }, { t: 'The third side must be longer than that. The shortest whole number it can be', v: hi - lo + 1 }];
+    },
+    draw({ mode, s }) {
+      if (mode === 'can') { const t = [...s].sort((u, v) => u - v); return baseFig(`${t[2]} cm`, `${t[0]} cm`, `${t[1]} cm`); }
+      const [p, q] = s;
+      return mode === 'max' ? baseFig('? cm', `${p} cm`, `${q} cm`) : baseFig(`${Math.max(p, q)} cm`, `${Math.min(p, q)} cm`, '? cm');
+    },
+  },
+  {
+    id: 'perpendicular-bisector', world: 'shapecity', band: '11-14', title: 'The perpendicular bisector',
+    hook: 'Two friends live at A and B. Where could you stand to be exactly as far from one as from the other — and how many such places are there?',
+    idea: 'Every point the same distance from A and B lies on one straight line: through the middle of AB, at right angles to it. Equal compass arcs from A and B find it.',
+    why: [
+      'Open the compasses to more than half of AB. Swing an arc from A, then — without changing the compasses — one from B. The arcs cross at two points, one above AB and one below. Each crossing is one compass-width from A and one compass-width from B, so each is the same distance from both.',
+      'Join the two crossings. Now look at the four points A, the top crossing, B and the bottom crossing: all four sides between them are one compass-width, so they make a rhombus. The diagonals of a rhombus always cut each other in half at right angles. So the line you drew passes through the exact middle of AB, square to it: it bisects AB (cuts it in half) and is perpendicular to it.',
+      'Fold the paper along that line and A lands exactly on B, so every point on the fold is as far from A as from B — there are endlessly many such places, all on one line. On a grid you can check a point without compasses: square its across-distance and its up-distance to A and add them, do the same for B, and see if the totals match.',
+    ],
+    alg: 'P on the bisector ⇔ PA = PB ⇔ (x − x₁)² + (y − y₁)² = (x − x₂)² + (y − y₂)²',
+    ex: { mode: 'line', A: [2, 1], B: [10, 1] },
+    gen(r, lv = 1) {
+      const mode = lv === 1 ? 'line' : lv === 2 ? pick(['line', 'which'], r) : pick(['which', 'which', 'line'], r);
+      const straight = () => {
+        const c = int(0, 10, r), p = int(0, 8, r), q = p + 2 * int(1, 5, r); if (q > 10) return null;
+        const [u, v] = r() < 0.5 ? [p, q] : [q, p];
+        return r() < 0.5 ? [[u, c], [v, c]] : [[c, u], [c, v]];
+      };
+      for (;;) {
+        let AB;
+        if (mode === 'line' || lv === 2) AB = straight();
+        else { const dx = 2 * int(-3, 3, r), dy = 2 * int(-3, 3, r); if (!dx || !dy) continue; const A = [int(0, 10, r), int(0, 10, r)], B = [A[0] + dx, A[1] + dy]; AB = B.every((v) => v >= 0 && v <= 10) ? [A, B] : null; }
+        if (!AB) continue;
+        const [A, B] = AB;
+        if (mode === 'line') { const q = this.q({ mode, A, B }); if (!nums(q.text).includes(String(q.ans))) return q; continue; }
+        const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], on = [];
+        for (let x = 0; x <= 10; x++) for (let y = 0; y <= 10; y++) if (sq([x, y], A) === sq([x, y], B) && (x !== M[0] || y !== M[1])) on.push([x, y]);
+        if (!on.length) continue;
+        const P = pick(on, r), near = [];
+        for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+          const Q = [P[0] + ox, P[1] + oy];
+          if (Q.every((v) => v >= 0 && v <= 10) && sq(Q, A) !== sq(Q, B)) near.push(pt(Q));
+        }
+        if (near.length < 3) continue;
+        return this.q({ mode, A, B, opts: options(pt(P), near, r) });
+      }
+    },
+    q({ mode, A, B, opts }) {
+      const [ax, ay] = A, [bx, by] = B;
+      if (mode === 'line') {
+        const across = ay === by, v = across ? 'x' : 'y';
+        return { mode, A, B, text: `A is ${pt(A)} and B is ${pt(B)}. Their perpendicular bisector is the line ${v} = ?. What is the missing number?`,
+          ans: across ? (ax + bx) / 2 : (ay + by) / 2,
+          expr: across ? `[...Array(11).keys()].find((x)=>(x-${ax})**2+${ay}**2===(x-${bx})**2+${by}**2)` : `[...Array(11).keys()].find((y)=>${ax}**2+(y-${ay})**2===${bx}**2+(y-${by})**2)` };
+      }
+      return { mode, A, B, opts, text: `A is ${pt(A)} and B is ${pt(B)}. Which point is the same distance from A as from B — so it lies on the perpendicular bisector of AB?`, choices: opts,
+        ans: opts.find((o) => { const [x, y] = o.slice(1, -1).split(', ').map(Number); return sq([x, y], A) === sq([x, y], B); }),
+        expr: `${JSON.stringify(opts)}.find((s)=>{const [x,y]=s.replace(/[()]/g,'').split(',').map(Number);return (x-${ax})**2+(y-${ay})**2===(x-${bx})**2+(y-${by})**2;})` };
+    },
+    work({ mode, A, B, opts, ans }) {
+      const [ax, ay] = A, [bx, by] = B, mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if (mode === 'line') return ay === by
+        ? [{ t: `Halfway across from x = ${ax} to x = ${bx}: (${ax} + ${bx}) ÷ 2`, v: mx }, { t: 'AB runs across, so the bisector runs straight up through its middle: x =', v: mx }]
+        : [{ t: `Halfway up from y = ${ay} to y = ${by}: (${ay} + ${by}) ÷ 2`, v: my }, { t: 'AB runs up, so the bisector runs straight across through its middle: y =', v: my }];
+      return [
+        { t: `The middle of AB — its x: (${ax} + ${bx}) ÷ 2`, v: mx },
+        { t: `Its y: (${ay} + ${by}) ÷ 2`, v: my },
+        { t: 'The bisector goes through that middle, square to AB. Which point is on it? (Check: across² + up² to A and to B must match.)', v: ans, choices: opts },
+      ];
+    },
+    draw({ A, B }) { return coords(10, { A, B }); },
+  },
+  {
+    id: 'angle-bisector', world: 'shapecity', band: '11-14', title: 'The angle bisector',
+    hook: 'A path must split a corner of 84° into two equal angles. Where does it go — with compasses, and no protractor?',
+    idea: 'The angle bisector cuts an angle into two equal halves, and every point on it is the same distance from both arms.',
+    why: [
+      'Put the compass point on the corner and swing one arc that cuts both arms, at M and N. Now, from M and from N, swing two arcs of the same size so they cross at P. Draw the line from the corner through P. That line is the bisector.',
+      'Why are the two halves equal? Look at the two triangles corner–M–P and corner–N–P. The corner is the same distance from M and from N (one arc). P is the same distance from M and from N (two equal arcs). And the side from the corner to P is shared. Three sides the same means the triangles are the same triangle, just flipped — so the two angles at the corner match.',
+      'Fold along the bisector and one arm lands on the other, so every point on it is the same distance from both arms. In a triangle the three bisectors meet at one point, the same distance from all three sides — the centre of the biggest circle that fits inside. And since each bisector takes exactly half of its angle, halving then using the 180° of a triangle finds the angles there.',
+    ],
+    alg: 'each half = θ ÷ 2 · in triangle ABC, the bisectors of B and C meet at I: ∠BIC = 180° − B/2 − C/2',
+    ex: { mode: 'half', d: 84 },
+    gen(r, lv = 1) {
+      return fresh(() => {
+        const mode = lv === 1 ? 'half' : lv === 2 ? pick(['whole', 'whole', 'half'], r) : pick(['tri', 'tri', 'whole'], r);
+        if (mode === 'half') return this.q({ mode, d: 2 * int(10, 89, r) });
+        if (mode === 'whole') return this.q({ mode, h: int(11, 89, r) });
+        let B, C; do { B = 2 * int(12, 60, r); C = 2 * int(12, 60, r); } while (B + C > 156);
+        return this.q({ mode, B, C });
+      });
+    },
+    q({ mode, d, h, B, C }) {
+      if (mode === 'half') return { mode, d, text: `An angle of ${d}° is cut in two by its bisector. How big is each half, in degrees?`, expr: `${d}-${d}/2`, ans: d / 2 };
+      if (mode === 'whole') return { mode, h, text: `The bisector of an angle makes ${h}° with one arm. How big is the whole angle, in degrees?`, expr: `${h}+${h}`, ans: 2 * h };
+      return { mode, B, C, text: `In triangle ABC, angle B is ${B}° and angle C is ${C}°. The bisectors of angles B and C meet at I. How big is angle BIC, in degrees?`,
+        expr: `90+(180-${B}-${C})/2`, ans: 180 - B / 2 - C / 2 };
+    },
+    work({ mode, d, h, B, C }) {
+      if (mode === 'half') return [{ t: 'The whole angle', v: d }, { t: `Two equal halves: ${d} ÷ 2`, v: d / 2 }];
+      if (mode === 'whole') return [{ t: 'One half', v: h }, { t: 'The other half is the same size', v: h }, { t: 'Both halves together', v: 2 * h }];
+      return [
+        { t: `The bisector halves angle B: ${B} ÷ 2`, v: B / 2 },
+        { t: `And angle C: ${C} ÷ 2`, v: C / 2 },
+        { t: `Triangle IBC has 180° altogether: 180 − ${B / 2} − ${C / 2}`, v: 180 - B / 2 - C / 2 },
+      ];
+    },
+    draw({ mode, d, h, B, C }) {
+      if (mode === 'half') return bisectFig(d, '?', '?', `the whole angle: ${d}°`);
+      if (mode === 'whole') return bisectFig(2 * h, `${h}°`, '', 'the whole angle: ?');
+      return incentreFig(180 - B - C, B, C);
+    },
+  },
 ];
 
 /* ------------------------------------------------------------ stories */
@@ -677,5 +888,32 @@ export const STORIES = {
     { who: 'comet', say: 'Three times first.', add: { t: '3 × 60', v: 180 } },
     { who: 'goldlegend', say: 'Then the small part.', add: { t: '0.14 × 60', v: 8.4 } },
     { who: 'comet', say: '188.4 cm every turn — nearly two metres!', add: { t: '180 + 8.4', v: 188.4 } },
+  ] },
+  'construct-triangle': { title: 'Three straws', scene: 'room', cast: ['astro', 'pixel'], beats: [
+    { who: null, say: 'Pip has three straws, 3 cm, 4 cm and 7 cm long, and wants a triangle. Mira gets out a ruler and compasses.', add: { t: '3 + 4' } },
+    { who: 'pixel', say: 'Easy — just join the ends up!' },
+    { who: 'astro', say: 'Draw the 7 cm one as the base first. Then swing a 3 cm arc from one end and a 4 cm arc from the other.' },
+    { who: 'pixel', say: 'The arcs only just touch — right on the base line. There is no corner sticking up.' },
+    { who: 'astro', say: 'Because the two short sides add up to exactly the base. Laid end to end, they lie flat along it.', add: { t: '3 + 4', v: 7 } },
+    { who: 'pixel', say: 'So if the long one were a bit shorter, the arcs would cross above the base?', add: { t: '7 − 1', v: 6 } },
+    { who: 'astro', say: 'Yes. The two shorter sides must add up to MORE than the longest. 3 + 4 is not more than 7, so no triangle.', add: { t: '3 + 4', v: 7 } },
+  ] },
+  'perpendicular-bisector': { title: 'The bird bath', scene: 'garden', cast: ['koi', 'scopey'], beats: [
+    { who: null, say: 'On Nova’s garden plan, two lemon trees stand at (2, 1) and (10, 1). She wants a bird bath exactly as far from one tree as from the other.', add: { t: '10 − 2', v: 8 } },
+    { who: 'koi', say: 'Halfway between them works: 4 from each.', add: { t: '8 ÷ 2', v: 4 } },
+    { who: 'scopey', say: 'That is one spot. Now open the compasses wider and swing equal arcs from both trees.' },
+    { who: 'koi', say: 'They cross above the line and below it. Both crossings are one compass-width from each tree.' },
+    { who: 'scopey', say: 'Join them: a straight line through the middle, square to the trees. Check (6, 4) — 4 across and 3 up from either tree.', add: { t: '4 × 4 + 3 × 3', v: 25 } },
+    { who: 'koi', say: 'The same 25 from both trees. So every spot on that line would do.' },
+    { who: 'scopey', say: 'The line through the middle is x = 6.', add: { t: '(2 + 10) ÷ 2', v: 6 } },
+  ] },
+  'angle-bisector': { title: 'The corner path', scene: 'city', cast: ['panda', 'beaker'], beats: [
+    { who: null, say: 'Two walls of a city park meet at a corner of 84°. Suki wants a path from the corner that splits it into two equal angles.', add: { t: '84 ÷ 2' } },
+    { who: 'beaker', say: 'Half of 84 — so each side of the path makes 42°.', add: { t: '84 ÷ 2', v: 42 } },
+    { who: 'panda', say: 'And to mark it out with no protractor: one arc from the corner that cuts both walls.' },
+    { who: 'beaker', say: 'Then equal arcs from those two marks, crossing. The path runs from the corner through the crossing.' },
+    { who: 'panda', say: 'Two triangles with the same three sides, one each side of the path. Same triangle, so the same angle.' },
+    { who: 'beaker', say: 'Check it: two halves make the whole corner.', add: { t: '42 × 2', v: 84 } },
+    { who: 'panda', say: 'Each half is 42°. The path is the angle bisector.', add: { t: '84 − 42', v: 42 } },
   ] },
 };

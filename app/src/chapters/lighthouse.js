@@ -17,7 +17,7 @@
    "positive" that is not strongly positive fails the build. */
 
 import { int, pick, shuffle, seeded } from '../rand.js';
-import { svg, text } from './kit.js';
+import { svg, text, pie, fracBar } from './kit.js';
 
 export const WORLD = {
   id: 'lighthouse', name: 'The Lighthouse', short: 'Lighthouse', band: '11-14',
@@ -217,6 +217,23 @@ const EVENTS = [
     one: 'exactly one of the two nights is foggy', same: 'the two nights are the same (both foggy, or both clear)' },
 ];
 function prob(r, maxDen) { const b = int(2, maxDen, r); let a; do a = int(1, b - 1, r); while (gcd(a, b) !== 1); return [a, b]; }
+
+/* ------------------------------------------------------------ expected frequency */
+
+/* A die outcome: how many of the six faces win, the rule as code (for `expr`), and the words. */
+const DIE = [
+  [1, 'f===6', 'a six'], [3, 'f%2===0', 'an even number'], [2, 'f>=5', 'a 5 or a 6'], [2, 'f<3', 'a number less than 3'],
+  [3, 'f>3', 'a number bigger than 3'], [4, 'f>2', 'a number bigger than 2'], [2, 'f===1||f===6', 'a 1 or a 6'],
+];
+const LOGW = [['rain', 'rainy nights'], ['fog', 'foggy nights'], ['a gale', 'nights with a gale'], ['a calm sea', 'calm nights']];
+const DEC = [5, 10, 15, 20, 25, 30, 35, 40, 45, 60, 65, 70, 75, 80, 90];   // chances in hundredths
+/* Six die faces, the winning ones shaded. */
+function faces(cond) {
+  const win = Function('f', `return ${cond}`);
+  let s = '';
+  for (let f = 1; f <= 6; f++) { const x = 6 + (f - 1) * 52; s += `<rect x="${x}" y="6" width="44" height="44" rx="8" class="${win(f) ? 'dg-fill1' : 'dg-blank'}"/>` + text(x + 22, 35, f, 'dg-big'); }
+  return svg(318, 56, s, 'The six faces of a die, the ones that count shaded');
+}
 
 /* ------------------------------------------------------------ inequalities */
 
@@ -569,6 +586,74 @@ export const TRICKS = [
     draw({ e, p1, p2 }) { const E = EVENTS[e]; return tree(p1, p2, E.words, E.names); },
   },
   {
+    id: 'expected-frequency', world: 'lighthouse', band: '11-14', title: 'Expected frequency',
+    hook: 'The logbook says it rains on 3 nights in every 10. How many wet nights should the keeper plan for in the next 60?',
+    idea: 'Expected number = probability × number of trials: take that fraction of the trials.',
+    why: [
+      'A probability is a long-run share. A chance of rain of 3/10 means that, over many, many nights, about 3 in every 10 are wet. So in 60 nights you expect 3/10 of 60: split the 60 nights into tens — 6 of them — with 3 wet nights in each, 18 altogether. That is all expected frequency is: the probability × the number of trials.',
+      'Expected does not mean promised. Toss a coin 60 times and you expect 30 heads, but you might easily get 27, or 34 — every toss is still chancy. Real counts wobble around the expected number, sometimes above and sometimes below. What you can count on is the middle they wobble round: the more trials, the closer the share of heads creeps to 1/2, even though the count is rarely exactly half.',
+      'It works however the chance is written. A decimal is a fraction too: 0.15 is 15 hundredths, or 3/20, so in 200 nights expect 200 ÷ 20 × 3 = 30. And for two things at once, multiply along the tree-diagram path first, then take that share of the trials: ferries late 1/4 and 2/5 of the time make both late 1/10 of the time — about 20 days in 200.',
+    ],
+    alg: 'expected frequency = P(event) × number of trials',
+    keys: ['/', '.'],
+    ex: { kind: 'log', k: 3, n: 10, T: 60, w: 0 },
+    gen(r, lv = 1) {
+      return fresh(() => {
+        const kind = lv === 1 ? pick(['spin', 'die', 'log'], r) : lv === 2 ? pick(['log', 'dec', 'dec', 'spin'], r) : pick(['tree', 'tree', 'dec'], r);
+        if (kind === 'spin') { const n = int(3, 8, r), k = int(1, n - 1, r); return this.q({ kind, n, k, T: n * int(lv === 1 ? 2 : 5, lv === 1 ? 12 : 30, r) }); }
+        if (kind === 'die') return this.q({ kind, i: int(0, DIE.length - 1, r), T: 6 * int(3, 20, r) });
+        if (kind === 'log') { const n = pick([4, 5, 8, 10], r); let k; do k = int(1, n - 1, r); while (gcd(k, n) !== 1); return this.q({ kind, k, n, w: int(0, LOGW.length - 1, r), T: n * int(lv === 1 ? 3 : 6, lv === 1 ? 15 : 40, r) }); }
+        if (kind === 'dec') { const c = pick(DEC, r), den = 100 / gcd(c, 100); return this.q({ kind, c, ship: r() < 0.5, T: den * int(2, Math.floor(400 / den), r) }); }
+        const p1 = prob(r, 6), p2 = prob(r, 6);
+        return this.q({ kind, e: pick([0, 2], r), p1, p2, ask: pick(['yy', 'yn', 'ny', 'nn'], r), T: p1[1] * p2[1] * int(2, 10, r) });
+      });
+    },
+    q(o) {
+      const { kind, T } = o;
+      if (kind === 'spin') return { ...o, text: `A spinner has ${o.n} equal sections, and ${o.k} of them are shaded. It is spun ${T} times. How many times would you expect it to land on a shaded section?`,
+        expr: `${T}*${o.k}/${o.n}`, ans: (T / o.n) * o.k };
+      if (kind === 'die') { const [k, cond, say] = DIE[o.i]; return { ...o, text: `A fair die is rolled ${T} times. How many times would you expect to roll ${say}?`,
+        expr: `${T}*[1,2,3,4,5,6].filter((f)=>${cond}).length/6`, ans: (T / 6) * k }; }
+      if (kind === 'log') { const [w, nights] = LOGW[o.w]; return { ...o, text: `The keeper’s logbook shows ${w} on ${o.k} night${o.k > 1 ? 's' : ''} in every ${o.n}. How many ${nights} would you expect in the next ${T} nights?`,
+        expr: `${T}*${o.k}/${o.n}`, ans: (T / o.n) * o.k }; }
+      if (kind === 'dec') { const p = String(o.c / 100), den = 100 / gcd(o.c, 100), num = o.c / gcd(o.c, 100);
+        return { ...o, text: o.ship ? `The chance that a passing ship signals to the lighthouse is ${p}. ${T} ships pass. How many would you expect to signal?`
+          : `The chance of fog on any night is ${p}. How many foggy nights would you expect in ${T} nights?`, expr: `${T}*${p}`, ans: (T / den) * num }; }
+      const E = EVENTS[o.e], [a, b] = o.p1, [c, d] = o.p2, pa = (y) => (y ? a : b - a), pc = (y) => (y ? c : d - c);
+      const y1 = o.ask[0] === 'y', y2 = o.ask[1] === 'y', num = pa(y1) * pc(y2), trials = o.e === 0 ? 'days' : 'fishing trips';
+      const cell = `(i<A)===${y1}&&(j<C)===${y2}`;
+      return { ...o, text: `The chance that the ${E.names[0]} ${E.yes} is ${fr(a, b)}. The chance that the ${E.names[1]} ${E.yes} is ${fr(c, d)}, whatever the first one does. Over ${T} ${trials}, how many times would you expect this: the ${E.names[0]} ${y1 ? E.yes : E.no} and the ${E.names[1]} ${y2 ? E.yes : E.no}?`,
+        expr: `${T}*((A,B,C,D)=>{let k=0;for(let i=0;i<B;i++)for(let j=0;j<D;j++)if(${cell})k++;return k/(B*D);})(${a},${b},${c},${d})`, ans: (T / (b * d)) * num };
+    },
+    work(o) {
+      const { kind, T } = o;
+      let num, den, first;
+      if (kind === 'spin' || kind === 'log' || kind === 'die') {
+        const [k, n] = kind === 'die' ? [DIE[o.i][0], 6] : [o.k, o.n];
+        [num, den] = fr(k, n).split('/').map(Number);
+        first = { t: kind === 'die' ? `The chance: winning faces out of 6, in its simplest form` : `The chance as a fraction: ${k} out of ${n}, in its simplest form`, v: fr(k, n) };
+      } else if (kind === 'dec') {
+        [num, den] = fr(o.c, 100).split('/').map(Number);
+        first = { t: `${o.c / 100} as a fraction in its simplest form`, v: fr(o.c, 100) };
+      } else {
+        const [a, b] = o.p1, [c, d] = o.p2, y1 = o.ask[0] === 'y', y2 = o.ask[1] === 'y';
+        const f1 = fr(y1 ? a : b - a, b), f2 = fr(y2 ? c : d - c, d), path = fr((y1 ? a : b - a) * (y2 ? c : d - c), b * d);
+        [num, den] = path.split('/').map(Number);
+        first = { t: `Multiply along the path: ${f1} × ${f2}`, v: path };
+      }
+      const s = [first, { t: `Share the ${T} trials into ${den} equal parts: ${T} ÷ ${den}`, v: T / den }];
+      if (num > 1) s.push({ t: `Take ${num} of those parts: ${T / den} × ${num}`, v: (T / den) * num });
+      return s;
+    },
+    draw(o) {
+      if (o.kind === 'spin') return pie(o.n, o.k);
+      if (o.kind === 'die') return faces(DIE[o.i][1]);
+      if (o.kind === 'log') return fracBar(o.n, o.k);
+      if (o.kind === 'dec') { const g = gcd(o.c, 100); return fracBar(100 / g, o.c / g); }
+      const E = EVENTS[o.e]; return tree(o.p1, o.p2, E.words, E.names);
+    },
+  },
+  {
     id: 'inequalities', world: 'lighthouse', band: '11-14', title: 'Inequalities',
     hook: '3x + 4 < 19. Not one answer this time — a whole range of them. What is the biggest whole number that works?',
     idea: 'Solve it like an equation, doing the same to both sides — but if you multiply or divide by a negative, turn the sign round.',
@@ -700,6 +785,15 @@ export const STORIES = {
     { who: 'melody', say: 'So both are late on 10 days in 100. That is one tenth.', add: { t: '10 ÷ 100', v: 0.1 } },
     { who: 'goldlegend', say: 'Multiply along the branches. A fraction of a fraction.' },
     { who: 'melody', say: 'One quarter times two fifths: two twentieths, which is one tenth.', add: { t: '1 ÷ 4 × 2 ÷ 5', v: 0.1 } },
+  ] },
+  'expected-frequency': { title: 'Sixty nights of weather', scene: 'night', cast: ['melody', 'scopey'], beats: [
+    { who: null, say: 'The keeper’s logbook shows rain on about 3 nights in every 10. Theo is planning the next 60 nights and wants to know how many will be wet.', add: { t: '60 ÷ 10 × 3' } },
+    { who: 'scopey', say: 'Sixty nights. How many rainy ones should I plan for?' },
+    { who: 'melody', say: 'Three in every ten. So split the 60 nights into tens first.', add: { t: '60 ÷ 10', v: 6 } },
+    { who: 'scopey', say: 'Six lots of ten nights, with 3 wet ones in each.', add: { t: '6 × 3', v: 18 } },
+    { who: 'melody', say: 'Or straight away: the chance times the number of nights. 0.3 of 60.', add: { t: '60 × 0.3', v: 18 } },
+    { who: 'scopey', say: 'So it will rain on exactly 18 nights?' },
+    { who: 'melody', say: 'Probably not exactly — maybe 15, maybe 21. Expect about 18: that is the middle the real count wobbles round, not a promise.' },
   ] },
   'inequalities': { title: 'The weight limit', scene: 'harbour', cast: ['samurai', 'scopey'], beats: [
     { who: null, say: 'The lighthouse crane can lift less than 19 tonnes. The cradle weighs 4 tonnes and each crate weighs 3 tonnes. How many crates can go up at once?', add: { t: '3 × 5 + 4' } },
