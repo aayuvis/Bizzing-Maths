@@ -127,6 +127,15 @@ LIB = {
     'lib-facts':    "Colourful wooden number-bond toys: bead strings, stacking rods of different lengths in a staircase, a tray of counters, on a sunny play table.",
     'lib-stories':  "A cosy bookshelf nook with storybooks with blank spines, a reading cushion, a lamp, and small toy figures of animals peeking from the shelf.",
 }
+WORLD3 = {
+    'w-quarry': "A wide panorama of a sunlit stone quarry in warm sandstone cliffs, where great smooth building blocks of a few different colours are stacked into towers, walls and arches, each tower clearly built from the same few kinds of block, a wooden crane, chisels and hammers on a bench, wildflowers on the ledges. Honey gold, terracotta, slate blue.",
+    'w-mine': "A wide cutaway view of a friendly storybook mine: green meadow and a little winding-house at the top, and below the grass line a tall wooden lift shaft going straight down through layers of rock to several lamp-lit tunnels one under another, crystals glowing in the walls, mine carts on rails, a thermometer-like glass tube of coloured liquid on a post, lanterns. Earthy browns, glowing amber, cool crystal blue.",
+    'w-coinstreet': "A wide panorama of a cheerful old market street of small shops with awnings, a little bank with columns, glass jars of shining round coins on a counter, a pair of brass weighing scales, a piggy bank on a window sill, baskets of fruit with blank price tags, bunting with no writing. Warm cream, coin gold, leafy green, brick red.",
+}
+ATLAS3 = ("A storybook fantasy map seen from above at a gentle angle of THREE separate islands in a calm sea: on the upper left an island "
+          "of warm sandstone cliffs with a quarry of stacked stone blocks, on the right an island with a winding-house and a lift shaft "
+          "going down into a hill with lamp-lit tunnels, and at the bottom an island with a little market town of shops with awnings and a small bank "
+          "with columns. Open water between them, dotted sea routes connecting them, a compass rose made only of arrows. Painted like the endpapers of a children's book.")
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')
@@ -138,6 +147,8 @@ HERO = ("A wide, joyful storybook panorama for the top of a children's maths app
 JOBS['home-hero'] = (HERO + ' ' + STYLE + ' Very wide banner.', '21:9')
 for k, v in WORLD2.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas2'] = (ATLAS2 + ' ' + STYLE, '16:9')
+for k, v in WORLD3.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
+JOBS['atlas3'] = (ATLAS3 + ' ' + STYLE, '16:9')
 for k, v in SCENE2.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
 for k, v in LIB.items(): JOBS[k] = (v + ' ' + STYLE + ' Landscape tile composition.', '4:3')
 JOBS['q-tower'] = (TOWER + ' ' + STYLE + ' Wide landscape frame.', '16:9')

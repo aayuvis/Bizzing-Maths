@@ -38,9 +38,12 @@ export const MAP2_PINS = {
   library: { x: 27, y: 20 }, clocktower: { x: 45, y: 17 }, bakery: { x: 62, y: 19 }, shapecity: { x: 80, y: 30 },
   forest: { x: 83, y: 56 }, palace: { x: 63, y: 74 }, dock: { x: 44, y: 71 }, setisland: { x: 28, y: 74 }, carnival: { x: 16, y: 43 },
 };
+/* The Outer Isles — measured against atlas3.webp the same way. */
+export const MAP3_PINS = { quarry: { x: 22, y: 30 }, mine: { x: 79, y: 33 }, coinstreet: { x: 50, y: 82 } };
 const ISLANDS = [
   { n: 1, name: 'Number Island', blurb: 'Mental methods and the Vedic sutras — where the Atlas began.', img: 'atlas', pins: MAP_PINS, w: 1920, h: 1072 },
   { n: 2, name: 'The Far Isles', blurb: 'Place value, time and money, fractions, shapes, factors, squares, decimals, sets and data.', img: 'atlas2', pins: MAP2_PINS, w: 1920, h: 1072 },
+  { n: 3, name: 'The Outer Isles', blurb: 'Kinds of number and the primes they are built from, numbers below zero, and money.', img: 'atlas3', pins: MAP3_PINS, w: 1920, h: 1072 },
 ];
 
 export function viewAtlasMap() {
@@ -51,7 +54,7 @@ export function viewAtlasMap() {
   const I = ISLANDS[isle - 1];
   const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
-    ${pageHead('The Number Atlas', 'Fourteen places on two islands, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
+    ${pageHead('The Number Atlas', 'Seventeen places on three islands, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
     <div class="seg isle-seg" role="tablist" aria-label="Island">${ISLANDS.map((x) => `<button role="tab" aria-selected="${x.n === isle}" class="${x.n === isle ? 'on' : ''}" data-act="isle" data-arg="${x.n}">${esc(x.name)}</button>`).join('')}</div>
     <p class="muted center-t">${esc(I.blurb)}</p>
     <div class="map-board">
@@ -82,7 +85,8 @@ export function viewAtlasMap() {
 /* The road across a board: a gentle wave, in the board's own 0–100 space. */
 const ROAD = { gardens: [72, 7, 1.3], market: [78, 5, 1.1], workshop: [80, 5, 1.6], observatory: [72, 6, 1.2], harbour: [82, 4, 1.4],
   library: [80, 4, 1.2], clocktower: [80, 5, 1.4], bakery: [80, 4, 1.1], shapecity: [82, 4, 1.5], forest: [78, 5, 1.2],
-  palace: [80, 5, 1.3], dock: [80, 4, 1.2], setisland: [82, 4, 1.1], carnival: [80, 5, 1.4] };
+  palace: [80, 5, 1.3], dock: [80, 4, 1.2], setisland: [82, 4, 1.1], carnival: [80, 5, 1.4],
+  quarry: [80, 4, 1.2], mine: [80, 4, 1.3], coinstreet: [82, 4, 1.2] };
 function roadY(wid, x) { const [b, a, f] = ROAD[wid] || [78, 5, 1.3]; return b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6); }
 
 export function viewWorld(wid) {
