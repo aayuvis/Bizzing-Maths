@@ -489,6 +489,7 @@ on('goalGo', (how) => {
   if (a === 'facts') { R.ui.factOp = b; return go('facts'); }
   if (a === 'world') return fire('openWorld', b);
   if (a === 'puzzles') return go('puzzles');
+  if (a === 'lib') return go('lib', b);
   go(a);
 });
 on('stopTab', (t) => { if (t !== 'turn' && R.run && R.run.kind === 'guided') R.run = null; R.ui.tab = t; render(); });
