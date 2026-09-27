@@ -1,6 +1,6 @@
 /* shapes.js — Shape Studio (docs/LIBRARY-CONTRACT.md).
 
-   Six workbenches, one idea: every number on the screen is measured from the
+   Seven workbenches, one idea: every number on the screen is measured from the
    drawing, or the drawing is built from the number, so the two can never
    disagree.
 
@@ -16,10 +16,16 @@
                   from the model, the net unfolded from it, a cuboid's volume
                   and surface area on sliders
      Moves        reflect, rotate and translate on a grid — predict, then look
+     Construct    ruler-and-compass constructions, one arc or line at a time:
+                  perpendicular and angle bisectors, a triangle from three
+                  sides (and why some cannot be built), a perpendicular from
+                  a point, an equilateral triangle, copying an angle
 
    Touch and keyboard for everything: the protractor turns by tapping its rim
    or with ← →; the grids take taps or arrows + space; sliders are native
-   ranges (drag, or arrows when focused) and ← → ↑ ↓ work on the page too. */
+   ranges (drag, or arrows when focused) and ← → ↑ ↓ work on the page too;
+   a construction steps with ← → and its points are tapped, then nudged with
+   the arrows or the on-screen pad. */
 
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
@@ -69,7 +75,7 @@ const LINKS = {
 
 const BENCHES = [
   ['protractor', '📐 Protractor'], ['polygon', '⬡ Polygons'], ['area', '▦ Area'],
-  ['circle', '◯ Circle'], ['solids', '🧊 3D & nets'], ['moves', '↔ Moves'],
+  ['circle', '◯ Circle'], ['solids', '🧊 3D & nets'], ['moves', '↔ Moves'], ['construct', '⌒ Construct'],
 ];
 
 /* =================================================== 1. the protractor */
@@ -891,17 +897,378 @@ function keyMoves(e, ctx) {
   return false;
 }
 
+/* ================================================= 7. constructions */
+
+/* Ruler and compasses, one mark at a time. Every construction is built from
+   its starting points by the same moves a child makes on paper — an arc is a
+   centre and a radius, a crossing is where two circles meet, a ruler line
+   joins two points — so the picture is the construction, never a drawing of
+   the answer. Screen coordinates throughout (y down); geometry does not mind. */
+
+const KW = 400, KH = 320, PXCM = 40;           // 40 px of drawing is read as 1 cm
+const kv = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1]], add: (a, b) => [a[0] + b[0], a[1] + b[1]], mul: (a, k) => [a[0] * k, a[1] * k],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1], cross: (a, b) => a[0] * b[1] - a[1] * b[0],
+  dist: (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]),
+};
+kv.unit = (a) => { const l = Math.hypot(a[0], a[1]) || 1; return [a[0] / l, a[1] / l]; };
+const kmid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+/* where two circles cross: [], one point (touching) or two */
+function circlesMeet(c1, r1, c2, r2) {
+  const d = kv.dist(c1, c2); if (d < 1e-12) return [];
+  const x = (d * d + r1 * r1 - r2 * r2) / (2 * d), h2 = r1 * r1 - x * x;
+  if (h2 < -1e-9) return [];
+  const u = kv.unit(kv.sub(c2, c1)), n = [-u[1], u[0]], base = kv.add(c1, kv.mul(u, x));
+  if (h2 <= 1e-9) return [base];
+  const h = Math.sqrt(h2); return [kv.add(base, kv.mul(n, h)), kv.add(base, kv.mul(n, -h))];
+}
+/* where line p1p2 meets line p3p4 */
+function linesMeet(p1, p2, p3, p4) {
+  const d1 = kv.sub(p2, p1), d2 = kv.sub(p4, p3), t = kv.cross(kv.sub(p3, p1), d2) / kv.cross(d1, d2);
+  return kv.add(p1, kv.mul(d1, t));
+}
+/* the angle at o between o→p and o→q, 0–180° */
+const angAt = (o, p, q) => { const a = kv.sub(p, o), b = kv.sub(q, o); return Math.acos(clamp(kv.dot(a, b) / (Math.hypot(...a) * Math.hypot(...b)), -1, 1)) / RAD; };
+/* the part of the page a line through p (direction d) crosses: a ray from p, or both ways */
+function clipLine(p, d, ray) {
+  let lo = ray ? 0 : -Infinity, hi = Infinity;
+  for (const [i, K] of [[0, KW], [1, KH]]) {
+    if (Math.abs(d[i]) < 1e-12) continue;
+    const t1 = (4 - p[i]) / d[i], t2 = (K - 4 - p[i]) / d[i];
+    lo = Math.max(lo, Math.min(t1, t2)); hi = Math.min(hi, Math.max(t1, t2));
+  }
+  return [kv.add(p, kv.mul(d, lo)), kv.add(p, kv.mul(d, hi))];
+}
+/* an arc's sweep (a0 < a1, clockwise on screen) that passes through pts, padded */
+function arcSpan(c, pts, pad) {
+  const an = pts.map((p) => Math.atan2(p[1] - c[1], p[0] - c[0]));
+  if (an.length === 1) return [an[0] - pad, an[0] + pad];
+  const d = mod(an[1] - an[0], 2 * Math.PI);
+  return d <= Math.PI ? [an[0] - pad, an[0] + d + pad] : [an[1] - pad, an[1] + (2 * Math.PI - d) + pad];
+}
+const arcCovers = (arc, p) => mod(Math.atan2(p[1] - arc.c[1], p[0] - arc.c[0]) - arc.a0, 2 * Math.PI) <= arc.a1 - arc.a0 + 1e-9;
+const kLab = (n) => n.replace('2', '′');
+
+/* drawing primitives. A step adds exactly one stroke — a ruler line (`seg`)
+   or a compass arc (`arc`) — plus the points it finds and any marks. */
+const kSeg = (a, b, cls = 'rule') => ({ t: 'seg', a, b, cls });
+const kArc = (N, cn, r, span, more = {}) => ({ t: 'arc', cn, c: N[cn], r, a0: span[0], a1: span[1], thru: [], ...more });
+const kPt = (...ns) => ns.map((n) => ({ t: 'pt', n }));
+const kRight = (at, u, v) => ({ t: 'right', at, u: kv.unit(u), v: kv.unit(v) });
+
+function buildPerp([A, B]) {
+  const ab = kv.dist(A, B), r = 0.65 * ab;
+  const [P, Q] = circlesMeet(A, r, B, r).sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+  const M = linesMeet(P, Q, A, B), N = { A, B, P, Q, M }, e = kv.mul(kv.sub(Q, P), 0.22);
+  const span = (c) => arcSpan(c, [P, Q], 0.3);
+  return { N, steps: [
+    { cap: 'Here is a segment, <b>AB</b>. You are going to find the line that cuts it exactly in half, at right angles — with only a ruler and compasses.', add: [kSeg(A, B, 'given'), ...kPt('A', 'B')] },
+    { cap: 'Put the compass point on <b>A</b> and open it to <b>more than half</b> of AB. Draw an arc above and below the segment.', add: [kArc(N, 'A', r, span(A), { thru: ['P', 'Q'], gt: ['A', 'B', 0.5] })] },
+    { cap: 'Keep the same opening. Put the compass point on <b>B</b> and draw another arc. The two arcs cross at <b>P</b> and <b>Q</b>.', add: [kArc(N, 'B', r, span(B), { thru: ['P', 'Q'], same: 1 }), ...kPt('P', 'Q')] },
+    { cap: 'Line the ruler up on <b>P</b> and <b>Q</b> and draw the line. It crosses AB at <b>M</b> — the exact middle, at a right angle.', add: [kSeg(kv.sub(P, e), kv.add(Q, e)), kRight(M, kv.sub(B, A), kv.sub(P, M)), ...kPt('M')] },
+  ],
+  why: ['Every arc had the same opening, so <b>AP, BP, AQ and BQ are all the same length</b>.',
+    'Four equal sides make a <b>rhombus</b>, and the diagonals of a rhombus cut each other in half at right angles. So M is the middle of AB, and PQ meets AB at 90°.',
+    'Better still: <b>every</b> point on PQ is the same distance from A as from B. That is what the line is for.'],
+  deep: 'In symbols: AP = BP and AQ = BQ, with PQ shared, so triangles APQ and BPQ are congruent (SSS). Their angles at P are equal, so triangles APM and BPM are congruent too (SAS): AM = MB, and the two angles at M are equal and add to 180°, so each is 90°.',
+  meas: `AM = ${num(kv.dist(A, M) / PXCM, 1)} cm, MB = ${num(kv.dist(M, B) / PXCM, 1)} cm, and angle AMP = ${Math.round(angAt(M, A, P))}°.` };
+}
+function buildAngle([O, P, Q]) {
+  const r1 = 0.5 * Math.min(kv.dist(O, P), kv.dist(O, Q));
+  const X = kv.add(O, kv.mul(kv.unit(kv.sub(P, O)), r1)), Y = kv.add(O, kv.mul(kv.unit(kv.sub(Q, O)), r1));
+  const r2 = 0.8 * kv.dist(X, Y), Z = circlesMeet(X, r2, Y, r2).sort((p, q) => kv.dist(q, O) - kv.dist(p, O))[0];
+  const N = { O, P, Q, X, Y, Z }, [, far] = clipLine(O, kv.unit(kv.sub(Z, O)), true);
+  const half = angAt(O, P, Z);
+  return { N, steps: [
+    { cap: 'Here is an angle, <b>POQ</b>, with its corner at <b>O</b>. You are going to cut it into two equal halves.', add: [kSeg(O, P, 'given'), kSeg(O, Q, 'given'), ...kPt('O', 'P', 'Q')] },
+    { cap: 'Put the compass point on the corner <b>O</b> and draw an arc that crosses both arms, at <b>X</b> and <b>Y</b>.', add: [kArc(N, 'O', r1, arcSpan(O, [X, Y], 0.25), { thru: ['X', 'Y'] }), ...kPt('X', 'Y')] },
+    { cap: 'Put the compass point on <b>X</b> and draw an arc inside the angle. Open it to more than half the gap from X to Y.', add: [kArc(N, 'X', r2, arcSpan(X, [Z], 0.4), { thru: ['Z'], gt: ['X', 'Y', 0.5] })] },
+    { cap: 'Keep the same opening. Put the point on <b>Y</b> and draw an arc that crosses the last one, at <b>Z</b>.', add: [kArc(N, 'Y', r2, arcSpan(Y, [Z], 0.4), { thru: ['Z'], same: 2 }), ...kPt('Z')] },
+    { cap: 'With the ruler, draw a line from <b>O</b> through <b>Z</b>. It cuts the angle exactly in half.', add: [kSeg(O, far)] },
+  ],
+  why: ['The first arc made <b>OX = OY</b>. The next two had the same opening, so <b>XZ = YZ</b>.',
+    'So the triangles OXZ and OYZ have three matching sides (OZ is in both). Triangles with the same three sides are the same shape — so their angles at O are equal.',
+    'That is the whole trick: two matching triangles, side by side, sharing the line you drew.'],
+  deep: 'In symbols: OX = OY, XZ = YZ and OZ = OZ, so triangle OXZ ≅ triangle OYZ (SSS), and angle XOZ = angle YOZ. Z is also the same distance from both arms — every point on the bisector is.',
+  meas: `Angle POQ = ${Math.round(angAt(O, P, Q))}°. Angle POZ = ${Math.round(half)}° and angle ZOQ = ${Math.round(angAt(O, Z, Q))}°.` };
+}
+function buildDrop([A, B, P]) {
+  const u = kv.unit(kv.sub(B, A)), d = Math.abs(kv.cross(u, kv.sub(P, A))), r = 1.5 * d;
+  const F0 = kv.add(A, kv.mul(u, kv.dot(kv.sub(P, A), u))), h = Math.sqrt(r * r - d * d);
+  const X = kv.sub(F0, kv.mul(u, h)), Y = kv.add(F0, kv.mul(u, h));
+  const s = 0.7 * kv.dist(X, Y), side = Math.sign(kv.cross(u, kv.sub(P, A)));
+  const Z = circlesMeet(X, s, Y, s).find((p) => Math.sign(kv.cross(u, kv.sub(p, A))) === -side);
+  const F = linesMeet(P, Z, A, B), N = { A, B, P, X, Y, Z, F }, [l0, l1] = clipLine(A, u, false);
+  return { N, steps: [
+    { cap: 'Here is a line and a point <b>P</b> that is not on it. You are going to draw the shortest path from P to the line — the one that meets it at right angles.', add: [kSeg(l0, l1, 'given'), ...kPt('A', 'B', 'P')] },
+    { cap: 'Put the compass point on <b>P</b> and draw an arc that crosses the line twice, at <b>X</b> and <b>Y</b>.', add: [kArc(N, 'P', r, arcSpan(P, [X, Y], 0.25), { thru: ['X', 'Y'] }), ...kPt('X', 'Y')] },
+    { cap: 'Put the compass point on <b>X</b> and draw an arc on the far side of the line from P. Open it more than half way to Y.', add: [kArc(N, 'X', s, arcSpan(X, [Z], 0.4), { thru: ['Z'], gt: ['X', 'Y', 0.5] })] },
+    { cap: 'Keep the same opening. Put the point on <b>Y</b> and draw an arc that crosses the last one, at <b>Z</b>.', add: [kArc(N, 'Y', s, arcSpan(Y, [Z], 0.4), { thru: ['Z'], same: 2 }), ...kPt('Z')] },
+    { cap: 'Line the ruler up on <b>P</b> and <b>Z</b> and draw. It meets the line at <b>F</b>, at a right angle. PF is the shortest way from P to the line.', add: [kSeg(P, Z), kRight(F, u, kv.sub(P, F)), ...kPt('F')] },
+  ],
+  why: ['The first arc made <b>PX = PY</b>. The next two had the same opening, so <b>ZX = ZY</b>.',
+    'So P and Z are each the same distance from X as from Y. Points like that all lie on the <b>perpendicular bisector</b> of XY — the first construction on this bench.',
+    'So PZ crosses the line XY at right angles. And a slanting path from P to the line is the long side of a right-angled triangle, so it is always longer than PF.'],
+  deep: 'In symbols: PX = PY and ZX = ZY, so P and Z both lie on the perpendicular bisector of XY; two points fix a line, so PZ is that bisector and PF ⟂ XY. For any other point G on the line, PG² = PF² + FG² > PF² (Pythagoras).',
+  meas: `Angle PFB = ${Math.round(angAt(F, P, B))}°, and PF = ${num(kv.dist(P, F) / PXCM, 1)} cm.` };
+}
+function buildEqui([A, B]) {
+  const ab = kv.dist(A, B), C = circlesMeet(A, ab, B, ab).sort((p, q) => p[1] - q[1] || p[0] - q[0])[0], N = { A, B, C };
+  return { N, steps: [
+    { cap: 'Here is a segment, <b>AB</b>. You are going to build a triangle with all three sides equal to it — and with it, an angle of exactly 60°.', add: [kSeg(A, B, 'given'), ...kPt('A', 'B')] },
+    { cap: 'Open the compasses to exactly the length of AB. Put the point on <b>A</b> and draw an arc above the middle of AB.', add: [kArc(N, 'A', ab, arcSpan(A, [C], 0.35), { thru: ['C'], eq: ['A', 'B'] })] },
+    { cap: 'Keep that opening. Put the point on <b>B</b> and draw an arc crossing the first one, at <b>C</b>.', add: [kArc(N, 'B', ab, arcSpan(B, [C], 0.35), { thru: ['C'], same: 1, eq: ['A', 'B'] }), ...kPt('C')] },
+    { cap: 'Join <b>A</b> to <b>C</b> with the ruler.', add: [kSeg(A, C)] },
+    { cap: 'Join <b>B</b> to <b>C</b>. Every side is the same length, and every angle is 60°.', add: [kSeg(B, C)] },
+  ],
+  why: ['C is on the first arc, so <b>AC = AB</b>. It is on the second arc too, so <b>BC = BA</b>.',
+    'So all three sides are equal: an <b>equilateral</b> triangle. Its three angles are equal too, and they add to 180°, so each one is 180° ÷ 3 = <b>60°</b>.',
+    'Bisect one of those angles (the second construction) and you have made 30°.'],
+  deep: 'This is the very first construction in Euclid\'s Elements (Book I, Proposition 1).',
+  meas: `AB = ${num(ab / PXCM, 1)} cm, BC = ${num(kv.dist(B, C) / PXCM, 1)} cm, CA = ${num(kv.dist(C, A) / PXCM, 1)} cm. Angles: ${Math.round(angAt(A, B, C))}°, ${Math.round(angAt(B, C, A))}°, ${Math.round(angAt(C, A, B))}°.` };
+}
+function buildCopy([O, P, Q, D, R]) {
+  const r = 0.5 * Math.min(kv.dist(O, P), kv.dist(O, Q));
+  const X = kv.add(O, kv.mul(kv.unit(kv.sub(P, O)), r)), Y = kv.add(O, kv.mul(kv.unit(kv.sub(Q, O)), r));
+  const X2 = kv.add(D, kv.mul(kv.unit(kv.sub(R, D)), r)), w = kv.dist(X, Y), turn = Math.sign(kv.cross(kv.sub(P, O), kv.sub(Q, O)));
+  const Y2 = circlesMeet(D, r, X2, w).find((p) => Math.sign(kv.cross(kv.sub(R, D), kv.sub(p, D))) === turn);
+  const N = { O, P, Q, D, R, X, Y, X2, Y2 }, [, far] = clipLine(D, kv.unit(kv.sub(Y2, D)), true);
+  return { N, steps: [
+    { cap: 'Here is an angle <b>POQ</b>, and a ray starting from a new point <b>D</b>. You are going to make the same angle at D — without a protractor.', add: [kSeg(O, P, 'given'), kSeg(O, Q, 'given'), kSeg(D, R, 'given'), ...kPt('O', 'P', 'Q', 'D', 'R')] },
+    { cap: 'Put the compass point on <b>O</b> and draw an arc that crosses both arms, at <b>X</b> and <b>Y</b>.', add: [kArc(N, 'O', r, arcSpan(O, [X, Y], 0.25), { thru: ['X', 'Y'] }), ...kPt('X', 'Y')] },
+    { cap: 'Keep the same opening. Put the point on <b>D</b> and draw a long arc that crosses the ray, at <b>X′</b>.', add: [kArc(N, 'D', r, arcSpan(D, [X2, Y2], 0.3), { thru: ['X2', 'Y2'], same: 1 }), ...kPt('X2')] },
+    { cap: 'Now open the compasses from X to Y. Put the point on <b>X′</b> and draw an arc crossing the long one, at <b>Y′</b>.', add: [{ t: 'meas', a: X, b: Y }, kArc(N, 'X2', w, arcSpan(X2, [Y2], 0.4), { thru: ['Y2'], eq: ['X', 'Y'] }), ...kPt('Y2')] },
+    { cap: 'With the ruler, draw from <b>D</b> through <b>Y′</b>. The angle at D is a copy of the angle at O.', add: [kSeg(D, far)] },
+  ],
+  why: ['The two big arcs had the same opening, so <b>DX′ = OX</b> and <b>DY′ = OY</b>.',
+    'Then you measured the gap: <b>X′Y′ = XY</b>.',
+    'So triangle X′DY′ and triangle XOY have three matching sides. Triangles with the same three sides are the same shape — so the angle at D equals the angle at O.'],
+  deep: 'In symbols: DX′ = OX, DY′ = OY and X′Y′ = XY, so triangle X′DY′ ≅ triangle XOY (SSS), and angle X′DY′ = angle XOY.',
+  meas: `Angle POQ = ${Math.round(angAt(O, P, Q))}°, and the copy, angle X′DY′ = ${Math.round(angAt(D, X2, Y2))}°.` };
+}
+const sssOk = ({ a, b, c }) => a + b > c && b + c > a && a + c > b;
+/* SSS: AB = c along the bottom, the compasses set to b at A and to a at B.
+   Built at scale s from origin o, so the whole thing can be fitted to the page. */
+function buildSSSat(L, s, o) {
+  const { a, b, c } = L, A = o, B = [o[0] + c * s, o[1]], N = { A, B }, fine = sssOk(L), u = [1, 0];
+  const cm = (x) => `${x} cm`;
+  const steps = [{ cap: `With the ruler, draw <b>AB</b> exactly ${cm(c)} long. It will be the side c.`, add: [kSeg(A, B, 'given'), ...kPt('A', 'B'), { t: 'txt', at: kv.add(kmid(A, B), [0, 22]), s: `c = ${cm(c)}` }] }];
+  let why, fail = null;
+  if (fine) {
+    const C = circlesMeet(A, b * s, B, a * s).sort((p, q) => p[1] - q[1])[0]; N.C = C;
+    steps.push(
+      { cap: `Open the compasses to ${cm(b)}, the side b. Put the point on <b>A</b> and draw an arc: every point on it is ${cm(b)} from A.`, add: [kArc(N, 'A', b * s, arcSpan(A, [C], 0.45), { thru: ['C'], rv: b })] },
+      { cap: `Open them to ${cm(a)}, the side a. Put the point on <b>B</b> and draw an arc. The arcs cross at <b>C</b>.`, add: [kArc(N, 'B', a * s, arcSpan(B, [C], 0.45), { thru: ['C'], rv: a }), ...kPt('C')] },
+      { cap: `Join <b>A</b> to <b>C</b> with the ruler: ${cm(b)}.`, add: [kSeg(A, C)] },
+      { cap: `Join <b>B</b> to <b>C</b>: ${cm(a)}. That is the triangle — and the only one with these three sides.`, add: [kSeg(B, C)] });
+    const cen = [(A[0] + B[0] + C[0]) / 3, (A[1] + B[1] + C[1]) / 3], out = (p, q) => { const m = kmid(p, q), d = kv.unit(kv.sub(m, cen)); return kv.add(m, kv.mul(d, 18)); };
+    steps[3].add.push({ t: 'txt', at: out(A, C), s: `b = ${cm(b)}` }); steps[4].add.push({ t: 'txt', at: out(B, C), s: `a = ${cm(a)}` });
+    why = [`C is on the first arc, so it is exactly ${cm(b)} from A. It is on the second arc, so it is exactly ${cm(a)} from B. The only places that are both are where the arcs cross.`,
+      'They cross twice — above AB and below — and the two triangles are mirror images, the same shape. So three sides fix a triangle: there is only one.',
+      'That is why builders brace a frame with triangles. A triangle cannot change shape without changing a side length; a square can.'];
+  } else {
+    // which circle is outside which decides where the two arcs come closest
+    const [dirA, dirB] = c >= a + b ? [0, Math.PI] : a >= b + c ? [Math.PI, Math.PI] : [0, 0];
+    const pA = kv.add(A, kv.mul([Math.cos(dirA), Math.sin(dirA)], b * s)), pB = kv.add(B, kv.mul([Math.cos(dirB), Math.sin(dirB)], a * s));
+    N.gA = pA; N.gB = pB;
+    const sides = [a, b, c].sort((x, y) => x - y), eq = sides[0] + sides[1] === sides[2];
+    fail = `${sides[0]} + ${sides[1]} = ${sides[0] + sides[1]} cm, ${eq ? 'which is only equal to' : 'which is shorter than'} ${sides[2]} cm.`;
+    steps.push(
+      { cap: `Open the compasses to ${cm(b)}, the side b. Put the point on <b>A</b> and draw an arc: every point on it is ${cm(b)} from A.`, add: [kArc(N, 'A', b * s, [dirA - 0.9, dirA + 0.9], { thru: ['gA'], rv: b })] },
+      { cap: `Open them to ${cm(a)}, the side a. Put the point on <b>B</b> and draw an arc. ${eq ? 'The arcs only just touch — on the line AB itself.' : 'The arcs do not meet.'}`, add: [kArc(N, 'B', a * s, [dirB - 0.9, dirB + 0.9], { thru: ['gB'], rv: a })] },
+      { cap: eq ? 'The only point on both arcs lies on AB, so the “triangle” is squashed flat. There is no corner C.' : 'There is no point on both arcs, so there is nowhere to put the corner C.', add: [{ t: 'gap', a: pA, b: pB }], fail: true });
+    why = [`The two shorter sides add up to ${fail}`,
+      `To make a corner, the two shorter sides have to reach further than the longest side. ${eq ? 'Only equal means they lie flat along it.' : 'These cannot even reach across it.'}`,
+      'In every triangle, any two sides add up to <b>more</b> than the third. It is called the <b>triangle inequality</b>.'];
+  }
+  return { N, steps, why, fail, unit: s,
+    deep: fine ? 'In symbols: two triangles whose three sides match are congruent (SSS) — this construction is the reason that rule is true.' : 'In symbols: a triangle with sides a, b, c exists exactly when a + b > c, b + c > a and c + a > b.',
+    meas: fine ? `Measured from the drawing: AB = ${num(kv.dist(A, B) / s)} cm, BC = ${num(kv.dist(B, N.C) / s)} cm, CA = ${num(kv.dist(N.C, A) / s)} cm.` : '' };
+}
+function buildSSS(L) {
+  const probe = buildSSSat(L, 1, [0, 0]), all = Object.values(probe.N);
+  for (const st of probe.steps) for (const p of st.add) if (p.t === 'arc') for (let t = p.a0; t <= p.a1; t += 0.05) all.push([p.c[0] + p.r * Math.cos(t), p.c[1] + p.r * Math.sin(t)]);
+  const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const s = Math.min(30, (KW - 70) / (x1 - x0 || 1), (KH - 80) / (y1 - y0 || 1));
+  return buildSSSat(L, s, [KW / 2 - s * (x0 + x1) / 2, KH / 2 - 6 - s * (y0 + y1) / 2]);
+}
+
+/* the ways a moved point could spoil a picture — refused before it happens */
+const inBox = (p, m) => p[0] >= m && p[0] <= KW - m && p[1] >= m && p[1] <= KH - m;
+function openAngle(O, P, Q) {
+  if (kv.dist(O, P) < 90 || kv.dist(O, Q) < 90) return 'Keep the arms at least a little long, so the arcs have room.';
+  const t = angAt(O, P, Q); return t < 25 ? 'That angle is too thin to draw arcs inside.' : t > 155 ? 'That angle is nearly flat — keep it under 155° so the arcs meet on the page.' : '';
+}
+const CONS = [
+  { id: 'perp', name: 'Perpendicular bisector', young: true, mv: ['A', 'B'], build: buildPerp,
+    pre: [[[90, 160], [300, 145]], [[150, 250], [240, 75]], [[100, 105], [310, 200]]],
+    check: ([A, B]) => (kv.dist(A, B) < 90 ? 'Keep A and B a little further apart.' : '') },
+  { id: 'angle', name: 'Angle bisector', young: true, mv: ['O', 'P', 'Q'], build: buildAngle,
+    pre: [[[60, 260], [350, 250], [220, 50]], [[200, 270], [370, 215], [45, 175]], [[50, 170], [360, 70], [340, 290]]],
+    check: ([O, P, Q]) => openAngle(O, P, Q) },
+  { id: 'sss', name: 'Triangle from three sides', young: true, build: null, pre: [{ a: 4, b: 5, c: 6 }, { a: 5, b: 5, c: 5 }, { a: 3, b: 4, c: 5 }, { a: 2, b: 3, c: 7 }, { a: 3, b: 4, c: 7 }] },
+  { id: 'drop', name: 'Perpendicular from a point', young: false, mv: ['A', 'B', 'P'], build: buildDrop,
+    pre: [[[40, 170], [360, 180], [180, 80]], [[40, 115], [360, 205], [250, 55]], [[60, 225], [350, 140], [140, 110]]],
+    check: ([A, B, P]) => { if (kv.dist(A, B) < 90) return 'Keep A and B a little further apart.'; const d = Math.abs(kv.cross(kv.unit(kv.sub(B, A)), kv.sub(P, A))); return d < 35 ? 'P is too close to the line — move it further away.' : ''; } },
+  { id: 'equi', name: 'Equilateral triangle (60°)', young: true, mv: ['A', 'B'], build: buildEqui,
+    pre: [[[100, 260], [300, 260]], [[130, 290], [290, 210]], [[110, 200], [255, 290]]],
+    check: ([A, B]) => (kv.dist(A, B) < 70 ? 'Keep A and B a little further apart.' : '') },
+  { id: 'copy', name: 'Copy an angle', young: false, mv: ['O', 'P', 'Q', 'D', 'R'], build: buildCopy,
+    pre: [[[30, 250], [190, 255], [120, 110], [215, 280], [385, 270]], [[40, 80], [185, 40], [170, 190], [215, 150], [380, 110]], [[30, 290], [175, 200], [80, 150], [225, 300], [385, 305]]],
+    check: ([O, P, Q, D, R]) => openAngle(O, P, Q) || (kv.dist(D, R) < 90 ? 'Keep the new ray a little longer.' : '') },
+];
+const conById = Object.fromEntries(CONS.map((c) => [c.id, c]));
+const conList = (band) => CONS.filter((c) => band !== '6-7' || c.young);
+const CLINKS = { perp: ['perpendicular-bisector'], angle: ['angle-bisector'], sss: ['construct-triangle'], drop: ['perpendicular-bisector'], equi: ['construct-triangle', 'angle-bisector'], copy: ['angle-bisector'] };
+/* a set of starting points: '' if it makes a good picture, or why not */
+function conProblem(con, pts) {
+  if (!pts.every((p) => inBox(p, 18))) return 'That would take a point off the page.';
+  const why = con.check(pts); if (why) return why;
+  const res = con.build(pts);
+  if (!Object.values(res.N).every((p) => p && inBox(p, 6))) return 'That would push part of the construction off the page.';
+  return '';
+}
+function kState(ctx) {
+  const ui = ctx.ui;
+  if (!ui.k) ui.k = { id: 'perp', step: 0, sel: -1, pts: {}, L: { ...CONS[2].pre[0] }, lsel: 'c', msg: '' };
+  const k = ui.k; if (!conList(ctx.band).some((c) => c.id === k.id)) k.id = 'perp';
+  return k;
+}
+const kPts = (k, con) => k.pts[con.id] || (k.pts[con.id] = con.pre[0].map((p) => [...p]));
+const kBuild = (k, con) => (con.id === 'sss' ? buildSSS(k.L) : con.build(kPts(k, con)));
+
+function conSVG(res, step, con, k) {
+  let arcs = '', lines = '', marks = '', pts = '';
+  const N = res.N, all = Object.values(N), cen = [all.reduce((a, p) => a + p[0], 0) / all.length, all.reduce((a, p) => a + p[1], 0) / all.length];
+  res.steps.slice(0, step + 1).forEach((st, i) => {
+    const now = i === step && i > 0 ? ' now' : '';
+    for (const p of st.add) {
+      if (p.t === 'seg') lines += line(p.a, p.b, `t-shapes-k-${p.cls}${now}`);
+      else if (p.t === 'meas') marks += line(p.a, p.b, 't-shapes-k-meas');
+      else if (p.t === 'arc') {
+        const s = [p.c[0] + p.r * Math.cos(p.a0), p.c[1] + p.r * Math.sin(p.a0)], e = [p.c[0] + p.r * Math.cos(p.a1), p.c[1] + p.r * Math.sin(p.a1)];
+        arcs += `<path d="M${f1(s[0])},${f1(s[1])} A${f1(p.r)},${f1(p.r)} 0 ${p.a1 - p.a0 > Math.PI ? 1 : 0} 1 ${f1(e[0])},${f1(e[1])}" class="t-shapes-k-arc${now}"/>`;
+        if (now) marks += line(p.c, e, 't-shapes-k-rad') + `<circle cx="${f1(p.c[0])}" cy="${f1(p.c[1])}" r="5" class="t-shapes-k-piv"/><circle cx="${f1(e[0])}" cy="${f1(e[1])}" r="3.5" class="t-shapes-k-piv"/>`;
+      } else if (p.t === 'right') {
+        const a = kv.add(p.at, kv.mul(p.u, 11)), b = kv.add(a, kv.mul(p.v, 11)), c = kv.add(p.at, kv.mul(p.v, 11));
+        marks += `<polyline points="${P([a, b, c])}" class="t-shapes-right"/>`;
+      } else if (p.t === 'gap') {
+        marks += kv.dist(p.a, p.b) > 1 ? line(p.a, p.b, 't-shapes-k-gap') : '';
+        marks += `<circle cx="${f1(p.a[0])}" cy="${f1(p.a[1])}" r="4.5" class="t-shapes-k-miss"/><circle cx="${f1(p.b[0])}" cy="${f1(p.b[1])}" r="4.5" class="t-shapes-k-miss"/>`;
+      } else if (p.t === 'txt') marks += T(f1(p.at[0]), f1(p.at[1] + 4), p.s, 't-shapes-k-len');
+      else if (p.t === 'pt') {
+        const q = N[p.n]; let d = kv.sub(q, cen); d = Math.hypot(...d) < 1 ? [0, -1] : kv.unit(d);
+        pts += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="4" class="t-shapes-vtx"/>` + T(f1(q[0] + d[0] * 15), f1(q[1] + d[1] * 15 + 5), kLab(p.n), 't-shapes-k-lab');
+      }
+    }
+  });
+  let hits = '';
+  if (con.mv) con.mv.forEach((n, i) => {
+    const q = N[n];
+    if (k.sel === i) hits += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="11" class="t-shapes-k-sel"/>`;
+    hits += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="17" class="t-shapes-hit" data-act="lib" data-arg="kpick|${i}"><title>Move ${n}</title></circle>`;
+  });
+  return kit.svg(KW, KH, arcs + lines + marks + pts + hits, `${con.name}: step ${step + 1} of ${res.steps.length}`);
+}
+function viewConstruct(ctx) {
+  const k = kState(ctx), con = conById[k.id], res = kBuild(k, con), n = res.steps.length;
+  k.step = clamp(k.step, 0, n - 1);
+  const st = res.steps[k.step], last = k.step === n - 1, young = ctx.band === '6-7';
+  const pick = `<div class="t-shapes-solids">${conList(ctx.band).map((c) => `<button class="btn small ${c.id === k.id ? 'primary' : ''}" data-act="lib" data-arg="kcon|${c.id}" aria-pressed="${c.id === k.id}">${c.name}</button>`).join('')}</div>`;
+  let ctrl;
+  if (con.id === 'sss') {
+    const L = k.L;
+    ctrl = [['a', 'BC'], ['b', 'CA'], ['c', 'AB']].map(([s, nm]) => `<div class="row gap t-shapes-row t-shapes-k-len-row ${k.lsel === s ? 'sel' : ''}"><button class="btn small" data-act="lib" data-arg="klen|${s},-1" aria-label="Shorter side ${s}">−</button>
+      <button class="btn small ghost" data-act="lib" data-arg="ksel|${s}" aria-pressed="${k.lsel === s}"><b>${s}</b> = ${nm} = <b>${L[s]} cm</b></button><button class="btn small" data-act="lib" data-arg="klen|${s},1" aria-label="Longer side ${s}">+</button></div>`).join('')
+      + `<div class="row gap t-shapes-row">${con.pre.map((p, i) => `<button class="chip t-shapes-k-pre" data-act="lib" data-arg="kpre|${i}">${p.a}, ${p.b}, ${p.c}</button>`).join('')}</div>
+      <p class="muted">Keys: ← → step · A, B or C picks a side, ↑ ↓ change it.</p>`;
+  } else {
+    ctrl = `<div class="row gap t-shapes-row"><span class="muted">Move a point:</span>${con.mv.map((m, i) => `<button class="btn small ${k.sel === i ? 'primary' : ''}" data-act="lib" data-arg="kpick|${i}" aria-pressed="${k.sel === i}">${m}</button>`).join('')}</div>
+      ${k.sel >= 0 ? `<div class="t-shapes-k-pad"><span></span><button class="btn small" data-act="lib" data-arg="knudge|0,-12" aria-label="Move ${con.mv[k.sel]} up">↑</button><span></span>
+        <button class="btn small" data-act="lib" data-arg="knudge|-12,0" aria-label="Move ${con.mv[k.sel]} left">←</button><button class="btn small" data-act="lib" data-arg="kpick|${k.sel}" aria-label="Done moving">✓</button><button class="btn small" data-act="lib" data-arg="knudge|12,0" aria-label="Move ${con.mv[k.sel]} right">→</button>
+        <span></span><button class="btn small" data-act="lib" data-arg="knudge|0,12" aria-label="Move ${con.mv[k.sel]} down">↓</button><span></span></div>` : ''}
+      <div class="row gap t-shapes-row">${con.pre.map((_, i) => `<button class="chip t-shapes-k-pre" data-act="lib" data-arg="kpre|${i}">Layout ${i + 1}</button>`).join('')}</div>
+      <p class="muted">${k.sel >= 0 ? `Arrows move ${con.mv[k.sel]} (Shift for bigger jumps). Esc or Enter when you are done.` : `Tap a point (or press 1–${con.mv.length}) to move it. ← → step, N another layout.`}</p>`;
+  }
+  const dots = res.steps.map((_, i) => `<span class="t-shapes-k-dot ${i <= k.step ? 'on' : ''}"></span>`).join('');
+  const failNote = res.fail ? `<p class="t-shapes-note t-shapes-k-fail">These lengths cannot be built into a triangle: ${res.fail}</p>` : '';
+  const side = `<p class="kicker">Step ${k.step + 1} of ${n} <span class="t-shapes-k-dots" aria-hidden="true">${dots}</span></p>
+    <p class="t-shapes-k-cap">${st.cap}</p>
+    <div class="row gap t-shapes-row"><button class="btn" data-act="lib" data-arg="kstep|-1" ${k.step ? '' : 'disabled'}>← Back</button>
+      <button class="btn primary" data-act="lib" data-arg="kstep|1" ${last ? 'disabled' : ''}>Next step →</button>
+      ${k.step ? '<button class="btn ghost" data-act="lib" data-arg="kgo|0">Start again</button>' : ''}</div>
+    ${failNote}${k.msg ? `<p class="t-shapes-note">${esc(k.msg)}</p>` : ''}
+    ${last && res.meas ? `<p class="t-shapes-formula">${res.meas}</p>` : ''}
+    <p class="muted">A compass arc is every point the same distance from its centre. The dashed line shows the opening while you draw.</p>`;
+  const why = last ? `<div class="card t-shapes-k-why"><p class="kicker">${res.fail ? 'Why it cannot be built' : 'Why it works'}</p>${res.why.map((w) => `<p>${w}</p>`).join('')}${young ? '' : `<p class="muted">${res.deep}</p>`}</div>` : '';
+  const built = Object.keys(ctx.data.built || {}).length;
+  return pick + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${conSVG(res, k.step, con, k)}${ctrl}</div><div class="card">${side}${built ? `<p class="muted">Constructions finished: ${built} of ${conList(ctx.band).length}.</p>` : ''}</div></div>${why}`;
+}
+function actConstruct(name, arg, ctx) {
+  const k = kState(ctx), con = conById[k.id];
+  if (name === 'kcon') { if (conList(ctx.band).some((c) => c.id === arg)) { k.id = arg; k.step = 0; k.sel = -1; k.msg = ''; } return true; }
+  if (name === 'kstep' || name === 'kgo') {
+    const n = kBuild(k, con).steps.length, to = name === 'kgo' ? (+arg || 0) : k.step + (Math.sign(+arg) || 0);
+    const was = k.step; k.step = clamp(to, 0, n - 1); k.msg = '';
+    if (k.step !== was) ctx.sfx.click();
+    const res = kBuild(k, con);
+    if (k.step === n - 1 && was !== k.step && !res.fail) { ctx.data.built = { ...(ctx.data.built || {}), [con.id]: 1 }; ctx.save(); ctx.sfx.good(); }
+    return true;
+  }
+  if (name === 'kpre') {
+    const i = Math.round(+arg); if (!(i >= 0 && i < con.pre.length)) return true;
+    if (con.id === 'sss') k.L = { ...con.pre[i] }; else k.pts[con.id] = con.pre[i].map((p) => [...p]);
+    k.msg = ''; ctx.sfx.click(); return true;
+  }
+  if (name === 'kpick') { if (!con.mv) return true; const i = Math.round(+arg); k.sel = i === k.sel || !(i >= 0 && i < con.mv.length) ? -1 : i; k.msg = ''; return true; }
+  if (name === 'knudge') {
+    if (!con.mv) return true;
+    if (k.sel < 0) { k.msg = 'Tap a point first — then move it.'; return true; }
+    const [dx, dy] = String(arg).split(',').map(Number); if (!Number.isFinite(dx) || !Number.isFinite(dy)) return true;
+    const pts = kPts(k, con).map((p, i) => (i === k.sel ? [p[0] + dx, p[1] + dy] : [...p]));
+    const why = conProblem(con, pts);
+    if (why) { k.msg = why; ctx.sfx.bad(); } else { k.pts[con.id] = pts; k.msg = ''; }
+    return true;
+  }
+  if (name === 'ksel') { if (['a', 'b', 'c'].includes(arg)) k.lsel = arg; return true; }
+  if (name === 'klen') {
+    const [s, d] = String(arg).split(','); if (!['a', 'b', 'c'].includes(s)) return true;
+    k.lsel = s; k.L = { ...k.L, [s]: clamp(k.L[s] + (Math.round(+d) || 0), 1, 12) }; k.msg = ''; return true;
+  }
+  return false;
+}
+function keyConstruct(e, ctx) {
+  const k = kState(ctx), con = conById[k.id];
+  if (con.mv && k.sel >= 0) {
+    const big = e.shiftKey ? 24 : 6, mv = { ArrowUp: [0, -big], ArrowDown: [0, big], ArrowLeft: [-big, 0], ArrowRight: [big, 0] }[e.key];
+    if (mv) return actConstruct('knudge', mv.join(','), ctx);
+    if (e.key === 'Escape' || (e.key === 'Enter' && !onButton(e))) { k.sel = -1; k.msg = ''; return true; }
+  }
+  if (e.key === 'ArrowRight' || (e.key === ' ' && !onButton(e))) return actConstruct('kstep', '1', ctx);
+  if (e.key === 'ArrowLeft') return actConstruct('kstep', '-1', ctx);
+  if (e.key === 'Home') return actConstruct('kgo', '0', ctx);
+  if (e.key === 'End') return actConstruct('kgo', '99', ctx);
+  if (con.id === 'sss') {
+    if (e.key === 'ArrowUp') return actConstruct('klen', `${k.lsel},1`, ctx);
+    if (e.key === 'ArrowDown') return actConstruct('klen', `${k.lsel},-1`, ctx);
+    const s = String(e.key).toLowerCase(); if (['a', 'b', 'c'].includes(s)) return actConstruct('ksel', s, ctx);
+  } else if (/^[1-9]$/.test(e.key) && +e.key <= con.mv.length) return actConstruct('kpick', String(+e.key - 1), ctx);
+  if (e.key === 'n' || e.key === 'N') { const i = (k.pre = ((k.pre || 0) + 1) % con.pre.length); return actConstruct('kpre', String(i), ctx); }
+  return false;
+}
+
 /* ============================================================ the tool */
 
 const bench = (ctx) => { const b = ctx.ui.bench; return BENCHES.some((x) => x[0] === b) ? b : ctx.band === '6-7' ? 'polygon' : 'protractor'; };
-const VIEWS = { protractor: viewProtractor, polygon: viewPolygon, area: viewArea, circle: viewCircle, solids: viewSolids, moves: viewMoves };
-const ACTS = { protractor: actProtractor, polygon: actPolygon, area: actArea, solids: actSolids, moves: actMoves };
-const KEYS = { protractor: keyProtractor, polygon: keyPolygon, area: keyArea, circle: keyCircle, solids: keySolids, moves: keyMoves };
+const VIEWS = { protractor: viewProtractor, polygon: viewPolygon, area: viewArea, circle: viewCircle, solids: viewSolids, moves: viewMoves, construct: viewConstruct };
+const ACTS = { protractor: actProtractor, polygon: actPolygon, area: actArea, solids: actSolids, moves: actMoves, construct: actConstruct };
+const KEYS = { protractor: keyProtractor, polygon: keyPolygon, area: keyArea, circle: keyCircle, solids: keySolids, moves: keyMoves, construct: keyConstruct };
 
 export function view(ctx) {
   const b = bench(ctx);
   const seg = `<div class="seg t-shapes-seg" role="tablist">${BENCHES.map(([id, l]) => `<button role="tab" aria-selected="${id === b}" class="${id === b ? 'on' : ''}" data-act="lib" data-arg="bench|${id}">${l}</button>`).join('')}</div>`;
-  return `<div class="t-shapes">${seg}${VIEWS[b](ctx)}${links(LINKS[b])}</div>`;
+  const ln = b === 'construct' ? CLINKS[kState(ctx).id] : LINKS[b];
+  return `<div class="t-shapes">${seg}${VIEWS[b](ctx)}${links(ln)}</div>`;
 }
 export function act(name, arg, ctx) {
   if (name === 'bench') { if (BENCHES.some((x) => x[0] === arg)) ctx.ui.bench = arg; return; }
@@ -980,6 +1347,28 @@ export const CSS = `
 .t-shapes-img{fill:color-mix(in srgb,var(--mastered) 30%,transparent);stroke:var(--mastered);stroke-width:2.5;stroke-linejoin:round}
 .t-shapes-trail{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 .t-shapes-pred{fill:none;stroke:var(--fix);stroke-width:3;pointer-events:none}
+.t-shapes-k-given{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+.t-shapes-k-rule{stroke:var(--action);stroke-width:2.5;stroke-linecap:round}
+.t-shapes-k-rule.now{stroke:var(--fix);stroke-width:3.5}
+.t-shapes-k-arc{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.t-shapes-k-arc.now{stroke:var(--fix);stroke-width:3}
+.t-shapes-k-rad{stroke:var(--fix);stroke-width:1.3;stroke-dasharray:4 4;opacity:.7}
+.t-shapes-k-piv{fill:var(--fix)}
+.t-shapes-k-meas{stroke:var(--treasure);stroke-width:2.5;stroke-dasharray:3 3}
+.t-shapes-k-gap{stroke:var(--fix);stroke-width:2;stroke-dasharray:3 4}
+.t-shapes-k-miss{fill:none;stroke:var(--fix);stroke-width:2}
+.t-shapes-k-lab{font:800 15px var(--ui);fill:var(--ink)}
+.t-shapes-k-len{font:600 12px var(--mono);fill:var(--muted)}
+.t-shapes-k-sel{fill:none;stroke:var(--action);stroke-width:3;pointer-events:none}
+.t-shapes-k-cap{font-size:var(--fs-lead);color:var(--ink);min-height:4.2em}
+.t-shapes-k-dots{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}
+.t-shapes-k-dot{width:8px;height:8px;border-radius:50%;background:var(--line)}.t-shapes-k-dot.on{background:var(--action)}
+.t-shapes-k-pad{display:grid;grid-template-columns:repeat(3,48px);gap:6px;justify-content:center;margin:8px auto}
+.t-shapes-k-pad button{min-height:44px}
+.t-shapes-k-len-row{margin:4px 0;border-radius:var(--r-md)}.t-shapes-k-len-row.sel{background:var(--action-tint)}
+.t-shapes-k-pre{border:0;cursor:pointer}
+.t-shapes-k-fail{border-left:4px solid var(--fix)}
+.t-shapes-k-why{margin-top:16px;border-left:4px solid var(--mastered)}
 `;
 
 /* ========================================================== selftest */
