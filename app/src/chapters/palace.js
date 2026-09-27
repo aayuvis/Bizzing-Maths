@@ -98,6 +98,7 @@ export const TRICKS = [
     ],
     alg: 'n² = n × n',
     ex: { n: 7 },
+    oneIdea: true,
     gen(r, lv = 1) { return this.q({ n: lv === 1 ? int(2, 10, r) : lv === 2 ? int(6, 15, r) : int(11, 20, r) }); },
     q({ n }) { return { n, text: `${n}²`, say: `${n} squared`, expr: `${n}*${n}`, ans: n ** 2 }; },
     work({ n }) {
@@ -111,20 +112,29 @@ export const TRICKS = [
     idea: 'Add the odd numbers from 1, and you always land on a square: count how many you added, and square that.',
     why: [
       'Start with one dot. Wrap 3 dots round its corner and you have a 2-by-2 square. Wrap 5 round that and you have 3 by 3. Each new odd number is exactly the "L" that turns one square into the next one up.',
-      'Why odd? To grow an n-by-n square to (n + 1) by (n + 1) you add a row of n, a column of n, and one dot in the corner: n + n + 1, which is always odd. So the first five odd numbers make 5 × 5 = 25.',
+      'Why odd? To grow an n-by-n square to (n + 1) by (n + 1) you add a row of n, a column of n, and one dot in the corner: n + n + 1, which is always odd. So the first five odd numbers make 5 × 5 = 25. When the list is too long to write out, find how many odd numbers there are from the last one: add 1 and halve. 1 + 3 + … + 15 has (15 + 1) ÷ 2 = 8 of them, so it makes 8² = 64.',
       'It works the other way too: the gap between two squares next to each other is an odd number — 15² + 31 = 16². That is the same "next square up" idea you may meet in the Harbour.',
     ],
     alg: '1 + 3 + 5 + … + (2n − 1) = n²',
     ex: { kind: 'sum', n: 5 },
+    caseKey: 'form',
+    cases: [
+      { label: 'Add the odd numbers', note: 'Count how many odd numbers you are adding, and square that count — each one is the L that grows the square.',
+        ex: { kind: 'sum', n: 5 } },
+      { label: 'A long list', note: 'You only see the last odd number. Add 1 and halve it to find how many there are, then square.',
+        ex: { kind: 'sum', n: 8 } },
+      { label: 'The gap to the next square', note: 'Now run it backwards: the L that turns one square into the next is a row, a column and one corner.',
+        ex: { kind: 'gap', n: 10 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 3 && r() < 0.4) return this.q({ kind: 'gap', n: int(8, 25, r) });
       return this.q({ kind: 'sum', n: lv === 1 ? int(3, 6, r) : lv === 2 ? int(5, 12, r) : int(10, 25, r) });
     },
     q({ kind, n }) {
-      if (kind === 'gap') return { kind, n, text: `${n}² + ? = ${n + 1}²`, say: `${n} squared plus what makes ${n + 1} squared`, expr: `${n + 1}*${n + 1}-${n}*${n}`, ans: 2 * n + 1 };
+      if (kind === 'gap') return { kind, n, form: 'gap', text: `${n}² + ? = ${n + 1}²`, say: `${n} squared plus what makes ${n + 1} squared`, expr: `${n + 1}*${n + 1}-${n}*${n}`, ans: 2 * n + 1 };
       const last = 2 * n - 1;
       const text = n <= 5 ? Array.from({ length: n }, (_, i) => 2 * i + 1).join(' + ') : `1 + 3 + 5 + … + ${last}`;
-      return { kind, n, text, say: `the odd numbers from 1 to ${last}, added`, expr: `Array.from({length:${n}},(_,i)=>2*i+1).reduce((a,b)=>a+b,0)`, ans: n * n };
+      return { kind, n, form: n <= 5 ? 'listed' : 'long', text, say: `the odd numbers from 1 to ${last}, added`, expr: `Array.from({length:${n}},(_,i)=>2*i+1).reduce((a,b)=>a+b,0)`, ans: n * n };
     },
     work({ kind, n }) {
       if (kind === 'gap') return [{ t: `A row of ${n} and a column of ${n}`, v: 2 * n }, { t: 'And one for the corner', v: 2 * n + 1 }];
@@ -143,6 +153,7 @@ export const TRICKS = [
     ],
     alg: '(a + b)² = a² + 2ab + b²   ·   (10 + b)² = 100 + 20b + b²',
     ex: { a: 13 },
+    oneIdea: true,
     gen(r, lv = 1) {
       const a = lv === 1 ? 10 + int(1, 5, r) : lv === 2 ? 10 + int(1, 9, r) : int(2, 9, r) * 10 + int(1, 9, r);
       return this.q({ a });
@@ -170,6 +181,15 @@ export const TRICKS = [
     ],
     alg: 'last digit of n² = last digit of (last digit of n)²',
     ex: { kind: 'last', n: 47 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'The last digit of a square', note: 'Only the last digit of the number matters — the tens and hundreds never reach down into the ones column.',
+        ex: { kind: 'last', n: 47 } },
+      { label: 'Can a square end in…?', note: 'Squares can only end in 0, 1, 4, 5, 6 or 9. A 2, 3, 7 or 8 at the end means “not a square”, however big the number.',
+        ex: { kind: 'can', d: 7 } },
+      { label: 'Spot the square', note: 'Cross out every number ending in 2, 3, 7 or 8 — they cannot be squares. The one left standing is.',
+        ex: { kind: 'which', opts: ['1163', '1156', '1098', '1152'], sq: '1156' } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ kind: 'last', n: int(12, 99, r) });
       if (lv === 2) return r() < 0.5 ? this.q({ kind: 'can', d: int(0, 9, r) }) : this.q({ kind: 'last', n: int(101, 999, r) });
@@ -218,6 +238,13 @@ export const TRICKS = [
     ],
     alg: '√(n²) = n   ·   a² ≤ x < (a + 1)² ⇒ a ≤ √x < a + 1',
     ex: { kind: 'exact', x: 196 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'An exact square root', note: 'The tens digit comes from which squares of 10 it sits between; the ones digit from its last digit. Then check.',
+        ex: { kind: 'exact', x: 196 } },
+      { label: 'Between two whole numbers', note: 'Not a perfect square, so the root is not whole. Find the biggest square that is not over it — its root is the smaller neighbour.',
+        ex: { kind: 'between', x: 200 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ kind: 'exact', x: int(2, 12, r) ** 2 });
       if (lv === 2) return this.q({ kind: 'exact', x: int(11, 20, r) ** 2 });
@@ -251,6 +278,15 @@ export const TRICKS = [
     ],
     alg: 'aⁿ = a × a × … × a  (n of them)   ·   a²ᵏ = aᵏ × aᵏ',
     ex: { a: 2, e: 5 },
+    caseKey: 'way',
+    cases: [
+      { label: 'Multiply along', note: 'A small index: just keep multiplying by the big number, one step for each.',
+        ex: { a: 2, e: 5 } },
+      { label: 'A big index: halve it', note: 'Too many to multiply one by one. Work out half the power, then multiply it by itself (and by one more if the index is odd).',
+        ex: { a: 3, e: 7 } },
+      { label: 'Doubling from 1', note: 'Doubling again and again is a power of 2 in words: double 8 times is 2 to the power 8.',
+        ex: { a: 2, e: 8, grow: true } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ a: pick([2, 3, 4, 5, 10], r), e: int(2, 4, r) });
       if (lv === 2) { const a = int(2, 9, r); let e = int(3, 5, r); while (a ** e > 100000) e--; return this.q({ a, e }); }
@@ -259,7 +295,7 @@ export const TRICKS = [
     },
     q({ a, e, grow = false }) {
       const text = grow ? `Start at 1 and double ${e} times` : `${a}${sup(e)}`;
-      return { a, e, grow, text, say: grow ? text : `${a} to the power ${e}`, expr: `Math.pow(${a},${e})`, ans: a ** e };
+      return { a, e, grow, way: grow ? 'double' : e <= 5 ? 'along' : 'halve', text, say: grow ? text : `${a} to the power ${e}`, expr: `Math.pow(${a},${e})`, ans: a ** e };
     },
     work({ a, e }) {
       const s = [{ t: `How many ${a}s are multiplied?`, v: e }];
@@ -283,14 +319,23 @@ export const TRICKS = [
     ],
     alg: 'n³ = n × n × n   ·   ∛(n³) = n',
     ex: { kind: 'cube', n: 4 },
+    caseKey: 'way',
+    cases: [
+      { label: 'Cubing a number', note: 'Three of the same number multiplied: a length, a width and a height all the same.',
+        ex: { kind: 'cube', n: 4 } },
+      { label: 'A small cube root', note: 'The last digit of a cube tells you exactly the last digit of its root — 2 and 8 swap, 3 and 7 swap.',
+        ex: { kind: 'root', x: 343 } },
+      { label: 'A big cube root', note: 'Two digits to find: drop the last three digits for the tens, and use the last digit for the ones.',
+        ex: { kind: 'root', x: 42875 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ kind: 'cube', n: int(2, 6, r) });
       if (lv === 2) return r() < 0.5 ? this.q({ kind: 'cube', n: int(3, 10, r) }) : this.q({ kind: 'root', x: int(2, 10, r) ** 3 });
       return fresh(() => (r() < 0.25 ? this.q({ kind: 'cube', n: int(11, 20, r) }) : this.q({ kind: 'root', x: int(11, 99, r) ** 3 })));
     },
     q({ kind, n, x }) {
-      if (kind === 'cube') return { kind, n, text: `${n}³`, say: `${n} cubed`, expr: `Math.pow(${n},3)`, ans: n ** 3 };
-      return { kind, x, text: `∛${fmt(x)}`, say: `the cube root of ${x}`, expr: `Math.round(Math.cbrt(${x}))`, ans: Math.round(Math.cbrt(x)) };
+      if (kind === 'cube') return { kind, n, way: 'cube', text: `${n}³`, say: `${n} cubed`, expr: `Math.pow(${n},3)`, ans: n ** 3 };
+      return { kind, x, way: Math.round(Math.cbrt(x)) <= 10 ? 'small root' : 'big root', text: `∛${fmt(x)}`, say: `the cube root of ${x}`, expr: `Math.round(Math.cbrt(${x}))`, ans: Math.round(Math.cbrt(x)) };
     },
     work({ kind, n, x }) {
       if (kind === 'cube') return [{ t: `${n} × ${n}`, v: n * n }, { t: `${n * n} × ${n}`, v: n ** 3 }];
@@ -320,6 +365,7 @@ export const TRICKS = [
     ],
     alg: '(a − b)² = a² − 2ab + b²',
     ex: { a: 19 },
+    oneIdea: true,
     gen(r, lv = 1) {
       const T = (lv === 1 ? int(2, 5, r) : int(2, 9, r)) * 10, d = lv === 1 ? 1 : int(1, lv === 2 ? 2 : 4, r);
       return this.q({ a: T - d });
@@ -347,11 +393,18 @@ export const TRICKS = [
     ],
     alg: '(50 ± d)² = 2500 ± 100d + d²',
     ex: { a: 47 },
+    caseKey: 'side',
+    cases: [
+      { label: 'Just below 50', note: 'Below 50 the two strips are cut off, so take 100 × the gap away from 2500 — then put the corner back.',
+        ex: { a: 47 } },
+      { label: 'Just above 50', note: 'Above 50 the strips are added on, and so is the corner: 2500 + 100 × the gap + the gap squared.',
+        ex: { a: 53 } },
+    ],
     gen(r, lv = 1) {
       const d = int(1, lv === 1 ? 3 : lv === 2 ? 6 : 12, r);
       return this.q({ a: r() < 0.5 ? 50 - d : 50 + d });
     },
-    q({ a }) { return { a, text: `${a}²`, say: `${a} squared`, expr: `${a}*${a}`, ans: a * a }; },
+    q({ a }) { return { a, side: a > 50 ? 'above' : 'below', text: `${a}²`, say: `${a} squared`, expr: `${a}*${a}`, ans: a * a }; },
     work({ a }) {
       const d = Math.abs(a - 50), up = a > 50;
       return [
@@ -374,6 +427,7 @@ export const TRICKS = [
     ],
     alg: '(a + b)(a − b) = a² − b²',
     ex: { a: 23, b: 17 },
+    oneIdea: true,
     gen(r, lv = 1) {
       let m, d;
       if (lv === 1) { m = int(11, 19, r); d = int(1, 3, r); }
@@ -401,10 +455,23 @@ export const TRICKS = [
     why: [
       '2³ is three 2s multiplied, and 2⁴ is four more. Put them side by side and you have seven 2s multiplied: 2⁷. You never needed to know that 2³ is 8.',
       'Dividing cancels: 5⁶ ÷ 5² is six 5s on top and two underneath. Each 5 underneath cancels one on top, leaving four: 5⁴. So you take the indices away.',
-      'This is exactly how scientists write huge numbers. 34,000 is 3.4 × 10,000 = 3.4 × 10⁴ — "standard form", one digit before the point and a power of ten. Multiply two of them and the indices add: (3 × 10⁴) × (2 × 10³) = 6 × 10⁷.',
+      'This is exactly how scientists write huge numbers. 34,000 is 3.4 × 10,000 = 3.4 × 10⁴ — "standard form", one digit before the point and a power of ten. Multiply two of them and the indices add: (3 × 10⁴) × (2 × 10³) = 6 × 10⁷. If the front numbers make 10 or more, one more ten moves into the power: (4 × 10²) × (5 × 10³) = 20 × 10⁵ = 2 × 10⁶.',
     ],
     alg: 'aᵐ × aⁿ = aᵐ⁺ⁿ   ·   aᵐ ÷ aⁿ = aᵐ⁻ⁿ   ·   standard form: A × 10ⁿ, 1 ≤ A < 10',
     ex: { kind: 'mul', a: 2, m: 3, n: 4 },
+    caseKey: 'rule',
+    cases: [
+      { label: 'Multiplying: add', note: 'Put the two lots side by side and count all the 2s together — so the indices add.',
+        ex: { kind: 'mul', a: 2, m: 3, n: 4 } },
+      { label: 'Dividing: take away', note: 'Each one underneath cancels one on top, so the indices take away.',
+        ex: { kind: 'div', a: 5, m: 6, n: 2 } },
+      { label: 'Standard form', note: 'One digit before the point, and the power of ten is how many places the point has to move — one fewer than the digits.',
+        ex: { kind: 'std', N: 34000 } },
+      { label: 'Multiplying in standard form', note: 'Multiply the front numbers, add the powers of ten.',
+        ex: { kind: 'prod', p: 3, q: 2, m: 4, n: 3 } },
+      { label: 'When the front goes past 10', note: 'If the front numbers make 10 or more, one ten slides into the power, so the index goes up by one more.',
+        ex: { kind: 'prod', p: 4, q: 5, m: 2, n: 3 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ kind: 'mul', a: pick([2, 3, 10], r), m: int(2, 6, r), n: int(2, 6, r) });
@@ -419,11 +486,11 @@ export const TRICKS = [
     },
     q(o) {
       const { kind, a, m, n } = o;
-      if (kind === 'mul') return { ...o, text: `${a}${sup(m)} × ${a}${sup(n)} as one power of ${a} — the index?`, say: `${a} to the ${m} times ${a} to the ${n}, as one power of ${a}. What is the index?`, expr: `Math.round(Math.log(Math.pow(${a},${m})*Math.pow(${a},${n}))/Math.log(${a}))`, ans: m + n };
-      if (kind === 'div') return { ...o, text: `${a}${sup(m)} ÷ ${a}${sup(n)} as one power of ${a} — the index?`, say: `${a} to the ${m} divided by ${a} to the ${n}, as one power of ${a}. What is the index?`, expr: `Math.round(Math.log(Math.pow(${a},${m})/Math.pow(${a},${n}))/Math.log(${a}))`, ans: m - n };
-      if (kind === 'std') { const N = o.N, lead = String(N)[0] + '.' + String(N)[1]; return { ...o, lead, text: `${fmt(N)} = ${lead} × 10 to the power ? — the index?`, say: `${N} in standard form is ${lead} times ten to what power`, expr: `String(${N}).length-1`, ans: String(N).length - 1 }; }
+      if (kind === 'mul') return { ...o, rule: kind, text: `${a}${sup(m)} × ${a}${sup(n)} as one power of ${a} — the index?`, say: `${a} to the ${m} times ${a} to the ${n}, as one power of ${a}. What is the index?`, expr: `Math.round(Math.log(Math.pow(${a},${m})*Math.pow(${a},${n}))/Math.log(${a}))`, ans: m + n };
+      if (kind === 'div') return { ...o, rule: kind, text: `${a}${sup(m)} ÷ ${a}${sup(n)} as one power of ${a} — the index?`, say: `${a} to the ${m} divided by ${a} to the ${n}, as one power of ${a}. What is the index?`, expr: `Math.round(Math.log(Math.pow(${a},${m})/Math.pow(${a},${n}))/Math.log(${a}))`, ans: m - n };
+      if (kind === 'std') { const N = o.N, lead = String(N)[0] + '.' + String(N)[1]; return { ...o, lead, rule: kind, text: `${fmt(N)} = ${lead} × 10 to the power ? — the index?`, say: `${N} in standard form is ${lead} times ten to what power`, expr: `String(${N}).length-1`, ans: String(N).length - 1 }; }
       const { p, q } = o, pq = p * q, lead = pq >= 10 ? String(pq / 10) : String(pq);
-      return { ...o, lead, text: `(${p} × 10${sup(m)}) × (${q} × 10${sup(n)}) = ${lead} × 10 to the power ? — the index?`, say: `${p} times ten to the ${m}, times ${q} times ten to the ${n}, in standard form. What is the power of ten?`, expr: `String(${p}*${q}*Math.pow(10,${m})*Math.pow(10,${n})).length-1`, ans: m + n + (pq >= 10 ? 1 : 0) };
+      return { ...o, lead, rule: pq >= 10 ? 'prod-carry' : 'prod', text: `(${p} × 10${sup(m)}) × (${q} × 10${sup(n)}) = ${lead} × 10 to the power ? — the index?`, say: `${p} times ten to the ${m}, times ${q} times ten to the ${n}, in standard form. What is the power of ten?`, expr: `String(${p}*${q}*Math.pow(10,${m})*Math.pow(10,${n})).length-1`, ans: m + n + (pq >= 10 ? 1 : 0) };
     },
     work(o) {
       const { kind, a, m, n } = o;

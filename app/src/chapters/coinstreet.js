@@ -38,8 +38,9 @@ function coinRow(vals) {
 }
 /* A bar model: the whole on top, split below into labelled parts (widths by value). */
 function barModel(whole, parts, wholeLabel) {
-  const W = 320, H = 36, tot = parts.reduce((a, p) => a + p.v, 0) || 1; let s = '', x = 4;
-  s += `<rect x="4" y="4" width="${W}" height="${H}" class="dg-fill2"/>` + text(4 + W / 2, 28, wholeLabel || whole, 'dg-text');
+  // scaled to the longer of the two rows, so a loss shows costs running PAST the takings
+  const H = 36, sum = parts.reduce((a, p) => a + p.v, 0), tot = Math.max(whole, sum) || 1, W = 320, WW = (whole / tot) * W; let s = '', x = 4;
+  s += `<rect x="4" y="4" width="${WW.toFixed(1)}" height="${H}" class="dg-fill2"/>` + text((4 + WW / 2).toFixed(1), 28, wholeLabel || whole, 'dg-text');
   parts.forEach((p, i) => {
     const w = (p.v / tot) * W;
     s += `<rect x="${x.toFixed(1)}" y="${H + 12}" width="${w.toFixed(1)}" height="${H}" class="${p.ask ? 'dg-blank' : `dg-fill${(i % 2) + 1}`}"/>` + text((x + w / 2).toFixed(1), H + 36, p.label, p.ask ? 'dg-accent' : 'dg-text');
@@ -76,6 +77,7 @@ export const TRICKS = [
     ],
     alg: 'fewest(n) = fewest(tens of n, with 50, 20, 10) + fewest(ones of n, with 5, 2, 1)',
     ex: { n: 37 },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => this.q({ n: lv === 1 ? int(3, 19, r) : lv === 2 ? int(21, 99, r) : int(101, 199, r) }));
     },
@@ -105,6 +107,7 @@ export const TRICKS = [
     ],
     alg: 'left = start − (spend₁ + spend₂ + …)',
     ex: { name: 'Nova', start: 40, spends: [12, 9] },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const name = pick(NAMES, r);
@@ -139,6 +142,15 @@ export const TRICKS = [
     ],
     alg: 'weeks = ⌈(price − saved already) ÷ per week⌉',
     ex: { name: 'Rafi', thing: 'kite', goal: 50, per: 6, have: 0 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'It fits exactly', note: 'The weekly saving goes into the price with nothing left over, so the division is the answer.',
+        ex: { name: 'Mira', thing: 'book', goal: 40, per: 5, have: 0 } },
+      { label: 'Round up', note: 'A bit is left over, and the shop will not take "nearly enough". Any remainder means one more whole week.',
+        ex: { name: 'Rafi', thing: 'kite', goal: 50, per: 6, have: 0 } },
+      { label: 'Some saved already', note: 'Take what is already saved off the price first. Only the rest has to be saved week by week.',
+        ex: { name: 'Theo', thing: 'torch', goal: 60, per: 8, have: 15 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const name = pick(NAMES, r), thing = pick(THINGS, r);
@@ -150,7 +162,7 @@ export const TRICKS = [
     q({ name, thing, goal, per, have }) {
       const text = `A ${thing} costs ${goal} coins. ${name} ${have ? `has ${have} coins already and ` : ''}saves ${per} coins a week. How many weeks until there is enough?`;
       // expr counts the weeks one at a time, never dividing
-      return { name, thing, goal, per, have, text, expr: `(()=>{let t=${have},w=0;while(t<${goal}){t+=${per};w++}return w})()`, ans: Math.ceil((goal - have) / per) };
+      return { name, thing, goal, per, have, kind: have ? 'saved' : goal % per === 0 ? 'exact' : 'up', text, expr: `(()=>{let t=${have},w=0;while(t<${goal}){t+=${per};w++}return w})()`, ans: Math.ceil((goal - have) / per) };
     },
     work({ goal, per, have }) {
       const need = goal - have, whole = Math.floor(need / per), s = [];
@@ -173,6 +185,13 @@ export const TRICKS = [
     ],
     alg: 'A is the better buy when priceA ÷ countA < priceB ÷ countB (or priceA × countB < priceB × countA)',
     ex: { n1: 4, p1: 28, n2: 6, p2: 36, it: 0 },
+    caseKey: 'way',
+    cases: [
+      { label: 'Price of one', note: 'Both prices share out evenly, so find what ONE costs from each pack and compare.',
+        ex: { n1: 4, p1: 28, n2: 6, p2: 36, it: 0 } },
+      { label: 'Price of the same number', note: 'One would be a messy number, so price the same number from both packs — a number both pack sizes go into.',
+        ex: { n1: 5, p1: 12, n2: 3, p2: 8, it: 1 } },
+    ],
     ITEMS: [['apples', 'apple'], ['pencils', 'pencil'], ['bananas', 'banana'], ['notebooks', 'notebook'], ['oranges', 'orange'], ['samosas', 'samosa'], ['balloons', 'balloon']],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -189,7 +208,7 @@ export const TRICKS = [
     },
     q({ n1, p1, n2, p2, it }) {
       const [pl, one] = this.ITEMS[it], choices = ['Pack A', 'Pack B'];
-      return { n1, p1, n2, p2, it, choices, text: `Pack A: ${n1} ${pl} for ${p1} coins. Pack B: ${n2} ${pl} for ${p2} coins. Which is cheaper for each ${one}?`,
+      return { n1, p1, n2, p2, it, choices, way: p1 % n1 === 0 && p2 % n2 === 0 ? 'each' : 'same', text: `Pack A: ${n1} ${pl} for ${p1} coins. Pack B: ${n2} ${pl} for ${p2} coins. Which is cheaper for each ${one}?`,
         expr: `${p1}/${n1}<${p2}/${n2}?'Pack A':'Pack B'`, ans: p1 * n2 < p2 * n1 ? 'Pack A' : 'Pack B' };
     },
     work({ n1, p1, n2, p2, choices, ans }) {
@@ -214,6 +233,13 @@ export const TRICKS = [
     ],
     alg: 'price with k/d off = price − price ÷ d × k = price ÷ d × (d − k)',
     ex: { N: 40, k: 1, d: 4, thing: 'kite' },
+    caseKey: 'off',
+    cases: [
+      { label: 'One part off', note: 'With 1 on top, one share comes off: divide the price by the bottom number, then take that away.',
+        ex: { N: 40, k: 1, d: 4, thing: 'kite' } },
+      { label: 'Several parts off', note: 'Find one share, multiply by the top number to get the whole discount, then take it off the price.',
+        ex: { N: 40, k: 2, d: 5, thing: 'puzzle' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const thing = pick(THINGS, r);
@@ -224,7 +250,7 @@ export const TRICKS = [
       });
     },
     q({ N, k, d, thing }) {
-      return { N, k, d, thing, text: `${/^(8|11|18)$|^8\d$/.test(String(N)) ? 'An' : 'A'} ${N}-coin ${thing} has ${k}/${d} off in the sale. What does it cost now?`, expr: `${N}*(${d}-${k})/${d}`, ans: N - (N / d) * k };
+      return { N, k, d, thing, off: k === 1 ? 'one' : 'several', text: `${/^(8|11|18)$|^8\d$/.test(String(N)) ? 'An' : 'A'} ${N}-coin ${thing} has ${k}/${d} off in the sale. What does it cost now?`, expr: `${N}*(${d}-${k})/${d}`, ans: N - (N / d) * k };
     },
     work({ N, k, d }) {
       const one = N / d, s = [{ t: `1/${d} of ${N}: ${N} ÷ ${d}`, v: one }];
@@ -240,11 +266,22 @@ export const TRICKS = [
     idea: 'Profit is what comes in minus what went out. If more went out than came in, it is a loss — a negative profit.',
     why: [
       'The coins that come in from selling are the takings: 14 cups at 4 coins each is 56 coins. But the stall did not get those lemons free — 30 coins went out first. Profit is what is left after paying for everything: 56 − 30 = 26.',
-      'Takings are not profit. A stall that takes 56 coins and spent 60 has made a loss of 4. Writing that as −4 keeps one rule for both: profit = in − out, and the sign says which way it went.',
+      'Takings are not profit. A stall that takes 56 coins and spent 60 has made a loss of 4. Writing that as −4 keeps one rule for both: profit = in − out, and the sign says which way it went. If there is more than one cost — materials and a pitch — add all the costs first. And if the takings exactly match the costs, the profit is 0: the stall has broken even.',
       'A loss is not a disaster, it is information — it tells the stall-keeper to change the price, the costs or how many they make. Every business uses this one subtraction to decide what to do next.',
     ],
     alg: 'profit = number sold × price − costs  (negative means a loss)',
     ex: { n: 14, p: 4, C: 30, fee: 0, stall: 0 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'A profit', note: 'Work out the takings first — how many sold times the price — then take away what was spent.',
+        ex: { n: 14, p: 4, C: 30, fee: 0, stall: 0 } },
+      { label: 'Two costs to pay', note: 'Everything that went out counts: add the materials and the pitch together before you take them away.',
+        ex: { n: 12, p: 5, C: 20, fee: 10, stall: 1 } },
+      { label: 'A loss', note: 'More went out than came in, so the profit is below zero. Write it with a minus sign: that is a loss.',
+        ex: { n: 10, p: 6, C: 50, fee: 15, stall: 2 } },
+      { label: 'Breaking even', note: 'The takings exactly cover the costs. Nothing gained, nothing lost: the profit is 0.',
+        ex: { n: 8, p: 5, C: 30, fee: 10, stall: 3 } },
+    ],
     keys: ['−'],
     STALLS: [['lemonade stall', 'cups', 'lemons and sugar'], ['bake stall', 'biscuits', 'flour and butter'], ['badge stall', 'badges', 'pins and card'], ['plant stall', 'seedlings', 'pots and soil'], ['bracelet stall', 'bracelets', 'beads and thread']],
     gen(r, lv = 1) {
@@ -259,7 +296,8 @@ export const TRICKS = [
     q({ n, p, C, fee, stall }) {
       const [name, what, stuff] = this.STALLS[stall];
       const text = `A ${name} spends ${C} coins on ${stuff}${fee ? ` and pays ${fee} coins for its pitch` : ''}, then sells ${n} ${what} at ${p} coins each. What is the profit?${fee ? ' (Write a loss as a negative number.)' : ''}`;
-      return { n, p, C, fee, stall, text, expr: `${n}*${p}-(${C}+${fee})`, ans: n * p - C - fee };
+      const P = n * p - C - fee;
+      return { n, p, C, fee, stall, kind: !fee ? 'profit' : P > 0 ? 'profit-fee' : P < 0 ? 'loss' : 'even', text, expr: `${n}*${p}-(${C}+${fee})`, ans: n * p - C - fee };
     },
     work({ n, p, C, fee }) {
       const s = [{ t: `Takings: ${n} × ${p}`, v: n * p }];
@@ -267,7 +305,9 @@ export const TRICKS = [
       s.push({ t: `Profit: ${n * p} − ${C + fee}`, v: n * p - C - fee });
       return s;
     },
-    draw: ({ n, p, C, fee }) => barModel(n * p, [{ v: Math.min(C + fee, n * p), label: `costs ${C + fee}` }, { v: Math.max(1, n * p - C - fee), label: '?', ask: true }], `takings ${n} × ${p}`),
+    draw: ({ n, p, C, fee }) => (C + fee > n * p
+      ? barModel(n * p, [{ v: n * p, label: `costs ${C + fee}` }, { v: C + fee - n * p, label: '?', ask: true }], `takings ${n} × ${p}`)
+      : barModel(n * p, [{ v: C + fee, label: `costs ${C + fee}` }, { v: Math.max(1, n * p - C - fee), label: '?', ask: true }], `takings ${n} × ${p}`)),
   },
   /* ---------------------------------------------------------- 11–14 */
   {
@@ -281,6 +321,13 @@ export const TRICKS = [
     ],
     alg: 'I = P × r × t ÷ 100',
     ex: { name: 'Ines', P: 200, rate: 5, t: 3, total: false },
+    caseKey: 'total',
+    cases: [
+      { label: 'The interest', note: 'One year\'s interest is the same every year, because it is always worked out on what was first put in. Multiply by the years.',
+        ex: { name: 'Ines', P: 200, rate: 5, t: 3, total: false } },
+      { label: 'What is in the account', note: 'The question asks for the account, not just the interest — so add the interest to the coins put in.',
+        ex: { name: 'Dax', P: 300, rate: 4, t: 2, total: true } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const name = pick(NAMES, r);
@@ -312,6 +359,13 @@ export const TRICKS = [
     ],
     alg: 'A = P × (1 + r/100)ⁿ;  after 2 years, compound − simple = P × (r/100)²',
     ex: { name: 'Ines', P: 200, rate: 5, n: 2, gap: false },
+    caseKey: 'gap',
+    cases: [
+      { label: 'The account, year by year', note: 'Each year\'s interest is worked out on the bigger amount, so go one year at a time — never multiply one year\'s interest by the years.',
+        ex: { name: 'Ines', P: 200, rate: 5, n: 2, gap: false } },
+      { label: 'Compound beats simple by…', note: 'Work out both accounts after two years and take one from the other. The gap is the interest earned on interest.',
+        ex: { name: 'Suki', P: 200, rate: 10, n: 2, gap: true } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -359,6 +413,7 @@ export const TRICKS = [
     ],
     alg: 'each = (sum of items) × (100 + p) ÷ 100 ÷ people',
     ex: { items: [24, 18, 30], p: 10, k: 3 },
+    oneIdea: true,
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -397,6 +452,13 @@ export const TRICKS = [
     ],
     alg: 'cost of the loan = payments × number of payments − amount borrowed',
     ex: { name: 'Kwame', B: 100, k: 5, m: 22, pct: false },
+    caseKey: 'pct',
+    cases: [
+      { label: 'The extra, in coins', note: 'Multiply out the payments to see what was paid back altogether, then take away what was borrowed.',
+        ex: { name: 'Kwame', B: 100, k: 5, m: 22, pct: false } },
+      { label: 'The extra, as a percentage', note: 'To compare loans of different sizes, divide the extra by the loan and multiply by 100.',
+        ex: { name: 'Vesper', B: 200, k: 4, m: 55, pct: true } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const name = pick(NAMES, r);

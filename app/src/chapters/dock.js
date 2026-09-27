@@ -65,6 +65,13 @@ export const TRICKS = [
     ],
     alg: 'a.bcd = a + b/10 + c/100 + d/1000',
     ex: { kind: 'value', N: 347, dp: 2, pos: 2 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'What a digit is worth', note: 'Count the places after the point: one place is tenths, two is hundredths. A 7 two places along is only 7 hundredths.',
+        ex: { kind: 'value', N: 347, dp: 2, pos: 2 } },
+      { label: 'Build the number', note: 'Now the other way: ones before the point, then each place after it in turn — tenths first, then hundredths.',
+        ex: { kind: 'build', o: 3, ds: [4, 7] } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -110,11 +117,20 @@ export const TRICKS = [
     idea: 'The point stays still; the digits move one place for every zero — left to multiply, right to divide.',
     why: [
       'Times 10 makes every digit worth ten times more, and "ten times more" is exactly one place to the left. So every digit slides one place left: 3.47 × 10 = 34.7.',
-      '× 100 is × 10 twice, so the digits slide two places: 347. Dividing is the same slide the other way — 52 ÷ 1000 slides three places right, to 0.052, with zeros holding the empty places.',
+      '× 100 is × 10 twice, so the digits slide two places: 347. If the digits run out, zeros hold the empty places: 5.2 × 1000 = 5200. Dividing is the same slide the other way — 52 ÷ 1000 slides three places right, to 0.052, with zeros holding the empty places.',
       'People say "move the point", and on paper it looks the same. But it is really the digits that move: the point always sits just after the ones, and it is the ones that change.',
     ],
     alg: 'x × 10ᵏ shifts every digit k places left; x ÷ 10ᵏ shifts them k places right',
     ex: { N: 347, dp: 2, k: 2, op: '×' },
+    caseKey: 'move',
+    cases: [
+      { label: 'Multiplying', note: 'Times makes every digit worth more, so they all slide left — one place for every zero.',
+        ex: { N: 347, dp: 2, k: 2, op: '×' } },
+      { label: 'Multiplying past the digits', note: 'When the digits slide further left than there are decimal places, zeros fill the empty places before the point.',
+        ex: { N: 52, dp: 1, k: 3, op: '×' } },
+      { label: 'Dividing', note: 'Divide makes every digit worth less, so they slide right — and zeros hold the empty places just after the point.',
+        ex: { N: 52, dp: 0, k: 3, op: '÷' } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -126,7 +142,7 @@ export const TRICKS = [
     q({ N, dp, k, op }) {
       const x = N / P10(dp), p = P10(k);
       const ans = op === '×' ? (k >= dp ? N * P10(k - dp) : N / P10(dp - k)) : N / P10(dp + k);
-      return { N, dp, k, op, text: `${x} ${op} ${p}`, expr: `${x}${op === '×' ? '*' : '/'}${p}`, ans };
+      return { N, dp, k, op, move: op === '÷' ? '÷' : k > dp ? '× past' : '×', text: `${x} ${op} ${p}`, expr: `${x}${op === '×' ? '*' : '/'}${p}`, ans };
     },
     work(q) {
       return [
@@ -142,11 +158,22 @@ export const TRICKS = [
     idea: 'Line the points up so tenths add to tenths — or turn both into hundredths and add whole numbers.',
     why: [
       'You can only add things of the same kind: ones to ones, tenths to tenths. Writing 3.5 and 1.27 with their points in a column puts every digit under a digit of the same value.',
-      'The 5 in 3.5 is 5 tenths, which is 50 hundredths. So 3.5 is 350 hundredths and 1.27 is 127 hundredths. Now it is a sum of whole numbers: 477 hundredths, which is 4.77.',
+      'The 5 in 3.5 is 5 tenths, which is 50 hundredths. So 3.5 is 350 hundredths and 1.27 is 127 hundredths. Now it is a sum of whole numbers: 477 hundredths, which is 4.77. Taking away works the same way: 5.2 − 1.45 is 520 − 145 = 375 hundredths, 3.75. The empty place in 5.2 is a zero, not a gap to skip.',
       'Adding 5 and 27 as if they were the same kind of thing (to get 1.62) is adding tenths to hundredths — like adding 5 metres to 27 centimetres and calling it 32. Lining up the point is what stops it.',
     ],
     alg: 'a + b = (a × 10ᵈ + b × 10ᵈ) ÷ 10ᵈ, d = the most decimal places',
     ex: { A: 35, da: 1, B: 127, db: 2, op: '+' },
+    caseKey: ['op', 'places'],
+    cases: [
+      { label: 'Add, same places', note: 'Both have tenths only, so the points already line up. Add the tenths as whole numbers, then put the point back.',
+        ex: { A: 24, da: 1, B: 18, db: 1, op: '+' } },
+      { label: 'Add, different places', note: 'One number has hundredths and the other does not. Turn both into hundredths first, so tenths add to tenths.',
+        ex: { A: 35, da: 1, B: 127, db: 2, op: '+' } },
+      { label: 'Take away, same places', note: 'Line up the points and take tenths from tenths, just like whole numbers.',
+        ex: { A: 52, da: 1, B: 37, db: 1, op: '−' } },
+      { label: 'Take away, different places', note: 'The shorter number gets a zero in its empty place — 5.2 is 520 hundredths — then take away as whole numbers.',
+        ex: { A: 52, da: 1, B: 145, db: 2, op: '−' } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -162,7 +189,7 @@ export const TRICKS = [
     q({ A, da, B, db, op }) {
       const D = Math.max(da, db), a2 = A * P10(D - da), b2 = B * P10(D - db);
       const a = A / P10(da), b = B / P10(db);
-      return { A, da, B, db, op, text: `${a} ${op} ${b}`, expr: `${a}${op === '+' ? '+' : '-'}${b}`, ans: (op === '+' ? a2 + b2 : a2 - b2) / P10(D) };
+      return { A, da, B, db, op, places: da === db ? 'same' : 'different', text: `${a} ${op} ${b}`, expr: `${a}${op === '+' ? '+' : '-'}${b}`, ans: (op === '+' ? a2 + b2 : a2 - b2) / P10(D) };
     },
     work({ A, da, B, db, op }) {
       const D = Math.max(da, db), unit = D === 1 ? 'tenths' : 'hundredths', a2 = A * P10(D - da), b2 = B * P10(D - db);
@@ -187,6 +214,17 @@ export const TRICKS = [
     ],
     alg: 'round x to d places: look at digit d + 1; ≥ 5 → up, < 5 → stay',
     ex: { N: 1268, dp: 2, to: 1 },
+    caseKey: ['place', 'dir'],
+    cases: [
+      { label: 'To a whole number: stay', note: 'Cut it off after the ones. The next digit is under 5, so the number is in the first half of the gap — it stays.',
+        ex: { N: 73, dp: 1, to: 0 } },
+      { label: 'To a whole number: up', note: 'The next digit is 5 — exactly halfway — and halfway always rounds up.',
+        ex: { N: 65, dp: 1, to: 0 } },
+      { label: 'To decimal places: up', note: 'Cut it off after the places you want. An 8 next means you are most of the way to the next one up.',
+        ex: { N: 1268, dp: 2, to: 1 } },
+      { label: 'To decimal places: stay', note: 'The next digit is under 5, so you stay — and the digits after it cannot pull you over halfway.',
+        ex: { N: 4329, dp: 3, to: 1 } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -197,7 +235,8 @@ export const TRICKS = [
     q({ N, dp, to }) {
       const s = P10(dp - to), x = N / P10(dp);
       const where = to === 0 ? 'the nearest whole number' : `${to} decimal place${to > 1 ? 's' : ''}`;
-      return { N, dp, to, text: `Round ${x} to ${where}`,
+      const dec = Math.floor((N % s) / (s / 10));
+      return { N, dp, to, place: to === 0 ? 'whole' : 'decimal', dir: dec >= 5 ? 'up' : 'stay', text: `Round ${x} to ${where}`,
         expr: `(${N}-${N}%${s}+(${N}%${s}>=${s / 2}?${s}:0))/${P10(dp)}`, ans: Math.round(N / s) / P10(to) };
     },
     work({ N, dp, to }) {
@@ -221,6 +260,21 @@ export const TRICKS = [
     ],
     alg: 'a/b = (a × 100/b)/100 = (a × 100/b)% ',
     ex: { kind: 'f2d', a: 3, b: 4 },
+    caseKey: ['kind', 'per'],
+    cases: [
+      { label: 'Fraction to decimal', note: 'Make the bottom 100 with an equivalent fraction. The hundredths are the two places after the point.',
+        ex: { kind: 'f2d', a: 3, b: 4 } },
+      { label: 'Decimal to percentage', note: 'Read the decimal as hundredths — and per cent means hundredths, so that is the percentage.',
+        ex: { kind: 'd2p', h: 36 } },
+      { label: 'Percentage to fraction', note: 'Write it over 100, then simplify by dividing top and bottom by the same number.',
+        ex: { kind: 'p2f', p: 35 } },
+      { label: 'Fraction to percentage', note: 'Make the bottom 100, and the top IS the percentage.',
+        ex: { kind: 'f2p', a: 2, b: 5 } },
+      { label: 'Decimal via thousandths', note: 'Eighths do not go into 100, but they do go into 1000. Thousandths are three places after the point.',
+        ex: { kind: 'f2d', a: 3, b: 8 } },
+      { label: 'Percentage via thousandths', note: 'Make the bottom 1000, then divide by 10 to get hundredths — per cent can have a decimal too.',
+        ex: { kind: 'f2p', a: 3, b: 8 } },
+    ],
     keys: ['.', '/'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -233,11 +287,12 @@ export const TRICKS = [
     },
     q(a) {
       const { kind } = a;
-      if (kind === 'd2p') { const x = a.h / 100; return { ...a, text: `${x} as a percentage`, expr: `${x}*100`, ans: a.h }; }
-      if (kind === 'p2f') { const g = gcd(a.p, 100); return { ...a, frac: true, text: `${a.p}% as a fraction`, expr: `${a.p}/100`, ans: F(a.p / g, 100 / g) }; }
+      if (kind === 'd2p') { const x = a.h / 100; return { ...a, per: 'hundredths', text: `${x} as a percentage`, expr: `${x}*100`, ans: a.h }; }
+      if (kind === 'p2f') { const g = gcd(a.p, 100); return { ...a, per: 'hundredths', frac: true, text: `${a.p}% as a fraction`, expr: `${a.p}/100`, ans: F(a.p / g, 100 / g) }; }
       const base = 100 % a.b === 0 ? 100 : 1000, top = (a.a * base) / a.b;
-      if (kind === 'f2p') return { ...a, text: `${a.a}/${a.b} as a percentage`, expr: `${a.a}/${a.b}*100`, ans: (top * 100) / base };
-      return { ...a, text: `${a.a}/${a.b} as a decimal`, expr: `${a.a}/${a.b}`, ans: top / base };
+      const per = base === 100 ? 'hundredths' : 'thousandths';
+      if (kind === 'f2p') return { ...a, per, text: `${a.a}/${a.b} as a percentage`, expr: `${a.a}/${a.b}*100`, ans: (top * 100) / base };
+      return { ...a, per, text: `${a.a}/${a.b} as a decimal`, expr: `${a.a}/${a.b}`, ans: top / base };
     },
     work(q) {
       if (q.kind === 'd2p') return [{ t: `${q.h / 100} is how many hundredths?`, v: q.h }, { t: 'Per cent means hundredths', v: q.h }];
@@ -259,6 +314,17 @@ export const TRICKS = [
     ],
     alg: 'p% of n = (n ÷ 10) × (p ÷ 10)',
     ex: { p: 35, n: 60 },
+    caseKey: 'build',
+    cases: [
+      { label: 'Just 10%', note: '10% is one tenth, so divide by 10. Every other percentage here is built from this one.',
+        ex: { p: 10, n: 60 } },
+      { label: 'Lots of 10%', note: '30% is three lots of 10%: find 10% first, then multiply by how many tens.',
+        ex: { p: 30, n: 60 } },
+      { label: 'Just 5%', note: '5% is half of 10%, so find 10% and halve it.',
+        ex: { p: 5, n: 60 } },
+      { label: 'Tens and a 5', note: 'Split it into tens and a five: 35% is 30% and 5%. Find both, then add.',
+        ex: { p: 35, n: 60 } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -267,7 +333,7 @@ export const TRICKS = [
         return this.q({ p: int(1, 19, r) * 5, n: int(2, 99, r) * 10 });
       });
     },
-    q({ p, n }) { return { p, n, text: `${p}% of ${n}`, say: `${p} percent of ${n}`, expr: `${n}/100*${p}`, ans: (p * n) / 100 }; },
+    q({ p, n }) { return { p, n, build: p === 10 ? 'ten' : p === 5 ? 'five' : p % 10 === 0 ? 'tens' : 'tens and five', text: `${p}% of ${n}`, say: `${p} percent of ${n}`, expr: `${n}/100*${p}`, ans: (p * n) / 100 }; },
     work({ p, n }) {
       const tens = Math.floor(p / 10), five = p % 10 === 5, s = [];
       if (p === 10) return [{ t: 'How many tenths make the whole?', v: 10 }, { t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 }];
@@ -290,6 +356,7 @@ export const TRICKS = [
     ],
     alg: 'amount for m = (amount for n ÷ n) × m',
     ex: { n: 4, per2: 100, m: 6, thing: 0 },
+    oneIdea: true,
     keys: ['.'], decimals: true,
     RECIPES: [['pancakes', 'g of flour'], ['cupcakes', 'g of sugar'], ['rotis', 'g of atta'], ['glasses of lassi', 'ml of yoghurt'], ['bowls of soup', 'ml of stock'], ['scones', 'g of butter']],
     gen(r, lv = 1) {
@@ -324,6 +391,17 @@ export const TRICKS = [
     ],
     alg: 'n with p% off = n × (100 − p)/100; n with p% added = n × (100 + p)/100',
     ex: { n: 60, p: 20, dir: 'off' },
+    caseKey: ['dir', 'way'],
+    cases: [
+      { label: 'Money off', note: 'Find the percentage of the price, then take it away.',
+        ex: { n: 60, p: 20, dir: 'off' } },
+      { label: 'Money added', note: 'The same two steps upwards: find the percentage, then add it on.',
+        ex: { n: 80, p: 15, dir: 'up', lv: 2 } },
+      { label: 'Off, in one step', note: 'Think about what you DO pay: 35% off leaves 65%, so find 65% of the price straight away.',
+        ex: { n: 120, p: 35, dir: 'off', lv: 3 } },
+      { label: 'Added, in one step', note: 'A rise of 15% makes 115% of the old amount — find that directly.',
+        ex: { n: 200, p: 15, dir: 'up', lv: 3 } },
+    ],
     keys: ['.'], decimals: true,
     gen(r, lv = 1) {
       return fresh(() => {
@@ -334,7 +412,7 @@ export const TRICKS = [
     },
     q({ n, p, dir, lv = 1 }) {
       const off = dir === 'off';
-      return { n, p, dir, lv, text: off ? `${n} with ${p}% off` : `${n} with ${p}% added`, say: off ? `${n} with ${p} percent off` : `${n} with ${p} percent added`,
+      return { n, p, dir, lv, way: lv === 3 ? 'one step' : 'two steps', text: off ? `${n} with ${p}% off` : `${n} with ${p}% added`, say: off ? `${n} with ${p} percent off` : `${n} with ${p} percent added`,
         expr: `${n}*(1${off ? '-' : '+'}${p}/100)`, ans: (n * (off ? 100 - p : 100 + p)) / 100 };
     },
     work({ n, p, dir, lv = 1 }) {
@@ -355,6 +433,13 @@ export const TRICKS = [
     ],
     alg: 'n shared in a : b → n ÷ (a + b) × a and n ÷ (a + b) × b',
     ex: { kind: 'share', a: 2, b: 5, n: 35, big: true },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Share in a ratio', note: 'Add the parts to get one round of sharing. Find one part, then multiply by the share you want.',
+        ex: { kind: 'share', a: 2, b: 5, n: 35, big: true } },
+      { label: 'Simplify a ratio', note: 'Divide both sides by the same number, just like simplifying a fraction. The mix stays the same.',
+        ex: { kind: 'simplify', a: 2, b: 3, g: 6 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         let a, b; do { a = int(1, lv === 1 ? 3 : lv === 2 ? 5 : 9, r); b = int(1, lv === 1 ? 4 : lv === 2 ? 7 : 11, r); } while (a === b || gcd(a, b) !== 1);
@@ -391,6 +476,17 @@ export const TRICKS = [
     ],
     alg: 'd = s × t,  s = d ÷ t,  t = d ÷ s',
     ex: { kind: 't', s: 80, t: 3 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'How far?', note: 'Speed is the distance in one hour, so multiply it by the number of hours.',
+        ex: { kind: 'd', s: 80, t: 3 } },
+      { label: 'How fast?', note: 'Share the distance equally between the hours: that is the distance in one hour, the speed.',
+        ex: { kind: 's', s: 80, t: 3 } },
+      { label: 'How long?', note: 'Ask how many one-hour distances fit into the whole trip.',
+        ex: { kind: 't', s: 80, t: 3 } },
+      { label: 'Minutes, not hours', note: 'Turn the minutes into a piece of an hour first: 20 minutes is a third, so you go a third of the speed.',
+        ex: { kind: 'min', mins: 20, s: 30 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const kind = lv === 1 ? pick(['d', 's'], r) : lv === 2 ? pick(['d', 's', 't'], r) : pick(['s', 't', 'min'], r);

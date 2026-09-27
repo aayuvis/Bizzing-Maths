@@ -98,6 +98,17 @@ export const TRICKS = [
     ],
     alg: 'counting {1, 2, 3, …} ⊂ whole {0, 1, 2, …} ⊂ integers {…, −2, −1, 0, 1, 2, …}',
     ex: { js: '-4', show: '−4', lv: 2 },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Counting number', note: 'A whole amount above zero is a counting number — the smallest hoop, and it sits inside the other two as well.',
+        ex: { js: '7', show: '7', lv: 2 } },
+      { label: 'Whole number', note: 'Zero is a whole amount — an empty jar — but you never start counting at zero, so its smallest hoop is the whole numbers.',
+        ex: { js: '0', show: '0', lv: 2 } },
+      { label: 'Integer', note: 'Work the sum out first. 7 − 12 lands below zero, so it is only in the biggest hoop, the integers.',
+        ex: { js: '7-12', show: 'the answer to 7 − 12', lv: 2 } },
+      { label: 'Not an integer', note: 'A part left over — 7 ÷ 2 is three and a half — puts a number outside all three hoops. It is still a real number.',
+        ex: { js: '7/2', show: 'the answer to 7 ÷ 2', lv: 3 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) { const x = r() < 0.3 ? 0 : int(1, 40, r); return this.q({ js: String(x), show: String(x), lv }); }
       if (lv === 2) {
@@ -147,6 +158,19 @@ export const TRICKS = [
     ],
     alg: 'even ± even = even · odd ± odd = even · odd ± even = odd · odd × odd = odd, anything × even = even',
     ex: { a: 37, op: '+', b: 58 },
+    caseKey: 'rule',
+    cases: [
+      { label: 'Odd + even', note: 'Only the one lonely extra from the odd number is left without a partner, so the answer is odd.',
+        ex: { a: 37, op: '+', b: 58 } },
+      { label: 'Odd + odd', note: 'Each odd number has one lonely extra — and the two lonely ones pair up with each other. So the answer is even.',
+        ex: { a: 23, op: '+', b: 15 } },
+      { label: 'Even ± even', note: 'All pairs and no extras on either side, so nothing can be left over — even. Taking away works just like adding.',
+        ex: { a: 40, op: '−', b: 16 } },
+      { label: 'Times, with an even', note: 'One even number is enough: 37 × 58 is 37 groups of 58, and every group is all pairs. So the answer is even.',
+        ex: { a: 37, op: '×', b: 58 } },
+      { label: 'Odd × odd', note: 'The only way a product is odd: every number in it is odd. An odd number of odd groups never pairs up.',
+        ex: { a: 7, op: '×', b: 9 } },
+    ],
     gen(r, lv = 1) {
       const hi = lv === 1 ? 20 : lv === 2 ? 99 : 999;
       const op = lv === 1 ? pick(['+', '+', '−'], r) : pick(['+', '−', '×'], r);
@@ -158,7 +182,8 @@ export const TRICKS = [
     q({ a, op, b }) {
       const pa = a % 2, pb = b % 2, even = op === '×' ? !(pa && pb) : pa === pb;
       const js = op === '×' ? '*' : op === '−' ? '-' : '+';
-      return { a, op, b, text: `${a} ${op} ${b} — odd or even?`, choices: ['odd', 'even'], ans: even ? 'even' : 'odd', expr: `(${a}${js}${b})%2===0?'even':'odd'` };
+      const rule = op === '×' ? (pa && pb ? 'odd×odd' : 'even×') : pa !== pb ? 'odd±even' : pa ? 'odd±odd' : 'even±even';
+      return { a, op, b, rule, text: `${a} ${op} ${b} — odd or even?`, choices: ['odd', 'even'], ans: even ? 'even' : 'odd', expr: `(${a}${js}${b})%2===0?'even':'odd'` };
     },
     work(q) {
       const { a, op, b, ans } = q, pa = a % 2 ? 'odd' : 'even', pb = b % 2 ? 'odd' : 'even', c = ['odd', 'even'];
@@ -188,6 +213,17 @@ export const TRICKS = [
     ],
     alg: 'square n² · triangular 1 + 2 + … + n = n(n + 1) ÷ 2 · cube n³ · prime: factors only 1 and itself',
     ex: { n: 28 },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Square', note: 'Some number of rows with that same number in each: 25 is 5 rows of 5.',
+        ex: { n: 25 } },
+      { label: 'Triangular', note: 'Rows of 1, 2, 3… each one longer: keep adding the next number and see if you land on it exactly. 28 is 1 + 2 + … + 7.',
+        ex: { n: 28 } },
+      { label: 'Cube', note: 'Some number times itself, times itself again: 27 is 3 layers of 3 × 3. It is not a square, so test for a cube next.',
+        ex: { n: 27 } },
+      { label: 'Prime', note: 'None of the three shapes fits, and the dots will only stand in one long line — no rectangle at all.',
+        ex: { n: 23 } },
+    ],
     gen(r, lv = 1) {
       const hi = lv === 1 ? 30 : lv === 2 ? 100 : 400;
       const pool = [];
@@ -234,6 +270,13 @@ export const TRICKS = [
     ],
     alg: 'every n > 1 = p₁ × p₂ × … × pₖ, one way only (apart from order)',
     ex: { list: [2, 2, 3, 5], miss: -1 },
+    caseKey: 'find',
+    cases: [
+      { label: 'Build the number', note: 'Multiply the stones one at a time, carrying the answer along: 2 × 2, then × 3, then × 5.',
+        ex: { list: [2, 2, 3, 5], miss: -1 } },
+      { label: 'Find the missing stone', note: 'Backwards: multiply the stones you can see, then divide the number by that. What is left is the one missing prime.',
+        ex: { list: [2, 3, 5, 7], miss: 2 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const pool = lv === 1 ? [2, 3, 5] : lv === 2 ? [2, 3, 5, 7] : [2, 3, 5, 7, 11, 13];
@@ -245,9 +288,9 @@ export const TRICKS = [
     },
     q({ list, miss }) {
       const n = list.reduce((a, b) => a * b, 1);
-      if (miss < 0) return { list, miss, n, text: `${list.join(' × ')} = ?`, expr: `[${list}].reduce((a,b)=>a*b,1)`, ans: n };
+      if (miss < 0) return { list, miss, n, find: 'build', text: `${list.join(' × ')} = ?`, expr: `[${list}].reduce((a,b)=>a*b,1)`, ans: n };
       const shown = list.filter((_, i) => i !== miss), have = shown.reduce((a, b) => a * b, 1);
-      return { list, miss, n, shown, text: `${n} = ${shown.join(' × ')} × ?`, say: `${n} is ${shown.join(' times ')} times which prime?`,
+      return { list, miss, n, shown, find: 'missing', text: `${n} = ${shown.join(' × ')} × ?`, say: `${n} is ${shown.join(' times ')} times which prime?`,
         expr: `(function(){for(let d=2;d<=${n};d++)if(${have}*d===${n})return d})()`, ans: list[miss] };
     },
     work(q) {
@@ -273,13 +316,20 @@ export const TRICKS = [
     ],
     alg: 'n not prime ⇒ n has a prime factor p with p × p ≤ n',
     ex: { n: 187 },
+    caseKey: 'step',
+    cases: [
+      { label: 'The root is a prime', note: '13 × 13 = 169 is the last square not past 187, and 13 is itself prime — so 13 is the last one to try.',
+        ex: { n: 187 } },
+      { label: 'Step down to a prime', note: '14 × 14 = 196 is not past 221, but 14 is not prime. Step down to the biggest prime below it: 13.',
+        ex: { n: 221 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => this.q({ n: 2 * (lv === 1 ? int(10, 60, r) : lv === 2 ? int(60, 250, r) : int(250, 1000, r)) + 1 }));
     },
     q({ n }) {
       let root = Math.floor(Math.sqrt(n)); while (root * root > n) root--; while ((root + 1) * (root + 1) <= n) root++;
       let p = root; while (!isPrime(p)) p--;
-      return { n, text: `To test whether ${n} is prime, what is the biggest prime you might have to try dividing by?`,
+      return { n, step: p === root ? 'root' : 'down', text: `To test whether ${n} is prime, what is the biggest prime you might have to try dividing by?`,
         say: `To test whether ${n} is prime, what is the biggest prime you might have to try?`,
         expr: `(function(n){let b=0;for(let p=2;p*p<=n;p++){let q=true;for(let d=2;d<p;d++)if(p%d===0)q=false;if(q)b=p}return b})(${n})`, ans: p };
     },
@@ -303,6 +353,13 @@ export const TRICKS = [
     ],
     alg: 'a, b coprime ⇔ HCF(a, b) = 1 ⇔ no prime p divides both',
     ex: { a: 35, b: 48 },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Coprime', note: 'Try EVERY stone of the first number on the second. Only when none of them goes in are the two coprime.',
+        ex: { a: 35, b: 48 } },
+      { label: 'Not coprime', note: 'You can stop at the first stone that goes in. 21 = 3 × 7: 3 does not go into 35, but 7 does — they share a stone.',
+        ex: { a: 21, b: 35 } },
+    ],
     gen(r, lv = 1) {
       const lo = lv === 1 ? 4 : lv === 2 ? 10 : 30, hi = lv === 1 ? 30 : lv === 2 ? 100 : 300;
       let a, b;
@@ -330,10 +387,17 @@ export const TRICKS = [
     why: [
       '2³ × 3² is 72. Every factor of 72 is built only from 72\'s own stones, and it cannot use more of a stone than 72 has. So a factor takes some of the three 2s — none, one, two or three of them: 4 choices — and some of the two 3s — none, one or two: 3 choices.',
       'Every choice of 2s can go with every choice of 3s, and each pairing builds a DIFFERENT factor, because a number has only one set of stones. Picture a table with 4 rows (1, 2, 4, 8) and 3 columns (1, 3, 9): each cell is one factor, and 4 × 3 = 12 cells.',
-      'So the rule is: add one to each little power, and multiply. The "add one" is the choice of taking none of that stone — the factor 1 comes from taking none of anything.',
+      'So the rule is: add one to each little power, and multiply. The "add one" is the choice of taking none of that stone — the factor 1 comes from taking none of anything. A stone written with no little number is there once, so it still gives two choices: none of it, or one.',
     ],
     alg: 'n = p^a × q^b × r^c ⇒ number of factors = (a + 1)(b + 1)(c + 1)',
     ex: { pw: [[2, 3], [3, 2]] },
+    caseKey: 'plain',
+    cases: [
+      { label: 'Every stone has a power', note: 'Three 2s give 4 choices (none, one, two, three) and two 3s give 3 choices. Every pairing is a different factor.',
+        ex: { pw: [[2, 3], [3, 2]] } },
+      { label: 'A stone on its own', note: 'A stone with no little number is there ONCE: a factor can take none of it or one. That is 2 choices, not 1.',
+        ex: { pw: [[2, 2], [5, 1]] } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const k = lv === 3 ? 3 : 2, top = lv === 1 ? 3 : 4;
@@ -343,7 +407,7 @@ export const TRICKS = [
     },
     q({ pw }) {
       const n = pw.reduce((m, [p, e]) => m * p ** e, 1);
-      return { pw, n, text: `${pw.map(([p, e]) => (e > 1 ? `${p}${sup(e)}` : String(p))).join(' × ')} — how many factors?`,
+      return { pw, n, plain: pw.some(([, e]) => e === 1) ? 'yes' : 'no', text: `${pw.map(([p, e]) => (e > 1 ? `${p}${sup(e)}` : String(p))).join(' × ')} — how many factors?`,
         say: `${pw.map(([p, e]) => (e > 1 ? `${p} to the power ${e}` : String(p))).join(' times ')}: how many factors?`,
         expr: `(function(n){let c=0;for(let d=1;d*d<=n;d++)if(n%d===0)c+=d*d===n?1:2;return c})(${n})`, ans: pw.reduce((m, [, e]) => m * (e + 1), 1) };
     },
@@ -364,6 +428,15 @@ export const TRICKS = [
     ],
     alg: 'a/b in lowest terms ends ⇔ b = 2^m × 5^n',
     ex: { a: 7, b: 40 },
+    caseKey: 'sort',
+    cases: [
+      { label: 'It ends', note: 'The bottom is made of only 2s and 5s, so it fits into a power of ten: 7/40 = 175/1000 = 0.175.',
+        ex: { a: 7, b: 40 } },
+      { label: 'It goes on for ever', note: 'A 3 in the bottom that will not cancel: no ten, hundred or thousand splits into threes, so the digits never stop.',
+        ex: { a: 1, b: 3 } },
+      { label: 'A stone that cancels', note: 'The trap: 3/12 has a 3 in its bottom, but simplify first — it is 1/4, which is only 2s. So it ends.',
+        ex: { a: 3, b: 12 } },
+    ],
     gen(r, lv = 1) {
       const hi = lv === 1 ? 20 : lv === 2 ? 60 : 200;
       const smooth = [], rough = [];
@@ -382,7 +455,8 @@ export const TRICKS = [
     },
     q({ a, b }) {
       const g = gcd(a, b); let m = b / g; while (m % 2 === 0) m /= 2; while (m % 5 === 0) m /= 5;
-      return { a, b, text: `${a}/${b} as a decimal — does it end, or go on for ever?`, say: `${a} over ${b} as a decimal: does it end, or go on for ever?`,
+      let m0 = b; while (m0 % 2 === 0) m0 /= 2; while (m0 % 5 === 0) m0 /= 5;
+      return { a, b, sort: m !== 1 ? 'forever' : m0 === 1 ? 'ends' : 'cancels', text: `${a}/${b} as a decimal — does it end, or go on for ever?`, say: `${a} over ${b} as a decimal: does it end, or go on for ever?`,
         choices: ['it ends', 'goes on for ever'], ans: m === 1 ? 'it ends' : 'goes on for ever',
         expr: `(function(a,b){let r=a%b;for(let i=0;i<80;i++){if(r===0)return 'it ends';r=r*10%b}return 'goes on for ever'})(${a},${b})` };
     },
@@ -406,6 +480,17 @@ export const TRICKS = [
     ],
     alg: '√n is rational ⇔ n is a perfect square ⇔ every prime stone of n appears an even number of times',
     ex: { n: 50 },
+    caseKey: ['ans', 'form'],
+    cases: [
+      { label: 'A lonely stone', note: '50 = 2 × 5 × 5. The 5s pair up but the 2 is alone, so no fraction squared can ever make 50: √50 is irrational.',
+        ex: { n: 50 } },
+      { label: 'Every stone paired', note: '36 = 2 × 2 × 3 × 3: every stone has a partner, so 36 is a square and √36 = 6 — rational.',
+        ex: { n: 36 } },
+      { label: 'A fraction, all paired', note: 'For a fraction in lowest terms, check the top AND the bottom. 4 and 9 are both squares, so √(4/9) = 2/3 — rational.',
+        ex: { n: 4, d: 9 } },
+      { label: 'A fraction, one lonely', note: 'The bottom 9 is a square, but the top 8 = 2 × 2 × 2 leaves a 2 alone. One lonely stone anywhere makes it irrational.',
+        ex: { n: 8, d: 9 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 3 && r() < 0.5) {
         let p, q;
@@ -421,10 +506,10 @@ export const TRICKS = [
     },
     q({ n, d }) {
       const c = ['rational', 'irrational'];
-      if (d) return { n, d, text: `√(${n}/${d}) — rational or irrational?`, say: `the square root of ${n} over ${d}: rational or irrational?`, choices: c,
+      if (d) return { n, d, form: 'fraction', text: `√(${n}/${d}) — rational or irrational?`, say: `the square root of ${n} over ${d}: rational or irrational?`, choices: c,
         ans: unpaired(n) + unpaired(d) === 0 ? 'rational' : 'irrational',
         expr: `Number.isInteger(Math.sqrt(${n}))&&Number.isInteger(Math.sqrt(${d}))?'rational':'irrational'` };
-      return { n, text: `√${n} — rational or irrational?`, say: `the square root of ${n}: rational or irrational?`, choices: c,
+      return { n, form: 'whole', text: `√${n} — rational or irrational?`, say: `the square root of ${n}: rational or irrational?`, choices: c,
         ans: unpaired(n) === 0 ? 'rational' : 'irrational', expr: `Number.isInteger(Math.sqrt(${n}))?'rational':'irrational'` };
     },
     work({ n, d }) {

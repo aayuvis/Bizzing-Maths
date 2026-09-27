@@ -58,6 +58,7 @@ export const TRICKS = [
     ],
     alg: 'k shaded out of n equal parts = k/n',
     ex: { n: 4, k: 3, shape: 'pie' },
+    oneIdea: true,
     keys: ['/'],
     gen(r, lv = 1) {
       const n = lv === 1 ? pick([2, 4], r) : lv === 2 ? pick([2, 3, 4], r) : pick([3, 5, 6, 8], r);
@@ -86,6 +87,13 @@ export const TRICKS = [
     ],
     alg: '(a/b) of n = (n ÷ b) × a',
     ex: { a: 3, b: 4, n: 20 },
+    caseKey: 'share',
+    cases: [
+      { label: 'One share: 1/4 of', note: 'With a 1 on top you only need one share, so dividing by the bottom is the whole job.',
+        ex: { a: 1, b: 4, n: 12 } },
+      { label: 'Several shares: 3/4 of', note: 'Find one share first by dividing, then take as many shares as the top number says.',
+        ex: { a: 3, b: 4, n: 20 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const b = pick([2, 3, 4], r); return this.q({ a: 1, b, n: b * int(2, 6, r) }); }
@@ -93,7 +101,7 @@ export const TRICKS = [
         const [a, b] = proper(r, 3, 12, 2); return this.q({ a, b, n: b * int(3, 12, r) });
       });
     },
-    q({ a, b, n }) { return { a, b, n, text: `${a}/${b} of ${n}`, expr: `${n}*${a}/${b}`, ans: (n / b) * a }; },
+    q({ a, b, n }) { return { a, b, n, share: a === 1 ? 'one' : 'several', text: `${a}/${b} of ${n}`, expr: `${n}*${a}/${b}`, ans: (n / b) * a }; },
     work({ a, b, n }) {
       if (a === 1) return [{ t: 'How many equal shares?', v: b }, { t: `${n} ÷ ${b}`, v: n / b }];
       return [{ t: `One share: ${n} ÷ ${b}`, v: n / b }, { t: `${a} shares: × ${a}`, v: (n / b) * a }];
@@ -111,6 +119,15 @@ export const TRICKS = [
     ],
     alg: 'a/b = (a × m)/(b × m)',
     ex: { a: 3, b: 4, m: 3, miss: 'top' },
+    caseKey: 'miss',
+    cases: [
+      { label: 'Missing top', note: 'Work out what the bottom was multiplied by, then do the same to the top.',
+        ex: { a: 3, b: 4, m: 3, miss: 'top' } },
+      { label: 'Missing bottom', note: 'This time the tops tell you the multiplier. Do the same to the bottom.',
+        ex: { a: 2, b: 3, m: 4, miss: 'bottom' } },
+      { label: 'Going down: dividing', note: 'The new bottom is smaller, so the pieces are being glued back together: divide the top by the same number.',
+        ex: { a: 2, b: 3, m: 5, miss: 'down' } },
+    ],
     gen(r, lv = 1) {
       const miss = lv === 1 ? 'top' : lv === 2 ? pick(['top', 'bottom'], r) : pick(['top', 'bottom', 'down'], r);
       const b = miss === 'down' ? int(2, 8, r) : int(2, lv === 1 ? 5 : lv === 2 ? 8 : 12, r);
@@ -140,6 +157,7 @@ export const TRICKS = [
     ],
     alg: 'a/b = (a ÷ g)/(b ÷ g), g = the highest common factor of a and b',
     ex: { a: 12, b: 16 },
+    oneIdea: true,
     keys: ['/'],
     gen(r, lv = 1) {
       const qmax = lv === 1 ? 5 : lv === 2 ? 9 : 12, mmax = lv === 1 ? 3 : lv === 2 ? 6 : 12;
@@ -167,10 +185,21 @@ export const TRICKS = [
     why: [
       'If the bottoms match, the pieces are the same size, so whoever has more pieces has more: 5/8 is more than 3/8.',
       'If the tops match, you have the same NUMBER of pieces — so the bigger pieces win, and bigger pieces come from cutting into fewer. 2/5 is more than 2/7, because fifths are bigger than sevenths.',
-      'If nothing matches, cut both into the same pieces. 3/5 and 4/7 both become thirty-fifths: 3/5 = 21/35 and 4/7 = 20/35. You never need the 35 — the two new tops, 3 × 7 and 4 × 5, are all you compare. That is cross-multiplying.',
+      'If nothing matches, cut both into the same pieces. 3/5 and 4/7 both become thirty-fifths: 3/5 = 21/35 and 4/7 = 20/35. You never need the 35 — the two new tops, 3 × 7 and 4 × 5, are all you compare. That is cross-multiplying. If the two new tops come out the same, the fractions are equal: two names for one share, like 2/4 and 3/6.',
     ],
     alg: 'a/b > c/d  ⇔  a × d > c × b',
     ex: { a: 3, b: 5, c: 4, d: 7 },
+    caseKey: 'rule',
+    cases: [
+      { label: 'Same bottoms', note: 'Same bottom, same size of piece — so whoever has more pieces has more.',
+        ex: { a: 5, b: 8, c: 3, d: 8 } },
+      { label: 'Same tops', note: 'The same number of pieces each, so the bigger pieces win — and fewer cuts make bigger pieces. The smaller bottom is more.',
+        ex: { a: 2, b: 5, c: 2, d: 7 } },
+      { label: 'Nothing matches', note: 'Cross-multiply: each top times the other bottom. Those are the tops you would get with a shared bottom.',
+        ex: { a: 3, b: 5, c: 4, d: 7 } },
+      { label: 'Equal after all', note: 'Different numbers can name the same share. When the cross-multiplied tops match, the answer is =.',
+        ex: { a: 2, b: 4, c: 3, d: 6 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) { const b = int(3, 10, r), a = int(1, b - 1, r); let c; do c = int(1, b - 1, r); while (c === a); return this.q({ a, b, c, d: b }); }
       if (lv === 2) { const a = int(1, 5, r); const b = int(a + 1, 12, r); let d; do d = int(a + 1, 12, r); while (d === b); return this.q({ a, b, c: a, d }); }
@@ -184,7 +213,7 @@ export const TRICKS = [
     },
     q({ a, b, c, d }) {
       const x = a * d, y = c * b;
-      return { a, b, c, d, choices: ['<', '=', '>'], ans: x > y ? '>' : x < y ? '<' : '=',
+      return { a, b, c, d, rule: b === d ? 'bottoms' : a === c ? 'tops' : x === y ? 'equal' : 'cross', choices: ['<', '=', '>'], ans: x > y ? '>' : x < y ? '<' : '=',
         text: `${a}/${b}  ?  ${c}/${d}`, say: `${a}/${b} compared with ${c}/${d}`,
         expr: `(${a}/${b})>(${c}/${d})?'>':(${a}/${b})<(${c}/${d})?'<':'='` };
     },
@@ -207,6 +236,13 @@ export const TRICKS = [
     ],
     alg: 'a/b ± c/b = (a ± c)/b',
     ex: { a: 2, c: 3, b: 7, op: '+' },
+    caseKey: 'op',
+    cases: [
+      { label: 'Adding', note: 'The bottom names the size of the slices, and adding more slices does not change their size. Add the tops only.',
+        ex: { a: 2, c: 3, b: 7, op: '+' } },
+      { label: 'Taking away', note: 'Same size of slice again, so take away the tops and keep the bottom just as it is.',
+        ex: { a: 5, c: 2, b: 9, op: '−' } },
+    ],
     keys: ['/'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -244,6 +280,15 @@ export const TRICKS = [
     ],
     alg: 'w a/b = (w × b + a)/b',
     ex: { w: 2, a: 3, b: 4, dir: 'up' },
+    caseKey: 'dir',
+    cases: [
+      { label: 'Mixed to top-heavy', note: 'Every whole is as many pieces as the bottom number. Multiply, then add the extra pieces.',
+        ex: { w: 2, a: 3, b: 4, dir: 'up' } },
+      { label: 'How many wholes?', note: 'Going back: how many whole groups of the bottom number fit into the top? That is the whole number.',
+        ex: { w: 2, a: 3, b: 4, dir: 'wholes' } },
+      { label: 'Pieces left over', note: 'Take away the pieces the wholes used up. What remains is the leftover fraction — always fewer than the bottom.',
+        ex: { w: 2, a: 3, b: 5, dir: 'left' } },
+    ],
     keys: ['/'],
     gen(r, lv = 1) {
       const dir = lv === 1 ? 'up' : pick(['up', 'wholes', 'left'], r);
@@ -271,10 +316,21 @@ export const TRICKS = [
     why: [
       'You cannot add thirds and quarters straight away, any more than you can add 3 metres and 4 centimetres and call it 7. First make them the same kind of thing.',
       'Twelfths fit both: every third is 4 twelfths and every quarter is 3 twelfths (12 is a number both 3 and 4 go into). So 1/3 + 1/4 = 4/12 + 3/12 = 7/12.',
-      'Changing to twelfths is only equivalent fractions — the same share, cut smaller — so nothing about the amounts has changed. Once the pieces match, it is the easy sum from the last stop.',
+      'Changing to twelfths is only equivalent fractions — the same share, cut smaller — so nothing about the amounts has changed. Once the pieces match, it is the easy sum from the last stop, and taking away works the same way. Sometimes one bottom already goes into the other — thirds and sixths — and then only the thirds need re-cutting: 1/3 = 2/6.',
     ],
     alg: 'a/b ± c/d = (a × L/b ± c × L/d)/L, L a common multiple of b and d',
     ex: { a: 1, b: 3, c: 1, d: 4, op: '+' },
+    caseKey: ['op', 'fit'],
+    cases: [
+      { label: 'Adding: one bottom fits', note: '3 goes into 6, so sixths already fit both. Only the thirds need cutting smaller.',
+        ex: { a: 1, b: 3, c: 1, d: 6, op: '+' } },
+      { label: 'Adding: re-cut both', note: 'Neither bottom goes into the other, so find a new bottom both go into and re-cut both fractions.',
+        ex: { a: 1, b: 3, c: 1, d: 4, op: '+' } },
+      { label: 'Taking away: one fits', note: 'Same first step as adding — make the pieces match — then take the tops away.',
+        ex: { a: 3, b: 4, c: 1, d: 2, op: '−' } },
+      { label: 'Taking away: re-cut both', note: 'Re-cut both into a shared size first; only then can one be taken from the other.',
+        ex: { a: 2, b: 3, c: 1, d: 4, op: '−' } },
+    ],
     keys: ['/'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -291,7 +347,7 @@ export const TRICKS = [
     },
     q({ a, b, c, d, op }) {
       const L = lcm(b, d), A = (a * L) / b, C = (c * L) / d;
-      return { a, b, c, d, op, frac: true, text: `${a}/${b} ${op} ${c}/${d}`, expr: `${a}/${b}${op === '+' ? '+' : '-'}${c}/${d}`, ans: F(op === '+' ? A + C : A - C, L) };
+      return { a, b, c, d, op, fit: L === b || L === d ? 'one' : 'both', frac: true, text: `${a}/${b} ${op} ${c}/${d}`, expr: `${a}/${b}${op === '+' ? '+' : '-'}${c}/${d}`, ans: F(op === '+' ? A + C : A - C, L) };
     },
     work({ a, b, c, d, op }) {
       const L = lcm(b, d), A = (a * L) / b, C = (c * L) / d;
@@ -315,6 +371,13 @@ export const TRICKS = [
     ],
     alg: 'a/b × c/d = (a × c)/(b × d)',
     ex: { a: 2, b: 3, c: 3, d: 4 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Whole number × fraction', note: 'This is repeated adding of the same slice, so the slices stay the same size: multiply the top, keep the bottom.',
+        ex: { w: 3, a: 2, b: 5 } },
+      { label: 'Fraction × fraction', note: '× means "of" here: part of a part. Multiply the tops to count your squares, and the bottoms to count them all.',
+        ex: { a: 2, b: 3, c: 3, d: 4 } },
+    ],
     keys: ['/'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -324,8 +387,8 @@ export const TRICKS = [
       });
     },
     q({ w, a, b, c, d }) {
-      if (w) return { w, a, b, frac: true, text: `${w} × ${a}/${b}`, expr: `${a}/${b}*${w}`, ans: F(w * a, b) };
-      return { a, b, c, d, frac: true, text: `${a}/${b} × ${c}/${d}`, expr: `(${a}/${b})*(${c}/${d})`, ans: F(a * c, b * d) };
+      if (w) return { w, a, b, kind: 'whole', frac: true, text: `${w} × ${a}/${b}`, expr: `${a}/${b}*${w}`, ans: F(w * a, b) };
+      return { a, b, c, d, kind: 'frac', frac: true, text: `${a}/${b} × ${c}/${d}`, expr: `(${a}/${b})*(${c}/${d})`, ans: F(a * c, b * d) };
     },
     work({ w, a, b, c, d }) {
       if (w) return [{ t: `Tops: ${w} × ${a}`, v: w * a }, { t: 'The pieces are the same size — keep the bottom', v: F(w * a, b) }];
@@ -348,6 +411,15 @@ export const TRICKS = [
     ],
     alg: 'a/b ÷ c/d = a/b × d/c',
     ex: { w: 3, c: 1, d: 2, kind: 'unit' },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Whole ÷ a unit fraction', note: 'How many halves fit in 3? Each whole holds 2, so multiply the wholes by the bottom number.',
+        ex: { w: 3, c: 1, d: 2, kind: 'unit' } },
+      { label: 'Whole ÷ a bigger fraction', note: 'Count the pieces first, then group them into helpings the size of the top number: multiply, then divide.',
+        ex: { w: 6, c: 2, d: 3, kind: 'whole' } },
+      { label: 'Fraction ÷ fraction', note: 'Now both are fractions. Keep the first, change ÷ to ×, flip the second, and multiply straight across.',
+        ex: { a: 2, b: 3, c: 3, d: 4, kind: 'frac' } },
+    ],
     keys: ['/'],
     gen(r, lv = 1) {
       return fresh(() => {

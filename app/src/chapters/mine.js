@@ -116,6 +116,15 @@ export const TRICKS = [
     ],
     alg: 'a < b exactly when a is below b on the number line ; −7 < −3',
     ex: { a: -7, b: -3 },
+    caseKey: 'side',
+    cases: [
+      { label: 'Both below ground', note: 'Both numbers are negative, so the one nearer to zero is higher up the shaft — and higher up means bigger, even though its digit looks smaller.',
+        ex: { a: -7, b: -3 } },
+      { label: 'One each side of ground', note: 'A number above ground beats every number below it, however big the digits underground look.',
+        ex: { a: 4, b: -6 } },
+      { label: 'Zero and a negative', note: 'Zero is ground level itself. Every negative number is below it, so every negative number is less than 0.',
+        ex: { a: 0, b: -2 } },
+    ],
     gen(r, lv = 1) {
       let a, b;
       do {
@@ -127,7 +136,8 @@ export const TRICKS = [
       return this.q({ a, b });
     },
     q({ a, b }) {
-      return { a, b, choices: C3, ans: a > b ? '>' : a < b ? '<' : '=',
+      const side = a < 0 && b < 0 ? 'both below' : a === 0 || b === 0 ? 'zero' : 'either side';
+      return { a, b, side, choices: C3, ans: a > b ? '>' : a < b ? '<' : '=',
         text: `${N(a)}  ?  ${N(b)}`, say: `${N(a)} compared with ${N(b)}`,
         expr: `(${a})>(${b})?'>':(${a})<(${b})?'<':'='` };
     },
@@ -147,6 +157,23 @@ export const TRICKS = [
     ],
     alg: 'start + change = end ; −4 + 9 = 5 , 3 − 8 = −5',
     ex: { s: -4, m: [9] },
+    caseKey: 'trip',
+    cases: [
+      { label: 'Down, still above ground', note: 'The lift stays above ground, so this is an ordinary take-away — the numbers you already know.',
+        ex: { s: 7, m: [-3] } },
+      { label: 'Landing on ground', note: 'The trip is exactly as long as the distance to ground, so the lift stops on 0 — ground is a level too, neither above nor below.',
+        ex: { s: -5, m: [5] } },
+      { label: 'Up past ground', note: 'Ride up to 0 first, then carry on with what is left of the trip. Zero splits one hard sum into two easy ones.',
+        ex: { s: -4, m: [9] } },
+      { label: 'Down past ground', note: 'The same two trips the other way: down to 0, then the rest of the trip takes you underground.',
+        ex: { s: 3, m: [-8] } },
+      { label: 'Down, deeper underground', note: 'Already below ground and going down: you get further from zero, so the distances add — and the number gets smaller.',
+        ex: { s: -6, m: [-3] } },
+      { label: 'Up, still underground', note: 'Going up underground brings you closer to zero, so the distance below ground shrinks — the number gets bigger.',
+        ex: { s: -6, m: [2] } },
+      { label: 'Two trips in a row', note: 'Do one trip at a time: find where the first one ends, then start the second from there.',
+        ex: { s: -3, m: [8, -12] } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 3) {
@@ -166,9 +193,12 @@ export const TRICKS = [
     q({ s, m }) {
       const say = (x) => `${x > 0 ? 'up' : 'down'} ${Math.abs(x)}`;
       const lv = (x) => (Math.abs(x) === 1 ? 'level' : 'levels');
-      const trip = m.length === 1 ? `It goes ${say(m[0])} ${lv(m[0])}.` : `It goes ${say(m[0])} ${lv(m[0])}, then ${say(m[1])}.`;
+      const say2 = m.length === 1 ? `It goes ${say(m[0])} ${lv(m[0])}.` : `It goes ${say(m[0])} ${lv(m[0])}, then ${say(m[1])}.`;
       let end = s; for (const x of m) end += x;
-      return { s, m, text: `The lift is on level ${N(s)}. ${trip} Which level is it on now?`,
+      const e1 = s + m[0];
+      const trip = m.length > 1 ? 'two' : e1 === 0 ? 'to ground' : s * e1 < 0 ? (m[0] > 0 ? 'cross up' : 'cross down')
+        : s < 0 ? (m[0] < 0 ? 'deeper' : 'closer') : 'above';
+      return { s, m, trip, text: `The lift is on level ${N(s)}. ${say2} Which level is it on now?`,
         expr: `[${m.join(',')}].reduce((a,b)=>a+b,${s})`, ans: end };
     },
     work({ s, m }) {
@@ -189,6 +219,13 @@ export const TRICKS = [
     ],
     alg: 'gap between a and b = |a − b| ; |−6| = 6',
     ex: { a: -6, b: 5, ctx: 'mine' },
+    caseKey: 'zero',
+    cases: [
+      { label: 'Zero is between them', note: 'One is above ground and one below, so the gap is two trips glued together at 0 — add the two distances.',
+        ex: { a: -6, b: 5, ctx: 'mine' } },
+      { label: 'Both below ground', note: 'Zero is not between them, so do not add. The deeper one is further down by the difference of their distances — take away.',
+        ex: { a: -9, b: -4, ctx: 'mine' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const R = lv === 1 ? 9 : lv === 2 ? 20 : 60;
@@ -200,7 +237,7 @@ export const TRICKS = [
       });
     },
     q({ a, b, ctx }) {
-      const base = { a, b, ctx, expr: `Math.abs((${a})-(${b}))`, ans: Math.max(a, b) - Math.min(a, b) };
+      const base = { a, b, ctx, zero: Math.max(a, b) > 0 ? 'between' : 'below', expr: `Math.abs((${a})-(${b}))`, ans: Math.max(a, b) - Math.min(a, b) };
       if (ctx === 'cold') return { ...base, text: `One freezer is at ${N(a)} °C, another at ${N(b)} °C. How many degrees apart are they?` };
       if (ctx === 'sea') return { ...base, text: `A diver is at ${N(a)} m, a gull is at ${N(b)} m (0 is the surface of the sea). How many metres apart are they?` };
       return { ...base, text: `One miner is on level ${N(a)}, another on level ${N(b)}. How many levels apart are they?` };
@@ -223,6 +260,15 @@ export const TRICKS = [
     ],
     alg: 'a + (−b) = a − b',
     ex: { a: 5, b: 8 },
+    caseKey: 'path',
+    cases: [
+      { label: 'Staying above ground', note: 'Adding a negative means going down. Here the start is high enough that you never pass ground — an ordinary take-away.',
+        ex: { a: 9, b: 4 } },
+      { label: 'Down past ground', note: 'Going down further than you are above ground: use up the levels to reach 0, then the rest take you below it.',
+        ex: { a: 5, b: 8 } },
+      { label: 'Starting below ground', note: 'Already underground and going down again: like two bills, the distances add up to a bigger bill.',
+        ex: { a: -2, b: 6 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ a: int(1, 9, r), b: int(2, 12, r) });
@@ -230,7 +276,7 @@ export const TRICKS = [
         return this.q({ a: int(-45, 60, r), b: int(6, 70, r) });
       });
     },
-    q({ a, b }) { return { a, b, text: `${N(a)} + (−${b})`, expr: `(${a})+(-${b})`, ans: a - b }; },
+    q({ a, b }) { return { a, b, path: a <= 0 ? 'below' : a >= b ? 'stay' : 'cross', text: `${N(a)} + (−${b})`, expr: `(${a})+(-${b})`, ans: a - b }; },
     work({ a, b }) { return [{ t: `Adding −${b} is the same as going down by`, v: b }, ...move(a, -b)]; },
     draw: ({ a, b }) => line([a, a - b], { [a]: 'start' }),
   },
@@ -245,6 +291,15 @@ export const TRICKS = [
     ],
     alg: 'a − (−b) = a + b',
     ex: { a: 5, b: 3 },
+    caseKey: 'path',
+    cases: [
+      { label: 'Starting above ground', note: 'The two minuses together mean add, so the lift goes up — and from above ground it simply climbs higher.',
+        ex: { a: 5, b: 3 } },
+      { label: 'Below ground, up past 0', note: 'Turn it into an add first, then ride up: reach ground, and the rest of the trip takes you above it.',
+        ex: { a: -4, b: 9 } },
+      { label: 'Below ground, staying there', note: 'Still an add, so still going up — but not far enough to reach ground. The answer is negative, just nearer to zero.',
+        ex: { a: -9, b: 4 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ a: int(1, 9, r), b: int(1, 9, r) });
@@ -252,7 +307,7 @@ export const TRICKS = [
         return this.q({ a: nz(5, 40, r), b: int(5, 40, r) });
       });
     },
-    q({ a, b }) { return { a, b, text: `${N(a)} − (−${b})`, expr: `(${a})-(-${b})`, ans: a + b }; },
+    q({ a, b }) { return { a, b, path: a > 0 ? 'above' : a + b > 0 ? 'cross' : 'below', text: `${N(a)} − (−${b})`, expr: `(${a})-(-${b})`, ans: a + b }; },
     work({ a, b }) { return [{ t: `Taking away −${b} is the same as adding`, v: b }, ...move(a, b)]; },
     draw: ({ a, b }) => line([a, a + b], { [a]: 'start' }),
   },
@@ -267,6 +322,7 @@ export const TRICKS = [
     ],
     alg: 'a₁ + a₂ + … = (sum of the positives) − (sum of the sizes of the negatives)',
     ex: { t: [-5, 8, -9, 3, -6] },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const k = lv === 1 ? 3 : lv === 2 ? 4 : int(5, 6, r), R = lv === 1 ? 9 : lv === 2 ? 12 : 25;
@@ -299,6 +355,15 @@ export const TRICKS = [
     ],
     alg: '(−a) × b = −(ab) ; (−a) × (−b) = ab',
     ex: { f: [-4, -8] },
+    caseKey: 'neg',
+    cases: [
+      { label: 'One negative', note: 'Lots of a bill is a bigger bill: one negative number in the product makes the answer negative.',
+        ex: { f: [3, -4] } },
+      { label: 'Two negatives', note: 'The pair of negatives cancels out, so the answer is positive — the times-table pattern leaves no other choice.',
+        ex: { f: [-4, -8] } },
+      { label: 'Three negatives', note: 'Two of them pair up and cancel; the third is left over on its own, so the answer is negative again.',
+        ex: { f: [-2, -3, -5] } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const f = [int(3, 9, r), int(2, 9, r)]; f[r() < 0.5 ? 0 : 1] *= -1; return this.q({ f }); }
@@ -310,7 +375,7 @@ export const TRICKS = [
     },
     q({ f }) {
       const neg = f.filter((x) => x < 0).length, size = f.reduce((a, b) => a * Math.abs(b), 1);
-      return { f, text: f.map((x, i) => (i ? B(x) : N(x))).join(' × '), expr: f.map((x) => `(${x})`).join('*'), ans: (neg % 2 ? -1 : 1) * size };
+      return { f, neg, text: f.map((x, i) => (i ? B(x) : N(x))).join(' × '), expr: f.map((x) => `(${x})`).join('*'), ans: (neg % 2 ? -1 : 1) * size };
     },
     work({ f }) {
       const neg = f.filter((x) => x < 0).length, size = f.reduce((a, b) => a * Math.abs(b), 1);
@@ -330,6 +395,17 @@ export const TRICKS = [
     ],
     alg: '(−a) ÷ b = −(a ÷ b) ; (−a) ÷ (−b) = a ÷ b',
     ex: { b: -6, c: 7 },
+    caseKey: 'signs',
+    cases: [
+      { label: 'Negative ÷ positive', note: 'A negative shared out stays negative: different signs give a negative answer.',
+        ex: { b: 6, c: -7 } },
+      { label: 'Positive ÷ negative', note: 'Different signs again, just the other way round — still a negative answer. Check: what times −6 makes 42?',
+        ex: { b: -6, c: -7 } },
+      { label: 'Negative ÷ negative', note: 'Same signs, so the answer is positive — because a positive number times −6 is what makes −42.',
+        ex: { b: -6, c: 7 } },
+      { label: 'Positive ÷ positive', note: 'Same signs, positive answer: the ordinary division you already know. The rule just agrees with it.',
+        ex: { b: 6, c: 7 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const b = int(2, 9, r), c = int(3, 9, r); return pick([() => this.q({ b: -b, c }), () => this.q({ b, c: -c }), () => this.q({ b: -b, c: -c })], r)(); }
@@ -339,7 +415,7 @@ export const TRICKS = [
     },
     q({ b, c }) {
       const a = b * c;
-      return { b, c, text: `${N(a)} ÷ ${B(b)}`, expr: `(${a})/(${b})`, ans: sgn(a) * sgn(b) * (Math.abs(a) / Math.abs(b)) };
+      return { b, c, signs: `${a < 0 ? '−' : '+'}÷${b < 0 ? '−' : '+'}`, text: `${N(a)} ÷ ${B(b)}`, expr: `(${a})/(${b})`, ans: sgn(a) * sgn(b) * (Math.abs(a) / Math.abs(b)) };
     },
     work({ b, c }) {
       const a = b * c, same = sgn(a) === sgn(b);
@@ -359,6 +435,19 @@ export const TRICKS = [
     ],
     alg: '(−a)² = a² ; −a² = −(a²) ; c − d × (−e) = c + de',
     ex: { kind: 'sq', a: 3 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Square in brackets', note: 'The bracket puts the minus inside the square, so it is multiplied by itself too — and two negatives make a positive.',
+        ex: { kind: 'sq', a: 3 } },
+      { label: 'Minus, no brackets', note: 'No brackets, so the power goes first and the minus waits: square the number, then make it negative.',
+        ex: { kind: 'negsq', a: 3 } },
+      { label: 'Square, then take away', note: 'Powers come before take-away: square the bracket first, then subtract.',
+        ex: { kind: 'sqsub', a: 4, b: 5 } },
+      { label: 'Times a negative', note: 'Multiply before you take away. Then taking away a negative is the same as adding.',
+        ex: { kind: 'mulneg', a: 3, b: 10, c: 4 } },
+      { label: 'Minus square plus a product', note: 'Two jobs before the add: the power (square, then the minus) and the multiplication. Only then add.',
+        ex: { kind: 'mix', a: 3, b: 5, c: 4 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const kind = lv === 1 ? pick(['sq', 'negsq'], r) : lv === 2 ? pick(['sq', 'negsq', 'sqsub', 'mulneg'], r) : pick(['sqsub', 'mulneg', 'mix'], r);

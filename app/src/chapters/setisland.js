@@ -57,6 +57,15 @@ export const TRICKS = [
     ],
     alg: 'x ∈ A means x is a member of A;  x ∉ A means it is not',
     ex: { kind: 'mult', k: 7, x: 91 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Multiples', note: 'Divide by the number in the rule. Nothing left over means it is a member; any remainder at all means it is not.',
+        ex: { kind: 'mult', k: 7, x: 91 } },
+      { label: 'Square numbers', note: 'Find the whole number whose square is just under or on it. If that square lands exactly on the number, it is in.',
+        ex: { kind: 'sq', x: 50 } },
+      { label: 'Factors', note: 'The rule is turned round: now the number must go INTO the big one. 36 ÷ 8 leaves 4 over, so 8 is not a factor.',
+        ex: { kind: 'fac', N: 36, x: 8 } },
+    ],
     gen(r, lv = 1) {
       const coin = r() < 0.5;
       if (lv === 1) { const k = pick([2, 5, 10], r); const x = coin ? k * int(3, 12, r) : k * int(3, 12, r) + int(1, k - 1, r); return this.q({ kind: 'mult', k, x }); }
@@ -93,6 +102,17 @@ export const TRICKS = [
     ],
     alg: 'n({k, 2k, …} up to N) = ⌊N ÷ k⌋   ·   n({a, …, b}) = b − a + 1   ·   n(∅) = 0',
     ex: { kind: 'mult', k: 6, N: 100 },
+    caseKey: ['kind', 'empty'],
+    cases: [
+      { label: 'A run of numbers', note: 'Take the first from the last, then add one — the first number is in the set too, like the first post of a fence.',
+        ex: { kind: 'range', a: 12, b: 30 } },
+      { label: 'Multiples up to a limit', note: 'Find the last multiple that fits under the limit. Its place in the times table is how many there are.',
+        ex: { kind: 'mult', k: 6, N: 100 } },
+      { label: 'Multiples between two', note: 'Count the multiples up to the top, then take away the ones that come before the bottom.',
+        ex: { kind: 'between', k: 5, a: 23, b: 61 } },
+      { label: 'The empty set', note: 'Sometimes the rule lets nothing in at all. That is still a set — the empty set, ∅ — and its count is 0.',
+        ex: { kind: 'between', k: 10, a: 41, b: 48 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const a = int(2, 30, r); return this.q({ kind: 'range', a, b: a + int(4, 20, r) }); }
@@ -104,6 +124,7 @@ export const TRICKS = [
     },
     q(o) {
       const range = (a, b, f) => `Array.from({length:${b}+1},(_,i)=>i).filter((i)=>i>=${a}&&${f}).length`;
+      o = { ...o, empty: o.kind === 'between' && Math.floor(o.b / o.k) === Math.floor((o.a - 1) / o.k) };
       if (o.kind === 'range') return { ...o, text: `A = {whole numbers from ${o.a} to ${o.b}}. n(A)?`, say: `how many whole numbers from ${o.a} to ${o.b}`, expr: range(o.a, o.b, 'true'), ans: o.b - o.a + 1 };
       if (o.kind === 'mult') return { ...o, text: `A = {multiples of ${o.k} up to ${o.N}}. n(A)?`, say: `how many multiples of ${o.k} up to ${o.N}`, expr: range(1, o.N, `i%${o.k}===0`), ans: Math.floor(o.N / o.k) };
       return { ...o, text: `A = {multiples of ${o.k} from ${o.a} to ${o.b}}. n(A)?`, say: `how many multiples of ${o.k} from ${o.a} to ${o.b}`, expr: range(o.a, o.b, `i%${o.k}===0`), ans: Math.floor(o.b / o.k) - Math.floor((o.a - 1) / o.k) };
@@ -131,6 +152,17 @@ export const TRICKS = [
     ],
     alg: 'n(A ∪ B) = n(A) + n(B) − n(A ∩ B)',
     ex: { kind: 'list', A: [2, 4, 6, 8, 10], B: [3, 6, 9], op: '∪' },
+    caseKey: ['kind', 'op'],
+    cases: [
+      { label: 'Union of two lists', note: 'Pour both lists into one bag, but a shared member goes in only once: add the two counts, then take the shared ones away.',
+        ex: { kind: 'list', A: [2, 4, 6, 8, 10], B: [3, 6, 9], op: '∪' } },
+      { label: 'Intersection of two lists', note: 'Keep only what is in BOTH lists — walk along one list and tick each member that the other list has too.',
+        ex: { kind: 'list', A: [1, 3, 5, 7, 9], B: [3, 4, 5, 6], op: '∩' } },
+      { label: 'Intersection by rule', note: 'A multiple of 4 AND of 6 is a multiple of their lowest common multiple, 12 — so count the multiples of 12.',
+        ex: { kind: 'rule', a: 4, b: 6, N: 50, op: '∩' } },
+      { label: 'Union by rule', note: 'Count each rule on its own and add — but the common multiples were counted twice, so take them away once.',
+        ex: { kind: 'rule', a: 3, b: 5, N: 40, op: '∪' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 3 && r() < 0.6) { const a = int(2, 5, r); let b = int(2, 7, r); if (b === a) b++; return this.q({ kind: 'rule', a, b, N: int(20, 60, r), op: pick(['∩', '∪'], r) }); }
@@ -176,6 +208,15 @@ export const TRICKS = [
     ],
     alg: 'n(A ∪ B) = n(A) + n(B) − n(A ∩ B)',
     ex: { kind: 'union', la: 'Cricket', lb: 'Chess', A: 14, B: 11, I: 5 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Add the three parts', note: 'When the diagram shows every part, each child is in exactly one part — so just add them up.',
+        ex: { kind: 'regions', la: 'Cricket', lb: 'Chess', A: 14, B: 11, I: 5 } },
+      { label: 'Add, then take the overlap', note: 'The totals for each circle both include the middle, so adding them counts the middle twice. Take it away once.',
+        ex: { kind: 'union', la: 'Cricket', lb: 'Chess', A: 14, B: 11, I: 5 } },
+      { label: 'Find the overlap', note: 'Backwards: the class minus "neither" is everyone in the circles. Adding the two circles overshoots — by exactly the ones in both.',
+        ex: { kind: 'both', la: 'Cricket', lb: 'Chess', A: 14, B: 11, I: 5, out: 4 } },
+    ],
     gen(r, lv = 1) {
       const [la, lb] = pick([['Cricket', 'Chess'], ['Dogs', 'Cats'], ['Piano', 'Drums'], ['Swim', 'Run'], ['Apples', 'Mangoes'], ['Maths', 'Art']], r);
       return fresh(() => {
@@ -211,10 +252,21 @@ export const TRICKS = [
     why: [
       '3n means 3 × n — in algebra we leave the × out so it does not get mixed up with the letter x. So when n = 4, 3n + 2 is 3 × 4 + 2 = 12 + 2 = 14.',
       'Why use a letter at all? Because one expression can describe a whole pattern. "Triangles in a row of n tiles use 3n + 2 matches" works for 4 tiles, for 40, for 400 — you only swap the number in the box.',
-      'The order still matters: multiply before you add. And a number just outside brackets multiplies everything inside: 4(n − 2) with n = 6 is 4 × 4 = 16.',
+      'The order still matters: multiply before you add. And a number just outside brackets multiplies everything inside: 4(n − 2) with n = 6 is 4 × 4 = 16. n² means n × n, so a negative in the box comes out positive: (−3) × (−3) = 9. And with two letters, each gets its own number.',
     ],
     alg: 'an + b with n = k  →  a × k + b',
     ex: { kind: 'lin', a: 3, b: 2, n: 4 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Times, then add', note: '3n is 3 × n — the × is hidden. Do the multiplying first, then the adding or taking away.',
+        ex: { kind: 'lin', a: 3, b: 2, n: 4 } },
+      { label: 'Brackets first', note: 'A number outside brackets multiplies the whole bracket, so work out the inside first.',
+        ex: { kind: 'bra', a: 4, b: 2, n: 6 } },
+      { label: 'Squaring a negative', note: 'n² is n × n. With a negative in the box, negative times negative is positive — so the square is never below zero.',
+        ex: { kind: 'sq', a: 2, b: 5, n: -3 } },
+      { label: 'Two letters', note: 'Each letter has its own number. Fill both boxes, work out each term, then add — a negative term takes away.',
+        ex: { kind: 'two', a: 3, c: 2, x: 4, y: -2 } },
+    ],
     keys: ['−'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -255,6 +307,15 @@ export const TRICKS = [
     ],
     alg: 'a set with n members has 2ⁿ subsets',
     ex: { kind: 'all', n: 4 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'All the subsets', note: 'Every member is in or out — two choices each — so double for every member. The empty set and the whole set both count.',
+        ex: { kind: 'all', n: 4 } },
+      { label: 'Not empty', note: 'Only one subset has every member out: the empty set. Count them all, then take away that one.',
+        ex: { kind: 'nonempty', n: 4 } },
+      { label: 'Must contain a', note: 'a has no choice now — it is in. Only the other members get in-or-out, so there are half as many.',
+        ex: { kind: 'with', n: 5 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ kind: 'all', n: int(1, 4, r) });
       if (lv === 2) return this.q({ kind: 'all', n: int(3, 7, r) });
@@ -286,6 +347,15 @@ export const TRICKS = [
     ],
     alg: 'ax + bx = (a + b)x',
     ex: { kind: 'pick', a: 3, b: 2, c: 4, d: 1 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'One letter', note: 'Every term is the same kind of thing, so just add the numbers in front. A letter on its own means 1 of it.',
+        ex: { kind: 'coef', v: 'm', cs: [4, 1, 3] } },
+      { label: 'Two letters', note: 'Keep x\'s with x\'s and y\'s with y\'s. The answer has two terms — you cannot add apples to bananas.',
+        ex: { kind: 'pick', a: 3, b: 2, c: 4, d: 1 } },
+      { label: 'Taking away x\'s', note: 'The minus sign belongs to the term after it. More x\'s taken than you had leaves a negative number in front.',
+        ex: { kind: 'neg', a: 5, p: 3, c: 8, q: 2 } },
+    ],
     keys: ['−'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -328,6 +398,17 @@ export const TRICKS = [
     ],
     alg: 'ax + b = c  ⇒  x = (c − b) ÷ a',
     ex: { kind: 'two', a: 3, b: 4, x: 5 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Undo an add', note: 'Something was added to x. Take the same amount off both sides and x stands alone.',
+        ex: { kind: 'add', b: 7, x: 9 } },
+      { label: 'Undo a times', note: '4x means four x\'s. Share both sides into four equal parts to find one x.',
+        ex: { kind: 'mul', a: 4, x: 6 } },
+      { label: 'Two steps', note: 'Undo the last thing first: take away the plain number, THEN share. Doing it the other way round breaks the balance sum.',
+        ex: { kind: 'two', a: 3, b: 4, x: 5 } },
+      { label: 'Words into an equation', note: 'Write the words as an equation first. Here a number was taken away, so undo it by adding to both sides.',
+        ex: { kind: 'words', a: 4, b: -3, x: 7 } },
+    ],
     keys: ['−'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -372,6 +453,15 @@ export const TRICKS = [
     ],
     alg: 'nth term = d·n + (a − d),  a = first term, d = step',
     ex: { kind: 'kth', a: 5, d: 3, k: 20 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Find a far term', note: 'From the 1st term to the 20th is 19 steps, not 20 — the first term is there before any step.',
+        ex: { kind: 'kth', a: 5, d: 3, k: 20 } },
+      { label: 'The nth-term rule', note: 'The step is the times table. Compare the first term with the step: whatever you add (or take) to fix it is the number in the box.',
+        ex: { kind: 'rule', a: 7, d: 4 } },
+      { label: 'Which term is it?', note: 'Run it backwards: how far from the first term, how many steps is that, then add one for the first term.',
+        ex: { kind: 'which', a: 5, d: 3, k: 15 } },
+    ],
     keys: ['−'],
     gen(r, lv = 1) {
       return fresh(() => {
@@ -408,6 +498,13 @@ export const TRICKS = [
     ],
     alg: 'y = mx + c   ·   m = (y₂ − y₁) ÷ (x₂ − x₁)',
     ex: { kind: 'y', m: 2, c: 1, x: 3 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Find y from the rule', note: 'Put x into the rule: times by m, then add c. Every point on the line obeys it.',
+        ex: { kind: 'y', m: 2, c: 1, x: 3 } },
+      { label: 'Gradient from two points', note: 'The gradient is the climb divided by the steps across. Take the y\'s from each other, then the x\'s, then divide.',
+        ex: { kind: 'm', m: 3, c: 2, x1: 1, x2: 3 } },
+    ],
     keys: ['−'],
     gen(r, lv = 1) {
       return fresh(() => {

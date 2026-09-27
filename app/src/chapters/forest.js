@@ -83,12 +83,20 @@ export const TRICKS = [
     ],
     alg: 'd | n ⇔ (n ÷ d) | n ; test d ≤ √n only',
     ex: { n: 36 },
+    caseKey: 'square',
+    cases: [
+      { label: 'Every factor has a partner', note: 'Each number that divides gives you two factors — itself and its partner — so the count comes out even.',
+        ex: { n: 24 } },
+      { label: 'A square number', note: 'One pair is a number times itself, like 6 × 6. That is only ONE factor, so count it once — and the total comes out odd.',
+        ex: { n: 36 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => this.q({ n: lv === 1 ? int(6, 30, r) : lv === 2 ? int(30, 100, r) : int(100, 200, r) }));
     },
     q({ n }) {
       let c = 0; for (let d = 1; d * d <= n; d++) if (n % d === 0) c += d * d === n ? 1 : 2;
-      return { n, text: `How many factors does ${n} have?`, expr: `Array.from({length:${n}},(_,i)=>i+1).filter(d=>${n}%d===0).length`, ans: c };
+      const root = Math.round(Math.sqrt(n));
+      return { n, square: root * root === n ? 'yes' : 'no', text: `How many factors does ${n} have?`, expr: `Array.from({length:${n}},(_,i)=>i+1).filter(d=>${n}%d===0).length`, ans: c };
     },
     work({ n }) {
       const root = Math.floor(Math.sqrt(n)); let pairs = 0;
@@ -108,18 +116,25 @@ export const TRICKS = [
     idea: 'Divide to see how many whole groups fit, then take one group more.',
     why: [
       'The multiples of 6 are the 6 times table carried on for ever: 6, 12, 18, 24… They are exactly the numbers you can make from whole groups of 6.',
-      'To find the first one past 50, you do not have to count up from 6. 50 ÷ 6 is 8, with some left over, so 8 boxes — 48 eggs — is the most that stays at or under 50. One more box is the first multiple past it: 9 × 6 = 54.',
+      'To find the first one past 50, you do not have to count up from 6. 50 ÷ 6 is 8, with some left over, so 8 boxes — 48 eggs — is the most that stays at or under 50. One more box is the first multiple past it: 9 × 6 = 54. And if the number is already a multiple — 48 is exactly 8 boxes — you still take one box more, because the question wants a number BIGGER than 48.',
       'Multiples and factors are two views of one fact. 54 is a multiple of 6 exactly because 6 is a factor of 54.',
     ],
     alg: 'first multiple of k above s = k × (⌊s ÷ k⌋ + 1)',
     ex: { k: 6, s: 50 },
+    caseKey: 'fits',
+    cases: [
+      { label: 'Some left over', note: 'The whole groups stop just short of the number, so one group more is the first multiple past it.',
+        ex: { k: 6, s: 50 } },
+      { label: 'It fits exactly', note: 'The trap: 48 is already 8 sixes, but it is not BIGGER than 48. Still take one group more.',
+        ex: { k: 6, s: 48 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const k = lv === 1 ? int(2, 5, r) : lv === 2 ? int(6, 12, r) : int(13, 25, r);
         return this.q({ k, s: int(2 * k + 1, lv === 1 ? 50 : lv === 2 ? 120 : 500, r) });
       });
     },
-    q({ k, s }) { return { k, s, text: `What is the first multiple of ${k} bigger than ${s}?`, expr: `${s}+${k}-${s}%${k}`, ans: k * (Math.floor(s / k) + 1) }; },
+    q({ k, s }) { return { k, s, fits: s % k === 0 ? 'exactly' : 'over', text: `What is the first multiple of ${k} bigger than ${s}?`, expr: `${s}+${k}-${s}%${k}`, ans: k * (Math.floor(s / k) + 1) }; },
     work({ k, s }) {
       const g = Math.floor(s / k);
       return [
@@ -140,6 +155,15 @@ export const TRICKS = [
     ],
     alg: 'n = 10a + b, and 2, 5, 10 all divide 10a ⇒ test b',
     ex: { a: 3475, b: 5 },
+    caseKey: 'b',
+    cases: [
+      { label: 'Divisible by 2', note: 'The last digit must be even — 0, 2, 4, 6 or 8. Nothing else in the number can spoil it.',
+        ex: { a: 1358, b: 2 } },
+      { label: 'Divisible by 5', note: 'The last digit must be 0 or 5, because those are the only single digits that split into fives.',
+        ex: { a: 3475, b: 5 } },
+      { label: 'Divisible by 10', note: 'The last digit must be 0. A 5 on the end is enough for five, but not for ten.',
+        ex: { a: 2345, b: 10 } },
+    ],
     gen(r, lv = 1) {
       const b = lv === 1 ? pick([2, 10], r) : pick([2, 5, 10], r);
       let a = lv === 1 ? int(10, 999, r) : lv === 2 ? int(100, 9999, r) : int(10000, 999999, r);
@@ -170,6 +194,13 @@ export const TRICKS = [
     ],
     alg: '4 | 100 ⇒ test n mod 100 ; 8 | 1000 ⇒ test n mod 1000',
     ex: { a: 73516, b: 4 },
+    caseKey: 'b',
+    cases: [
+      { label: 'Divisible by 4', note: 'Every hundred splits into fours, so only the last TWO digits decide.',
+        ex: { a: 73516, b: 4 } },
+      { label: 'Divisible by 8', note: 'A hundred does not split into eights, but a thousand does — so look at the last THREE digits. Passing the test for 4 is not enough.',
+        ex: { a: 73516, b: 8 } },
+    ],
     gen(r, lv = 1) {
       const b = lv === 1 ? 4 : pick([4, 8], r);
       let a = b === 8 ? int(1000, lv === 3 ? 999999 : 99999, r) : int(lv === 1 ? 100 : 1000, lv === 3 ? 999999 : 99999, r);
@@ -199,6 +230,13 @@ export const TRICKS = [
     ],
     alg: '6 | n ⇔ 2 | n and 3 | n ; 11 | n ⇔ 11 | (d₀ − d₁ + d₂ − d₃ …)',
     ex: { a: 4158, b: 11 },
+    caseKey: 'b',
+    cases: [
+      { label: 'Divisible by 6', note: 'Two tests, and it must pass BOTH: even, and a digit sum in the 3 times table. 2,134 is even, but its digits add to 10.',
+        ex: { a: 2134, b: 6 } },
+      { label: 'Divisible by 11', note: 'Add every other digit from the right, then the digits you skipped. If the two totals match (or differ by 11, 22…), 11 divides it.',
+        ex: { a: 4158, b: 11 } },
+    ],
     gen(r, lv = 1) {
       const b = lv === 1 ? 6 : lv === 2 ? 11 : pick([6, 11], r);
       let a = int(lv === 1 ? 100 : 1000, lv === 3 ? 999999 : 9999, r);
@@ -236,6 +274,13 @@ export const TRICKS = [
     ],
     alg: 'n is prime ⇔ n > 1 and no prime p ≤ √n divides n',
     ex: { n: 91 },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Not prime', note: 'As soon as one prime divides it exactly, you can stop: it is not prime. 91 looks prime, but 7 goes in.',
+        ex: { n: 91 } },
+      { label: 'Prime', note: 'To say "prime" you must try EVERY prime up to the square-root line and see each one fail. For 97 that is 2, 3, 5 and 7.',
+        ex: { n: 97 } },
+    ],
     gen(r, lv = 1) {
       const [lo, hi] = lv === 1 ? [2, 30] : lv === 2 ? [31, 100] : [101, 250];
       const primes = PRIMES.filter((p) => p >= lo && p <= hi);
@@ -266,6 +311,13 @@ export const TRICKS = [
     ],
     alg: 'n = p₁ × p₂ × … × pₖ, the same primes however you split',
     ex: { n: 84, kind: 'largest' },
+    caseKey: 'kind',
+    cases: [
+      { label: 'The largest prime factor', note: 'Break the number down until every branch ends in a prime, then pick the biggest prime at the ends.',
+        ex: { n: 84, kind: 'largest' } },
+      { label: 'How many primes', note: 'Count every prime at the ends of the branches, repeats included: 72 = 2 × 2 × 2 × 3 × 3 is five primes, not two.',
+        ex: { n: 72, kind: 'count' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const pool = lv === 1 ? [2, 3, 5, 7] : lv === 2 ? [2, 3, 5, 7, 11] : [2, 3, 5, 7, 11, 13];
@@ -299,6 +351,7 @@ export const TRICKS = [
     ],
     alg: 'HCF(a, b) = product of the primes a and b share (with repeats)',
     ex: { a: 24, b: 36 },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const h = lv === 1 ? pick([2, 3, 4, 5, 6], r) : lv === 2 ? pick([4, 6, 8, 9, 10, 12, 14, 15], r) : pick([12, 16, 18, 20, 24, 28, 30], r);
@@ -334,6 +387,13 @@ export const TRICKS = [
     ],
     alg: 'LCM(a, b) = a ÷ HCF(a, b) × b',
     ex: { a: 6, b: 8, ctx: 'bus' },
+    caseKey: 'shared',
+    cases: [
+      { label: 'They share a factor', note: 'Multiplying the two counts the shared factor twice, so divide it out once first: 6 ÷ 2 × 8.',
+        ex: { a: 6, b: 8, ctx: 'bus' } },
+      { label: 'They share nothing', note: 'When the HCF is 1 there is nothing to take out, so the LCM is simply the two numbers multiplied.',
+        ex: { a: 4, b: 9, ctx: 'lights' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const hi = lv === 1 ? 10 : lv === 2 ? 15 : 30;
@@ -346,7 +406,7 @@ export const TRICKS = [
       const text = ctx === 'bus' ? `One bus comes every ${a} minutes, another every ${b}. They leave together. How many minutes until they next leave together?`
         : ctx === 'lights' ? `Two lights flash together. One flashes every ${a} seconds, the other every ${b}. After how many seconds do they next flash together?`
           : `LCM of ${a} and ${b}`;
-      const q = { a, b, ctx, text, expr: `(function(a,b){let m=b;while(m%a)m+=b;return m})(${a},${b})`, ans: (a / gcd(a, b)) * b };
+      const q = { a, b, ctx, shared: gcd(a, b) > 1 ? 'yes' : 'no', text, expr: `(function(a,b){let m=b;while(m%a)m+=b;return m})(${a},${b})`, ans: (a / gcd(a, b)) * b };
       if (ctx === 'plain') q.say = `the lowest common multiple of ${a} and ${b}`;
       return q;
     },

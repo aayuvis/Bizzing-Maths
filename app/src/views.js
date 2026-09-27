@@ -357,7 +357,7 @@ function learnTab(t) {
   const next = more ? btn(`Next: ${esc(cs[ci + 1].label)} →`, 'learnCase', String(ci + 1), 'primary') : btn('Your turn →', 'stopTab', 'turn', 'primary');
   const figure = t.fig ? fig(t.fig(q)) : '';
   return `${strip}<div class="learn">
-    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${ci === 0 ? `<p>${esc(t.hook)}</p>` : ''}</div>
+    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${q.text === t.q(t.ex).text ? `<p>${esc(t.hook)}</p>` : ''}</div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
       <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${next}</p>`}</div>

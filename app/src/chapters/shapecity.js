@@ -255,11 +255,20 @@ export const TRICKS = [
     idea: 'Count the sides — the number of sides gives a flat shape its name, and it always has the same number of corners.',
     why: [
       'Walk round the edge of any flat shape with straight sides. Every time a side ends you turn a corner, and the next side begins. So sides and corners take turns all the way round, and when you get back to the start you have met exactly as many of each.',
-      'That is why a shape is named by one number. The start of each name is an old counting word: tri- means three (like a tricycle), penta- five, hexa- six, octa- eight (like an octopus). A square is the special four-sided shape with equal sides and square corners.',
+      'That is why a shape is named by one number. The start of each name is an old counting word: tri- means three (like a tricycle), penta- five, hexa- six, hepta- seven, octa- eight (like an octopus), nona- nine and deca- ten. A square is the special four-sided shape with equal sides and square corners.',
       'Size and turning do not change the name. A tiny hexagon and a huge one, standing up or tipped over, both have six sides — so count, do not guess from the look.',
     ],
     alg: 'sides = corners = n',
     ex: { n: 6, ask: 'name', opts: ['pentagon', 'hexagon', 'octagon', 'square'] },
+    caseKey: 'ask',
+    cases: [
+      { label: 'Name the shape', note: 'Count the sides, then turn the number into its name: hexa- means six, so six sides is a hexagon.',
+        ex: { n: 6, ask: 'name', opts: ['pentagon', 'hexagon', 'octagon', 'square'] } },
+      { label: 'Count the corners', note: 'You do not need to count the corners at all: every side ends at a corner, so there are just as many corners as sides.',
+        ex: { n: 5, ask: 'corners', opts: null } },
+      { label: 'Count the sides', note: 'Put your finger on one side and go round, so you never count a side twice. Starting at a corner you remember helps.',
+        ex: { n: 8, ask: 'sides', opts: null } },
+    ],
     gen(r, lv = 1) {
       const n = lv === 1 ? int(3, 6, r) : lv === 2 ? int(3, 8, r) : int(5, 10, r);
       const ask = lv === 1 ? pick(['name', 'name', 'corners'], r) : pick(['name', 'corners', 'sides'], r);
@@ -286,10 +295,23 @@ export const TRICKS = [
     why: [
       'Fold along a line of symmetry and every corner lands on a corner, every side on a side. So a fold line always leaves the shape through a corner or through the exact middle of a side — those are the only places worth trying.',
       'A regular shape (all sides and corners equal) with n sides has exactly n fold lines. With an odd number of sides, each fold runs from a corner to the middle of the opposite side. With an even number, half the folds join opposite corners and half join the middles of opposite sides.',
-      'A rectangle has only two. Fold it corner to corner and the long side lands on the short side, which does not fit — so the diagonal is not a line of symmetry, even though it cuts the rectangle into two equal halves.',
+      'A rectangle has only two. Fold it corner to corner and the long side lands on the short side, which does not fit — so the diagonal is not a line of symmetry, even though it cuts the rectangle into two equal halves. Some shapes have none at all: a parallelogram or a scalene triangle looks balanced, but every fold leaves a corner hanging over the edge.',
     ],
     alg: 'regular n-sided shape: n lines of symmetry',
     ex: { k: 'rectangle' },
+    caseKey: 'fold',
+    cases: [
+      { label: 'Folds through middles', note: 'A rectangle folds top to bottom and side to side. The diagonal is NOT a fold: the long side would land on the short side.',
+        ex: { k: 'rectangle' } },
+      { label: 'Regular, odd sides', note: 'With an odd number of equal sides, every fold runs from a corner to the middle of the opposite side — one fold for every corner.',
+        ex: { k: 'reg5' } },
+      { label: 'Regular, even sides', note: 'With an even number of equal sides, half the folds join opposite corners and half join the middles of opposite sides.',
+        ex: { k: 'reg6' } },
+      { label: 'Folds through corners', note: 'A kite folds only down its long middle, from corner to corner. Folding it across leaves the top and bottom not matching.',
+        ex: { k: 'kite' } },
+      { label: 'No fold at all', note: 'A parallelogram looks balanced, but try every fold and a corner always sticks out. Two equal halves are not enough — they must land on each other.',
+        ex: { k: 'parallelogram' } },
+    ],
     gen(r, lv = 1) {
       const pool = lv === 1 ? ['reg3', 'reg4', 'reg6', 'rectangle', 'isosceles']
         : lv === 2 ? ['reg4', 'reg5', 'reg6', 'reg8', 'rectangle', 'rhombus', 'kite', 'parallelogram', 'scalene']
@@ -298,7 +320,8 @@ export const TRICKS = [
     },
     q({ k }) {
       const S = SYM[k];
-      return { k, text: `${k.startsWith('reg') ? 'All its sides and corners are equal. ' : ''}How many lines of symmetry does this shape have?`,
+      const fold = k.startsWith('reg') ? (S.pts.length % 2 ? 'regular-odd' : 'regular-even') : S.c + S.o === 0 ? 'none' : S.o === 0 ? 'corners' : 'middles';
+      return { k, fold, text: `${k.startsWith('reg') ? 'All its sides and corners are equal. ' : ''}How many lines of symmetry does this shape have?`,
         expr: `${mirrors(S.pts)}`, ans: S.c + S.o };
     },
     work({ k }) {
@@ -389,6 +412,21 @@ export const TRICKS = [
     ],
     alg: 'parallelogram + right angles = rectangle; + equal sides = rhombus; + both = square',
     ex: { k: 'rhombus', opts: ['square', 'rhombus', 'kite', 'rectangle'] },
+    caseKey: 'k',
+    cases: [
+      { label: 'Square', note: 'Every rule at once: two pairs of parallel sides, all four sides equal, and every corner a right angle.',
+        ex: { k: 'square', opts: ['rhombus', 'square', 'rectangle', 'kite'] } },
+      { label: 'Rectangle', note: 'Right angles, but the sides are not all the same — two long, two short. A square is a rectangle whose sides happen to match.',
+        ex: { k: 'rectangle', opts: ['square', 'parallelogram', 'rectangle', 'trapezium'] } },
+      { label: 'Rhombus', note: 'All four sides equal, like a square — but pushed over, so no corner is a right angle.',
+        ex: { k: 'rhombus', opts: ['square', 'rhombus', 'kite', 'rectangle'] } },
+      { label: 'Parallelogram', note: 'Two pairs of parallel sides and nothing more: no right angles, and the sides are not all equal. A rectangle pushed over.',
+        ex: { k: 'parallelogram', opts: ['rhombus', 'trapezium', 'parallelogram', 'rectangle'] } },
+      { label: 'Trapezium', note: 'Only ONE pair of parallel sides. That single missing pair is what stops it being a parallelogram.',
+        ex: { k: 'trapezium', opts: ['trapezium', 'kite', 'parallelogram', 'square'] } },
+      { label: 'Kite', note: 'No parallel sides at all. The equal sides come in pairs that sit next to each other, not opposite.',
+        ex: { k: 'kite', opts: ['rhombus', 'trapezium', 'square', 'kite'] } },
+    ],
     gen(r, lv = 1) {
       const pool = lv === 1 ? ['square', 'rectangle', 'kite', 'trapezium'] : QUADS;
       const k = pick(pool, r);
@@ -421,6 +459,23 @@ export const TRICKS = [
     ],
     alg: 'prism: F = n + 2, E = 3n, V = 2n · pyramid: F = V = n + 1, E = 2n · F + V − E = 2',
     ex: { name: 'hexagonal prism', ask: 'edges' },
+    caseKey: 'idea',
+    cases: [
+      { label: 'Edges of a prism', note: 'Three rings of edges: round the front end, round the back end, and running between them. So 3 × the sides of an end.',
+        ex: { name: 'hexagonal prism', ask: 'edges' } },
+      { label: 'Faces of a prism', note: 'One flat side for every side of the end shape — and do not forget the two ends themselves.',
+        ex: { name: 'pentagonal prism', ask: 'faces' } },
+      { label: 'Corners of a prism', note: 'All the corners sit on the two ends, so it is twice the corners of one end.',
+        ex: { name: 'triangular prism', ask: 'vertices' } },
+      { label: 'Edges of a pyramid', note: 'One ring round the base, and one edge from each base corner up to the tip: 2 × the sides of the base.',
+        ex: { name: 'square-based pyramid', ask: 'edges' } },
+      { label: 'Faces of a pyramid', note: 'A triangle leans in from every side of the base — plus the base, which is easy to forget because it is underneath.',
+        ex: { name: 'pentagonal pyramid', ask: 'faces' } },
+      { label: 'Corners of a pyramid', note: 'The corners of the base, and then the tip on top: one more than the base has.',
+        ex: { name: 'hexagonal pyramid', ask: 'vertices' } },
+      { label: "Edges by Euler's rule", note: 'No picture and no name — just two counts. Faces + vertices − edges is always 2, so the edges are 2 fewer than faces + vertices.',
+        ex: { name: null, kind: 'prism', n: 5, ask: 'euler' } },
+    ],
     sources: ['L. Euler, "Elementa doctrinae solidorum", Novi Commentarii academiae scientiarum Petropolitanae 4 (1758) — the relation F + V − E = 2 for polyhedra.'],
     gen(r, lv = 1) {
       const names = Object.keys(SOLIDS);
@@ -430,12 +485,12 @@ export const TRICKS = [
       return this.q({ name: null, kind, n, ask: 'euler' });
     },
     q({ name, kind, n, ask }) {
-      const S = name ? SOLIDS[name] : { kind, n }, C = count(S.kind, S.n);
-      if (ask === 'euler') return { name, kind, n, ask, text: `A solid has ${C.F} faces and ${C.V} vertices (corners). Use Euler's rule: how many edges does it have?`,
+      const S = name ? SOLIDS[name] : { kind, n }, C = count(S.kind, S.n), idea = ask === 'euler' ? 'euler' : `${S.kind} ${ask}`;
+      if (ask === 'euler') return { name, kind, n, ask, idea, text: `A solid has ${C.F} faces and ${C.V} vertices (corners). Use Euler's rule: how many edges does it have?`,
         expr: `${S.kind === 'prism' ? `3*${S.n}` : `2*${S.n}`}`, ans: C.E };
       const word = ask === 'vertices' ? 'vertices (corners)' : ask;
       const other = ask === 'faces' ? `${C.E}-${C.V}+2` : ask === 'edges' ? `${C.F}+${C.V}-2` : `${C.E}-${C.F}+2`;
-      return { name, kind, n, ask, text: `How many ${word} does a ${name} have?`, expr: other, ans: C[ask[0].toUpperCase()] };
+      return { name, kind, n, ask, idea, text: `How many ${word} does a ${name} have?`, expr: other, ans: C[ask[0].toUpperCase()] };
     },
     work({ name, kind, n, ask }) {
       const S = name ? SOLIDS[name] : { kind, n }, C = count(S.kind, S.n), m = S.n;
@@ -465,6 +520,17 @@ export const TRICKS = [
     ],
     alg: 'acute < 90° = right < obtuse < 180° < reflex < 360°',
     ex: { d: 130, lv: 1, opts: ['acute', 'obtuse', 'right', 'reflex'] },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Acute', note: 'It fits inside the corner of a page with room to spare: smaller than a right angle. Acute means sharp.',
+        ex: { d: 40, lv: 1, opts: ['acute', 'obtuse', 'right', 'reflex'] } },
+      { label: 'Right', note: 'Exactly a quarter turn, 90° — the corner of a page fits it perfectly. Not a little more, not a little less.',
+        ex: { d: 90, lv: 1, opts: ['reflex', 'right', 'acute', 'obtuse'] } },
+      { label: 'Obtuse', note: 'It pokes out past the corner of a page, but has not yet opened as wide as a straight line. Obtuse means blunt.',
+        ex: { d: 130, lv: 1, opts: ['acute', 'obtuse', 'right', 'reflex'] } },
+      { label: 'Reflex', note: 'It has turned past a straight line (180°). Look at which side the arc is on — it is the big, outside angle.',
+        ex: { d: 250, lv: 1, opts: ['obtuse', 'acute', 'reflex', 'right'] } },
+    ],
     gen(r, lv = 1) {
       const kind = lv === 1 ? pick(['acute', 'right', 'obtuse'], r) : pick(['acute', 'right', 'obtuse', 'reflex', 'acute', 'obtuse', 'reflex'], r);
       const d = kind === 'right' ? 90 : kind === 'acute' ? (lv === 1 ? int(4, 14, r) * 5 : lv === 2 ? int(10, 80, r) : int(10, 88, r))
@@ -497,6 +563,21 @@ export const TRICKS = [
     ],
     alg: '(x, y) moved a right and b up → (x + a, y + b)',
     ex: { lv: 2, x: 3, y: 2, dx: 4, dy: 1, ask: 'x' },
+    caseKey: 'step',
+    cases: [
+      { label: 'Read the across number', note: 'The x-coordinate is always the FIRST number: how far you walk along the bottom before you climb.',
+        ex: { lv: 1, x: 4, y: 6, dx: 0, dy: 0, ask: 'x' } },
+      { label: 'Read the up number', note: 'The y-coordinate is the SECOND number: how far you climb once you are under the point.',
+        ex: { lv: 1, x: 6, y: 3, dx: 0, dy: 0, ask: 'y' } },
+      { label: 'Move right or up: add', note: 'Moving right makes the across number bigger, so add. Moving up would add to the up number instead.',
+        ex: { lv: 2, x: 3, y: 2, dx: 4, dy: 1, ask: 'x' } },
+      { label: 'Move left or down: take away', note: 'Moving left or down goes back towards 0, so take away.',
+        ex: { lv: 2, x: 7, y: 5, dx: -3, dy: 2, ask: 'x' } },
+      { label: 'A move that leaves it alone', note: 'Moving only up or down never changes the across number — walking up stairs does not move you sideways.',
+        ex: { lv: 2, x: 4, y: 3, dx: 0, dy: 5, ask: 'x' } },
+      { label: 'How far it moved', note: 'Working backwards: the gap between the two across numbers is how far it slid sideways (or the up numbers, for up and down).',
+        ex: { lv: 3, x: 2, y: 3, dx: 5, dy: 4, ask: 'right' } },
+    ],
     gen(r, lv = 1) {
       const x = int(1, 8, r), y = int(1, 8, r);
       if (lv === 1) return this.q({ lv, x, y, dx: 0, dy: 0, ask: pick(['x', 'y'], r) });
@@ -505,14 +586,15 @@ export const TRICKS = [
     },
     q({ lv, x, y, dx, dy, ask }) {
       const mv = (v, pos, neg) => (v === 0 ? '' : `${Math.abs(v)} ${v > 0 ? pos : neg}`);
-      if (lv === 1) return { lv, x, y, dx, dy, ask, text: `What is the ${ask}-coordinate of point A?`, expr: ask === 'x' ? `${x}` : `${y}`, ans: ask === 'x' ? x : y };
+      const dv = ask === 'x' ? dx : dy, step = lv === 1 ? `read-${ask}` : lv === 3 ? 'gap' : dv > 0 ? 'add' : dv < 0 ? 'take' : 'stay';
+      if (lv === 1) return { lv, x, y, dx, dy, ask, step, text: `What is the ${ask}-coordinate of point A?`, expr: ask === 'x' ? `${x}` : `${y}`, ans: ask === 'x' ? x : y };
       if (lv === 3) {
         const h = ask === 'right', v = h ? dx : dy, word = h ? (v > 0 ? 'right' : 'left') : (v > 0 ? 'up' : 'down');
-        return { lv, x, y, dx, dy, ask, text: `Point A slides to point B. How many squares ${word} did it move?`,
+        return { lv, x, y, dx, dy, ask, step, text: `Point A slides to point B. How many squares ${word} did it move?`,
           expr: h ? `Math.abs(${x + dx}-${x})` : `Math.abs(${y + dy}-${y})`, ans: Math.abs(v) };
       }
       const moves = [mv(dx, 'right', 'left'), mv(dy, 'up', 'down')].filter(Boolean).join(' and ');
-      return { lv, x, y, dx, dy, ask, text: `Point A moves ${moves}. What is its new ${ask}-coordinate?`,
+      return { lv, x, y, dx, dy, ask, step, text: `Point A moves ${moves}. What is its new ${ask}-coordinate?`,
         expr: ask === 'x' ? `${x}+(${dx})` : `${y}+(${dy})`, ans: ask === 'x' ? x + dx : y + dy };
     },
     work({ lv, x, y, dx, dy, ask }) {
@@ -538,6 +620,13 @@ export const TRICKS = [
     ],
     alg: 'a + b = 180° on a line · a + b + c + … = 360° round a point',
     ex: { full: false, known: [125], pos: 1 },
+    caseKey: 'full',
+    cases: [
+      { label: 'On a straight line', note: 'A straight line is half a turn, so the angles along it share 180° between them.',
+        ex: { full: false, known: [125], pos: 1 } },
+      { label: 'Round a point', note: 'All the way round is a whole turn, 360°. Add every angle you know first, then see what is left.',
+        ex: { full: true, known: [100, 120, 60], pos: 2 } },
+    ],
     gen(r, lv = 1) {
       const full = lv === 3, total = full ? 360 : 180, k = lv === 1 ? 1 : full ? pick([2, 3], r) : 2;
       let q;
@@ -581,6 +670,15 @@ export const TRICKS = [
     ],
     alg: 'triangle: a + b + c = 180° · quadrilateral: a + b + c + d = 360°',
     ex: { kind: 'tri', angles: [50, 60, 70], hide: 2 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'A triangle', note: 'Three angles always fill 180° — tear the corners off and they make a straight line.',
+        ex: { kind: 'tri', angles: [50, 60, 70], hide: 2 } },
+      { label: 'An isosceles triangle', note: 'You know only ONE angle, but the other two are equal. Take the top angle from 180°, then halve what is left.',
+        ex: { kind: 'iso', apex: 40 } },
+      { label: 'A four-sided shape', note: 'Cut it corner to corner into two triangles: two lots of 180° make 360°.',
+        ex: { kind: 'quad', angles: [70, 95, 110, 85], hide: 3 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const kind = lv === 1 ? 'tri' : lv === 2 ? pick(['tri', 'iso', 'right'], r) : pick(['quad', 'quad', 'iso'], r);
@@ -626,6 +724,17 @@ export const TRICKS = [
     alg: 'd = 2r · C = π × d ≈ 3.14 × d',
     decimals: true, keys: ['.'],
     ex: { ask: 'circ-d', v: 12 },
+    caseKey: 'ask',
+    cases: [
+      { label: 'Radius to diameter', note: 'The diameter goes right across through the centre: one radius out and one radius back, so double it.',
+        ex: { ask: 'diam', v: 6 } },
+      { label: 'Diameter to radius', note: 'Going the other way, the radius is only halfway across — so halve the diameter.',
+        ex: { ask: 'rad', v: 14 } },
+      { label: 'Round, from the diameter', note: 'The distance round is a little more than 3 diameters: 3.14 × the diameter. Do the 3 × first, then add the small 0.14 ×.',
+        ex: { ask: 'circ-d', v: 12 } },
+      { label: 'Round, from the radius', note: 'π works with the diameter, so double the radius FIRST. Multiplying the radius by 3.14 gives only half the way round.',
+        ex: { ask: 'circ-r', v: 5 } },
+    ],
     gen(r, lv = 1) {
       if (lv === 1) return this.q({ ask: pick(['diam', 'rad'], r), v: int(2, 25, r) * (r() < 0.5 ? 1 : 2) });
       if (lv === 2) return this.q({ ask: 'circ-d', v: int(2, 20, r) });
@@ -667,6 +776,19 @@ export const TRICKS = [
     ],
     alg: 'sides a ≤ b ≤ c make a triangle only if a + b > c · third side x: (b − a) < x < (a + b)',
     ex: { mode: 'can', s: [3, 4, 7], opts: ['Yes', 'No'] },
+    caseKey: 'sort',
+    cases: [
+      { label: 'The arcs cross', note: 'The two shorter sides together reach further than the base, so the arcs cross above it and the third corner is there.',
+        ex: { mode: 'can', s: [5, 6, 8], opts: ['Yes', 'No'] } },
+      { label: 'The arcs never meet', note: 'The two shorter sides together do not even reach across the base, so the arcs stop short of each other.',
+        ex: { mode: 'can', s: [2, 3, 8], opts: ['Yes', 'No'] } },
+      { label: 'The arcs only touch', note: 'The trap: the shorter sides add up to EXACTLY the base. The arcs meet on the base line, the triangle lies flat — so the answer is still no.',
+        ex: { mode: 'can', s: [3, 4, 7], opts: ['Yes', 'No'] } },
+      { label: 'Longest third side', note: 'The third side must be shorter than the other two laid end to end — so one less than their sum, as a whole number.',
+        ex: { mode: 'max', s: [5, 8] } },
+      { label: 'Shortest third side', note: 'The short side and the third side must reach past the long one — so the third side must be MORE than the difference.',
+        ex: { mode: 'min', s: [5, 8] } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 3 && r() < 0.5) {
@@ -682,12 +804,12 @@ export const TRICKS = [
     },
     q({ mode, s, opts }) {
       if (mode === 'can') {
-        const [a, b, c] = s, t = [...s].sort((u, v) => u - v);
-        return { mode, s, opts, text: `Can a triangle be built with sides of ${a} cm, ${b} cm and ${c} cm?`, choices: opts,
+        const [a, b, c] = s, t = [...s].sort((u, v) => u - v), sort = t[0] + t[1] > t[2] ? 'cross' : t[0] + t[1] === t[2] ? 'touch' : 'short';
+        return { mode, s, opts, sort, text: `Can a triangle be built with sides of ${a} cm, ${b} cm and ${c} cm?`, choices: opts,
           ans: t[0] + t[1] > t[2] ? 'Yes' : 'No', expr: `${HERON}(${a},${b},${c})>0?'Yes':'No'` };
       }
       const [p, q] = s, big = mode === 'max';
-      return { mode, s, text: `Two sides of a triangle are ${p} cm and ${q} cm. The third side is a whole number of cm. What is the ${big ? 'longest' : 'shortest'} it can be, in cm?`,
+      return { mode, s, sort: mode, text: `Two sides of a triangle are ${p} cm and ${q} cm. The third side is a whole number of cm. What is the ${big ? 'longest' : 'shortest'} it can be, in cm?`,
         ans: big ? p + q - 1 : Math.abs(p - q) + 1,
         expr: `((ok)=>${big ? 'ok[ok.length-1]' : 'ok[0]'})([...Array(100).keys()].filter((x)=>${HERON}(${p},${q},x)>0))` };
     },
@@ -718,10 +840,21 @@ export const TRICKS = [
     why: [
       'Open the compasses to more than half of AB. Swing an arc from A, then — without changing the compasses — one from B. The arcs cross at two points, one above AB and one below. Each crossing is one compass-width from A and one compass-width from B, so each is the same distance from both.',
       'Join the two crossings. Now look at the four points A, the top crossing, B and the bottom crossing: all four sides between them are one compass-width, so they make a rhombus. The diagonals of a rhombus always cut each other in half at right angles. So the line you drew passes through the exact middle of AB, square to it: it bisects AB (cuts it in half) and is perpendicular to it.',
-      'Fold the paper along that line and A lands exactly on B, so every point on the fold is as far from A as from B — there are endlessly many such places, all on one line. On a grid you can check a point without compasses: square its across-distance and its up-distance to A and add them, do the same for B, and see if the totals match.',
+      'Fold the paper along that line and A lands exactly on B, so every point on the fold is as far from A as from B — there are endlessly many such places, all on one line. On a grid you can check a point without compasses: square its across-distance and its up-distance to A and add them, do the same for B, and see if the totals match. When A and B sit on the same row, the bisector is the upright line x = the halfway number; when they sit in the same column, it is the flat line y = the halfway number.',
     ],
     alg: 'P on the bisector ⇔ PA = PB ⇔ (x − x₁)² + (y − y₁)² = (x − x₂)² + (y − y₂)²',
     ex: { mode: 'line', A: [2, 1], B: [10, 1] },
+    caseKey: 'sort',
+    cases: [
+      { label: 'A and B side by side', note: 'A and B are on the same row, so the bisector stands straight up through the middle: x = halfway between their across numbers.',
+        ex: { mode: 'line', A: [2, 1], B: [10, 1] } },
+      { label: 'A and B one above other', note: 'A and B are in the same column, so the bisector lies flat through the middle: y = halfway between their up numbers.',
+        ex: { mode: 'line', A: [3, 2], B: [3, 8] } },
+      { label: 'Pick a point: straight AB', note: 'The bisector is the upright line through the middle of AB. The right point sits exactly on it — every other one is off to a side.',
+        ex: { mode: 'which', A: [2, 4], B: [8, 4], opts: ['(4, 7)', '(5, 7)', '(6, 6)', '(7, 5)'] } },
+      { label: 'Pick a point: slanted AB', note: 'With a slanted AB the bisector slants too, so check each point: across² + up² to A must equal across² + up² to B.',
+        ex: { mode: 'which', A: [2, 2], B: [6, 6], opts: ['(2, 7)', '(1, 7)', '(5, 4)', '(6, 3)'] } },
+    ],
     gen(r, lv = 1) {
       const mode = lv === 1 ? 'line' : lv === 2 ? pick(['line', 'which'], r) : pick(['which', 'which', 'line'], r);
       const straight = () => {
@@ -752,11 +885,11 @@ export const TRICKS = [
       const [ax, ay] = A, [bx, by] = B;
       if (mode === 'line') {
         const across = ay === by, v = across ? 'x' : 'y';
-        return { mode, A, B, text: `A is ${pt(A)} and B is ${pt(B)}. Their perpendicular bisector is the line ${v} = ?. What is the missing number?`,
+        return { mode, A, B, sort: `line-${v}`, text: `A is ${pt(A)} and B is ${pt(B)}. Their perpendicular bisector is the line ${v} = ?. What is the missing number?`,
           ans: across ? (ax + bx) / 2 : (ay + by) / 2,
           expr: across ? `[...Array(11).keys()].find((x)=>(x-${ax})**2+${ay}**2===(x-${bx})**2+${by}**2)` : `[...Array(11).keys()].find((y)=>${ax}**2+(y-${ay})**2===${bx}**2+(y-${by})**2)` };
       }
-      return { mode, A, B, opts, text: `A is ${pt(A)} and B is ${pt(B)}. Which point is the same distance from A as from B — so it lies on the perpendicular bisector of AB?`, choices: opts,
+      return { mode, A, B, opts, sort: ax === bx || ay === by ? 'which-straight' : 'which-slant', text: `A is ${pt(A)} and B is ${pt(B)}. Which point is the same distance from A as from B — so it lies on the perpendicular bisector of AB?`, choices: opts,
         ans: opts.find((o) => { const [x, y] = o.slice(1, -1).split(', ').map(Number); return sq([x, y], A) === sq([x, y], B); }),
         expr: `${JSON.stringify(opts)}.find((s)=>{const [x,y]=s.replace(/[()]/g,'').split(',').map(Number);return (x-${ax})**2+(y-${ay})**2===(x-${bx})**2+(y-${by})**2;})` };
     },
@@ -784,6 +917,15 @@ export const TRICKS = [
     ],
     alg: 'each half = θ ÷ 2 · in triangle ABC, the bisectors of B and C meet at I: ∠BIC = 180° − B/2 − C/2',
     ex: { mode: 'half', d: 84 },
+    caseKey: 'mode',
+    cases: [
+      { label: 'Each half', note: 'The bisector cuts the angle into two equal halves, so each half is the whole angle ÷ 2.',
+        ex: { mode: 'half', d: 84 } },
+      { label: 'The whole angle', note: 'Backwards: you are given one half. The other half is the same size, so the whole angle is double.',
+        ex: { mode: 'whole', h: 35 } },
+      { label: 'Where bisectors meet', note: 'Halve angles B and C first, then use triangle IBC: its three angles make 180°, so angle BIC is whatever is left.',
+        ex: { mode: 'tri', B: 70, C: 50 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const mode = lv === 1 ? 'half' : lv === 2 ? pick(['whole', 'whole', 'half'], r) : pick(['tri', 'tri', 'whole'], r);

@@ -92,10 +92,17 @@ export const TRICKS = [
     why: [
       'The long hand goes all the way round once every hour, and there are 60 minutes in an hour. The clock has 12 numbers, so each number is 60 ÷ 12 = 5 minutes along: the 3 means 15 minutes past, the 6 means 30, the 9 means 45.',
       'The short hand goes round once every 12 hours, so it creeps slowly from one number to the next as the hour passes. At 3:45 it is three-quarters of the way from the 3 to the 4 — it has not reached the 4 yet, so the hour is still 3.',
-      'That is why you read the long hand first. Once you know it is 45 minutes past, you know the short hand must be most of the way to the next number, and you name the number it has just left behind.',
+      'That is why you read the long hand first. Once you know it is 45 minutes past, you know the short hand must be most of the way to the next number, and you name the number it has just left behind. And to say how long until the next o\'clock, take the minutes past away from 60: at 3:45 there are 15 minutes to go.',
     ],
     alg: 'minutes = 5 × (number the long hand points to)',
     ex: { h: 3, m: 45, ask: 'time', opts: ['9:15', '3:45', '4:45', '3:15'] },
+    caseKey: 'ask',
+    cases: [
+      { label: 'What time is it?', note: 'Long hand first for the minutes, counting in fives. Then name the hour the short hand has just left — not the one it is heading for.',
+        ex: { h: 3, m: 45, ask: 'time', opts: ['9:15', '3:45', '4:45', '3:15'] } },
+      { label: 'Minutes to the next hour', note: 'A full turn of the long hand is 60 minutes, so the minutes still to go are 60 take away the minutes already past.',
+        ex: { h: 7, m: 40, ask: 'to', opts: null } },
+    ],
     gen(r, lv = 1) {
       const h = int(1, 12, r);
       if (lv === 3 && r() < 0.6) return this.q({ h, m: int(1, 59, r), ask: 'to', opts: null });
@@ -131,6 +138,13 @@ export const TRICKS = [
     ],
     alg: 'change = paid − price = (next ten − price) + (paid − next ten)',
     ex: { qty: 1, price: 37, pay: 50, item: 'comic' },
+    caseKey: 'many',
+    cases: [
+      { label: 'Buying one thing', note: 'Count up from the price: to the next ten first, then on to what you paid. The jumps added together are the change.',
+        ex: { qty: 1, price: 37, pay: 50, item: 'comic' } },
+      { label: 'Buying several', note: 'Find the total first — the price times how many — and only then count up from the total to what you paid.',
+        ex: { qty: 4, price: 18, pay: 100, item: 'kite' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const item = pick(ITEMS, r);
@@ -143,7 +157,7 @@ export const TRICKS = [
     q({ qty, price, pay, item }) {
       const text = qty === 1 ? `A ${item} costs ${price} coins. You pay with ${pay} coins. How many coins do you get back?`
         : `You buy ${qty} ${item}s at ${price} coins each and pay with ${pay} coins. How many coins do you get back?`;
-      return { qty, price, pay, item, text, expr: `${pay}-${qty}*${price}`, ans: pay - qty * price };
+      return { qty, price, pay, item, many: qty > 1 ? 'several' : 'one', text, expr: `${pay}-${qty}*${price}`, ans: pay - qty * price };
     },
     work({ qty, price, pay }) {
       const tot = qty * price, s = [];
@@ -160,12 +174,21 @@ export const TRICKS = [
     hook: 'The film starts at 2:40 and ends at 4:15. How many minutes long is it?',
     idea: 'Jump to the next o\'clock, then whole hours, then the minutes left over — and add the jumps.',
     why: [
-      'Time does not work in tens. An hour is 60 minutes, so 4:15 − 2:40 written as 415 − 240 gives 175, which is wrong. The clock rolls over at 60, not at 100.',
+      'Time does not work in tens. An hour is 60 minutes, so 4:15 − 2:40 written as 415 − 240 gives 175, which is wrong. The clock rolls over at 60, not at 100. (When both times are inside the same hour, nothing rolls over, and you can simply take the minutes away.)',
       'O\'clock is to time what a round ten is to numbers: the easy place to jump to. From 2:40 to 3:00 is 20 minutes. From 3:00 to 4:00 is a whole hour, 60 minutes. From 4:00 to 4:15 is 15 minutes.',
       'The film fills every one of those jumps and nothing else, so its length is the jumps added up: 20 + 60 + 15 = 95 minutes.',
     ],
     alg: 'time = (60 − start minutes) + 60 × whole hours + end minutes',
     ex: { H: 2, m1: 40, E: 4, m2: 15 },
+    caseKey: 'span',
+    cases: [
+      { label: 'Inside one hour', note: 'Both times are in the same hour, so no o\'clock is crossed: take the start minutes from the end minutes.',
+        ex: { H: 3, m1: 10, E: 3, m2: 45 } },
+      { label: 'Across one o\'clock', note: 'The end has fewer minutes than the start, so you cannot just take away. Jump to the o\'clock, then on to the end.',
+        ex: { H: 2, m1: 40, E: 3, m2: 15 } },
+      { label: 'Across several hours', note: 'Jump to the next o\'clock, then count whole hours as 60 minutes each, then the minutes left over.',
+        ex: { H: 2, m1: 40, E: 4, m2: 15 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const H = int(1, 12, r), a = int(0, 8, r); return this.q({ H, m1: a * 5, E: H, m2: int(a + 1, 11, r) * 5 }); }
@@ -174,7 +197,7 @@ export const TRICKS = [
       });
     },
     q({ H, m1, E, m2 }) {
-      return { H, m1, E, m2, text: `How many minutes is it from ${fmt(h12(H), m1)} to ${fmt(h12(E), m2)}?`, expr: `(${E}*60+${m2})-(${H}*60+${m1})`, ans: (E - H) * 60 + m2 - m1 };
+      return { H, m1, E, m2, span: E === H ? 'same' : E - H === 1 ? 'next' : 'hours', text: `How many minutes is it from ${fmt(h12(H), m1)} to ${fmt(h12(E), m2)}?`, expr: `(${E}*60+${m2})-(${H}*60+${m1})`, ans: (E - H) * 60 + m2 - m1 };
     },
     work({ H, m1, E, m2 }) {
       const D = (E - H) * 60 + m2 - m1;
@@ -195,11 +218,26 @@ export const TRICKS = [
     idea: 'After midday, add 12 to the hour to get the 24-hour time; take 12 away to get back. Midnight is 00.',
     why: [
       'A day has 24 hours but an ordinary clock face only shows 12, so every time happens twice — 7:45 in the morning and 7:45 in the evening. Writing am or pm says which. The 24-hour clock does it with the number itself: it simply keeps counting past 12 instead of starting again.',
-      'So the afternoon hours carry on 13, 14, 15… 1 pm is 13:00 because it is 12 hours plus 1. That is why you add 12 to any pm hour — and take 12 away to go back.',
+      'So the afternoon hours carry on 13, 14, 15… 1 pm is 13:00 because it is 12 hours plus 1. That is why you add 12 to any pm hour — and take 12 away to go back. Morning hours need nothing added: 9:15 am is 09:15, with a 0 in front so every time has two digits for the hour.',
       'The two odd ones are the twelves. Midday is 12:00 in both. Midnight starts a new day, so the count starts again from nothing: 12:30 am is 00:30.',
     ],
     alg: 'pm: H = h + 12 (except 12 pm = 12) · am: H = h (except 12 am = 00)',
     ex: { H: 19, m: 45, dir: 'to24', opts: ['17:45', '19:45', '07:45', '21:45'] },
+    caseKey: 'part',
+    cases: [
+      { label: 'pm into 24-hour', note: 'After midday the 24-hour clock keeps counting past 12, so add 12 to the hour.',
+        ex: { H: 19, m: 45, dir: 'to24', opts: ['17:45', '19:45', '07:45', '21:45'] } },
+      { label: 'am into 24-hour', note: 'Before midday nothing is added — the hour stays, with a 0 in front if it is a single digit.',
+        ex: { H: 9, m: 15, dir: 'to24', opts: ['21:15', '09:15', '07:15', '11:15'] } },
+      { label: '24-hour into pm', note: 'An hour of 13 or more is in the afternoon or evening: take 12 away and write pm.',
+        ex: { H: 16, m: 30, dir: 'to12', opts: ['4:30 am', '2:30 pm', '4:30 pm', '6:30 pm'] } },
+      { label: '24-hour into am', note: 'An hour from 01 to 11 is the morning: the hour stays as it is, and you write am.',
+        ex: { H: 8, m: 20, dir: 'to12', opts: ['8:20 pm', '8:20 am', '6:20 am', '10:20 am'] } },
+      { label: 'Midday: 12', note: 'Midday is the odd one: 12 in both clocks, and it is already pm — nothing is added or taken away.',
+        ex: { H: 12, m: 30, dir: 'to12', opts: ['12:30 am', '10:30 am', '2:30 pm', '12:30 pm'] } },
+      { label: 'Midnight: 00', note: 'Midnight starts a new day, so the 24-hour count starts again from 00. 12:30 at night is 00:30.',
+        ex: { H: 0, m: 30, dir: 'to24', opts: ['12:30', '00:30', '24:30', '02:30'] } },
+    ],
     gen(r, lv = 1) {
       const m = lv === 3 ? int(0, 59, r) : int(0, 11, r) * 5;
       const H = lv === 1 ? int(13, 22, r) : lv === 2 ? pick([int(1, 11, r), int(13, 23, r)], r) : pick([0, 12, int(0, 23, r)], r);
@@ -210,9 +248,10 @@ export const TRICKS = [
     },
     q({ H, m, dir, opts }) {
       const pm = H >= 12 ? 1 : 0, h = h12(H);
-      if (dir === 'to24') return { H, m, dir, opts, text: `Write ${h}:${pad(m)} ${pm ? 'pm' : 'am'} in the 24-hour clock.`, choices: opts, ans: `${pad(H)}:${pad(m)}`,
+      const part = H === 0 ? 'midnight' : H === 12 ? 'midday' : `${dir}-${pm ? 'pm' : 'am'}`;
+      if (dir === 'to24') return { H, m, dir, opts, part, text: `Write ${h}:${pad(m)} ${pm ? 'pm' : 'am'} in the 24-hour clock.`, choices: opts, ans: `${pad(H)}:${pad(m)}`,
         expr: `String(${h}%12+${pm}*12).padStart(2,'0')+':${pad(m)}'` };
-      return { H, m, dir, opts, text: `Write ${pad(H)}:${pad(m)} in the 12-hour clock, with am or pm.`, choices: opts, ans: `${h}:${pad(m)} ${pm ? 'pm' : 'am'}`,
+      return { H, m, dir, opts, part, text: `Write ${pad(H)}:${pad(m)} in the 12-hour clock, with am or pm.`, choices: opts, ans: `${h}:${pad(m)} ${pm ? 'pm' : 'am'}`,
         expr: `((${H}+11)%12+1)+':${pad(m)} '+(${H}>=12?'pm':'am')` };
     },
     work({ H, m, dir, opts }) {
@@ -241,6 +280,17 @@ export const TRICKS = [
     alg: 'big → small: × f · small → big: ÷ f (f = 10, 100 or 1000)',
     decimals: true, keys: ['.'],
     ex: { kind: 'mixed', u: 'm-cm', x: 3, y: 45 },
+    caseKey: 'form',
+    cases: [
+      { label: 'Big unit to small', note: 'Every big unit breaks into 10, 100 or 1000 small ones, so going down you multiply.',
+        ex: { kind: 'down', u: 'kg-g', x: 4, y: 0 } },
+      { label: 'Two units at once', note: 'Change the big units into small ones first, then add on the small ones that were already there.',
+        ex: { kind: 'mixed', u: 'm-cm', x: 3, y: 45 } },
+      { label: 'A decimal, big to small', note: '2.5 litres is two and a half lots of 1000 ml, so it still multiplies — and × 1000 slides the digits three places.',
+        ex: { kind: 'down', u: 'l-ml', x: 2.5, y: 0 } },
+      { label: 'Small unit to big', note: 'Going up you are grouping small units into big ones, so you divide — and the answer can be a decimal.',
+        ex: { kind: 'up', u: 'm-cm', x: 450, y: 0 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ kind: 'down', u: pick(['m-cm', 'cm-mm', 'kg-g', 'l-ml'], r), x: int(2, 9, r), y: 0 });
@@ -255,10 +305,10 @@ export const TRICKS = [
       });
     },
     q({ kind, u, x, y }) {
-      const { big, small, f } = UNITS[u];
-      if (kind === 'up') return { kind, u, x, y, text: `How many ${big} is ${x} ${small}?`, expr: `${x}/${f}`, ans: x / f };
-      if (kind === 'mixed') return { kind, u, x, y, text: `How many ${small} is ${x} ${big} ${y} ${small}?`, expr: `${x}*${f}+${y}`, ans: x * f + y };
-      return { kind, u, x, y, text: `How many ${small} is ${x} ${big}?`, expr: `${x}*${f}`, ans: R3(x * f) };
+      const { big, small, f } = UNITS[u], form = kind === 'down' && !Number.isInteger(x) ? 'down-decimal' : kind;
+      if (kind === 'up') return { kind, u, x, y, form, text: `How many ${big} is ${x} ${small}?`, expr: `${x}/${f}`, ans: x / f };
+      if (kind === 'mixed') return { kind, u, x, y, form, text: `How many ${small} is ${x} ${big} ${y} ${small}?`, expr: `${x}*${f}+${y}`, ans: x * f + y };
+      return { kind, u, x, y, form, text: `How many ${small} is ${x} ${big}?`, expr: `${x}*${f}`, ans: R3(x * f) };
     },
     work({ kind, u, x, y }) {
       const { big, small, f } = UNITS[u], s = [{ t: `How many ${small} make 1 ${big}?`, v: f }];
@@ -273,12 +323,21 @@ export const TRICKS = [
     hook: 'A garden is 8 m by 5 m. How much fence goes all the way round?',
     idea: 'Perimeter is the distance all the way round: add every side. A rectangle has two of each side, so double (length + width).',
     why: [
-      'Imagine walking round the edge. You walk the length, then the width, then the length again, then the width again — so the perimeter is two lengths and two widths: 2 × (length + width).',
+      'Imagine walking round the edge. You walk the length, then the width, then the length again, then the width again — so the perimeter is two lengths and two widths: 2 × (length + width). A square has four sides all the same, so its perimeter is just 4 × the side.',
       'An L-shape looks harder, but it is not. Push the two sides of the cut-out corner outwards and they line up exactly with the missing corner of a full rectangle. The steps up and across still add up to the full height and the full width.',
       'So an L-shape (with square corners) has the same perimeter as the rectangle around it: 2 × (full width + full height). Find the missing sides by taking away, add all six, and the rule will agree with you.',
     ],
     alg: 'rectangle: P = 2(l + w) · L-shape: P = 2(W + H)',
     ex: { kind: 'rect', W: 8, H: 5, w1: 0, h1: 0 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'A rectangle', note: 'Two lengths and two widths. Add one of each, then double it.',
+        ex: { kind: 'rect', W: 8, H: 5, w1: 0, h1: 0 } },
+      { label: 'A square', note: 'Only one side is given, because all four are the same. Four of them make the way round.',
+        ex: { kind: 'square', W: 6, H: 6, w1: 0, h1: 0 } },
+      { label: 'An L-shape', note: 'Find the two unlabelled sides by taking away. The steps add up to the full width and height, so the answer matches the rectangle around it.',
+        ex: { kind: 'L', W: 8, H: 6, w1: 3, h1: 2 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const W = int(2, 10, r); let H = int(2, 10, r); if (H === W) H++; return this.q({ kind: 'rect', W, H, w1: 0, h1: 0 }); }
@@ -313,6 +372,15 @@ export const TRICKS = [
     ],
     alg: 'A = l × w · w = A ÷ l',
     ex: { lv: 2, W: 7, H: 6 },
+    caseKey: 'lv',
+    cases: [
+      { label: 'Counting shaded squares', note: 'No need to count one by one: count the squares in one row, count the rows, and multiply.',
+        ex: { lv: 1, W: 4, H: 3, cols: 7, rows: 5, c0: 1, r0: 1 } },
+      { label: 'Length × width', note: 'The length is how many squares fit in a row and the width is how many rows, so the area is the two multiplied.',
+        ex: { lv: 2, W: 7, H: 6 } },
+      { label: 'Finding a missing side', note: 'Now the area is given and a side is missing. Undo the multiplying: divide the area by the side you know.',
+        ex: { lv: 3, W: 7, H: 6 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const cols = int(6, 9, r), rows = int(4, 6, r), W = int(2, cols - 1, r), H = int(2, rows - 1, r); return this.q({ lv, W, H, cols, rows, c0: int(0, cols - W, r), r0: int(0, rows - H, r) }); }
@@ -346,6 +414,7 @@ export const TRICKS = [
     ],
     alg: 'A = W × h₁ + w₁ × (H − h₁) = W × H − (W − w₁)(H − h₁)',
     ex: { W: 8, H: 7, w1: 3, h1: 3 },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const lo = lv === 1 ? 4 : lv === 2 ? 6 : 8, hi = lv === 1 ? 7 : lv === 2 ? 10 : 14;
@@ -377,6 +446,17 @@ export const TRICKS = [
     ],
     alg: 'parallelogram: A = b × h · triangle: A = ½ × b × h',
     ex: { kind: 'para', b: 9, h: 4, o: 3, sl: 5 },
+    caseKey: ['kind', 'slope'],
+    cases: [
+      { label: 'A parallelogram', note: 'Slide the sloping end across and it becomes a rectangle, so its area is base × the straight-up height.',
+        ex: { kind: 'para', b: 9, h: 4, o: 3, sl: 0 } },
+      { label: 'Ignore the slope', note: 'The sloping side is given too, but it is a trap: only the straight-up height tells you how tall the shape stands.',
+        ex: { kind: 'para', b: 7, h: 4, o: 3, sl: 5 } },
+      { label: 'A right-angled triangle', note: 'The upright side IS the height. The triangle is half of a rectangle, so halve base × height.',
+        ex: { kind: 'right', b: 6, h: 4, o: 0, sl: 0 } },
+      { label: 'Any triangle', note: 'The height is the dashed line from the top straight down to the base. Two copies make a parallelogram, so halve base × height.',
+        ex: { kind: 'tri', b: 10, h: 6, o: 3, sl: 0 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ kind: 'para', b: int(4, 12, r), h: int(3, 10, r), o: int(2, 4, r), sl: 0 });
@@ -389,7 +469,7 @@ export const TRICKS = [
     q({ kind, b, h, o, sl }) {
       const pts = kind === 'para' ? [[0, h], [b, h], [b + o, 0], [o, 0]] : kind === 'right' ? [[0, h], [b, h], [0, 0]] : [[0, h], [b, h], [o, 0]];
       const name = kind === 'para' ? 'parallelogram' : kind === 'right' ? 'right-angled triangle' : 'triangle';
-      return { kind, b, h, o, sl, text: `A ${name} has a base of ${b} cm and a height of ${h} cm${sl ? ` (its sloping side is ${sl} cm)` : ''}. What is its area, in cm²?`,
+      return { kind, b, h, o, sl, slope: sl ? 'given' : 'none', text: `A ${name} has a base of ${b} cm and a height of ${h} cm${sl ? ` (its sloping side is ${sl} cm)` : ''}. What is its area, in cm²?`,
         expr: shoelace(pts), ans: kind === 'para' ? b * h : (b * h) / 2 };
     },
     work({ kind, b, h }) {
@@ -417,6 +497,13 @@ export const TRICKS = [
     ],
     alg: 'V = l × w × h · SA = 2(lw + lh + wh)',
     ex: { ask: 'vol', l: 5, w: 3, h: 4 },
+    caseKey: 'ask',
+    cases: [
+      { label: 'Volume', note: 'Count the cubes in the bottom layer, then multiply by the number of layers. The answer is in cm³.',
+        ex: { ask: 'vol', l: 5, w: 3, h: 4 } },
+      { label: 'Surface area', note: 'Now you want the wrapping, not the filling: three different faces, each appearing twice. The answer is in cm².',
+        ex: { ask: 'sa', l: 5, w: 3, h: 4 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) return this.q({ ask: 'vol', l: int(2, 5, r), w: int(2, 5, r), h: int(2, 5, r) });

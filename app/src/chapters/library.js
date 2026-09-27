@@ -93,31 +93,31 @@ function busStop(a, d) {
 /* ---------------------------------------------------------------- order of operations */
 
 const OPS = {
-  'add-mul': { lv: 1, make: (r) => [int(2, 20, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
+  'add-mul': { lv: 1, rule: 'mul', make: (r) => [int(2, 20, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c]) => `${a} + ${b} × ${c}`,
     steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c }, { t: `${a} + ${b * c}`, v: a + b * c }] },
-  'sub-mul': { lv: 1, make: (r) => [int(30, 60, r), int(2, 6, r), int(2, 5, r)], ok: ([a, b, c]) => a > b * c,
+  'sub-mul': { lv: 1, rule: 'mul', make: (r) => [int(30, 60, r), int(2, 6, r), int(2, 5, r)], ok: ([a, b, c]) => a > b * c,
     text: ([a, b, c]) => `${a} − ${b} × ${c}`,
     steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c }, { t: `${a} − ${b * c}`, v: a - b * c }] },
-  'add-div': { lv: 1, make: (r) => { const c = int(2, 9, r); return [int(2, 30, r), c * int(2, 9, r), c]; }, ok: () => true,
+  'add-div': { lv: 1, rule: 'mul', make: (r) => { const c = int(2, 9, r); return [int(2, 30, r), c * int(2, 9, r), c]; }, ok: () => true,
     text: ([a, b, c]) => `${a} + ${b} ÷ ${c}`,
     steps: ([a, b, c]) => [{ t: `Divide first: ${b} ÷ ${c}`, v: b / c }, { t: `${a} + ${b / c}`, v: a + b / c }] },
-  'brk-mul': { lv: 2, make: (r) => [int(2, 12, r), int(2, 12, r), int(2, 9, r)], ok: () => true,
+  'brk-mul': { lv: 2, rule: 'brackets', make: (r) => [int(2, 12, r), int(2, 12, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c]) => `(${a} + ${b}) × ${c}`,
     steps: ([a, b, c]) => [{ t: `Brackets first: ${a} + ${b}`, v: a + b }, { t: `${a + b} × ${c}`, v: (a + b) * c }] },
-  'mul-brk': { lv: 2, make: (r) => { const c = int(2, 9, r); return [int(2, 9, r), c + int(2, 9, r), c]; }, ok: () => true,
+  'mul-brk': { lv: 2, rule: 'brackets', make: (r) => { const c = int(2, 9, r); return [int(2, 9, r), c + int(2, 9, r), c]; }, ok: () => true,
     text: ([a, b, c]) => `${a} × (${b} − ${c})`,
     steps: ([a, b, c]) => [{ t: `Brackets first: ${b} − ${c}`, v: b - c }, { t: `${a} × ${b - c}`, v: a * (b - c) }] },
-  'mul-add-mul': { lv: 2, make: (r) => [int(2, 9, r), int(2, 9, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
+  'mul-add-mul': { lv: 2, rule: 'mul', make: (r) => [int(2, 9, r), int(2, 9, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c, d]) => `${a} × ${b} + ${c} × ${d}`,
     steps: ([a, b, c, d]) => [{ t: `${a} × ${b}`, v: a * b }, { t: `${c} × ${d}`, v: c * d }, { t: `${a * b} + ${c * d}`, v: a * b + c * d }] },
-  'brk-mul-sub': { lv: 3, make: (r) => { const b = int(2, 9, r); return [b + int(2, 9, r), b, int(3, 9, r), int(2, 15, r)]; }, ok: ([a, b, c, d]) => (a - b) * c > d,
+  'brk-mul-sub': { lv: 3, rule: 'brackets', make: (r) => { const b = int(2, 9, r); return [b + int(2, 9, r), b, int(3, 9, r), int(2, 15, r)]; }, ok: ([a, b, c, d]) => (a - b) * c > d,
     text: ([a, b, c, d]) => `(${a} − ${b}) × ${c} − ${d}`,
     steps: ([a, b, c, d]) => [{ t: `Brackets first: ${a} − ${b}`, v: a - b }, { t: `${a - b} × ${c}`, v: (a - b) * c }, { t: `${(a - b) * c} − ${d}`, v: (a - b) * c - d }] },
-  'long': { lv: 3, make: (r) => { const c = int(2, 6, r); return [int(20, 60, r), c * int(2, 9, r), c, int(2, 9, r), int(2, 9, r)]; }, ok: ([a, b, c]) => a > b / c,
+  'long': { lv: 3, rule: 'left to right', make: (r) => { const c = int(2, 6, r); return [int(20, 60, r), c * int(2, 9, r), c, int(2, 9, r), int(2, 9, r)]; }, ok: ([a, b, c]) => a > b / c,
     text: ([a, b, c, d, e]) => `${a} − ${b} ÷ ${c} + ${d} × ${e}`,
     steps: ([a, b, c, d, e]) => [{ t: `${b} ÷ ${c}`, v: b / c }, { t: `${d} × ${e}`, v: d * e }, { t: `Now left to right: ${a} − ${b / c}`, v: a - b / c }, { t: `${a - b / c} + ${d * e}`, v: a - b / c + d * e }] },
-  'pow': { lv: 3, make: (r) => [int(2, 30, r), int(2, 6, r), int(2, 5, r)], ok: () => true,
+  'pow': { lv: 3, rule: 'powers', make: (r) => [int(2, 30, r), int(2, 6, r), int(2, 5, r)], ok: () => true,
     text: ([a, b, c]) => `${a} + ${b}² × ${c}`,
     steps: ([a, b, c]) => [{ t: `Powers first: ${b}²`, v: b * b }, { t: `${b * b} × ${c}`, v: b * b * c }, { t: `${a} + ${b * b * c}`, v: a + b * b * c }] },
 };
@@ -137,6 +137,13 @@ export const TRICKS = [
     ],
     alg: 'digit in place p (counting 0 from the right) is worth digit × 10ᵖ',
     ex: { n: 4372, p: 2, kind: 'worth' },
+    caseKey: 'kind',
+    cases: [
+      { label: 'What is a digit worth?', note: 'Find the digit\'s place first. The digit says how many; the place says of what.',
+        ex: { n: 4372, p: 2, kind: 'worth' } },
+      { label: 'The missing part', note: 'Now the number is pulled apart into its places, with one part hidden. What is missing is what that digit is worth.',
+        ex: { n: 5847, p: 2, kind: 'expand' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const n = distinctDigits(lv === 1 ? int(2, 3, r) : lv === 2 ? int(3, 4, r) : int(5, 6, r), r);
@@ -179,6 +186,15 @@ export const TRICKS = [
     ],
     alg: 'compare digit counts; if equal, the first place where aₖ ≠ bₖ decides',
     ex: { a: 4372, b: 4327 },
+    caseKey: 'how',
+    cases: [
+      { label: 'Same number of digits', note: 'Both have four digits, so go from the left. The first place that differs decides — here, the tens.',
+        ex: { a: 4372, b: 4327 } },
+      { label: 'More digits wins', note: 'Count the digits before you look at them. Five digits is smaller than six, however big they are — so this time the sign is <.',
+        ex: { a: 98765, b: 102345 } },
+      { label: 'Exactly the same', note: 'Every place matches, all the way to the ones. Neither is bigger, so the sign is =.',
+        ex: { a: 5060, b: 5060 } },
+    ],
     gen(r, lv = 1) {
       const L = lv === 1 ? int(2, 3, r) : lv === 2 ? int(4, 5, r) : int(6, 7, r);
       const a = int(10 ** (L - 1), 10 ** L - 1, r), roll = r();
@@ -199,7 +215,8 @@ export const TRICKS = [
       let ans = '=';
       if (sa.length !== sb.length) ans = sa.length > sb.length ? '>' : '<';
       else for (let i = 0; i < sa.length; i++) if (sa[i] !== sb[i]) { ans = sa[i] > sb[i] ? '>' : '<'; break; }
-      return { a, b, text: `${fmt(a)}  ☐  ${fmt(b)}`, say: `Which sign goes between ${a} and ${b}?`, choices: ['<', '=', '>'], ans, expr: `${a}>${b}?'>':${a}<${b}?'<':'='` };
+      const how = sa.length !== sb.length ? 'digits' : ans === '=' ? 'same' : 'place';
+      return { a, b, how, text: `${fmt(a)}  ☐  ${fmt(b)}`, say: `Which sign goes between ${a} and ${b}?`, choices: ['<', '=', '>'], ans, expr: `${a}>${b}?'>':${a}<${b}?'<':'='` };
     },
     work({ a, b }) {
       const sa = String(a), sb = String(b), C = ['<', '=', '>'];
@@ -230,6 +247,15 @@ export const TRICKS = [
     ],
     alg: 'round(n, to) = to × ⌊n ÷ to + ½⌋',
     ex: { n: 4372, to: 100 },
+    caseKey: 'dir',
+    cases: [
+      { label: 'Past halfway: round up', note: 'To the nearest hundred, look at the tens digit. 7 tens is past the halfway 5 tens, so up it goes.',
+        ex: { n: 4372, to: 100 } },
+      { label: 'Below halfway: round down', note: 'To the nearest ten, look at the ones digit. 3 is below halfway, so it rounds DOWN — the tens digit stays as it is.',
+        ex: { n: 63, to: 10 } },
+      { label: 'Exactly halfway', note: 'To the nearest thousand, look at the hundreds. 2,500 is exactly halfway — equally close to both — and the agreed rule is: halfway rounds up.',
+        ex: { n: 2500, to: 1000 } },
+    ],
     gen(r, lv = 1) {
       const to = lv === 1 ? 10 : lv === 2 ? pick([10, 100], r) : pick([100, 1000], r);
       const lo = to === 10 ? (lv === 1 ? 11 : 101) : to === 100 ? (lv === 2 ? 101 : 1001) : 1001;
@@ -240,7 +266,8 @@ export const TRICKS = [
     },
     q({ n, to }) {
       const lower = n - (n % to), ans = n % to >= to / 2 ? lower + to : lower;
-      return { n, to, text: `Round ${fmt(n)} to the nearest ${fmt(to)}`, say: `Round ${n} to the nearest ${to}`, expr: `Math.round(${n}/${to})*${to}`, ans };
+      const dir = n % to === to / 2 ? 'halfway' : n % to > to / 2 ? 'up' : 'down';
+      return { n, to, dir, text: `Round ${fmt(n)} to the nearest ${fmt(to)}`, say: `Round ${n} to the nearest ${to}`, expr: `Math.round(${n}/${to})*${to}`, ans };
     },
     work({ n, to }) {
       const lower = n - (n % to);
@@ -264,6 +291,15 @@ export const TRICKS = [
     ],
     alg: 'column k: aₖ + bₖ + carry = 10 × (next carry) + digitₖ',
     ex: { a: 368, b: 457 },
+    caseKey: 'way',
+    cases: [
+      { label: 'One carry', note: 'Only the ones make ten or more. Their ten goes to the top of the tens column and is added in with the tens.',
+        ex: { a: 246, b: 137 } },
+      { label: 'Carry after carry', note: 'The carried one can make the next column reach ten too — then that column carries as well. Always add the carry in.',
+        ex: { a: 368, b: 457 } },
+      { label: 'A carry makes a new place', note: 'The last column carries too, and there is nothing to its left. The carried one starts a new place of its own at the front.',
+        ex: { a: 68, b: 57 } },
+    ],
     gen(r, lv = 1) {
       let a = lv === 1 ? int(12, 89, r) : lv === 2 ? int(102, 899, r) : int(1002, 8999, r);
       let b = lv === 1 ? int(12, 89, r) : lv === 2 ? int(102, 899, r) : int(102, 8999, r);
@@ -273,8 +309,10 @@ export const TRICKS = [
     },
     q({ a, b }) {
       let c = 0, out = '';
-      for (let i = 0; i < Math.max(len(a), len(b)); i++) { const s = digitAt(a, i) + digitAt(b, i) + c; out = (s % 10) + out; c = s >= 10 ? 1 : 0; }
-      return { a, b, text: `${a} + ${b}`, expr: `${a}+${b}`, ans: Number((c ? '1' : '') + out) };
+      let carries = 0;
+      for (let i = 0; i < Math.max(len(a), len(b)); i++) { const s = digitAt(a, i) + digitAt(b, i) + c; out = (s % 10) + out; c = s >= 10 ? 1 : 0; carries += c; }
+      const way = c ? 'new place' : carries > 1 ? 'several' : 'one';
+      return { a, b, way, text: `${a} + ${b}`, expr: `${a}+${b}`, ans: Number((c ? '1' : '') + out) };
     },
     work({ a, b }) {
       const steps = []; let c = 0;
@@ -300,6 +338,15 @@ export const TRICKS = [
     ],
     alg: 'column k: if aₖ − borrow < bₖ, use aₖ − borrow + 10 and borrow 1 from column k + 1',
     ex: { a: 532, b: 178 },
+    caseKey: 'way',
+    cases: [
+      { label: 'One exchange', note: 'Only the ones are too small. One ten from next door becomes ten ones, and the tens column has one fewer to give.',
+        ex: { a: 72, b: 38 } },
+      { label: 'Exchange after exchange', note: 'After lending, the tens are too small as well — so they exchange from the hundreds. Remember each column has one fewer after it lends.',
+        ex: { a: 532, b: 178 } },
+      { label: 'Across a zero', note: 'The next column is a 0 with nothing to lend, so it exchanges from ITS neighbour first. That is why the 0s turn into 9s.',
+        ex: { a: 4003, b: 1257 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         let a, b, tries = 0;
@@ -315,8 +362,10 @@ export const TRICKS = [
     },
     q({ a, b }) {
       let br = 0, out = '';
-      for (let i = 0; i < len(a); i++) { let d = digitAt(a, i) - br - digitAt(b, i); br = d < 0 ? 1 : 0; if (d < 0) d += 10; out = d + out; }
-      return { a, b, text: `${a} − ${b}`, expr: `${a}-${b}`, ans: Number(out) };
+      let ex = 0, zero = false;
+      for (let i = 0; i < len(a); i++) { if (digitAt(a, i) - br < 0) zero = true; let d = digitAt(a, i) - br - digitAt(b, i); br = d < 0 ? 1 : 0; ex += br; if (d < 0) d += 10; out = d + out; }
+      const way = zero ? 'across zero' : ex > 1 ? 'several' : 'one';
+      return { a, b, way, text: `${a} − ${b}`, expr: `${a}-${b}`, ans: Number(out) };
     },
     work({ a, b }) {
       const steps = []; let br = 0;
@@ -341,9 +390,25 @@ export const TRICKS = [
       'A thermometer is a number line standing up. Zero is not the bottom — the numbers keep going down: −1, −2, −3. The further below zero, the colder, so −8 is colder than −3 even though 8 is bigger than 3.',
       'Getting warmer means moving up the line. From −3, the first 3 degrees only bring you back to zero; that uses up 3 of the 8. The 5 that are left take you above zero, to 5. Stopping at zero splits one hard jump into two easy ones.',
       'The gap between two temperatures works the same way. From −6 up to 4 is 6 to reach zero and 4 more — 10 degrees. Two distances from zero, added, because zero sits between them.',
+      'Getting colder is moving down, and zero is the stop again: from 4, falling 7 uses 4 to reach zero and takes you 3 below, to −3. If you start below zero, colder just goes further below: −2, then 5 colder, is −7. And when both temperatures are below zero, zero is not between them, so the gap is one distance take away the other: −9 to −2 is 7 degrees.',
     ],
     alg: '−a + b = b − a ; the gap from −a to b is a + b',
     ex: { s: -3, c: 8, kind: 'rise' },
+    caseKey: ['kind', 'zero'],
+    cases: [
+      { label: 'Warmer, past zero', note: 'Rising from below zero, the first few degrees only get you back to 0. What is left of the rise takes you above it.',
+        ex: { s: -3, c: 8, kind: 'rise' } },
+      { label: 'Warmer, still below zero', note: 'A small rise does not reach zero. It just brings you closer: 9 below, 4 warmer, is 5 below.',
+        ex: { s: -9, c: 4, kind: 'rise' } },
+      { label: 'Colder, past zero', note: 'Falling from above zero, the first degrees take you down to 0. The rest take you below it.',
+        ex: { s: 4, c: 7, kind: 'fall' } },
+      { label: 'Colder, further below', note: 'Already below zero? Colder takes you even further below, so the two distances add: 2 below, 5 colder, is 7 below.',
+        ex: { s: -2, c: 5, kind: 'fall' } },
+      { label: 'The gap across zero', note: 'Zero sits between the two temperatures, so add the two distances from zero.',
+        ex: { s: -6, c: 4, kind: 'gap' } },
+      { label: 'The gap below zero', note: 'Both are below zero, so zero is not between them. Take the smaller distance from the bigger one.',
+        ex: { s: -9, c: -2, kind: 'gap' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const R = lv === 1 ? 9 : lv === 2 ? 19 : 29;
@@ -361,9 +426,10 @@ export const TRICKS = [
       });
     },
     q({ s, c, kind }) {
-      if (kind === 'gap') return { s, c, kind, text: `The night was ${deg(s)} °C. The afternoon was ${deg(c)} °C. How many degrees warmer was the afternoon?`, expr: `(${c})-(${s})`, ans: c - s };
+      const zero = kind === 'gap' ? (c > 0 ? 'across' : 'below') : kind === 'rise' ? (s + c >= 0 ? 'across' : 'below') : (s > 0 ? 'across' : 'below');
+      if (kind === 'gap') return { s, c, kind, zero, text: `The night was ${deg(s)} °C. The afternoon was ${deg(c)} °C. How many degrees warmer was the afternoon?`, expr: `(${c})-(${s})`, ans: c - s };
       const warm = kind === 'rise';
-      return { s, c, kind, text: `It is ${deg(s)} °C. It gets ${c} degrees ${warm ? 'warmer' : 'colder'}. What is the temperature now?`, expr: `(${s})${warm ? '+' : '-'}(${c})`, ans: warm ? s + c : s - c };
+      return { s, c, kind, zero, text: `It is ${deg(s)} °C. It gets ${c} degrees ${warm ? 'warmer' : 'colder'}. What is the temperature now?`, expr: `(${s})${warm ? '+' : '-'}(${c})`, ans: warm ? s + c : s - c };
     },
     work({ s, c, kind }) {
       if (kind === 'gap') {
@@ -394,6 +460,17 @@ export const TRICKS = [
     ],
     alg: 'value = Σ letters, with a letter subtracted when it stands before a larger one',
     ex: { n: 1944, kind: 'read' },
+    caseKey: ['kind', 'minus'],
+    cases: [
+      { label: 'Read one that only adds', note: 'Every letter is the same size or smaller than the one before it, so just add them all up.',
+        ex: { n: 26, kind: 'read' } },
+      { label: 'Read one that takes away', note: 'A smaller letter just before a bigger one is taken away: CM is 900, XL is 40, IV is 4. Split it by place and add the parts.',
+        ex: { n: 1944, kind: 'read' } },
+      { label: 'Write one that only adds', note: 'Split the number by place and write each part, biggest first. No part here needs a take-away pair.',
+        ex: { n: 27, kind: 'write' } },
+      { label: 'Write one that takes away', note: 'A 4 or a 9 in any place is written as a take-away pair — 40 is XL and 9 is IX — never four of the same letter.',
+        ex: { n: 49, kind: 'write' } },
+    ],
     gen(r, lv = 1) {
       let n = lv === 1 ? int(1, 20, r) : lv === 2 ? int(21, 99, r) : int(101, 2000, r);
       if (lv >= 2 && r() < 0.5) n = n - (n % 10) + pick([4, 9], r);
@@ -401,9 +478,10 @@ export const TRICKS = [
       return this.q({ n, kind: r() < 0.5 ? 'read' : 'write' });
     },
     q({ n, kind }) {
-      if (kind === 'write') return { n, kind, text: `Which is ${n} in Roman numerals?`, choices: romanChoices(n), ans: roman(n), expr: writeExpr(n) };
+      const minus = /IV|IX|XL|XC|CD|CM/.test(roman(n)) ? 'takes away' : 'only adds';
+      if (kind === 'write') return { n, kind, minus, text: `Which is ${n} in Roman numerals?`, choices: romanChoices(n), ans: roman(n), expr: writeExpr(n) };
       const s = roman(n);
-      return { n, kind, text: `What number is ${s}?`, say: `What number is ${s.split('').join(' ')}?`, expr: readExpr(s), ans: n };
+      return { n, kind, minus, text: `What number is ${s}?`, say: `What number is ${s.split('').join(' ')}?`, expr: readExpr(s), ans: n };
     },
     work({ n, kind }) {
       const parts = placeParts(n);
@@ -431,10 +509,17 @@ export const TRICKS = [
     why: [
       '46 × 37 means 46 rows of 37. Split the 46 into 40 and 6, and the 37 into 30 and 7, and the rectangle cuts into four smaller rectangles: 40 × 30, 40 × 7, 6 × 30 and 6 × 7. Every one is a times-table fact with some zeros.',
       'The four boxes cover the whole rectangle exactly once — no gaps, no overlaps — so their areas add up to the whole: 1200 + 280 + 180 + 42 = 1702.',
-      'The column method is the same grid folded up. The first row is the whole top number times the ones (46 × 7); the second row is it times the tens (46 × 30, which is why you write a 0 first). Add the two rows and you have added all the boxes.',
+      'The column method is the same grid folded up — and it is the quicker way once a number has three digits. The first row is the whole top number times the ones (46 × 7); the second row is it times the tens (46 × 30, which is why you write a 0 first). Add the two rows and you have added all the boxes.',
     ],
     alg: '(10a + b)(10c + d) = 100ac + 10ad + 10bc + bd',
     ex: { a: 46, b: 37 },
+    caseKey: 'way',
+    cases: [
+      { label: 'Two-digit: the grid', note: 'Two parts each way make four boxes. Every box is a times-table fact with zeros, and the four add up to the whole.',
+        ex: { a: 46, b: 37 } },
+      { label: 'Three-digit: two rows', note: 'With a three-digit number, work in rows: the whole top number times the ones, then times the tens (write a 0 first). Add the two rows.',
+        ex: { a: 234, b: 26 } },
+    ],
     gen(r, lv = 1) {
       let a = lv === 1 ? int(11, 29, r) : lv === 2 ? int(21, 99, r) : int(101, 499, r);
       let b = lv === 1 ? int(11, 19, r) : lv === 2 ? int(21, 99, r) : int(12, 99, r);
@@ -444,7 +529,7 @@ export const TRICKS = [
     },
     q({ a, b }) {
       const pa = placeParts(a), pb = placeParts(b);
-      return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: pa.reduce((s, x) => s + pb.reduce((t, y) => t + x * y, 0), 0) };
+      return { a, b, way: a >= 100 ? 'rows' : 'grid', text: `${a} × ${b}`, expr: `${a}*${b}`, ans: pa.reduce((s, x) => s + pb.reduce((t, y) => t + x * y, 0), 0) };
     },
     work({ a, b }) {
       const bt = b - (b % 10), bo = b % 10;
@@ -477,9 +562,19 @@ export const TRICKS = [
       'Sharing 347 between 5 is sharing 3 hundreds, 4 tens and 7 ones. 3 hundreds will not go into 5 groups as whole hundreds, so break them into 30 tens. Now there are 34 tens, and 5 groups get 6 tens each, with 4 tens over.',
       'Those 4 tens become 40 ones, which join the 7 ones: 47. Each group gets 9 more, with 2 left over. The digits you wrote on top — 6 tens and 9 ones — are the answer, 69, and the 2 that could not be shared is the remainder.',
       'It is the same exchange as column subtraction, run from the left: what does not fit in one place is passed on, ten times bigger, to the place on its right. You can check it: 69 × 5 + 2 = 347.',
+      'If a place is too small to share at all, the answer still needs a digit there: 823 ÷ 4 — 8 hundreds give 2, but 2 tens will not give 4 groups a ten each, so write 0 and pass on 20 ones. 23 ones give 5, with 3 over: 205, remainder 3.',
     ],
     alg: 'n = d × q + r, with 0 ≤ r < d',
     ex: { a: 347, d: 5, ask: 'q' },
+    caseKey: 'way',
+    cases: [
+      { label: 'How many whole ones?', note: 'Divide place by place from the left, passing on what does not share. The digits along the top are the answer.',
+        ex: { a: 347, d: 5, ask: 'q' } },
+      { label: 'A place that will not share', note: 'Sometimes a place is too small to give every group even one. Write 0 on top — do not skip it — and pass it all on.',
+        ex: { a: 823, d: 4, ask: 'q' } },
+      { label: 'What is left over?', note: 'Now the question is the remainder: what is still left after the very last place has been shared.',
+        ex: { a: 257, d: 6, ask: 'r' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const d = lv === 1 ? int(2, 5, r) : int(3, 9, r);
@@ -489,9 +584,9 @@ export const TRICKS = [
       });
     },
     q({ a, d, ask }) {
-      const b = busStop(a, d);
-      if (ask === 'r') return { a, d, ask, text: `${a} ÷ ${d}: what is the remainder?`, say: `${a} divided by ${d}. What is the remainder?`, expr: `${a}%${d}`, ans: b.rem };
-      return { a, d, ask, text: `${a} ÷ ${d}: how many whole ${d}s? (leave out the remainder)`, say: `${a} divided by ${d}, not counting the remainder`, expr: `Math.floor(${a}/${d})`, ans: b.quot };
+      const b = busStop(a, d), way = ask === 'r' ? 'remainder' : String(b.quot).includes('0') ? 'zero' : 'quotient';
+      if (ask === 'r') return { a, d, ask, way, text: `${a} ÷ ${d}: what is the remainder?`, say: `${a} divided by ${d}. What is the remainder?`, expr: `${a}%${d}`, ans: b.rem };
+      return { a, d, ask, way, text: `${a} ÷ ${d}: how many whole ${d}s? (leave out the remainder)`, say: `${a} divided by ${d}, not counting the remainder`, expr: `Math.floor(${a}/${d})`, ans: b.quot };
     },
     work({ a, d, ask }) {
       const b = busStop(a, d);
@@ -514,9 +609,21 @@ export const TRICKS = [
       'A calculation written in a line could be read more than one way. 2 + 3 × 4 is 20 if you add first and 14 if you multiply first. Maths only works if everyone gets the same answer, so everyone agrees an order. You may know it as BODMAS or BIDMAS in Britain and India, or PEMDAS in America — they are the same rule.',
       'Multiplying goes before adding because a multiplication is a bundle: 3 × 4 is "three fours", a single amount, 12. The 2 is added to that amount. If you want the 2 and 3 to go together first, you have to say so with brackets: (2 + 3) × 4.',
       '× and ÷ are the same rank, and so are + and −, so between those you just go left to right: 20 − 6 + 3 is 14 + 3 = 17, not 20 − 9.',
+      'Powers come before × and ÷ because a power is a bundle of multiplications: 3² is 3 × 3, a single amount, 9. So 5 + 3² × 2 is 5 + 9 × 2 = 5 + 18 = 23.',
     ],
     alg: 'Brackets → Orders (powers) → × ÷ (left to right) → + − (left to right)',
     ex: { k: 'add-mul', n: [2, 3, 4] },
+    caseKey: 'rule',
+    cases: [
+      { label: '× and ÷ before + and −', note: 'A multiplication is one bundle — three fours is 12 — so work it out before you add anything to it.',
+        ex: { k: 'add-mul', n: [2, 3, 4] } },
+      { label: 'Brackets first', note: 'Brackets change the order on purpose: whatever is inside them is done first, even an adding sum.',
+        ex: { k: 'brk-mul', n: [2, 3, 4] } },
+      { label: 'Powers before ×', note: 'A power like 3² is a bundle too — 3 × 3 — and it comes before multiplying or adding.',
+        ex: { k: 'pow', n: [5, 3, 2] } },
+      { label: 'Same rank: left to right', note: 'Do the × and ÷ bundles first. Then the + and − are the same rank, so go strictly left to right.',
+        ex: { k: 'long', n: [30, 12, 4, 2, 5] } },
+    ],
     gen(r, lv = 1) {
       const ks = Object.keys(OPS).filter((k) => OPS[k].lv === lv || (lv === 3 && OPS[k].lv === 2 && r() < 0.2));
       return fresh(() => {
@@ -527,7 +634,7 @@ export const TRICKS = [
     },
     q({ k, n }) {
       const t = OPS[k].text(n);
-      return { k, n, text: t, expr: toJs(t), ans: OPS[k].steps(n).at(-1).v };
+      return { k, n, rule: OPS[k].rule, text: t, expr: toJs(t), ans: OPS[k].steps(n).at(-1).v };
     },
     work({ k, n }) { return OPS[k].steps(n); },
   },

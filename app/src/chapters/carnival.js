@@ -167,6 +167,15 @@ export const TRICKS = [
     ],
     alg: 'total = (whole symbols × key) + (half symbols × key ÷ 2)',
     ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [10, 6, 8], per: 2, ask: 1 },
+    caseKey: 'idea',
+    cases: [
+      { label: 'Whole stars', note: 'Read the key first. Every star is worth the same, so count the stars and times by the key.',
+        ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [10, 6, 8], per: 2, ask: 1 } },
+      { label: 'A half star', note: 'A half star is half of what one star is worth. With 4 in a star, half a star is 2.',
+        ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [18, 12, 8], per: 4, ask: 0 } },
+      { label: 'The whole chart', note: 'Altogether means every row. Count all the whole stars, times by the key, then add the halves.',
+        ex: { labels: ['Hoopla', 'Darts', 'Ducks', 'Coconut'], counts: [8, 6, 12, 4], per: 4, ask: -1 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const per = lv === 1 ? 2 : lv === 2 ? pick([2, 4], r) : pick([4, 10], r);
@@ -180,7 +189,7 @@ export const TRICKS = [
       const sym = (c) => [Math.floor(c / per), c % per ? 1 : 0];
       const rows = ask < 0 ? counts : [counts[ask]];
       const F = sum(rows.map((c) => sym(c)[0])), H = sum(rows.map((c) => sym(c)[1]));
-      return { labels, counts, per, ask, text: ask < 0 ? `Each ★ is ${per} prizes. How many prizes were won altogether?` : `Each ★ is ${per} prizes. How many prizes were won at ${labels[ask]}?`,
+      return { labels, counts, per, ask, idea: ask < 0 ? 'all' : H ? 'half' : 'whole', text: ask < 0 ? `Each ★ is ${per} prizes. How many prizes were won altogether?` : `Each ★ is ${per} prizes. How many prizes were won at ${labels[ask]}?`,
         expr: rows.join('+'), ans: F * per + H * (per / 2) };
     },
     work({ counts, per, ask, labels }) {
@@ -203,6 +212,15 @@ export const TRICKS = [
     ],
     alg: 'how many more = taller bar − shorter bar',
     ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [9, 4, 6, 7], step: 1, a: 0, b: 1 },
+    caseKey: 'step',
+    cases: [
+      { label: 'Each line is 1', note: 'Read across from the top of each bar, then take the smaller from the bigger.',
+        ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [9, 4, 6, 7], step: 1, a: 0, b: 1 } },
+      { label: 'Each line is 2', note: 'Now the lines go up in twos, so count in twos from the bottom — not one for each line.',
+        ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [16, 10, 12, 8], step: 2, a: 0, b: 3 } },
+      { label: 'Each line is 10', note: 'The lines go up in tens. A bar that stops halfway between two lines is worth a 5 in the middle.',
+        ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [65, 30, 45, 50], step: 10, a: 0, b: 2 } },
+    ],
     gen(r, lv = 1) {
       const step = lv === 1 ? 1 : lv === 2 ? 2 : 10, unit = lv === 3 ? 5 : step;
       const labels = shuffle(RIDES, r).slice(0, lv === 1 ? 3 : int(4, 5, r));
@@ -232,6 +250,19 @@ export const TRICKS = [
     ],
     alg: 'k ways out of n: k = 0 impossible · k < n/2 unlikely · k = n/2 even · k > n/2 likely · k = n certain',
     ex: { kind: 'bag', bag: ['yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'blue'], want: 'blue' },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Impossible', note: 'There are no green counters at all, so green cannot happen — not even once in a million tries.',
+        ex: { kind: 'bag', bag: ['blue', 'yellow', 'blue', 'yellow', 'blue'], want: 'green' } },
+      { label: 'Unlikely', note: 'Blue can happen, but fewer than half the counters are blue — so usually it won\'t.',
+        ex: { kind: 'bag', bag: ['yellow', 'blue', 'yellow', 'yellow', 'blue', 'yellow'], want: 'blue' } },
+      { label: 'Even chance', note: 'Exactly half the counters are blue, so blue and not-blue are equally matched.',
+        ex: { kind: 'bag', bag: ['blue', 'yellow', 'yellow', 'blue'], want: 'blue' } },
+      { label: 'Likely', note: 'More than half the counters are blue: 5 out of 8 is more than 4. Likely — but not certain.',
+        ex: { kind: 'bag', bag: ['yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'blue'], want: 'blue' } },
+      { label: 'Certain', note: 'Every face of a dice is less than 7, so it must happen — every single time.',
+        ex: { kind: 'dice', ev: 1 } },
+    ],
     gen(r, lv = 1) {
       if (lv > 1 && r() < 0.4) return this.q({ kind: 'dice', ev: int(0, DICE.length - 1, r) });
       const target = pick(CHANCE, r), cols = lv === 1 ? ['blue', 'yellow'] : ['blue', 'yellow', 'green'];
@@ -277,6 +308,15 @@ export const TRICKS = [
     ],
     alg: 'value between two readings a and b, halfway along = (a + b) ÷ 2',
     ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'at', i: 2, j: 2 },
+    caseKey: 'ask',
+    cases: [
+      { label: 'Read one value', note: 'Go up from the time to the dot, then across to the side. Each small gap is 2 degrees.',
+        ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'at', i: 2, j: 2 } },
+      { label: 'How much warmer?', note: 'Read both times, then take the smaller from the bigger — the difference is the gap between the two dots.',
+        ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'diff', i: 4, j: 0 } },
+      { label: 'Halfway between', note: 'There is no dot there, but the line joins the two readings — halfway along is halfway between them.',
+        ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'half', i: 1, j: 2 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const temps = [int(7, 10, r) * 2]; for (let i = 1; i < 7; i++) temps.push(Math.max(14, Math.min(32, temps[i - 1] + 2 * int(i < 5 ? -1 : -2, i < 5 ? 3 : 1, r))));
@@ -313,6 +353,7 @@ export const TRICKS = [
     ],
     alg: 'mean = (x₁ + x₂ + … + xₙ) ÷ n',
     ex: { vals: [3, 7, 5, 9] },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const n = lv === 1 ? 3 : lv === 2 ? int(4, 5, r) : int(5, 6, r), lo = 1, hi = lv === 1 ? 10 : lv === 2 ? 20 : 60;
@@ -341,6 +382,15 @@ export const TRICKS = [
     alg: 'median = the ((n + 1) ÷ 2)th value in order · mode = the most frequent value',
     echo: true,
     ex: { vals: [12, 5, 9, 14, 7], stat: 'median' },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Median', note: 'Put them in order first. With an odd count there is one number right in the middle.',
+        ex: { vals: [12, 5, 9, 14, 7], stat: 'median' } },
+      { label: 'Median of an even count', note: 'With an even count, two numbers share the middle. The median is halfway between them.',
+        ex: { vals: [12, 5, 9, 14, 7, 3], stat: 'median' } },
+      { label: 'Mode', note: 'No ordering needed: the mode is simply the number that turns up most often.',
+        ex: { vals: [4, 7, 4, 2, 9, 4], stat: 'mode' } },
+    ],
     gen(r, lv = 1) {
       const stat = r() < 0.5 ? 'median' : 'mode';
       if (stat === 'mode') {
@@ -359,7 +409,7 @@ export const TRICKS = [
         : n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
       const expr = stat === 'mode' ? `[${vals}].find((v,_,a)=>a.every((w)=>a.filter((x)=>x===w).length<a.filter((x)=>x===v).length||w===v))`
         : `((a)=>(a[Math.floor((a.length-1)/2)]+a[Math.ceil((a.length-1)/2)])/2)([${vals}].sort((x,y)=>x-y))`;
-      return { vals, stat, text: `The ${stat} of ${vals.join(', ')}`, say: `the ${stat} of ${list(vals)}`, expr, ans };
+      return { vals, stat, kind: stat === 'mode' ? 'mode' : n % 2 ? 'odd' : 'even', text: `The ${stat} of ${vals.join(', ')}`, say: `the ${stat} of ${list(vals)}`, expr, ans };
     },
     work({ vals, stat, ans }) {
       const s = [...vals].sort((a, b) => a - b), n = vals.length;
@@ -380,6 +430,7 @@ export const TRICKS = [
     ],
     alg: 'range = largest − smallest',
     ex: { vals: [14, 31, 25, 9, 27] },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const n = lv === 1 ? 4 : lv === 2 ? 6 : 8, hi = lv === 1 ? 20 : lv === 2 ? 60 : 150;
@@ -407,6 +458,13 @@ export const TRICKS = [
     alg: 'P(event) = ways it can happen ÷ all equally likely ways',
     frac: true, keys: ['/'],
     ex: { kind: 'spin', slices: ['blue', 'yellow', 'blue', 'yellow', 'yellow', 'blue', 'yellow', 'yellow'], want: 'blue', not: false },
+    caseKey: 'ask',
+    cases: [
+      { label: 'The chance of it', note: 'The bottom of the fraction counts every equal part; the top counts the parts you want.',
+        ex: { kind: 'spin', slices: ['blue', 'yellow', 'blue', 'yellow', 'yellow', 'blue', 'yellow', 'yellow'], want: 'blue', not: false } },
+      { label: 'The chance of NOT', note: 'Count the parts that are anything else. The two chances always add up to a whole: 3/8 blue leaves 5/8 not blue.',
+        ex: { kind: 'spin', slices: ['blue', 'yellow', 'blue', 'yellow', 'yellow', 'blue', 'yellow', 'yellow'], want: 'blue', not: true } },
+    ],
     gen(r, lv = 1) {
       if (lv === 3 && r() < 0.4) { let ev; do ev = int(0, DICE.length - 1, r); while ([0, 1].includes(ev)); return this.q({ kind: 'dice', ev }); }
       const cols = lv === 1 ? ['blue', 'yellow'] : ['blue', 'yellow', 'green'];
@@ -426,7 +484,7 @@ export const TRICKS = [
           : `A bag holds ${list(tally.map(([c, m]) => `${m} ${c}`))} counters. Pick one without looking. What is the chance of ${what}?`;
         expr = `${JSON.stringify(a.slices)}.filter((c)=>(c==='${a.want}')!==${a.not}).length/${JSON.stringify(a.slices)}.length`;
       }
-      return { ...a, text, expr, ans: `${k}/${n}`, frac: true };
+      return { ...a, ask: a.not ? 'not' : 'is', text, expr, ans: `${k}/${n}`, frac: true };
     },
     work(q) {
       if (q.kind === 'dice') { const k = diceCount(DICE[q.ev][1]); return [{ t: `How many faces give ${DICE[q.ev][0]}?`, v: k }, { t: 'How many faces altogether?', v: 6 }, { t: 'The chance, as a fraction', v: `${k}/6` }]; }
@@ -446,6 +504,15 @@ export const TRICKS = [
     ],
     alg: 'a choices then b choices: a × b · handshakes among n people: n(n − 1) ÷ 2',
     ex: { kind: 'wear', a: 3, b: 4 },
+    caseKey: 'idea',
+    cases: [
+      { label: 'Two choices: multiply', note: 'Every top goes with every skirt, so it is rows of the same size: 3 rows of 4.',
+        ex: { kind: 'wear', a: 3, b: 4 } },
+      { label: 'Three choices', note: 'Every hat-and-mask pair goes with every cape, so multiply again for the third choice.',
+        ex: { kind: 'three', a: 2, b: 3, c: 4 } },
+      { label: 'Handshakes', note: 'A handshake between two people is ONE handshake, but counting from both ends counts it twice — so halve it.',
+        ex: { kind: 'hands', a: 5, b: 0 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const kind = pick(['coins', 'coindie', 'coinspin', 'wear'], r); return this.q({ kind, a: 2, b: kind === 'coins' ? 2 : kind === 'coindie' ? 6 : kind === 'coinspin' ? int(3, 5, r) : int(2, 4, r) }); }
@@ -464,7 +531,7 @@ export const TRICKS = [
         three: [`${a} hats, ${b} masks and ${c} capes. One of each — how many different costumes?`, `${a}*${b}*${c}`],
       }[kind];
       const ans = kind === 'hands' ? (a * (a - 1)) / 2 : kind === 'three' ? a * b * c : a * b;
-      return { kind, a, b, c, text: T[0], expr: T[1], ans };
+      return { kind, a, b, c, idea: kind === 'hands' ? 'pairs' : kind === 'three' ? 'three' : 'two', text: T[0], expr: T[1], ans };
     },
     work({ kind, a, b, c }) {
       if (kind === 'hands') return [{ t: 'How many hands does each person shake?', v: a - 1 }, { t: `${a} × ${a - 1}`, v: a * (a - 1) }, { t: 'Each handshake was counted twice — halve it', v: (a * (a - 1)) / 2 }];
@@ -493,6 +560,7 @@ export const TRICKS = [
     ],
     alg: '((x × a) + b = c) ⇒ x = (c − b) ÷ a',
     ex: { x: 5, ops: [['×', 3], ['+', 4]] },
+    oneIdea: true,
     gen(r, lv = 1) {
       return fresh(() => {
         const x = int(2, lv === 1 ? 10 : lv === 2 ? 15 : 25, r);
@@ -535,11 +603,26 @@ export const TRICKS = [
     idea: 'Find the question inside the question: work out the part you need first, then use it.',
     why: [
       'A long problem is a few short ones in a row. "How many tokens are left?" cannot be answered until you know how many were spent — so that is the first question, and its answer feeds the second.',
-      'Write each step as its own little sum. 3 rides at 8 tokens is 3 × 8 = 24 spent; 50 − 24 = 26 left. Each sum is easy; the skill is putting them in the right order.',
+      'Write each step as its own little sum. 3 rides at 8 tokens is 3 × 8 = 24 spent; 50 − 24 = 26 left. Each sum is easy; the skill is putting them in the right order. Watch the gaps, too: 3 shows in a row have only 2 breaks between them, like 3 fence posts with 2 gaps.',
       'Then check the answer makes sense: you cannot have more tokens left than you started with, and a show cannot finish before it starts. A silly answer means a step was done the wrong way round.',
     ],
     alg: 'left = start − (number × price)',
     ex: { kind: 'left', T: 50, n: 3, p: 8 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'What is left?', note: 'You cannot take away until you know what was spent — so the times sum comes first.',
+        ex: { kind: 'left', T: 50, n: 3, p: 8 } },
+      { label: 'Two things bought', note: 'Two different prices make two little times sums. Work each one out, then add them.',
+        ex: { kind: 'total', a: 3, p: 5, b: 2, c: 4 } },
+      { label: 'Change from a payment', note: 'Cost the candy floss, cost the lollies, add them — and only then take the total from what you paid.',
+        ex: { kind: 'change', T: 50, a: 2, p: 8, b: 3, c: 5 } },
+      { label: 'Breaks between shows', note: 'There is a break between each pair of shows, not after the last — so one fewer break than shows.',
+        ex: { kind: 'shows', k: 3, m: 20, g: 10 } },
+      { label: 'Turns in a queue', note: 'First find how many rides it takes to fit everyone in, then times by how long each ride lasts.',
+        ex: { kind: 'queue', N: 12, s: 4, t: 5 } },
+      { label: 'Pool, then share', note: 'Put all the sweets in one pile first, then share the pile equally.',
+        ex: { kind: 'share', n: 3, c: 8, k: 4 } },
+    ],
     gen(r, lv = 1) {
       const kinds = lv === 1 ? ['left', 'queue', 'share'] : lv === 2 ? ['total', 'shows', 'share', 'left'] : ['change', 'shows', 'queue', 'total'];
       return fresh(() => { const kind = pick(kinds, r); return this.q({ kind, ...planArgs(kind, r, lv) }); });
@@ -558,6 +641,13 @@ export const TRICKS = [
     ],
     alg: 'one per row, one per column: a row with one box left is that person\'s',
     ex: { names: ['Asha', 'Ben', 'Chen'], items: ['kite', 'teddy', 'yo-yo'], clues: [[0, 0, false], [1, 1, true]], ask: 0 },
+    caseKey: 'clue',
+    cases: [
+      { label: 'A tick clue', note: 'A tick does double work: Ben has the teddy, so nobody else can — cross out his whole row and the teddy\'s whole column.',
+        ex: { names: ['Asha', 'Ben', 'Chen'], items: ['kite', 'teddy', 'yo-yo'], clues: [[0, 0, false], [1, 1, true]], ask: 0 } },
+      { label: 'Only crosses', note: 'No clue says who won what — but a row with one empty box left settles that person, and their prize is crossed out for everyone else.',
+        ex: { names: ['Asha', 'Ben', 'Chen'], items: ['kite', 'teddy', 'yo-yo'], clues: [[0, 0, false], [0, 1, false], [1, 0, false]], ask: 2 } },
+    ],
     gen(r, lv = 1) {
       const n = lv === 3 ? 4 : 3;
       for (let tries = 0; tries < 500; tries++) {
@@ -583,7 +673,7 @@ export const TRICKS = [
       const n = names.length, s = eliminate(n, clues), ans = items[s.got[ask]];
       const say = clues.map(([p, i, y]) => `${names[p]} ${y ? 'won' : 'did not win'} the ${items[i]}.`).join(' ');
       const text = `${list(names)} each won one prize: ${items.slice(0, -1).map((i) => 'the ' + i).join(', ')} or the ${items.at(-1)}. ${say} Which prize did ${names[ask]} win?`;
-      return { names, items, clues, ask, text, expr: `(${BRUTE})(${n},${JSON.stringify(clues)},${ask},${JSON.stringify(items)})`, ans, choices: shuffle(items, seeded(text)) };
+      return { names, items, clues, ask, clue: clues.some((c) => c[2]) ? 'tick' : 'crosses', text, expr: `(${BRUTE})(${n},${JSON.stringify(clues)},${ask},${JSON.stringify(items)})`, ans, choices: shuffle(items, seeded(text)) };
     },
     work({ names, items, clues, ask }) {
       const n = names.length, s = eliminate(n, clues), upto = s.order.slice(0, s.order.indexOf(ask) + 1).slice(-5);

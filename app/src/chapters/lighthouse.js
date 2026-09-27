@@ -243,6 +243,8 @@ const lhs = (a, b) => `${a === 1 ? '' : a === -1 ? '−' : N(a)}x ${b < 0 ? '−
 const setLabel = (op, k) => `x ${OPS[op][0]} ${N(k)}`;
 
 const EX_SCATTER = scatterPts('positive', seeded('lighthouse-ex'), 1);
+const EX_SCATTER_NEG = scatterPts('negative', seeded('lighthouse-ex-neg'), 1);
+const EX_SCATTER_NONE = scatterPts('none', seeded('lighthouse-ex-none'), 1);
 
 /* ================================================================ stops */
 
@@ -259,6 +261,13 @@ export const TRICKS = [
     alg: 'a² + b² = c² , where c is the side opposite the right angle',
     sources: ['Euclid, Elements, Book I, Proposition 47; in T. L. Heath (trans.), The Thirteen Books of Euclid’s Elements (Cambridge University Press, 1908).'],
     ex: { a: 12, b: 5, c: 13, find: 'c' },
+    caseKey: 'side',
+    cases: [
+      { label: 'Find the longest side', note: 'Square the two short sides and ADD: the total is the square on the longest side.',
+        ex: { a: 12, b: 5, c: 13, find: 'c' } },
+      { label: 'Find a short side', note: 'Now the longest side is given, so its square is the big one. Take the small square AWAY from it instead of adding.',
+        ex: { a: 8, b: 15, c: 17, find: 'a' } },
+    ],
     gen(r, lv = 1) {
       const T = lv === 1 ? [[3, 4, 5], [6, 8, 10], [5, 12, 13]] : [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29], [9, 40, 41]];
       return fresh(() => {
@@ -269,9 +278,10 @@ export const TRICKS = [
       });
     },
     q({ a, b, c, find }) {
-      if (find === 'c') return { a, b, c, find, text: `A right-angled triangle has short sides ${a} m and ${b} m. How long is the longest side?`, expr: `Math.sqrt(${a}*${a}+${b}*${b})`, ans: c };
+      const side = find === 'c' ? 'long' : 'short';
+      if (find === 'c') return { a, b, c, find, side, text: `A right-angled triangle has short sides ${a} m and ${b} m. How long is the longest side?`, expr: `Math.sqrt(${a}*${a}+${b}*${b})`, ans: c };
       const known = find === 'a' ? b : a, want = find === 'a' ? a : b;
-      return { a, b, c, find, text: `A right-angled triangle has a longest side of ${c} m and one short side of ${known} m. How long is the other short side?`, expr: `Math.sqrt(${c}*${c}-${known}*${known})`, ans: want };
+      return { a, b, c, find, side, text: `A right-angled triangle has a longest side of ${c} m and one short side of ${known} m. How long is the other short side?`, expr: `Math.sqrt(${c}*${c}-${known}*${known})`, ans: want };
     },
     work({ a, b, c, find }) {
       if (find === 'c') return [{ t: `${a}²`, v: a * a }, { t: `${b}²`, v: b * b }, { t: `${a * a} + ${b * b}`, v: c * c }, { t: `Which number squared makes ${c * c}?`, v: c }];
@@ -291,6 +301,15 @@ export const TRICKS = [
     ],
     alg: 'hypotenuse: opposite the right angle · opposite: across from θ · adjacent: touches θ (and is not the hypotenuse)',
     ex: { deg: 35, at: 'P', mirror: false, flip: false, hi: 'wall' },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Hypotenuse', note: 'Find the right angle first. The side facing it is the hypotenuse, whichever angle you look from.',
+        ex: { deg: 35, at: 'P', mirror: false, flip: false, hi: 'slope' } },
+      { label: 'Opposite', note: 'This side does not touch the marked angle at all — it is across the triangle from it.',
+        ex: { deg: 35, at: 'P', mirror: false, flip: false, hi: 'wall' } },
+      { label: 'Adjacent', note: 'The angle has moved to the top corner, so the same upright side now touches it: it is adjacent.',
+        ex: { deg: 35, at: 'Q', mirror: false, flip: false, hi: 'wall' } },
+    ],
     gen(r, lv = 1) {
       const deg = int(25, 65, r), hi = pick(['base', 'wall', 'slope', 'base', 'wall'], r);
       return this.q({ deg, at: lv === 3 && r() < 0.5 ? 'Q' : 'P', mirror: lv > 1 && r() < 0.5, flip: lv === 3 && r() < 0.5, hi });
@@ -322,6 +341,13 @@ export const TRICKS = [
     ],
     alg: 'tan θ = opposite ÷ adjacent ⇒ opposite = adjacent × tan θ',
     ex: { deg: 35, d: 40, find: 'h' },
+    caseKey: 'find',
+    cases: [
+      { label: 'Find the height', note: 'The height is opposite and the distance adjacent, so height = distance × tan of the angle.',
+        ex: { deg: 35, d: 40, find: 'h' } },
+      { label: 'Find the distance', note: 'Going the other way, undo the times: distance = height ÷ tan of the angle.',
+        ex: { deg: 27, d: 50, find: 'd' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         // a real lighthouse: between 6 m and 80 m tall
@@ -361,6 +387,17 @@ export const TRICKS = [
     alg: 'sin θ = opp ÷ hyp · cos θ = adj ÷ hyp ⇒ opp = hyp × sin θ , adj = hyp × cos θ',
     decimals: true, keys: ['.'],
     ex: { deg: 53, L: 10, want: 'up' },
+    caseKey: 'want',
+    cases: [
+      { label: 'Height up the wall: sin', note: 'The height is opposite the angle at the ground, and the ladder is the hypotenuse: height = ladder × sin.',
+        ex: { deg: 53, L: 10, want: 'up' } },
+      { label: 'Foot from the wall: cos', note: 'The ground side touches the angle — it is adjacent — so use cos: distance = ladder × cos.',
+        ex: { deg: 53, L: 10, want: 'out' } },
+      { label: 'Ladder from height', note: 'Now the ladder is the unknown. Height = ladder × sin, so undo it: ladder = height ÷ sin.',
+        ex: { deg: 30, L: 12, want: 'L-up' } },
+      { label: 'Ladder from foot', note: 'The same undoing with the ground side: ladder = distance along the ground ÷ cos.',
+        ex: { deg: 37, L: 15, want: 'L-out' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         // level 1 keeps to the tenths, on a ladder that makes a whole answer;
@@ -410,13 +447,22 @@ export const TRICKS = [
     ],
     alg: 'sin 30° = cos 60° = 1/2 · sin 45° = cos 45° = 1/√2 · tan 45° = 1 · sin 60° = cos 30° = √3/2 · tan 60° = √3 · tan 30° = 1/√3',
     ex: { f: 'sin', i: 0 },
+    caseKey: 'f',
+    cases: [
+      { label: 'Sin: opposite ÷ hypotenuse', note: 'In the half-equilateral, the short side 1 over the hypotenuse 2 is a half — and 1 is opposite the 30° corner.',
+        ex: { i: 0 } },
+      { label: 'Cos: adjacent ÷ hypotenuse', note: 'The same 1 over 2 — but for cos the side must TOUCH the angle, and it touches the 60° corner.',
+        ex: { i: 1 } },
+      { label: 'Tan: opposite ÷ adjacent', note: 'Tan is 1 when the two short sides are equal — and that only happens in the half-square, at 45°.',
+        ex: { i: 2 } },
+    ],
     gen(r, lv = 1) {
       const pool = lv === 1 ? [0, 1, 2] : lv === 2 ? [0, 1, 2, 3, 4, 7] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
       return this.q({ i: pick(pool, r) });
     },
     q({ i }) {
       const [f, show, val, deg, tri] = SPECIAL[i];
-      return { i, text: `${f} x = ${show}, and x is between 0° and 90°. What is x?`, say: `${f} x equals ${show.replace('√', 'root ')}`, choices: ['30°', '45°', '60°'], ans: `${deg}°`,
+      return { i, f, text: `${f} x = ${show}, and x is between 0° and 90°. What is x?`, say: `${f} x equals ${show.replace('√', 'root ')}`, choices: ['30°', '45°', '60°'], ans: `${deg}°`,
         expr: `['30°','45°','60°'].find((s)=>Math.abs(Math.${f}(parseInt(s)*Math.PI/180)-(${val}))<1e-9)`, tri };
     },
     work({ i }) {
@@ -449,12 +495,19 @@ export const TRICKS = [
     ],
     alg: 'back bearing = bearing + 180° (if under 180°) , bearing − 180° (if over 180°)',
     ex: { out: 65 },
+    caseKey: 'turn',
+    cases: [
+      { label: 'Out under 180°: add', note: 'Half a turn more still fits inside a whole turn, so add 180°.',
+        ex: { out: 65 } },
+      { label: 'Out over 180°: take away', note: 'Adding 180° would go past 360°, all the way round. Take 180° away instead to face the opposite way.',
+        ex: { out: 300 } },
+    ],
     gen(r, lv = 1) {
       const out = lv === 1 ? int(1, 35, r) * 5 : lv === 2 ? int(37, 71, r) * 5 : pick([int(1, 179, r), int(181, 359, r)], r);
       return this.q({ out });
     },
     q({ out }) {
-      return { out, text: `A ship leaves the lighthouse on a bearing of ${pad3(out)}°. What bearing takes it straight back? Type the number of degrees (a leading zero is fine either way).`,
+      return { out, turn: out < 180 ? 'add' : 'take', text: `A ship leaves the lighthouse on a bearing of ${pad3(out)}°. What bearing takes it straight back? Type the number of degrees (a leading zero is fine either way).`,
         say: `A ship leaves on a bearing of ${pad3(out).split('').join(' ')} degrees. What bearing takes it straight back?`,
         expr: `(${out}+180)%360`, ans: out < 180 ? out + 180 : out - 180 };
     },
@@ -475,6 +528,15 @@ export const TRICKS = [
     ],
     alg: 'up to the right: positive · down to the right: negative · no lean: none (−1 ≤ r ≤ 1)',
     ex: { kind: 'positive', pts: EX_SCATTER },
+    caseKey: 'ans',
+    cases: [
+      { label: 'Positive', note: 'The dots lean up to the right: the bigger one reading, the bigger the other tends to be.',
+        ex: { kind: 'positive', pts: EX_SCATTER } },
+      { label: 'Negative', note: 'The dots lean down to the right: as one reading grows, the other tends to shrink.',
+        ex: { kind: 'negative', pts: EX_SCATTER_NEG } },
+      { label: 'None', note: 'A round, shapeless cloud with no lean either way. Knowing one reading tells you nothing about the other.',
+        ex: { kind: 'none', pts: EX_SCATTER_NONE } },
+    ],
     gen(r, lv = 1) { const kind = pick(CORRS, r); return this.q({ kind, pts: scatterPts(kind, r, lv) }); },
     q({ kind, pts }) {
       return { kind, pts, text: `The keeper logs two readings on each of ${pts.length} nights and plots them. What correlation does the scatter graph show?`, choices: CORRS, ans: kind,
@@ -498,6 +560,15 @@ export const TRICKS = [
     alg: 'gradient m = (y₂ − y₁) ÷ (x₂ − x₁) ; y = y₁ + (x − x₁) × m',
     decimals: true, keys: ['.', '−'],
     ex: { x1: 4, y1: 6, x2: 12, y2: 10, x0: 8 },
+    caseKey: 'idea',
+    cases: [
+      { label: 'Inside the data', note: 'Work out how much y climbs for each 1 across, then walk along from a point you know.',
+        ex: { x1: 4, y1: 6, x2: 12, y2: 10, x0: 8 } },
+      { label: 'A falling line', note: 'When the line goes down, y changes by a negative amount for each step across — so walking right makes y smaller.',
+        ex: { x1: 2, y1: 16, x2: 10, y2: 12, x0: 6 } },
+      { label: 'Beyond the data', note: 'The sum is the same, but nobody measured out here. That is extrapolation: the trend may bend or stop, so trust it less.',
+        ex: { x1: 4, y1: 6, x2: 12, y2: 10, x0: 18 } },
+    ],
     gen(r, lv = 1) {
       const ms = lv === 1 ? [0.5, 1, 2] : [0.5, 1, 1.5, 2, -0.5, -1, -1.5, -2];
       return fresh(() => {
@@ -514,7 +585,7 @@ export const TRICKS = [
     },
     q({ x1, y1, x2, y2, x0 }) {
       const out = x0 < x1 || x0 > x2;
-      return { x1, y1, x2, y2, x0, text: `A line of best fit passes through (${x1}, ${y1}) and (${x2}, ${y2}). Use the line to estimate y when x = ${x0}.${out ? ` The data only runs from x = ${x1} to x = ${x2}.` : ''}`,
+      return { x1, y1, x2, y2, x0, idea: out ? 'beyond' : y2 < y1 ? 'falls' : 'rises', text: `A line of best fit passes through (${x1}, ${y1}) and (${x2}, ${y2}). Use the line to estimate y when x = ${x0}.${out ? ` The data only runs from x = ${x1} to x = ${x2}.` : ''}`,
         expr: `${y2}-(${y2}-(${y1}))*(${x2}-(${x0}))/(${x2}-(${x1}))`, ans: y1 + ((y2 - y1) * (x0 - x1)) / (x2 - x1) };
     },
     work({ x1, y1, x2, y2, x0 }) {
@@ -543,6 +614,15 @@ export const TRICKS = [
     alg: 'P(A and B) = P(A) × P(B) (independent) · P(one path or another) = sum of the paths',
     frac: true, keys: ['/'],
     ex: { e: 0, p1: [1, 4], p2: [2, 5], ask: 'yy' },
+    caseKey: 'route',
+    cases: [
+      { label: 'One path: multiply', note: 'Follow the one path where both happen, and multiply the chances along it — a fraction of a fraction.',
+        ex: { e: 0, p1: [1, 4], p2: [2, 5], ask: 'yy' } },
+      { label: 'A "not" branch', note: 'The other branch is whatever is left of 1: late 1/4 means on time 3/4. Find it first, then multiply along.',
+        ex: { e: 0, p1: [1, 4], p2: [2, 5], ask: 'yn' } },
+      { label: 'Two paths: add', note: 'Exactly one late can happen two ways. Multiply along each path, then add the two, because either will do.',
+        ex: { e: 0, p1: [1, 4], p2: [2, 5], ask: 'one' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const p1 = prob(r, lv === 1 ? 6 : 10), p2 = prob(r, lv === 1 ? 6 : 10);
@@ -560,7 +640,7 @@ export const TRICKS = [
       else num = pa(ask[0] === 'y') * pc(ask[1] === 'y');
       // the independent route: count the cells of a b-by-d grid
       const cell = ask === 'one' ? '(i<A)!==(j<C)' : ask === 'same' ? '(i<A)===(j<C)' : `(i<A)===${ask[0] === 'y'}&&(j<C)===${ask[1] === 'y'}`;
-      return { e, p1, p2, ask, frac: true, ans: fr(num, b * d),
+      return { e, p1, p2, ask, route: ask === 'yy' ? 'path' : ask.length === 2 ? 'not' : 'add', frac: true, ans: fr(num, b * d),
         text: `The chance that the ${E.names[0]} ${E.yes} is ${fr(a, b)}. The chance that the ${E.names[1]} ${E.yes} is ${fr(c, d)}, whatever the first one does. What is the chance that ${what}?`,
         expr: `((A,B,C,D)=>{let k=0;for(let i=0;i<B;i++)for(let j=0;j<D;j++)if(${cell})k++;return k/(B*D);})(${a},${b},${c},${d})` };
     },
@@ -592,11 +672,22 @@ export const TRICKS = [
     why: [
       'A probability is a long-run share. A chance of rain of 3/10 means that, over many, many nights, about 3 in every 10 are wet. So in 60 nights you expect 3/10 of 60: split the 60 nights into tens — 6 of them — with 3 wet nights in each, 18 altogether. That is all expected frequency is: the probability × the number of trials.',
       'Expected does not mean promised. Toss a coin 60 times and you expect 30 heads, but you might easily get 27, or 34 — every toss is still chancy. Real counts wobble around the expected number, sometimes above and sometimes below. What you can count on is the middle they wobble round: the more trials, the closer the share of heads creeps to 1/2, even though the count is rarely exactly half.',
-      'It works however the chance is written. A decimal is a fraction too: 0.15 is 15 hundredths, or 3/20, so in 200 nights expect 200 ÷ 20 × 3 = 30. And for two things at once, multiply along the tree-diagram path first, then take that share of the trials: ferries late 1/4 and 2/5 of the time make both late 1/10 of the time — about 20 days in 200.',
+      'It works however the chance is written. On a die, count the faces that win first: “a 5 or a 6” is 2 faces out of 6, so the chance is 2/6 = 1/3. A decimal is a fraction too: 0.15 is 15 hundredths, or 3/20, so in 200 nights expect 200 ÷ 20 × 3 = 30. And for two things at once, multiply along the tree-diagram path first, then take that share of the trials: ferries late 1/4 and 2/5 of the time make both late 1/10 of the time — about 20 days in 200.',
     ],
     alg: 'expected frequency = P(event) × number of trials',
     keys: ['/', '.'],
     ex: { kind: 'log', k: 3, n: 10, T: 60, w: 0 },
+    caseKey: 'given',
+    cases: [
+      { label: 'A fraction chance', note: 'Split the trials into equal groups — the bottom of the fraction — and take the top number of those groups.',
+        ex: { kind: 'log', k: 3, n: 10, T: 60, w: 0 } },
+      { label: 'Faces of a die', note: 'The chance is not written down: count the faces that win, out of 6, and simplify before you share.',
+        ex: { kind: 'die', i: 2, T: 60 } },
+      { label: 'A decimal chance', note: 'A decimal is a fraction in disguise: 0.15 is 15 hundredths, which is 3/20.',
+        ex: { kind: 'dec', c: 15, ship: false, T: 200 } },
+      { label: 'Two things at once', note: 'Multiply along the tree-diagram path first to get one chance, then take that share of the trials.',
+        ex: { kind: 'tree', e: 0, p1: [1, 4], p2: [2, 5], ask: 'yy', T: 200 } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const kind = lv === 1 ? pick(['spin', 'die', 'log'], r) : lv === 2 ? pick(['log', 'dec', 'dec', 'spin'], r) : pick(['tree', 'tree', 'dec'], r);
@@ -610,6 +701,7 @@ export const TRICKS = [
     },
     q(o) {
       const { kind, T } = o;
+      o = { ...o, given: kind === 'spin' || kind === 'log' ? 'fraction' : kind === 'die' ? 'faces' : kind === 'dec' ? 'decimal' : 'tree' };
       if (kind === 'spin') return { ...o, text: `A spinner has ${o.n} equal sections, and ${o.k} of them are shaded. It is spun ${T} times. How many times would you expect it to land on a shaded section?`,
         expr: `${T}*${o.k}/${o.n}`, ans: (T / o.n) * o.k };
       if (kind === 'die') { const [k, cond, say] = DIE[o.i]; return { ...o, text: `A fair die is rolled ${T} times. How many times would you expect to roll ${say}?`,
@@ -665,6 +757,19 @@ export const TRICKS = [
     alg: 'a·x + b < c ⇒ x < (c − b) ÷ a if a > 0 ; x > (c − b) ÷ a if a < 0',
     keys: ['−'],
     ex: { a: 3, b: 4, op: '<', k: 5, form: 'num' },
+    caseKey: 'idea',
+    cases: [
+      { label: 'Less than: the largest', note: 'Solve it like an equation. x < 5 lets in 4 but not 5 itself, so the largest whole number is one below.',
+        ex: { a: 3, b: 4, op: '<', k: 5, form: 'num' } },
+      { label: 'More than: the smallest', note: 'Now the answers run upwards, so look for the smallest. x > 4 does not include 4, so start one above.',
+        ex: { a: 2, b: 3, op: '>', k: 4, form: 'num' } },
+      { label: 'Or equal to', note: '≤ and ≥ include the edge itself, so the boundary number is allowed this time.',
+        ex: { a: 3, b: 4, op: '<=', k: 5, form: 'num' } },
+      { label: 'The whole answer', note: 'The answer is a whole range, written like x ≥ 3. Dividing by a positive number, the sign stays the one you started with.',
+        ex: { a: 4, b: -2, op: '>=', k: 3, form: 'set' } },
+      { label: 'Dividing by a negative', note: 'Dividing both sides by a negative number mirrors the number line, so the sign turns round: < becomes >.',
+        ex: { a: -2, b: 1, op: '<', k: -3, form: 'num' } },
+    ],
     gen(r, lv = 1) {
       return fresh(() => {
         const a = lv === 3 ? -int(2, 9, r) : int(2, lv === 1 ? 6 : 9, r);
@@ -675,13 +780,14 @@ export const TRICKS = [
     },
     q({ a, b, op, k, form }) {
       const c = a * k + b, sol = a < 0 ? FLIP[op] : op, t = `${lhs(a, b)} ${OPS[op][0]} ${N(c)}`;
+      const idea = a < 0 ? 'flip' : form === 'set' ? 'set' : op.length === 2 ? 'equal' : op === '<' ? 'below' : 'above';
       const test = `(x)=>${a}*x+(${b})${OPS[op][1]}${c}`;
       if (form === 'set') {
-        return { a, b, op, k, form, text: `Solve ${t}. Which of these is the answer?`, choices: ['<', '<=', '>', '>='].map((o) => setLabel(o, k)), ans: setLabel(sol, k),
+        return { a, b, op, k, form, idea, text: `Solve ${t}. Which of these is the answer?`, choices: ['<', '<=', '>', '>='].map((o) => setLabel(o, k)), ans: setLabel(sol, k),
           expr: `((f)=>{const s=(o)=>'x '+o+' ${N(k)}';return f(${k - 1})&&!f(${k + 1})?(f(${k})?s('≤'):s('<')):(f(${k})?s('≥'):s('>'));})(${test})` };
       }
       const big = sol === '<' || sol === '<=';
-      return { a, b, op, k, form, text: `${t}. What is the ${big ? 'largest' : 'smallest'} integer x that makes this true?`,
+      return { a, b, op, k, form, idea, text: `${t}. What is the ${big ? 'largest' : 'smallest'} integer x that makes this true?`,
         ans: sol === '<' ? k - 1 : sol === '>' ? k + 1 : k,
         expr: `((f)=>{const ok=[];for(let x=-200;x<=200;x++)if(f(x))ok.push(x);return ${big ? 'ok[ok.length-1]' : 'ok[0]'};})(${test})` };
     },
