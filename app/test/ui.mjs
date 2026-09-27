@@ -154,6 +154,8 @@ async function run(vp, tag) {
   await page.evaluate(() => { window.__bzm.fire('openStop', 'kinds-of-triangle'); window.__bzm.fire('stopTab', 'learn'); });
   await page.waitForSelector('.case-chip');
   ok(await page.locator('.case-chip').count() === 6, 'Kinds of triangle shows six ideas to click through');
+  // every tab in a tab row sits inside the screen — on a phone the row wraps instead of hiding one
+  ok(await page.evaluate(() => [...document.querySelectorAll('.seg button')].every((b) => { const r = b.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; })), 'every stop tab is on screen');
   await shot('28b-cases-1');
   for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowRight');
   ok(await page.evaluate(() => window.__bzm.R.ui.lcase) === 5, '→ walks every idea to the last one');
@@ -211,6 +213,7 @@ async function run(vp, tag) {
   // Shape Studio's Construct bench: a triangle from three sides, stepped through by keyboard
   await page.evaluate(() => { window.__bzm.fire('openTool', 'shapes'); window.__bzm.fire('lib', 'bench|construct'); window.__bzm.fire('lib', 'kcon|sss'); });
   await page.waitForSelector('.t-shapes'); for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  ok(await page.evaluate(() => [...document.querySelectorAll('.t-shapes-seg button')].every((b) => { const r = b.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; })), 'every Shape Studio tab is on screen');
   await page.waitForTimeout(200); await shot('31b-construct');
   ok(/why it/i.test(await page.locator('.t-shapes').innerText()), 'a construction steps through to its reason');
   await page.evaluate(() => window.__bzm.fire('openTool', 'explorer')); await page.waitForSelector('#t-explorer-n');

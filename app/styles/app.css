@@ -749,3 +749,9 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .case-chip.on{border-color:var(--action);background:var(--action-tint)}
 .case-chip.on b{background:var(--action);color:#fff}
 .case-note{margin:0;padding:10px 14px;border-radius:12px;background:var(--action-tint);color:var(--ink);max-width:75ch}
+
+/* ---- tab rows wrap on a phone: every tab visible, none hiding off the edge */
+@media (max-width: 760px) {
+  div.seg{flex-wrap:wrap;justify-content:center;width:auto;max-width:100%;overflow:visible;border-radius:20px;row-gap:4px}
+  div.seg button{padding:8px 13px;flex:0 1 auto}
+}
