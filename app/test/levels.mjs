@@ -59,7 +59,7 @@ for (const l of LEVELS) {
     lastLv[s.stop] = s.lv;
     // prerequisites first: inside a level, a world's stops come in the world's own teaching order
     const prev = lastInWorld[t.world];
-    ok(prev === undefined || order[prev] < order[s.stop], `level ${l.n}: ${s.stop} comes before ${prev}, but ${t.world} teaches ${prev} after it`);
+    ok(prev === undefined || order[prev] < order[s.stop], `level ${l.n}: ${s.stop} comes after ${prev}, but ${t.world} teaches ${s.stop} first`);
     lastInWorld[t.world] = s.stop;
   }
 }
