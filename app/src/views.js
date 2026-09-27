@@ -62,7 +62,7 @@ export const TABS = [
   { k: 'puzzles', n: 'Puzzles', icon: 'puzzle' },
   { k: 'arcade', n: 'Arcade', icon: 'play' },
 ];
-const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
+const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', journey: 'atlas', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
 
 export function icon(k) {
   const p = {
@@ -209,8 +209,8 @@ function journeyCard(k) {
   return `<div class="hcard jcard">
       <button class="jc-lv" data-act="nav" data-arg="journey" aria-label="My journey">${p.level}</button>
       <span class="jc-t"><span class="kick">Level ${p.level} · ${esc(p.age)}</span><b>${esc(p.L.name)}</b>
-        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">${p.done} of ${p.total} steps${p.next ? ` · next: ${esc(p.next.t.title)}` : ''}</span></span>
-      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : `<button class="btn" data-act="nav" data-arg="journey">See it</button>`}
+        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">Station ${Math.min(p.done + 1, p.total)} of ${p.total}${p.next ? ` · ${esc(p.next.t.title)}` : ' · the level check is next'}</span></span>
+      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : p.checkOpen && !p.finishedTop ? `<button class="btn primary" data-act="startLevelCheck">Take the Level ${p.level} check</button>` : `<button class="btn" data-act="nav" data-arg="journey">See my road</button>`}
     </div>`;
 }
 
@@ -264,7 +264,10 @@ export function viewHome() {
     ${journeyCard(k)}
 
     <div class="h-r2">
-      ${next ? `<button class="journey" data-act="openStop" data-arg="${next.id}">
+      ${J.progress(k) ? `<button class="journey" data-act="atlasView" data-arg="islands">
+        <span class="jb" style="background-image:url(art/atlas.webp)"><span class="jchip">🗺️</span><span class="jtag">Three islands · 18 places</span></span>
+        <span class="jt"><span class="kick">Explore the Atlas</span><b>Wander back through everything you have reached</b><span class="jh">Every lesson from your earlier levels is open, and every station your road has reached.</span>
+        <span class="jgo"><span class="btn">Explore</span></span></span></button>` : next ? `<button class="journey" data-act="openStop" data-arg="${next.id}">
         <span class="jb" style="background-image:url(art/w-${w.id}.webp)"><span class="jchip">${w.glyph}</span><span class="jtag">Part ${w.n} · ${esc(w.short)}</span></span>
         <span class="jt"><span class="kick">Next on your Atlas</span><b>${esc(next.title)}</b><span class="jh">${esc(next.hook)}</span>
         <span class="jgo"><span class="btn primary">Start</span><span class="meter"><i style="width:${Math.round(100 * at.stars / at.maxStars)}%"></i></span></span></span></button>`

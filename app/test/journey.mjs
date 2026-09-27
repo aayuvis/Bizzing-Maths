@@ -46,32 +46,50 @@ ok(J.progress(k).done === (first.lv === 1 ? 0 : 0), 'a drill passed EASIER than 
 J.passed(k, first.stop, 3);
 ok(J.progress(k).steps[0].done, 'a drill passed at a harder level ticks the step');
 let res;
+// the road is linear: station 2 waits for station 1
+const k3 = newKid('Fin', '8-10', 'koi'); J.place(k3, 1);
+let p3 = J.progress(k3);
+ok(p3.steps[0].open && !p3.steps[1].open && !p3.steps.at(-1).open, 'only the first station of the road is open');
+J.passed(k3, p3.steps[0].stop, p3.steps[0].lv);
+p3 = J.progress(k3);
+ok(p3.steps[1].open && !p3.steps[2].open, 'passing station 1 opens station 2, and only that');
+// every station passed: the check opens, but only the check moves the level
 for (const s of p.steps) res = J.passed(k, s.stop, s.lv);
-ok(res.finished && res.from === 3 && res.to === 4 && J.rec(k).level === 4, 'finishing every step moves the child to the next level');
-ok(J.rec(k).finished.includes(3), 'the finished level is remembered');
-J.place(k, 10); for (const s of J.stepsOf(J.rec(k), 10)) res = J.passed(k, s.stop, s.lv);
-ok(res.finished && J.rec(k).level === 10, 'the last journey finishes and stays at the top');
+ok(res.checkOpen && J.rec(k).level === 3, 'all stations passed: the level check opens, the level has not moved');
+const items = J.checkItems(k, seeded('chk'));
+ok(items.length === J.CHECK_N && items.every((q) => J.levelOf(3).steps.some((s) => s.stop === q.trick) && correct(q, String(q.ans))), 'the level check asks gradable questions from this level only');
+ok(!J.checkPassed(k, J.CHECK_PASS - 1).moved && J.rec(k).level === 3, `${J.CHECK_PASS - 1} of ${J.CHECK_N} does not pass the check`);
+res = J.checkPassed(k, J.CHECK_PASS);
+ok(res.moved && res.from === 3 && res.to === 4 && J.rec(k).level === 4 && J.rec(k).finished.includes(3), `${J.CHECK_PASS} of ${J.CHECK_N} passes: on to Level 4`);
+ok(!J.checkPassed(k, J.CHECK_N).moved, 'the Level 4 check cannot be passed before its stations');
+J.place(k, 10); for (const s of J.stepsOf(J.rec(k), 10)) J.passed(k, s.stop, s.lv);
+res = J.checkPassed(k, J.CHECK_N);
+ok(J.rec(k).level === 10 && J.rec(k).finished.includes(10), 'the last check finishes the last road and stays at the top');
 // placed above Level 1 → a recap of the level below comes first; climbing up → no recap
 const kr = newKid('Cai', '11-14', 'koi'); J.place(kr, 6);
 let pr = J.progress(kr), rc = J.recapOf(6);
-ok(rc.length >= 4 && pr.steps.slice(0, rc.length).every((s) => s.recap) && pr.steps.length === rc.length + J.levelOf(6).steps.length, 'placed at Level 6: the journey opens with a recap of Level 5');
-ok(rc.every((s) => J.levelOf(5).steps.some((x) => x.stop === s.stop && x.lv === s.lv)), 'every recap step is a real Level 5 step');
-ok(new Set(rc.map((s) => s.stop)).size === rc.length, 'one recap step per idea, no repeats');
+ok(rc.length >= 4 && pr.steps.slice(0, rc.length).every((s) => s.recap) && pr.steps.length === rc.length + J.levelOf(6).steps.length, 'placed at Level 6: the road opens with a recap of Level 5');
+ok(rc.every((s) => J.levelOf(5).steps.some((x) => x.stop === s.stop && x.lv === s.lv)), 'every recap station is a real Level 5 step');
+ok(new Set(rc.map((s) => s.stop)).size === rc.length, 'one recap station per idea, no repeats');
 for (const s of J.levelOf(6).steps) res = J.passed(kr, s.stop, s.lv);
-ok(!res.finished && J.rec(kr).level === 6, 'the level is not finished while the recap is still to do');
+ok(!res.checkOpen, 'the check stays shut while the recap is still to do');
 for (const s of rc) res = J.passed(kr, s.stop, s.lv);
-ok(res.finished && J.rec(kr).level === 7, 'recap done too: on to Level 7');
+ok(res.checkOpen && J.checkPassed(kr, J.CHECK_N).moved && J.rec(kr).level === 7, 'recap done too: the check passes and Level 7 opens');
 ok(J.progress(kr).steps.every((s) => !s.recap), 'a child who CLIMBED to Level 7 gets no recap');
 const k1 = newKid('Dee', '6-7', 'koi'); J.place(k1, 1);
 ok(J.progress(k1).steps.every((s) => !s.recap), 'Level 1 has nothing below it to recap');
-// placed at Level 6: every lesson of Levels 1–6 is open in the Atlas, and nothing only taught later
-const { isOpen, ROUTE, levelOpen } = await import('../src/model.js');
+// the Atlas follows the road: earlier levels all open; this level only as far as the road; later levels shut
+const { isOpen, ROUTE, levelOpen, firstLevel } = await import('../src/model.js');
 const ka = newKid('Eli', '8-10', 'koi'), ha = { parent: { tester: false }, kids: [ka], active: ka.id };
 J.place(ka, 6);
-const early = new Set(J.LEVELS.filter((L) => L.n <= 6).flatMap((L) => L.steps.map((s) => s.stop)));
-ok(ROUTE.every((n, i) => n.kind !== 'stop' || !early.has(n.id) || isOpen(ha, ka, i)), 'placed at Level 6: every lesson from Levels 1–6 is open in the Atlas');
-const onlyLater = ROUTE.map((n, i) => [n, i]).filter(([n]) => n.kind === 'stop' && !early.has(n.id));
-ok(onlyLater.some(([n]) => !levelOpen(ka, n.id)), 'lessons first taught after Level 6 are not opened by the level');
+const idx = (id) => ROUTE.findIndex((n) => n.id === id);
+const earlier = ROUTE.filter((n) => n.kind === 'stop' && firstLevel(n.id) < 6);
+ok(earlier.every((n) => isOpen(ha, ka, idx(n.id))), 'placed at Level 6: every lesson first taught in Levels 1–5 is open in the Atlas');
+const road = J.progress(ka).steps, firstShut = road.find((s) => !s.open && firstLevel(s.stop) === 6);
+ok(road[0].open && isOpen(ha, ka, idx(road[0].stop)), 'the first station of the road is open in the Atlas');
+ok(firstShut && !isOpen(ha, ka, idx(firstShut.stop)), 'a Level 6 station the road has not reached is shut in the Atlas');
+const later = ROUTE.filter((n) => n.kind === 'stop' && firstLevel(n.id) > 6);
+ok(later.length && later.every((n) => !isOpen(ha, ka, idx(n.id))), 'lessons first taught after Level 6 are shut');
 // a second child never inherits the first one's journey
 const k2 = newKid('Ben', '6-7', 'froggy');
 ok(J.progress(k2) === null && Object.keys(J.rec(k2).done).length === 0, "a second child starts with nobody's journey");

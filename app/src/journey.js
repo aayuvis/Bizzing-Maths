@@ -44,31 +44,67 @@ export function recapOf(n) {
 }
 export const stepsOf = (j, n) => [...(j.recap === n ? recapOf(n) : []), ...levelOf(n).steps];
 
+/* A level is ONE road. Its stations open strictly in order — station n+1 opens
+   when station n is passed — and after the last station comes the LEVEL CHECK:
+   CHECK_N mixed questions from the whole level, CHECK_PASS right to pass. Passing
+   the check is the moment a child moves up a maths age; nothing else moves them. */
+export const CHECK_N = 12, CHECK_PASS = 10;
+
 export function progress(k) {
   const j = rec(k);
   if (!j.level) return null;
-  const L = levelOf(j.level), steps = stepsOf(j, j.level).map((s, i) => ({ ...s, i, done: stepDone(j, s), t: byId[s.stop] }));
-  const done = steps.filter((s) => s.done).length;
-  return { level: j.level, L, age: ageOf(j.level), steps, done, total: steps.length, next: steps.find((s) => !s.done) || null, top: j.level === TOP };
+  const L = levelOf(j.level), raw = stepsOf(j, j.level);
+  const steps = []; let open = true;
+  raw.forEach((s, i) => {
+    const done = stepDone(j, s);
+    steps.push({ ...s, i, done, open: done || open, t: byId[s.stop] });
+    if (!done) open = false;                 // everything after the first unpassed station waits
+  });
+  const done = steps.filter((s) => s.done).length, next = steps.find((s) => !s.done) || null;
+  return { level: j.level, L, age: ageOf(j.level), steps, done, total: steps.length, next,
+    checkOpen: !next, top: j.level === TOP, finishedTop: j.finished.includes(TOP) };
 }
 
-/* A drill passed at `lv` on `stop` (70% or more). Returns what changed: whether
-   a journey step was ticked, and whether the level was finished. */
+/* Is this stop open on the child's road? (Stops of earlier levels are always
+   open — see model.levelOpen; this is about the current level's order.) */
+export function onRoad(k, stop) {
+  const p = progress(k); if (!p) return null;
+  const s = p.steps.find((x) => x.stop === stop);
+  return s ? { open: s.open, done: s.done, n: s.i + 1 } : null;
+}
+
+/* A drill passed at `lv` on `stop` (70% or more): records it, and says whether
+   it ticked a station of the child's road. It never moves a level — the check does. */
 export function passed(k, stop, lv) {
   const j = rec(k), key = `${stop}@${lv}`, was = !!j.done[key];
   j.done[key] = true;
-  if (!j.level) return { ticked: false, finished: false };
-  const steps = stepsOf(j, j.level);
-  const ticked = !was && steps.some((s) => s.stop === stop && s.lv <= lv);
-  const all = steps.every((s) => stepDone(j, s));
-  if (all && !j.finished.includes(j.level)) {
-    j.finished.push(j.level);
-    const from = j.level;
-    if (j.level < TOP) j.level++;
-    j.recap = null;                       // they climbed here: the level below is fresh
-    return { ticked, finished: true, from, to: j.level };
+  if (!j.level) return { ticked: false, checkOpen: false };
+  const ticked = !was && stepsOf(j, j.level).some((s) => s.stop === stop && s.lv <= lv);
+  const p = progress(k);
+  return { ticked, checkOpen: p.checkOpen, next: p.next };
+}
+
+/* The level check: CHECK_N questions, spread across the level's stations (each
+   at its own drill level), never the same stop twice in a row. */
+export function checkItems(k, r = Math.random) {
+  const j = rec(k), steps = levelOf(j.level).steps, out = [];
+  const order = steps.map((s) => [r(), s]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+  for (let i = 0; out.length < CHECK_N; i++) {
+    const s = order[i % order.length], t = byId[s.stop];
+    out.push({ ...dress(t, t.gen(r, s.lv)), trick: s.stop });
   }
-  return { ticked, finished: false };
+  return out;
+}
+
+/* The check is passed: the level is finished and the next road opens. */
+export function checkPassed(k, right) {
+  const j = rec(k), p = progress(k);
+  if (!p || !p.checkOpen || right < CHECK_PASS) return { moved: false };
+  const from = j.level;
+  if (!j.finished.includes(from)) j.finished.push(from);
+  if (j.level < TOP) j.level++;
+  j.recap = null;                          // they climbed here: the level below is fresh
+  return { moved: j.level !== from, from, to: j.level };
 }
 
 /* ------------------------------------------------------------- the level test */

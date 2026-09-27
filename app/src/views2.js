@@ -15,7 +15,7 @@
 import { R } from './runtime.js';
 import { esc, cls } from './ui.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn } from './tricks.js';
-import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen } from './model.js';
+import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen, onJourney, firstLevel } from './model.js';
 import { STORIES } from './stories.js';
 import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
@@ -48,6 +48,21 @@ const ISLANDS = [
   { n: 3, name: 'The Outer Isles', blurb: 'Kinds of number and the primes they are built from, numbers below zero, money — and the Lighthouse, for trigonometry, bearings, scatter graphs and chance.', img: 'atlas3', pins: MAP3_PINS, w: 1920, h: 1072 },
 ];
 
+/* A stop's level badge. On a journey: "L2 · 5" for station 5 of the child's
+   road (✓ once passed), a plain "L1" for an earlier level, a locked "L6" for a
+   later one. Every place a stop is drawn in the Atlas carries one. */
+function lvBadge(k, id) {
+  const f = firstLevel(id); if (!f) return '';
+  if (!onJourney(k)) return `<b class="lvb">L${f}</b>`;
+  const L = k.journey.level, r = J.onRoad(k, id);
+  if (r) return `<b class="lvb road${r.done ? ' ok' : ''}" title="Station ${r.n} on your Level ${L} road">L${L} · ${r.done ? '✓' : r.n}</b>`;
+  return f < L ? `<b class="lvb past" title="From Level ${f}">L${f}</b>` : `<b class="lvb later" title="Opens on the Level ${f} road">🔒 L${f}</b>`;
+}
+/* The Atlas has two views for a child on a journey: their road, and the islands. */
+export const atlasSeg = (k, on) => onJourney(k) ? `<div class="seg atlas-seg" role="tablist" aria-label="Atlas view">
+    <button role="tab" aria-selected="${on === 'road'}" class="${on === 'road' ? 'on' : ''}" data-act="atlasView" data-arg="road">🧭 My road</button>
+    <button role="tab" aria-selected="${on === 'islands'}" class="${on === 'islands' ? 'on' : ''}" data-act="atlasView" data-arg="islands">🗺️ Explore the islands</button></div>` : '';
+
 export function viewAtlasMap() {
   const h = R.h, k = kid(h), f = frontier(k, h);
   const here = ROUTE[f] ? ROUTE[f].world : WORLDS.at(-1).id;
@@ -57,6 +72,7 @@ export function viewAtlasMap() {
   const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
     ${pageHead('The Number Atlas', 'Eighteen places on three islands, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
+    ${atlasSeg(k, 'islands')}
     <div class="seg isle-seg" role="tablist" aria-label="Island">${ISLANDS.map((x) => `<button role="tab" aria-selected="${x.n === isle}" class="${x.n === isle ? 'on' : ''}" data-act="isle" data-arg="${x.n}">${esc(x.name)}</button>`).join('')}</div>
     <p class="muted center-t">${esc(I.blurb)}</p>
     <div class="map-board">
@@ -66,8 +82,9 @@ export function viewAtlasMap() {
         const open = worldOpen(h, k, w.id);
         const done = ROUTE.filter((n) => n.world === w.id).every((n) => nodeDone(k, n));
         const p = I.pins[w.id];
+        const onroad = onJourney(k) ? ROUTE.filter((n) => n.world === w.id && n.kind === 'stop' && J.onRoad(k, n.id) && !J.onRoad(k, n.id).done).length : 0;
         return `<button class="map-pin${open ? '' : ' shut'}${here === w.id ? ' here' : ''}${done ? ' done' : ''}" style="left:${p.x}%;top:${p.y}%;--wi:${w.ink};--wt:${w.tint}" data-act="${open ? 'openWorld' : 'shutWorld'}" data-arg="${w.id}" aria-label="${esc(w.name)}${open ? '' : ', not reached yet'}">
-          <span class="mp-g">${w.glyph}</span><span class="mp-t"><b>${esc(isle === 2 ? w.short : w.name)}</b>${here === w.id ? '<i>You are here</i>' : done ? '<i>Done ✓</i>' : open ? '' : '<i>Not reached yet</i>'}</span></button>`;
+          <span class="mp-g">${w.glyph}</span><span class="mp-t"><b>${esc(isle === 2 ? w.short : w.name)}</b>${onroad ? `<i class="mp-road">${onroad} on your Level ${k.journey.level} road</i>` : here === w.id && !onJourney(k) ? '<i>You are here</i>' : done ? '<i>Done ✓</i>' : open ? '' : '<i>Not reached yet</i>'}</span></button>`;
       }).join('')}
     </div>
     <div class="world-list">
@@ -116,7 +133,7 @@ export function viewWorld(wid) {
           const st = t ? ((k.tricks[t.id] || {}).stars || 0) : 0;
           return `<button class="bpin${cls(done && ' done', cur && ' cur', !open && ' shut', n.kind === 'check' && ' chk', sel === n.id && ' sel')}" style="left:${xs[j]}%;top:${roadY(wid, xs[j])}%"
             data-act="pickStop" data-arg="${n.id}" aria-label="${t ? esc(t.title) : 'Checkpoint'}${open ? '' : ', locked'}">
-            <span>${n.kind === 'check' ? (done ? '🏅' : '⚑') : open ? j + 1 : '🔒'}</span>${t && st ? `<em>${'★'.repeat(st)}</em>` : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
+            <span>${n.kind === 'check' ? (done ? '🏅' : '⚑') : open ? j + 1 : '🔒'}</span>${t && st ? `<em>${'★'.repeat(st)}</em>` : ''}${t ? lvBadge(k, t.id) : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
         }).join('')}
       </div>
     </div>
@@ -125,7 +142,7 @@ export function viewWorld(wid) {
       const open = isOpen(h, k, i), done = nodeDone(k, n), cur = i === f;
       const t = n.kind === 'stop' ? byId[n.id] : null;
       return `<li class="${cls('stop', done && 'done', cur && 'cur', !open && 'shut', !t && 'check')}"><button data-act="pickStop" data-arg="${n.id}" ${open ? '' : 'aria-disabled="true"'}>
-        <span class="pin">${t ? (open ? j + 1 : '🔒') : (done ? '🏅' : '⚑')}</span><span class="st">${t ? esc(t.title) : 'Checkpoint'}</span>
+        <span class="pin">${t ? (open ? j + 1 : '🔒') : (done ? '🏅' : '⚑')}</span><span class="st">${t ? esc(t.title) : 'Checkpoint'} ${t ? lvBadge(k, t.id) : ''}</span>
         <span class="ss">${t ? starRow((k.tricks[t.id] || {}).stars || 0) : done ? 'Passed' : 'Mixed round'}</span></button></li>`;
     }).join('')}</ol>
   </section>`;
@@ -293,38 +310,44 @@ const conceptOf = (id) => CONCEPTS.find((c) => c.id === CONCEPT_OF[id]) || { nam
 
 export function viewJourney() {
   const k = kid(R.h), j = J.rec(k), p = J.progress(k);
-  if (!p) return `<section class="narrow">${pageHead('My journey', 'Ten levels, from maths age 6 to 15+')}
+  if (!p) return `<section class="narrow">${pageHead('My road', 'Ten levels, from maths age 6 to 15+')}
     <div class="card center-card"><p class="kicker">Not placed yet</p><h2>Find your level first</h2>
-      <p>A few questions move up when you get them and down when you don't, until they find your maths age. Then your journey starts there.</p>
+      <p>A few questions move up when you get them and down when you don't, until they find your maths age. Then your road starts there.</p>
       <div class="row gap center"><button class="btn primary big" data-act="startLevelTest">Find my level</button><button class="btn" data-act="startLevel1">Start at Level 1</button></div></div></section>`;
   const show = R.ui.jlv && R.ui.jlv !== p.level ? R.ui.jlv : p.level, mine = show === p.level;
   const L = J.levelOf(show);
-  const steps = J.stepsOf(j, show).map((s) => ({ ...s, done: J.stepDone(j, s), t: byId[s.stop] }));
-  const next = mine ? steps.find((s) => !s.done) : null;
-  const done = steps.filter((s) => s.done).length;
+  // your own level: the live road (strict order). Another level: past ones all done-or-open, later ones shut.
+  const steps = mine ? p.steps : J.stepsOf({ ...j, recap: null }, show).map((s) => ({ ...s, done: J.stepDone(j, s), open: show < p.level, t: byId[s.stop] }));
+  const next = mine ? p.next : null, done = steps.filter((s) => s.done).length;
   const ladder = J.LEVELS.map((x) => {
     const st = j.finished.includes(x.n) ? 'fin' : x.n === p.level ? 'now' : x.n < p.level ? 'past' : 'ahead';
-    return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}"><b>${x.n}</b><span>${esc(x.age)}</span>${st === 'fin' ? '<i>✓</i>' : ''}</button>`;
+    return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}"><b>${x.n}</b><span>${esc(x.age)}</span>${st === 'fin' ? '<i>✓</i>' : st === 'ahead' ? '<i>🔒</i>' : ''}</button>`;
   }).join('');
+  const check = `<li class="jcheck ${mine && p.checkOpen ? 'next' : mine ? 'shut' : show < p.level ? 'done' : 'shut'}">
+      <button data-act="${mine && p.checkOpen ? 'startLevelCheck' : 'jcheckShut'}" data-arg="${show}">
+        <span class="jn">${show < p.level ? '🏅' : mine && p.checkOpen ? '⚑' : '🔒'}</span>
+        <span class="jx"><b>Level ${show} check</b><span class="muted small">${J.CHECK_N} questions from the whole road · ${J.CHECK_PASS} right moves you up to ${esc(J.ageOf(Math.min(10, show + 1)))}</span></span>
+        ${mine && p.checkOpen ? '<span class="btn primary small">Take it</span>' : ''}</button></li>`;
   return `<section class="journey-page">
-    ${pageHead('My journey', 'Ten levels, from maths age 6 to 15+. Finish a journey and the next one opens.', '', `<button class="btn small" data-act="startLevelTest">Find my level again</button>`)}
+    ${pageHead('My road', `One road per level, walked in order. Every station opens the next; the check at the end moves you up.`, '', `<button class="btn small" data-act="startLevelTest">Find my level again</button>`)}
+    ${atlasSeg(k, 'road')}
     <div class="jladder" role="tablist" aria-label="The ten levels">${ladder}</div>
     <div class="card jhead">
-      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your journey' : show < p.level ? ' · behind you' : ' · ahead'}</p>
+      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your road' : show < p.level ? ' · walked' : ' · ahead of you'}</p>
         <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p></div>
-      <div class="jprog"><b class="mono">${done}/${steps.length}</b><span class="meter"><i style="width:${Math.round(100 * done / steps.length)}%"></i></span><span class="muted small">steps done</span></div>
+      <div class="jprog"><b class="mono">${done}/${steps.length}</b><span class="meter"><i style="width:${Math.round(100 * done / steps.length)}%"></i></span><span class="muted small">stations passed</span></div>
     </div>
-    ${!mine ? `<p class="muted center">${show < p.level ? `Every lesson from Level ${show} is open to you — here and in the Atlas. Only your own journey moves you on.` : `You are on Level ${p.level}. You can look at any step here, but only your own journey moves you on.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to Level ${p.level}</button></p>` : ''}
-    <ol class="jsteps">${steps.map((s, i) => {
+    ${!mine ? `<p class="muted center">${show < p.level ? `Every lesson on the Level ${show} road is open to you — here and in the Atlas.` : `This road opens when you pass the Level ${show - 1} check.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
+    <ol class="jsteps jroad">${steps.map((s, i) => {
       const c = conceptOf(s.stop), w = worldOf(s.t.world);
-      const cl = (s.done ? 'done' : s === next ? 'next' : '') + (s.recap ? ' recap' : '');
-      const head = s.recap && i === 0 ? `<li class="jsec"><b>Recap of Level ${show - 1}</b> <span class="muted small">You started here, so first a quick look back — one step for each idea Level ${show - 1} taught.</span></li>`
-        : !s.recap && i > 0 && steps[i - 1].recap ? `<li class="jsec"><b>Level ${show}</b> <span class="muted small">Now the journey itself.</span></li>` : '';
-      return `${head}<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}">
-        <span class="jn">${s.done ? '✓' : i + 1}</span>
+      const cl = (s.done ? 'done' : s === next ? 'next' : !s.open ? 'shut' : '') + (s.recap ? ' recap' : '');
+      const head = s.recap && i === 0 ? `<li class="jsec"><b>Recap of Level ${show - 1}</b> <span class="muted small">You started here, so first a quick look back — one station for each idea Level ${show - 1} taught.</span></li>`
+        : !s.recap && i > 0 && steps[i - 1].recap ? `<li class="jsec"><b>Level ${show}</b> <span class="muted small">Now the road itself.</span></li>` : '';
+      return `${head}<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}" ${s.open || s.done ? '' : 'aria-disabled="true"'}>
+        <span class="jn">${s.done ? '✓' : s.open ? i + 1 : '🔒'}</span>
         <span class="jx"><b>${esc(s.t.title)}</b><span class="muted small">${w.glyph} ${esc(w.short)} · ${c.glyph} ${esc(c.name)}</span></span>
         <span class="jlvtag lv${s.lv}">${LVNAME[s.lv]}</span>${s === next ? '<span class="btn primary small">Next</span>' : ''}</button></li>`;
-    }).join('')}</ol>
-    <p class="muted small center">A step is done when its drill is passed at that level or a harder one — here, or anywhere in the Atlas.</p>
+    }).join('')}${check}</ol>
+    <p class="muted small center">A station is passed when its drill is passed at that difficulty or harder. Stations open one at a time, in order.</p>
   </section>`;
 }

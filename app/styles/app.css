@@ -800,3 +800,16 @@ div.jcard{cursor:default}
 @media (max-width:760px){.jladder{grid-template-columns:repeat(5,1fr)}.jc-lv{width:52px;height:52px;font-size:24px}}
 .jsteps .jsec{padding:10px 4px 2px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .jsteps li.recap button{border-style:dashed}
+/* the road: stations in order, a lock on what the road has not reached */
+.jsteps li.shut button{opacity:.55;cursor:not-allowed}
+.jroad{position:relative;padding-left:4px}
+.jroad::before{content:"";position:absolute;left:31px;top:16px;bottom:16px;width:3px;border-radius:2px;background:repeating-linear-gradient(var(--line) 0 8px,transparent 8px 14px)}
+.jroad .jn{position:relative;z-index:1}
+.jcheck button{border-width:2px}.jcheck.next button{border-color:var(--treasure);background:color-mix(in srgb,var(--treasure) 18%,var(--surface))}
+.jcheck .jn{background:var(--treasure);color:#3b2a00}
+.atlas-seg{margin-bottom:14px}
+.lvb{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;font:700 10.5px/1.5 var(--ui);background:var(--surface2);color:var(--ink);vertical-align:middle;white-space:nowrap}
+.lvb.road{background:var(--action);color:var(--action-ink)}.lvb.road.ok{background:var(--mastered);color:#fff}
+.lvb.later{opacity:.75}
+.bpin .lvb{position:absolute;top:-12px;left:50%;transform:translateX(-50%);margin:0;box-shadow:var(--sh)}
+.mp-road{color:var(--action);font-weight:700}

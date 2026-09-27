@@ -75,6 +75,17 @@ async function run(vp, tag) {
   // the first journey step opens its stop with the journey's drill level chosen
   await page.click('.jsteps li.next button'); await page.waitForSelector('.stop-page');
   ok(await page.evaluate(() => !!window.__bzm.R.ui.jstep), 'a journey step opens as a journey step');
+  // the road is linear: the second station is locked; the Atlas opens on the road, with level badges
+  await page.evaluate(() => window.__bzm.go('atlas')); await page.waitForSelector('.jroad');
+  ok(await page.locator('.jroad li.shut').count() > 5 && await page.locator('.jcheck').count() === 1, 'the Atlas opens on My road: stations locked beyond the next, a level check at the end');
+  await page.click('.jroad li.shut button', { force: true }); await page.waitForTimeout(150);
+  ok(await page.evaluate(() => window.__bzm.R.ui.nav) === 'atlas', 'a locked station does not open');
+  await shot('02d-road');
+  await page.evaluate(() => window.__bzm.fire('atlasView', 'islands')); await page.waitForSelector('.map-board');
+  ok(await page.locator('.mp-road').count() >= 1, 'the island map says how many road stations each place holds');
+  await page.evaluate(() => window.__bzm.fire('openWorld', 'market')); await page.waitForSelector('.board');
+  ok(await page.locator('.bpin .lvb').count() >= 3, 'world boards carry a level badge on each stop');
+  await shot('02e-badges');
   await page.evaluate(() => window.__bzm.go('atlas'));
   await page.waitForSelector('.map-board');
   await page.waitForTimeout(400);
