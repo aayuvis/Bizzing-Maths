@@ -1,18 +1,83 @@
-The three families here are used under the SIL Open Font License 1.1. Each
-family's licence, as published with the font, is alongside; the copyright
-lines below are quoted from those files rather than from memory.
+Every family here is used under the SIL Open Font License 1.1. Each
+family's licence, as published with the font in the google/fonts repository,
+is alongside; the copyright lines below are quoted from those files rather
+than from memory.
 
-  Fraunces        Copyright 2018 The Fraunces Project Authors
-                  https://github.com/undercasetype/Fraunces
-                  OFL-fraunces.txt
+  Sono  (Graph Paper · digits)
+      Copyright 2020 The Sono Project Authors (https://github.com/sursly/sono)
+      OFL-sono.txt
 
-  Hanken Grotesk  Copyright 2021 The Hanken Grotesk Project Authors
-                  https://github.com/marcologous/hanken-grotesk
-                  OFL-hankengrotesk.txt
+  Baloo 2  (Graph Paper · display)
+      Copyright 2019 The Baloo 2 Project Authors (https://github.com/EkType/Baloo2)
+      OFL-baloo2.txt
 
-  Sono            Copyright 2020 The Sono Project Authors
-                  https://github.com/sursly/sono
-                  OFL-sono.txt
+  Nunito  (Graph Paper · UI)
+      Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+      OFL-nunito.txt
+
+  Kalam  (Chalkboard · display)
+      Copyright (c) 2014, Indian Type Foundry (info@indiantypefoundry.com).
+      OFL-kalam.txt
+
+  Atkinson Hyperlegible Next  (Chalkboard · UI)
+      Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next)
+      OFL-atkinsonhyperlegiblenext.txt
+
+  Atkinson Hyperlegible Mono  (Chalkboard · digits)
+      Copyright 2020-2024 The Atkinson Hyperlegible Mono Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next-mono)
+      OFL-atkinsonhyperlegiblemono.txt
+
+  Space Grotesk  (Blueprint · display)
+      Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+      OFL-spacegrotesk.txt
+
+  Archivo  (Blueprint · UI)
+      Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)
+      OFL-archivo.txt
+
+  JetBrains Mono  (Blueprint · digits)
+      Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+      OFL-jetbrainsmono.txt
+
+  Orbitron  (Orbit · display)
+      Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font Name: "Orbitron"
+      OFL-orbitron.txt
+
+  Exo 2  (Orbit · UI)
+      Copyright 2013 The Exo 2 Project Authors (https://github.com/googlefonts/Exo-2.0)
+      OFL-exo2.txt
+
+  Azeret Mono  (Orbit · digits)
+      Copyright 2021 The Azeret Project Authors (https://github.com/displaay/azeret)
+      OFL-azeretmono.txt
+
+  Yatra One  (Rangoli · display)
+      Copyright 2014 The Yatra Project Authors.
+      OFL-yatraone.txt
+
+  Mukta  (Rangoli · UI)
+      Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved.
+      OFL-mukta.txt
+
+  Red Hat Mono  (Rangoli · digits)
+      Copyright 2024 The Red Hat Project Authors (https://github.com/RedHatOfficial/RedHatFont)
+      OFL-redhatmono.txt
+
+  Pixelify Sans  (Arcade · display)
+      Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
+      OFL-pixelifysans.txt
+
+  Lexend  (Arcade · UI)
+      Copyright 2018 The Lexend Project Authors (https://github.com/googlefonts/lexend), with Reserved Font Name “RevReading Lexend”.
+      OFL-lexend.txt
+
+  Kode Mono  (Arcade · digits)
+      Copyright 2023 The Kode Mono Project Authors (https://github.com/isaozler/kode-mono)
+      OFL-kodemono.txt
+
+Baloo 2 and Mukta (Ek Type, Mumbai) and Kalam (Indian Type Foundry) were
+chosen partly for where they come from: Indian foundries, the same family of
+type as Bizzing India.
 
 The .woff2 files are the latin and latin-ext subsets as served by Google
 Fonts. They are checked in rather than fetched at build time so that the build

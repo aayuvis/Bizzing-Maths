@@ -7,7 +7,7 @@ import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from '.
 import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
-import { newHousehold, newKid, kid, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
+import { newHousehold, newKid, kid, AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
@@ -16,6 +16,7 @@ import * as V2 from './views2.js';
 import { toolById, SHELF } from './library/index.js';
 import { STORIES } from './stories.js';
 import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize } from './puzzles.js';
+import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor } from './themes.js';
 
 const root = document.getElementById('app');
 
@@ -23,8 +24,16 @@ const root = document.getElementById('app');
 
 R.h = Store.loadHousehold() || newHousehold();
 R.sound = Store.loadDevice('sound', true); setSound(R.sound);
+/* Light/dark is the device's. data-mode is ALWAYS set, so themes.css never has
+   to guess the system scheme: a saved choice wins, otherwise the system's,
+   followed live until the child picks one with the moon button. */
 const mode = Store.loadDevice('mode', null);
-if (mode) document.documentElement.setAttribute('data-mode', mode);
+const sysDark = matchMedia('(prefers-color-scheme: dark)');
+document.documentElement.setAttribute('data-mode', mode || (sysDark.matches ? 'dark' : 'light'));
+sysDark.addEventListener && sysDark.addEventListener('change', (e) => {
+  if (Store.loadDevice('mode', null)) return;
+  document.documentElement.setAttribute('data-mode', e.matches ? 'dark' : 'light'); syncThemeColor();
+});
 
 function save() { Store.saveHousehold(R.h); }
 
@@ -78,6 +87,7 @@ function go(nav, arg = null, fromHash = false) {
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
   if (nav === 'grownups' && R.ui.nav !== 'grownups') { R.ui.gate = false; R.ui.gateIn = ''; }
+  if (nav !== 'me') R.ui.avEdit = false;
   R.ui.nav = nav; R.ui.arg = arg; R.ui.confirm = null;
   hush();
   if (!fromHash) writeHash();
@@ -117,6 +127,7 @@ function screen() {
 
 function render() {
   const focusId = document.activeElement && document.activeElement.id;
+  applyTheme(themeOf(kid(R.h)));   // the active child's theme; switching child switches it
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
@@ -569,6 +580,8 @@ on('daily', () => daily());
 
 on('draftBand', (b) => { R.ui.draft.band = b; render(); });
 on('draftAv', (a) => { R.ui.draft.avatar = a; render(); });
+on('avEdit', () => { R.ui.avEdit = !R.ui.avEdit; render(); });
+on('setAv', (a) => { const k = kid(R.h); if (!k || !AVATARS.includes(a)) return; k.avatar = a; Store.saveNow(R.h); render(); });
 on('createKid', () => {
   const d = R.ui.draft; if (!d || !d.name.trim() || !d.band) return;
   const k = newKid(d.name, d.band, d.avatar);
@@ -598,7 +611,18 @@ on('sound', () => { R.sound = !R.sound; setSound(R.sound); Store.saveDevice('sou
 on('mode', () => {
   const cur = document.documentElement.getAttribute('data-mode') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const nx = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-mode', nx); Store.saveDevice('mode', nx);
+  document.documentElement.setAttribute('data-mode', nx); Store.saveDevice('mode', nx); syncThemeColor();
+});
+/* themes belong to the child: chosen on their page, applied at once */
+on('theme', (id) => {
+  const k = kid(R.h); if (!k || !isTheme(id)) return;
+  k.prefs.theme = id; save(); render();
+  const el = document.getElementById('theme-' + id); if (el) el.focus();
+});
+on('themes', () => {
+  go('me');
+  const el = document.getElementById('themes'); if (el) el.scrollIntoView({ block: 'start' });
+  const on1 = document.querySelector('.theme-card[aria-checked="true"]'); if (on1) on1.focus({ preventScroll: true });
 });
 on('testerOff', () => { R.h.parent.tester = false; save(); render(); });
 
@@ -658,12 +682,34 @@ root.addEventListener('pointerdown', (e) => {
   padKey(b.dataset.k);
 });
 
+/* the avatar picker: arrows move focus through the 6-wide grid of all five
+   packs (up/down cross between packs), Home/End jump; Enter/Space choose,
+   natively, because every face is a button */
+function avKey(e) {
+  const t = e.target; if (!t || !t.classList || !t.classList.contains('av-pick')) return false;
+  const all = [...t.closest('[data-avgrid]').querySelectorAll('.av-pick')], i = all.indexOf(t);
+  const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 6, ArrowUp: -6 }[e.key];
+  const j = e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : step != null ? i + step : null;
+  if (j == null) return false;
+  e.preventDefault();
+  const n = all[Math.max(0, Math.min(all.length - 1, j))];
+  all.forEach((b) => b.setAttribute('tabindex', b === n ? '0' : '-1'));
+  n.focus(); n.scrollIntoView({ block: 'nearest' });
+  return true;
+}
 addEventListener('keydown', (e) => {
   if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
+  if (avKey(e)) return;
   if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // the theme picker is a radio group: arrows move the choice and apply it (Enter/Space click it)
+  if (t && t.classList && t.classList.contains('theme-card') && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
+    e.preventDefault();
+    const i = THEMES.findIndex((x) => x.id === t.dataset.arg), d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+    return fire('theme', THEMES[(i + d + THEMES.length) % THEMES.length].id);
+  }
   const nav = R.ui.nav;
   const run = R.run;
   // choices: 1/2 (and y/n)

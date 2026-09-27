@@ -867,7 +867,7 @@ export const quiz = (card, r = rnd) => range(5, () => quizQ(card, r));
 const bandName = { '6-7': 'Ages 6–7', '8-10': 'Ages 8–10', '11-14': 'Ages 11–14' };
 const stopTitle = Object.fromEntries(TRICKS.map((t) => [t.id, t.title]));
 const rival = Object.fromEntries(RIVALS.map((b) => [b.id, b]));
-const av = (id, size) => `<img class="av" src="avatars/${esc(id)}.png" width="${size}" height="${size}" alt="" loading="lazy" decoding="async">`;
+const av = (id, size) => `<img class="av" src="avatars/${esc(id)}.webp" width="${size}" height="${size}" alt="" loading="lazy" decoding="async">`;
 const got = (ctx, id) => !!(ctx.data.collected && ctx.data.collected[id]);
 const count = (ctx) => CARDS.filter((c) => got(ctx, c.id)).length;
 

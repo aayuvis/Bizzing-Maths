@@ -1,0 +1,334 @@
+/* themes.css — the six looks a child can choose (src/themes.js lists them).
+
+   A theme belongs to the CHILD (k.prefs.theme) and is applied as data-theme on
+   <html>; light/dark stays a device setting (data-mode, always resolved by
+   main.js at boot, so these rules never have to guess the system's scheme).
+
+   Every theme sets every colour token tokens.css defines, in both modes, plus
+   its three faces:
+     --display  headings, the brand, the big numbers on cards
+     --ui       everything you read
+     --mono     digits — tabular, so a column of answers lines up
+   The answer-state colours (mastered/fix/medium/quick) and treasure gold are
+   the family's semantics and are NOT themed: green means right in every
+   theme, and gold is always stars.
+
+   test/themes.mjs parses this file and holds every theme × mode to WCAG:
+   ink on tint/paper/surface/surface2 and action-ink on action ≥ 4.5:1,
+   muted on paper/surface ≥ 3:1. Keep the tested tokens as #hex.
+
+   The motif is a fixed layer behind everything (<div class="motif"> in
+   index.html, outside #app so a re-render never restarts it). It draws
+   shapes only — never a letter or a digit — animates only transform and
+   opacity, loops in ≤ 60s, and stops under prefers-reduced-motion.
+
+   The rules are written as ":root[data-theme=x], [data-theme=x]" so a
+   swatch card on the picker can carry data-theme="x" and preview that
+   theme's colours and faces inside whatever theme is active. */
+
+/* ================================================================ 1 · Graph Paper (default) */
+:root[data-theme="graph"],[data-theme="graph"]{
+  --sw2:#E0457B;
+  --display:"Baloo 2","Nunito",system-ui,sans-serif;
+  --ui:"Nunito",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
+  --tint:#F3F7FD; --tint-deep:#E6EEF9; --paper:#FFFFFF; --surface:#FFFFFF; --surface2:#F1F5FB;
+  --line:#D5DFEE; --line-soft:#E5ECF6;
+  --ink:#1B2238; --muted:#56617F;
+  --action:#2D5BD8; --action-ink:#FFFFFF; --action-tint:#E3EAFB; --action-deep:#1E43A8;
+  --dot:rgb(45 91 216 / .10); --grid:rgb(45 91 216 / .075); --grid-major:rgb(45 91 216 / .15);
+  --ground:linear-gradient(var(--grid-major) 1px,transparent 1px) 0 0/120px 120px,
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px) 0 0/120px 120px,
+    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/24px 24px,
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/24px 24px;
+  --motif-a:#E0457B; --motif-b:#2D5BD8; --motif-c:#1B2238; --motif-o:.22;
+}
+:root[data-mode="dark"][data-theme="graph"],[data-mode="dark"] [data-theme="graph"]{
+  --sw2:#F07AA5;
+  --tint:#0F1428; --tint-deep:#0A0E1E; --paper:#141A33; --surface:#19203D; --surface2:#1F2748;
+  --line:#2B335A; --line-soft:#232A4C;
+  --ink:#E6EAF7; --muted:#9AA3C4;
+  --action:#7FA2F5; --action-ink:#0B1433; --action-tint:#1F2A55; --action-deep:#A9C0FA;
+  --dot:rgb(127 162 245 / .10); --grid:rgb(127 162 245 / .06); --grid-major:rgb(127 162 245 / .12);
+  --motif-a:#F07AA5; --motif-b:#7FA2F5; --motif-c:#E6EAF7; --motif-o:.26;
+}
+
+/* ================================================================ 2 · Chalkboard */
+:root[data-theme="chalk"],[data-theme="chalk"]{
+  --sw2:#2F6B4F;
+  --display:"Kalam","Atkinson Hyperlegible Next",cursive;
+  --ui:"Atkinson Hyperlegible Next",system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,monospace;
+  --tint:#DCE8DF; --tint-deep:#CEDFD2; --paper:#F7FAF6; --surface:#FFFFFF; --surface2:#EAF2EC;
+  --line:#CADACF; --line-soft:#DDE8E0;
+  --ink:#15291F; --muted:#4D6457;
+  --action:#1C6488; --action-ink:#FFFFFF; --action-tint:#DDEEF5; --action-deep:#134B67;
+  --dot:rgb(21 41 31 / .09);
+  --ground:radial-gradient(ellipse 60% 40% at 18% 12%,rgb(255 255 255 / .55),transparent 70%) fixed,
+    radial-gradient(ellipse 50% 35% at 85% 78%,rgb(255 255 255 / .4),transparent 70%) fixed,
+    radial-gradient(var(--dot) 1px,transparent 1.2px) 0 0/26px 26px;
+  --motif-a:#1F4A35; --motif-b:#1C6488; --motif-c:#1F4A35; --motif-o:.16;
+}
+:root[data-mode="dark"][data-theme="chalk"],[data-mode="dark"] [data-theme="chalk"]{
+  --sw2:#F2F5EC;
+  --tint:#1C3629; --tint-deep:#162C21; --paper:#21402F; --surface:#264836; --surface2:#2C523E;
+  --line:#3C634F; --line-soft:#325A45;
+  --ink:#F2F5EC; --muted:#AFC6B6;
+  --action:#A3DBF3; --action-ink:#0C2A36; --action-tint:#2D5A5A; --action-deep:#CBEBF9;
+  --dot:rgb(242 245 236 / .07);
+  --ground:radial-gradient(ellipse 60% 40% at 18% 12%,rgb(242 245 236 / .07),transparent 70%) fixed,
+    radial-gradient(ellipse 50% 35% at 85% 78%,rgb(242 245 236 / .05),transparent 70%) fixed,
+    radial-gradient(var(--dot) 1px,transparent 1.2px) 0 0/26px 26px;
+  --motif-a:#F2F5EC; --motif-b:#A3DBF3; --motif-c:#F2F5EC; --motif-o:.16;
+}
+
+/* ================================================================ 3 · Blueprint */
+:root[data-theme="blueprint"],[data-theme="blueprint"]{
+  --sw2:#D0452F;
+  --display:"Space Grotesk","Archivo",system-ui,sans-serif;
+  --ui:"Archivo",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --tint:#E7F0FA; --tint-deep:#D8E6F6; --paper:#F7FAFE; --surface:#FFFFFF; --surface2:#EDF3FB;
+  --line:#C6D8EE; --line-soft:#DAE6F4;
+  --ink:#0F2744; --muted:#48617F;
+  --action:#0B5CAD; --action-ink:#FFFFFF; --action-tint:#DCEAF8; --action-deep:#084785;
+  --dot:rgb(11 92 173 / .10); --grid:rgb(11 92 173 / .07); --grid-major:rgb(11 92 173 / .14);
+  --ground:linear-gradient(var(--grid-major) 1px,transparent 1px) 0 0/96px 96px,
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px) 0 0/96px 96px,
+    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/12px 12px,
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/12px 12px;
+  --motif-a:#0B5CAD; --motif-b:#D0452F; --motif-c:#0F2744; --motif-o:.2;
+}
+:root[data-mode="dark"][data-theme="blueprint"],[data-mode="dark"] [data-theme="blueprint"]{
+  --sw2:#F2F8FF;
+  --tint:#0A3160; --tint-deep:#08284F; --paper:#0D3A70; --surface:#11427D; --surface2:#164B8A;
+  --line:#2D65A1; --line-soft:#225893;
+  --ink:#F2F8FF; --muted:#A8C5E6;
+  --action:#86DEFF; --action-ink:#062A4A; --action-tint:#1D5C97; --action-deep:#BDEFFF;
+  --dot:rgb(242 248 255 / .10); --grid:rgb(242 248 255 / .06); --grid-major:rgb(242 248 255 / .13);
+  --motif-a:#F2F8FF; --motif-b:#86DEFF; --motif-c:#F2F8FF; --motif-o:.24;
+}
+
+/* ================================================================ 4 · Orbit */
+:root[data-theme="orbit"],[data-theme="orbit"]{
+  --sw2:#E0457B;
+  --display:"Orbitron","Exo 2",system-ui,sans-serif;
+  --ui:"Exo 2",system-ui,-apple-system,sans-serif;
+  --mono:"Azeret Mono",ui-monospace,monospace;
+  --tint:#ECEBFA; --tint-deep:#DFDDF4; --paper:#FAFAFF; --surface:#FFFFFF; --surface2:#F1F0FB;
+  --line:#DAD8EF; --line-soft:#E7E5F6;
+  --ink:#1A1838; --muted:#5A5782;
+  --action:#4A4ED6; --action-ink:#FFFFFF; --action-tint:#E5E5FB; --action-deep:#3336A6;
+  --dot:rgb(74 78 214 / .16);
+  --ground:radial-gradient(var(--dot) 1px,transparent 1.6px) 0 0/53px 53px,
+    radial-gradient(var(--dot) 1px,transparent 1.6px) 19px 31px/89px 89px,
+    radial-gradient(var(--dot) 1.4px,transparent 2px) 41px 7px/137px 137px;
+  --motif-a:#4A4ED6; --motif-b:#E0457B; --motif-c:#F0B429; --motif-d:#1FA3A3; --motif-o:.24;
+}
+:root[data-mode="dark"][data-theme="orbit"],[data-mode="dark"] [data-theme="orbit"]{
+  --sw2:#FF8FB8;
+  --tint:#070A1C; --tint-deep:#04060F; --paper:#0E1229; --surface:#141936; --surface2:#1B2144;
+  --line:#2A3160; --line-soft:#212850;
+  --ink:#EAEBFF; --muted:#9EA3CF;
+  --action:#949FFF; --action-ink:#0A0D26; --action-tint:#262D63; --action-deep:#BEC5FF;
+  --dot:rgb(234 235 255 / .30);
+  --motif-a:#C9CCFF; --motif-b:#FF8FB8; --motif-c:#FFD166; --motif-d:#5FE0D0; --motif-o:.34;
+}
+
+/* ================================================================ 5 · Rangoli */
+:root[data-theme="rangoli"],[data-theme="rangoli"]{
+  --sw2:#E8860C;
+  --display:"Yatra One","Mukta",system-ui,sans-serif;
+  --ui:"Mukta",system-ui,-apple-system,sans-serif;
+  --mono:"Red Hat Mono",ui-monospace,monospace;
+  --tint:#FFF0DE; --tint-deep:#FBE2C6; --paper:#FFF9F1; --surface:#FFFFFF; --surface2:#FFF1E3;
+  --line:#EFD6BA; --line-soft:#F6E5D0;
+  --ink:#2D1A10; --muted:#78583F;
+  --action:#B8175A; --action-ink:#FFFFFF; --action-tint:#FBE2EC; --action-deep:#8F1046;
+  --dot:rgb(184 23 90 / .16);
+  --ground:radial-gradient(var(--dot) 1.5px,transparent 2px) 0 0/28px 28px;
+  --motif-a:#E8860C; --motif-b:#B8175A; --motif-c:#1F8A70; --motif-o:.2;
+}
+:root[data-mode="dark"][data-theme="rangoli"],[data-mode="dark"] [data-theme="rangoli"]{
+  --sw2:#FFB040;
+  --tint:#1D0E13; --tint-deep:#150A0E; --paper:#26141B; --surface:#2F1922; --surface2:#3A1F2A;
+  --line:#57303F; --line-soft:#472734;
+  --ink:#FFEFE3; --muted:#D3AE9F;
+  --action:#FF80B5; --action-ink:#2A0A17; --action-tint:#512438; --action-deep:#FFB5D3;
+  --dot:rgb(255 176 64 / .14);
+  --motif-a:#FFB040; --motif-b:#FF80B5; --motif-c:#5FD3B0; --motif-o:.2;
+}
+
+/* ================================================================ 6 · Arcade */
+:root[data-theme="arcade"],[data-theme="arcade"]{
+  --sw2:#0EA5C6;
+  --display:"Pixelify Sans","Lexend",system-ui,sans-serif;
+  --ui:"Lexend",system-ui,-apple-system,sans-serif;
+  --mono:"Kode Mono",ui-monospace,monospace;
+  --tint:#F1F2FF; --tint-deep:#E3E5FB; --paper:#FBFBFF; --surface:#FFFFFF; --surface2:#EEF0FC;
+  --line:#D4D8F0; --line-soft:#E5E8F8;
+  --ink:#14142B; --muted:#545676;
+  --action:#6A2BD6; --action-ink:#FFFFFF; --action-tint:#ECE3FC; --action-deep:#5020A8;
+  --dot:rgb(106 43 214 / .07);
+  --ground:conic-gradient(var(--dot) 25%,transparent 0 50%,var(--dot) 0 75%,transparent 0) 0 0/32px 32px;
+  --motif-a:#6A2BD6; --motif-b:#0EA5C6; --motif-c:#E0457B; --motif-d:#F0A018; --motif-o:.2;
+}
+:root[data-mode="dark"][data-theme="arcade"],[data-mode="dark"] [data-theme="arcade"]{
+  --sw2:#22E3FF;
+  --tint:#0B0B1A; --tint-deep:#070712; --paper:#111127; --surface:#171733; --surface2:#1E1E42;
+  --line:#2F2F62; --line-soft:#25254F;
+  --ink:#F2F2FF; --muted:#A5A5D3;
+  --action:#FF5AD9; --action-ink:#1E0419; --action-tint:#3F1A45; --action-deep:#FF9BE8;
+  --dot:rgb(120 120 255 / .07);
+  --motif-a:#FF5AD9; --motif-b:#22E3FF; --motif-c:#9CFF57; --motif-d:#FFD23F; --motif-o:.22;
+}
+
+/* ================================================================ per-theme type tuning */
+/* Orbitron is wide: fine for a name and the brand, too loud for a long title. */
+:root[data-theme="orbit"] :is(h1,h2,h3){letter-spacing:0;font-weight:700}
+:root[data-theme="orbit"] h1{font-size:calc(var(--fs-h1) * .82)}
+:root[data-theme="orbit"] :is(h2,h3){font-size:.86em}
+:root[data-theme="orbit"] :is(.brand-t,.hname){letter-spacing:.01em}
+:root[data-theme="orbit"] .hname{font-size:28px}
+/* single-weight or hand-drawn display faces: the negative tracking the
+   geometric faces want would crush them */
+:root:is([data-theme="chalk"],[data-theme="rangoli"],[data-theme="arcade"]) :is(h1,h2,h3,.brand-t,.hname){letter-spacing:0}
+:root[data-theme="rangoli"] :is(h1,h2,h3,.brand-t,.hname){font-weight:400}
+:root[data-theme="chalk"] :is(.brand-t,.hname,h1){font-weight:700}
+
+/* ================================================================ the motif layer */
+.motif{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;opacity:var(--motif-o,.2);contain:strict}
+.motif i{position:absolute;display:none;will-change:transform}
+.motif i::before,.motif i::after{content:"";position:absolute;inset:0}
+/* a mask layer: the shape comes from --m, the colour from the theme */
+.motif i::before{background:var(--c,var(--motif-a));
+  -webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
+.motif i::after{display:none}
+
+/* ---- Graph Paper: axes, and two curves that plot themselves ---- */
+:root[data-theme="graph"] .motif i:nth-child(-n+3){display:block}
+:root[data-theme="graph"] .motif i:nth-child(1){inset:0;will-change:auto}
+:root[data-theme="graph"] .motif i:nth-child(1)::before{-webkit-mask:none;mask:none;background:
+  linear-gradient(var(--motif-c),var(--motif-c)) 0 64%/100% 2px no-repeat,
+  linear-gradient(var(--motif-c),var(--motif-c)) 12% 0/2px 100% no-repeat;opacity:.45}
+:root[data-theme="graph"] .motif i:nth-child(2),
+:root[data-theme="graph"] .motif i:nth-child(3){overflow:hidden;animation:bzWipeO 26s cubic-bezier(.45,0,.25,1) infinite}
+:root[data-theme="graph"] .motif i:nth-child(2){left:0;right:0;top:46%;height:36%}
+:root[data-theme="graph"] .motif i:nth-child(2)::before{animation:bzWipeI 26s cubic-bezier(.45,0,.25,1) infinite;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 300' preserveAspectRatio='none'><path d='M0 150Q130 -60 260 150T520 150T780 150T1040 150' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>")}
+:root[data-theme="graph"] .motif i:nth-child(3){right:4%;top:6%;width:min(46vw,420px);aspect-ratio:1;animation-delay:-13s}
+:root[data-theme="graph"] .motif i:nth-child(3)::before{--c:var(--motif-b);animation:bzWipeI 26s cubic-bezier(.45,0,.25,1) infinite;animation-delay:-13s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><path d='M40 30Q200 690 360 30' fill='none' stroke='black' stroke-width='4' stroke-linecap='round'/><circle cx='200' cy='360' r='7'/><circle cx='40' cy='30' r='5'/><circle cx='360' cy='30' r='5'/></svg>")}
+@keyframes bzWipeO{0%{transform:translateX(-100%);opacity:1}45%{transform:none;opacity:1}86%{transform:none;opacity:1}100%{transform:none;opacity:0}}
+@keyframes bzWipeI{0%{transform:translateX(100%)}45%,100%{transform:none}}
+
+/* ---- Chalkboard: constructions drifting, like last lesson not quite rubbed off ---- */
+:root[data-theme="chalk"] .motif i:nth-child(-n+5){display:block;width:clamp(120px,24vmin,260px);aspect-ratio:1;animation:bzDrift 48s ease-in-out infinite alternate}
+:root[data-theme="chalk"] .motif i:nth-child(1){left:4%;top:14%;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M15 85L15 20L85 85Z'/><path d='M15 75h10v10'/></svg>")}
+:root[data-theme="chalk"] .motif i:nth-child(2){right:5%;top:22%;animation-duration:56s;animation-delay:-20s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><circle cx='50' cy='50' r='38'/><path d='M50 50L82 30'/><circle cx='50' cy='50' r='2' fill='black'/></svg>")}
+:root[data-theme="chalk"] .motif i:nth-child(3){left:8%;bottom:8%;animation-duration:52s;animation-delay:-8s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M10 70A40 40 0 0 1 90 70Z'/><path d='M90 70L80 70M88.6 59.6L82.8 61.2M84.6 50L79.4 53M78.3 41.7L71.2 48.8M70 35.4L67 40.6M60.4 31.4L58.8 37.2M50 30L50 40M39.6 31.4L41.2 37.2M30 35.4L33 40.6M21.7 41.7L28.8 48.8M15.4 50L20.6 53M11.4 59.6L17.2 61.2M10 70L20 70'/><circle cx='50' cy='70' r='2' fill='black'/></svg>")}
+:root[data-theme="chalk"] .motif i:nth-child(4){right:6%;bottom:6%;animation-duration:60s;animation-delay:-33s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'><path d='M40 60L40 36L72 60Z'/><path d='M16 36h24v24h-24z'/><path d='M40 60h32v32h-32z'/><path d='M40 36L72 60L96 28L64 4Z'/></svg>")}
+:root[data-theme="chalk"] .motif i:nth-child(5){left:44%;top:6%;width:clamp(90px,16vmin,180px);animation-duration:44s;animation-delay:-15s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M15 80L85 80M15 80L70 30'/><path d='M40 80A25 25 0 0 0 33.5 63.2'/><path d='M46 80A31 31 0 0 0 38 60'/></svg>")}
+@keyframes bzDrift{0%{transform:translate(0,0) rotate(-3deg)}50%{transform:translate(2.5vw,-1.5vh) rotate(2deg)}100%{transform:translate(-1.5vw,2vh) rotate(5deg)}}
+
+/* ---- Blueprint: a hexagon constructed with compass alone, a sweep going round, a bisector ---- */
+:root[data-theme="blueprint"] .motif i:nth-child(-n+3){display:block}
+:root[data-theme="blueprint"] .motif i:nth-child(1){right:-6vmin;top:8%;width:min(62vmin,560px);aspect-ratio:1;animation:bzBreathe 18s ease-in-out infinite alternate;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='black' stroke-width='.9'><circle cx='100' cy='100' r='80'/><path d='M30.7 60A80 80 0 0 0 169.3 60M100 20A80 80 0 0 0 169.3 140M169.3 60A80 80 0 0 0 100 180M169.3 140A80 80 0 0 0 30.7 140M100 180A80 80 0 0 0 30.7 60M30.7 140A80 80 0 0 0 100 20' stroke-dasharray='3 3'/><path d='M100 20L169.3 60L169.3 140L100 180L30.7 140L30.7 60Z' stroke-width='1.4'/><path d='M100 4V196M4 100H196' stroke-dasharray='8 3 2 3'/><circle cx='100' cy='100' r='2.5' fill='black'/></svg>")}
+/* the compass: a radius and the fading arc it leaves behind, going round once a minute */
+:root[data-theme="blueprint"] .motif i:nth-child(2){right:calc(-6vmin + min(62vmin,560px) * .1);top:calc(8% + min(62vmin,560px) * .1);width:calc(min(62vmin,560px) * .8);aspect-ratio:1;animation:bzSpin 60s linear infinite}
+:root[data-theme="blueprint"] .motif i:nth-child(2)::before{background:conic-gradient(from 0deg,transparent 0 250deg,var(--motif-b) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2.5px),black 100%,transparent 100%);mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2.5px),black 100%,transparent 100%)}
+:root[data-theme="blueprint"] .motif i:nth-child(2)::after{display:block;inset:0 auto 50% calc(50% - 1px);width:2px;background:linear-gradient(var(--motif-b),transparent 140%)}
+:root[data-theme="blueprint"] .motif i:nth-child(3){left:3%;bottom:4%;width:min(40vmin,360px);aspect-ratio:1;animation:bzBreathe 22s ease-in-out infinite alternate-reverse;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round'><path d='M50 100H150' stroke-width='1.6'/><circle cx='50' cy='100' r='2.5' fill='black'/><circle cx='150' cy='100' r='2.5' fill='black'/><path d='M85 39.4A70 70 0 0 1 107.3 59.8M107.3 140.2A70 70 0 0 1 85 160.6M92.7 59.8A70 70 0 0 1 115 39.4M115 160.6A70 70 0 0 1 92.7 140.2'/><path d='M100 30V170' stroke-dasharray='6 4'/><path d='M100 100h8v-8h-8'/></svg>")}
+@keyframes bzSpin{to{transform:rotate(1turn)}}
+@keyframes bzBreathe{from{opacity:.55}to{opacity:1}}
+
+/* ---- Orbit: three planets on tilted ellipses, and a sky that twinkles ---- */
+:root[data-theme="orbit"] .motif i:nth-child(-n+6){display:block}
+/* the orbits, drawn to the same numbers the planets move by: 1 unit = .4vmin */
+:root[data-theme="orbit"] .motif i:nth-child(1){left:calc(72% - 40vmin);top:calc(58% - 40vmin);width:80vmin;height:80vmin;rotate:-16deg;will-change:auto;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='black'><ellipse cx='100' cy='100' rx='40' ry='16' stroke-width='.6'/><ellipse cx='100' cy='100' rx='65' ry='26' stroke-width='.6'/><ellipse cx='100' cy='100' rx='92' ry='37' stroke-width='.6' stroke-dasharray='2 3'/><circle cx='100' cy='100' r='7' fill='black' stroke='none'/></svg>")}
+:root[data-theme="orbit"] .motif i:nth-child(1)::after{display:block;inset:calc(50% - 7vmin);border-radius:50%;background:radial-gradient(var(--motif-c),transparent 70%);opacity:.8}
+/* a planet: the i swings in x, its ::before swings in y a quarter-period behind */
+:root[data-theme="orbit"] .motif i:nth-child(n+2):nth-child(-n+4){left:72%;top:58%;width:0;height:0;rotate:-16deg;animation:bzOx var(--t) ease-in-out var(--d,0s) infinite alternate}
+:root[data-theme="orbit"] .motif i:nth-child(n+2):nth-child(-n+4)::before{inset:auto;left:calc(var(--s) / -2);top:calc(var(--s) / -2);width:var(--s);height:var(--s);border-radius:50%;
+  -webkit-mask:none;mask:none;background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--c) 40%,white),var(--c) 70%);
+  animation:bzOy var(--t) ease-in-out calc(var(--d,0s) - var(--t) / 2) infinite alternate}
+:root[data-theme="orbit"] .motif i:nth-child(2){--t:9s;--ax:16vmin;--ay:6.4vmin;--s:2.2vmin;--c:var(--motif-b)}
+:root[data-theme="orbit"] .motif i:nth-child(3){--t:15s;--ax:26vmin;--ay:10.4vmin;--s:3.4vmin;--c:var(--motif-a);--d:-4s}
+:root[data-theme="orbit"] .motif i:nth-child(4){--t:24s;--ax:36.8vmin;--ay:14.8vmin;--s:2.8vmin;--c:var(--motif-d);--d:-17s}
+@keyframes bzOx{from{transform:translateX(calc(var(--ax) * -1))}to{transform:translateX(var(--ax))}}
+@keyframes bzOy{from{transform:translateY(calc(var(--ay) * -1))}to{transform:translateY(var(--ay))}}
+/* stars: two fields out of step, so the sky never blinks all at once */
+:root[data-theme="orbit"] .motif i:nth-child(5),
+:root[data-theme="orbit"] .motif i:nth-child(6){inset:0;will-change:opacity;animation:bzTwinkle 5s ease-in-out infinite alternate}
+:root[data-theme="orbit"] .motif i:nth-child(5)::before{-webkit-mask:none;mask:none;background:
+  radial-gradient(var(--motif-a) 1.2px,transparent 2px) 13px 17px/131px 113px,
+  radial-gradient(var(--motif-c) 1.6px,transparent 2.4px) 71px 53px/197px 173px}
+:root[data-theme="orbit"] .motif i:nth-child(6){animation-duration:7s;animation-delay:-3s}
+:root[data-theme="orbit"] .motif i:nth-child(6)::before{-webkit-mask:none;mask:none;background:
+  radial-gradient(var(--motif-a) 1px,transparent 1.8px) 47px 89px/157px 139px,
+  radial-gradient(var(--motif-b) 1.4px,transparent 2.2px) 101px 11px/229px 211px}
+@keyframes bzTwinkle{from{opacity:.25}to{opacity:1}}
+
+/* ---- Rangoli: eight-fold symmetry, turning slowly, on a kolam dot grid ---- */
+:root[data-theme="rangoli"] .motif i:nth-child(-n+2){display:block;aspect-ratio:1;animation:bzSpin 60s linear infinite;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><circle cx='100' cy='100' r='9'/><circle cx='100' cy='100' r='17' fill='none' stroke='black' stroke-width='2'/><g id='p'><ellipse cx='100' cy='70' rx='8' ry='15'/><ellipse cx='100' cy='48' rx='11' ry='21' fill-opacity='.55' transform='rotate(22.5 100 100)'/><circle cx='100' cy='28' r='3.2'/><circle cx='100' cy='28' r='3.2' transform='rotate(22.5 100 100)'/><path d='M100 16q9 8 0 16q-9-8 0-16z' fill-opacity='.7' transform='rotate(11.25 100 100)'/><path d='M100 16q9 8 0 16q-9-8 0-16z' fill-opacity='.7' transform='rotate(33.75 100 100)'/></g><use href='%23p' transform='rotate(45 100 100)'/><use href='%23p' transform='rotate(90 100 100)'/><use href='%23p' transform='rotate(135 100 100)'/><use href='%23p' transform='rotate(180 100 100)'/><use href='%23p' transform='rotate(225 100 100)'/><use href='%23p' transform='rotate(270 100 100)'/><use href='%23p' transform='rotate(315 100 100)'/><circle cx='100' cy='100' r='62' fill='none' stroke='black' stroke-width='1.6'/><circle cx='100' cy='100' r='94' fill='none' stroke='black' stroke-width='1.2' stroke-dasharray='2 5'/></svg>")}
+:root[data-theme="rangoli"] .motif i:nth-child(1){right:-18vmin;bottom:-18vmin;width:min(78vmin,720px)}
+:root[data-theme="rangoli"] .motif i:nth-child(2){left:-10vmin;top:6%;width:min(40vmin,380px);animation-duration:45s;animation-direction:reverse}
+:root[data-theme="rangoli"] .motif i:nth-child(2)::before{--c:var(--motif-b)}
+
+/* ---- Arcade: tetrominoes falling in steps, like the real thing ---- */
+:root[data-theme="arcade"] .motif i:nth-child(-n+7){display:block;top:0;--u:clamp(14px,3.2vmin,26px);
+  animation:bzFall var(--t,34s) steps(34) infinite;transform:translateY(-30vh)}
+:root[data-theme="arcade"] .motif i:nth-child(1){left:6%;width:calc(var(--u) * 4);height:var(--u);--t:30s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'><path d='M.5 .5h9v9h-9zM10.5 .5h9v9h-9zM20.5 .5h9v9h-9zM30.5 .5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(2){left:24%;width:calc(var(--u) * 2);height:calc(var(--u) * 2);--t:38s;animation-delay:-11s;--c:var(--motif-d);
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M.5 .5h9v9h-9zM10.5 .5h9v9h-9zM.5 10.5h9v9h-9zM10.5 10.5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(3){left:43%;width:calc(var(--u) * 3);height:calc(var(--u) * 2);--t:34s;animation-delay:-24s;--c:var(--motif-c);
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path d='M.5 .5h9v9h-9zM10.5 .5h9v9h-9zM20.5 .5h9v9h-9zM10.5 10.5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(4){left:61%;width:calc(var(--u) * 2);height:calc(var(--u) * 3);--t:42s;animation-delay:-5s;--c:var(--motif-b);
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 30'><path d='M.5 .5h9v9h-9zM.5 10.5h9v9h-9zM.5 20.5h9v9h-9zM10.5 20.5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(5){left:78%;width:calc(var(--u) * 3);height:calc(var(--u) * 2);--t:31s;animation-delay:-17s;
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path d='M10.5 .5h9v9h-9zM20.5 .5h9v9h-9zM.5 10.5h9v9h-9zM10.5 10.5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(6){left:91%;width:calc(var(--u) * 3);height:calc(var(--u) * 2);--t:45s;animation-delay:-30s;--c:var(--motif-c);
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path d='M.5 .5h9v9h-9zM10.5 .5h9v9h-9zM10.5 10.5h9v9h-9zM20.5 10.5h9v9h-9z'/></svg>")}
+:root[data-theme="arcade"] .motif i:nth-child(7){left:34%;width:var(--u);height:calc(var(--u) * 4);--t:50s;animation-delay:-40s;--c:var(--motif-b);
+  --m:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 40'><path d='M.5 .5h9v9h-9zM.5 10.5h9v9h-9zM.5 20.5h9v9h-9zM.5 30.5h9v9h-9z'/></svg>")}
+@keyframes bzFall{from{transform:translateY(-30vh)}to{transform:translateY(115vh)}}
+
+/* a child who has asked the device for less motion gets a still picture */
+@media (prefers-reduced-motion:reduce){
+  .motif i,.motif i::before,.motif i::after{animation:none!important}
+  :root[data-theme="arcade"] .motif i{transform:translateY(62vh)}
+  :root[data-theme="arcade"] .motif i:nth-child(odd){transform:translateY(24vh)}
+  :root[data-theme="arcade"] .motif i:nth-child(3n){transform:translateY(80vh)}
+}
+
+/* ================================================================ the picker */
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:760px){.themes{grid-template-columns:1fr 1fr}}
+@media (max-width:400px){.themes{grid-template-columns:1fr}}
+.theme-card{position:relative;display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;text-align:left;cursor:pointer;
+  border:2px solid var(--line);border-radius:var(--r-lg);background:var(--paper);color:var(--ink);font-family:var(--ui);
+  box-shadow:var(--sh);transition:transform .15s,border-color .15s}
+.theme-card:hover{transform:translateY(-2px);border-color:var(--action)}
+.theme-card[aria-checked="true"]{border-color:var(--action);box-shadow:0 0 0 3px color-mix(in srgb,var(--action) 30%,transparent),var(--sh)}
+.theme-card .tc-sw{position:relative;height:76px;background:var(--ground,none),var(--tint);display:flex;align-items:flex-end;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.theme-card .tc-sw i{width:22px;height:22px;border-radius:7px;background:var(--c);box-shadow:inset 0 -2px 0 rgb(0 0 0 / .15)}
+.theme-card .tc-aa{position:absolute;right:12px;top:6px;font:400 40px/1 var(--display);color:var(--action)}
+.theme-card .tc-t{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px}
+.theme-card .tc-t b{font:700 19px/1.15 var(--display)}
+.theme-card .tc-t span{font-size:13px;color:var(--muted);line-height:1.35}
+.theme-card .tc-n{font:600 15px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:.02em}
+.theme-card .tc-on{position:absolute;left:10px;top:10px;padding:2px 9px;border-radius:999px;background:var(--action);color:var(--action-ink);font:700 11px var(--ui)}
+.theme-chip{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 12px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--surface2);color:var(--ink);font:650 13px var(--ui);cursor:pointer;align-self:flex-start}
+.theme-chip:hover{border-color:var(--action)}
+.theme-chip i{width:12px;height:12px;border-radius:4px;background:var(--action);box-shadow:5px 0 0 -1px var(--treasure)}

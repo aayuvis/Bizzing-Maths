@@ -6,8 +6,8 @@
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-padding-top:80px}
 body{margin:0;font:var(--w,450) var(--fs-body)/1.5 var(--ui);color:var(--ink);
-  background-color:var(--tint);
-  background-image:radial-gradient(var(--dot) 1.2px,transparent 1.3px);background-size:22px 22px;
+  /* the ground is the theme's (themes.css --ground); the family dot grid if none */
+  background:var(--ground,radial-gradient(var(--dot) 1.2px,transparent 1.3px) 0 0/22px 22px),var(--tint);
   min-height:100vh;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:var(--display);font-weight:750;letter-spacing:-.01em;line-height:1.15;margin:0 0 .35em}
 h1{font-size:var(--fs-h1)} h2{font-size:var(--fs-h2)} h3{font-size:var(--fs-h3)}
@@ -132,6 +132,19 @@ button.card:hover{transform:translateY(-2px)}
 .avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px}
 .av-pick{border:2px solid transparent;border-radius:16px;background:var(--surface2);padding:6px;cursor:pointer;display:grid;place-items:center}
 .av-pick.on{border-color:var(--action);background:var(--action-tint)}
+/* the five avatar packs: every row is six wide at every width, so the arrow
+   keys' up/down (±6) always land on the face above or below */
+.av-packs{display:grid;gap:14px}
+.av-pack-h{margin:0 0 6px;font-size:var(--fs-label)}
+.av-pack-h span{color:var(--muted)}
+.av-packs .avs{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.av-packs .av-pick{padding:4px;min-width:0}
+.av-packs .av-pick .av{width:100%;height:auto;max-width:64px;aspect-ratio:1}
+.av-pick:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+.me-av{margin-bottom:16px}
+.me-av > .row{align-items:center}
+.me-av > .row > div{flex:1}
+.me-av .av-packs{margin-top:14px}
 .form .row{margin-top:20px}
 .fam{text-align:center;color:var(--muted);font-size:var(--fs-label);margin-top:18px}
 .door{display:flex;flex-direction:column;gap:8px;padding:24px;border-radius:var(--r-lg);border:0;background:var(--surface);box-shadow:var(--sh-raised);cursor:pointer;text-align:left;transition:transform .15s}

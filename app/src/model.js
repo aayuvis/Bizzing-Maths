@@ -17,10 +17,36 @@ export const BANDS = [
 ];
 export const bandRank = (b) => BANDS.findIndex((x) => x.id === b);
 
-/* The avatars are Bizzing Bee's own painted set — one collection across the
-   house, which is the strategy deck's whole mechanism for games and products
-   feeding each other. Deities and real people are left out of the picker. */
-export const AVATARS = ['redpanda', 'panda', 'neko', 'pengu', 'froggy', 'capy', 'ottie', 'snowfox', 'koi', 'robo', 'rocket', 'bizzy'];
+/* Five packs of six, all free, all at once: no unlocking, no drops, no price —
+   the family's no-loot rule. Packs 1–2 are Bizzing Bee's own painted set (one
+   collection across the house, the strategy deck's mechanism for products
+   feeding each other); packs 3–5 were painted for this app in the Bee's style
+   (tools/art/gen.py AVATAR), each body built from a maths object and none
+   carrying a numeral. Deities and real people are never in the picker
+   (test/avatars.mjs holds a denylist of the Bee's). */
+export const AVATAR_PACKS = [
+  { id: 'lab', name: 'Lab Friends', blurb: 'Borrowed from Bizzing Bee’s lab.', avatars: ['beaker', 'atom', 'robo', 'magnet', 'scopey', 'brainiac'] },
+  { id: 'stars', name: 'Star Crew', blurb: 'Borrowed from Bizzing Bee’s cosmos.', avatars: ['rocket', 'astro', 'comet', 'saturn', 'luna', 'supernova'] },
+  { id: 'shapes', name: 'Shape Pals', blurb: 'Bodies built from solids.', avatars: ['cubebot', 'orbowl', 'pyrafox', 'cylicat', 'dodecadrake', 'conicorn'] },
+  { id: 'tools', name: 'Tool Kit', blurb: 'Made from the geometry box.', avatars: ['protortle', 'compacrab', 'abacuhog', 'rulraffe', 'setsquin', 'pencilbird'] },
+  { id: 'patterns', name: 'Pattern Pets', blurb: 'Spirals, hexagons and symmetry from nature.', avatars: ['nautilus', 'hexbee', 'tessgecko', 'flakefox', 'peacock', 'sunlion'] },
+];
+export const AVATARS = AVATAR_PACKS.flatMap((p) => p.avatars);
+/* Names for the picker's labels (Bee's own names for the borrowed ones). */
+export const AVATAR_NAME = {
+  beaker: 'Bubbly Beaker', atom: 'Atom', robo: 'Robo Helper', magnet: 'Magneto Max', scopey: 'Scopey', brainiac: 'Brainiac',
+  rocket: 'Rocket Rae', astro: 'Astro', comet: 'Comet', saturn: 'Saturn', luna: 'Luna', supernova: 'Supernova',
+  cubebot: 'Cube Bot', orbowl: 'Orb Owl', pyrafox: 'Pyramid Fox', cylicat: 'Cylinder Cat', dodecadrake: 'Dodeca Dragon', conicorn: 'Cone-icorn',
+  protortle: 'Protractor Turtle', compacrab: 'Compass Crab', abacuhog: 'Abacus Hedgehog', rulraffe: 'Ruler Giraffe', setsquin: 'Set-square Penguin', pencilbird: 'Pencil Bird',
+  nautilus: 'Spiral Snail', hexbee: 'Honeycomb Bee', tessgecko: 'Tiling Gecko', flakefox: 'Snowflake Fox', peacock: 'Spiral Peacock', sunlion: 'Sunflower Lion',
+};
+/* Files kept outside the picker: the contest rivals and story cast, Aryabhata on
+   the welcome screen, and the first picker's animals, so a child who chose one
+   before the packs still sees themself. av() draws anything else as AVATARS[0]. */
+export const AVATAR_KEPT = ['pixel', 'koi', 'panda', 'melody', 'samurai', 'goldlegend', 'aryabhatta',
+  'redpanda', 'neko', 'pengu', 'froggy', 'capy', 'ottie', 'snowfox', 'bizzy'];
+const AVATAR_FILES = new Set([...AVATARS, ...AVATAR_KEPT]);
+export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : AVATARS[0]);
 
 /* ---------------------------------------------------------------- ranks */
 
@@ -52,7 +78,7 @@ export function newKid(name, band, avatar) {
   return {
     id: 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
     name: String(name || '').trim().slice(0, 20) || 'Friend',
-    band, avatar: avatar || AVATARS[0],
+    band, avatar: AVATARS.includes(avatar) ? avatar : AVATARS[0],
     xp: 0,
     facts: {},            // fact key → fluency record (facts.js)
     tricks: {},           // trick id → { stars, best, learned, runs }

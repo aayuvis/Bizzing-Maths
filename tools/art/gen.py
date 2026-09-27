@@ -12,6 +12,7 @@ a calm band for it; the pins never depend on where a model put a path.
     python3 tools/art/gen.py            # everything missing
     python3 tools/art/gen.py --only w-gardens,s-market
     python3 tools/art/gen.py --force --only atlas
+    python3 tools/art/gen.py --only av-cubebot,av-hexbee   # avatars: see AVATAR below
 
 The key is read from $GKEY_FILE or /root/.gkey (never from the repo, never
 printed). Output: raw PNGs in tools/art/raw/ (gitignored), then process.py
@@ -156,6 +157,55 @@ for k, v in SCENE2.items(): JOBS[k] = (v + ' Leave the lower third fairly open a
 for k, v in LIB.items(): JOBS[k] = (v + ' ' + STYLE + ' Landscape tile composition.', '4:3')
 JOBS['q-tower'] = (TOWER + ' ' + STYLE + ' Wide landscape frame.', '16:9')
 for k, v in SCENE.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
+
+# ------------------------------------------------------------------ avatars
+# Packs 3-5 of the avatar picker (model.js AVATAR_PACKS). These are CHARACTERS,
+# which the plates above never are, so they get their own style block, written
+# from looking at Bizzing Bee's set (robo, beaker, atom, crystal): one chibi
+# sticker figure, centred, full body; a smooth even dark outline; glossy cel
+# shading with soft gradients and a white specular glint; huge dark eyes with
+# two white star-glints; pink blush ovals; a tiny smile; a few sparkles. The
+# background is flat magenta so process.py --avatars can key it to alpha, the
+# way the Bee's champions-pack.py does. Every body is BUILT FROM the maths
+# object it is named for, and no maths object carries a numeral: a protractor
+# or a ruler shows plain tick marks only.
+AV_STYLE = (
+    "A cute chibi kawaii collectible sticker character for a children's maths app, in exactly the style of a "
+    "premium mobile-game avatar set: ONE single character, full body, centred, facing the viewer, the whole "
+    "character inside the frame with a comfortable margin all round. A smooth, even, medium-thick dark navy-brown "
+    "outline around every shape. Glossy soft cel shading with gentle gradients and a small white specular "
+    "highlight. Huge glossy dark eyes with two bright white star-shaped glints, soft pink blush ovals on the "
+    "cheeks, a small happy smile. Stubby rounded little limbs, exactly the right number of them. Bright, friendly, "
+    "saturated colours. A few tiny sparkles near the character. "
+    "THE ENTIRE BACKGROUND IS FLAT PURE MAGENTA (hex FF00FF), one solid uniform field with nothing in it: no "
+    "ground, no shadow, no scenery, no glow, no border, no vignette, and no magenta or hot pink on the character "
+    "itself. ABSOLUTELY NO TEXT: no letters, no words, no numbers, no digits, no numerals, no mathematical "
+    "symbols, no writing of any kind anywhere in the image. Not a person, no human features beyond the cute face."
+)
+AVATAR = {
+    # Shape Pals — bodies built from a solid
+    'cubebot':    "A little robot whose body is a single perfect CUBE (clearly a cube, three faces visible, crisp edges), sky blue with a lighter top face, a friendly face on the front face, tiny stubby arms and legs, one short antenna with a round bead on top.",
+    'orbowl':     "An owl whose whole body is a perfect glossy SPHERE, a round ball of soft teal feathers, two small wing flaps, little tufted ear points, orange feet, big round eyes on the front of the ball.",
+    'pyrafox':    "A fox whose body is a clear square-based PYRAMID with flat triangular faces in orange and cream (crisp straight edges, apex on top), a face on the front face, pointed ears near the apex, four stubby legs and one fluffy white-tipped tail.",
+    'cylicat':    "A cat whose body is an upright CYLINDER like a tin can with flat circular top and curved sides, butter-yellow and cream stripes around it (no purple, no lilac, no pink), cat ears on the flat circular top, a face on the curved front, two small paws and a curly tail.",
+    'dodecadrake':"A small friendly dragon whose round body is a regular DODECAHEDRON made of flat pentagon faces in shades of emerald green (the pentagon facets clearly visible), little stubby legs, two small leaf-green wings, a short rounded tail, no teeth showing.",
+    'conicorn':   "A unicorn whose body is an upright CONE, wide round base and pointed top, pastel mint and lemon, a face on the front of the cone near the base, a tiny golden spiral horn at the tip, a soft sky-blue mane and tail, four stubby legs under the base.",
+    # Tool Kit — bodies built from a geometry tool
+    'protortle':  "A turtle whose shell is a clear half-circle PROTRACTOR made of transparent pale-blue plastic, marked around its curved edge with ONLY short plain tick marks (no numerals), a small hole at the centre of the straight edge; a green turtle head and four stubby legs peek out.",
+    'compacrab':  "A crab built from a school drawing COMPASS: its two big arms ARE the two long straight legs of the compass, spread apart in an upside-down V from a round silver hinge knob on top of its head; one arm ends in a sharp metal point, the other arm ends in a short yellow pencil. A round coral-orange crab body with the face on it, six small walking legs. No clock, no watch, no dial anywhere.",
+    'abacuhog':   "A hedgehog whose spines are the rows of an ABACUS: short wooden rods fanning out across its back, each threaded with round coloured beads (red, yellow, blue, green), a soft brown face, a pink nose, four tiny feet.",
+    'rulraffe':   "A giraffe whose long neck is a wooden RULER marked with ONLY plain short tick lines (no numerals), a yellow body with brown patches, little ossicone horns, four stubby legs, a small tufted tail.",
+    'setsquin':   "A penguin whose body is a transparent turquoise plastic SET SQUARE: a RIGHT-ANGLED triangle with one perfectly square 90-degree corner at the bottom left, one vertical straight side up the left, one horizontal straight side along the bottom, and the long sloping side on the right, with a smaller right-angled triangular hole in its middle. NOT an equilateral or isosceles triangle. A face near the top, a small orange beak, a white tummy patch, two little flippers and orange feet.",
+    'pencilbird': "A small round bird whose beak is a sharpened wooden PENCIL tip and whose tail is the pencil's pink eraser end, the body a yellow painted pencil-coloured ball of feathers, two little wings, orange feet.",
+    # Pattern Pets — a pattern from nature and maths
+    'nautilus':   "A snail whose shell is a NAUTILUS logarithmic SPIRAL, chambers growing steadily larger as they wind outward, cream and warm terracotta stripes, a soft sea-green snail body with two eye stalks.",
+    'hexbee':     "A round honey bee whose striped body is covered in a neat HEXAGON honeycomb pattern of golden cells, small translucent wings, two antennae, a little honey drop in its hands.",
+    'tessgecko':  "A gecko whose skin is a TESSELLATION of interlocking tiles that fit together with no gaps (like a mosaic of repeating shapes) in turquoise, lime and navy, a curled tail, four splayed toes on each of its four feet.",
+    'flakefox':   "An arctic fox with a SIX-FOLD SNOWFLAKE pattern: a large symmetric six-armed snowflake emblem on its chest and smaller six-armed snowflakes on its fluffy white-and-ice-blue fur, one fluffy tail.",
+    'peacock':    "A small round peacock with a fanned tail of feathers; instead of ordinary eyespots, the end of every tail feather is a neat curling SPIRAL, like a snail-shell swirl coiling inward, in gold and royal blue. Rich teal body, a little crest of three feathers on its head, standing on two orange feet. No shadow under it.",
+    'sunlion':    "A lion cub whose mane is a SUNFLOWER: golden petals radiating round his face and the seeds arranged in crossing SPIRALS like a real sunflower head, a tan body, a tufted tail.",
+}
+for k, v in AVATAR.items(): JOBS['av-' + k] = (v + ' ' + AV_STYLE, '1:1')
 
 
 def call(model, prompt, ratio):

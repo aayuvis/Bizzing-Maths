@@ -11,8 +11,10 @@
    dots.
    ================================================================ */
 :root{
-  --display:"Fraunces",Georgia,serif;
-  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  /* the faces here are Graph Paper's, the default theme; every theme in
+     themes.css sets its own three (display, ui, mono) */
+  --display:"Baloo 2","Nunito",system-ui,sans-serif;
+  --ui:"Nunito",system-ui,-apple-system,sans-serif;
   /* numbers get the monospace face: every digit the same width, so a
      column of answers lines up and 1 never looks thinner than 8 */
   --mono:"Sono",ui-monospace,monospace;

@@ -143,6 +143,7 @@ export function numberRush(kid, { onTick, onEnd }) {
     const fl = ctx.createLinearGradient(0, H - 26, 0, H);
     fl.addColorStop(0, 'rgba(196,69,60,0)'); fl.addColorStop(1, 'rgba(196,69,60,.28)');
     ctx.fillStyle = fl; ctx.fillRect(0, H - 26, W, 26);
+    const face = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'ui-monospace, monospace'; // the theme's digits
     for (const b of bubbles) {
       const gr = ctx.createRadialGradient(b.x - b.r * .35, b.y - b.r * .4, b.r * .1, b.x, b.y, b.r);
       gr.addColorStop(0, `hsl(${b.hue} 90% 92%)`); gr.addColorStop(.55, `hsl(${b.hue} 75% 70%)`); gr.addColorStop(1, `hsl(${b.hue} 65% 48%)`);
@@ -150,7 +151,7 @@ export function numberRush(kid, { onTick, onEnd }) {
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(b.x - b.r * .38, b.y - b.r * .45, b.r * .22, b.r * .12, -0.6, 0, Math.PI * 2); ctx.fill();
       // size the sum to fit INSIDE its bubble: a monospace glyph is ~0.6em wide
       const fs = Math.min(b.r * 0.5, (b.r * 1.7) / (b.text.length * 0.6));
-      ctx.fillStyle = '#10162c'; ctx.font = `700 ${Math.round(fs)}px Sono, ui-monospace, monospace`;
+      ctx.fillStyle = '#10162c'; ctx.font = `700 ${Math.round(fs)}px ${face}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.text, b.x, b.y + 1);
     }
     for (const p of burst) {

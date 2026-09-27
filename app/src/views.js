@@ -6,18 +6,33 @@ import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
-import { BANDS, AVATARS, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
+import { BANDS, AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
 import { keypad } from './games.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
 import { summary } from './objectives.js';
 import { seeded, int, dayKey } from './rand.js';
+import { themePicker } from './themes.js';
 
 /* ------------------------------------------------------------- helpers */
 
+/* An id with no file (a child from some older build) draws as the first
+   picker face rather than a broken image — model.js avatarFile(). */
 export const av = (id, size = 48, alt = '') =>
-  `<img class="av" src="avatars/${esc(id)}.png" width="${size}" height="${size}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+  `<img class="av" src="avatars/${esc(avatarFile(id))}.webp" width="${size}" height="${size}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+
+/* The avatar picker: five labelled packs of six, all free. One tab stop (the
+   chosen face); arrow keys move through the grid (main.js avKey), Enter or
+   Space chooses; a tap chooses. Used by the welcome form and by viewMe. */
+export function avatarPicker(cur, act, where) {
+  const on = AVATARS.includes(cur) ? cur : AVATARS[0];
+  return `<div class="av-packs" data-avgrid>${AVATAR_PACKS.map((p) => `
+    <div class="av-pack" role="radiogroup" aria-labelledby="avp-${where}-${p.id}">
+      <p class="av-pack-h" id="avp-${where}-${p.id}"><b>${esc(p.name)}</b> <span>${esc(p.blurb)}</span></p>
+      <div class="avs">${p.avatars.map((a) => `<button id="av-${where}-${a}" class="av-pick${cur === a ? ' on' : ''}" role="radio" aria-checked="${cur === a}" tabindex="${on === a ? 0 : -1}" data-act="${act}" data-arg="${a}" aria-label="${esc(AVATAR_NAME[a] || a)}" title="${esc(AVATAR_NAME[a] || a)}">${av(a, 64)}</button>`).join('')}</div>
+    </div>`).join('')}</div>`;
+}
 
 export const starRow = (n, max = 3, big = false) =>
   `<span class="stars${big ? ' big' : ''}" aria-label="${n} of ${max} stars">${Array.from({ length: max }, (_, i) => `<span class="${i < n ? 'on' : ''}">★</span>`).join('')}</span>`;
@@ -121,15 +136,13 @@ export function viewWelcome() {
         ${BANDS.map((b) => `<button class="chip-btn${d.band === b.id ? ' on' : ''}" role="radio" aria-checked="${d.band === b.id}" data-act="draftBand" data-arg="${b.id}"><b>${b.label}</b><span>${b.blurb}</span></button>`).join('')}
       </div>
       <p class="lab">Pick a face</p>
-      <div class="avs" role="radiogroup" aria-label="Avatar">
-        ${AVATARS.map((a) => `<button class="av-pick${d.avatar === a ? ' on' : ''}" role="radio" aria-checked="${d.avatar === a}" data-act="draftAv" data-arg="${a}" aria-label="${a}">${av(a, 64)}</button>`).join('')}
-      </div>
+      ${avatarPicker(d.avatar, 'draftAv', 'new')}
       <div class="row gap end">
         ${!first ? btn('Cancel', 'nav', 'home') : ''}
         ${btn("Let's go →", 'createKid', '', 'primary', !d.name.trim() || !d.band ? 'disabled' : '')}
       </div>
     </div>
-    <p class="fam">Bizzing Maths is part of the Bizzing family, with <a href="https://www.bizzingbee.com/">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/">Bizzing India</a> and <a href="https://aayuvis.github.io/bizzingfinance/">Bizzing Finance</a>. The faces are the Bee's own.</p>
+    <p class="fam">Bizzing Maths is part of the Bizzing family, with <a href="https://www.bizzingbee.com/">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/">Bizzing India</a> and <a href="https://aayuvis.github.io/bizzingfinance/">Bizzing Finance</a>. Two packs of faces are the Bee's own; the other three were painted for this app in the same style.</p>
   </section>`;
 }
 
@@ -211,7 +224,7 @@ export function viewHome() {
   const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
   const stopsToday = (k.dayStops || {})[d] || 0;
   const parts = [
-    { n: 'Right answers', v: today.ok, goal: 20, col: '#2D5BD8', tint: 'rgb(45 91 216 / .14)' },
+    { n: 'Right answers', v: today.ok, goal: 20, col: 'var(--action)', tint: 'color-mix(in srgb,var(--action) 14%,transparent)' },
     { n: 'Atlas stars', v: stopsToday, goal: 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
     { n: 'Today’s puzzle', v: puzzleDone ? 1 : 0, goal: 1, col: '#178A4C', tint: 'rgb(23 138 76 / .15)' },
   ];
@@ -229,6 +242,7 @@ export function viewHome() {
           <span class="hi">${greet()},</span>
           <b class="hname">${esc(k.name)}</b>
           <p class="bubble2">“${line}”</p>
+          <button class="theme-chip" data-act="themes" aria-label="Choose a theme"><i aria-hidden="true"></i>Theme</button>
         </div>
       </div>
       <div class="hcard today">
@@ -609,9 +623,15 @@ export function viewMe() {
   const maxQ = Math.max(10, ...days.map((d) => d.v.q));
   return `<section>
     ${pageHead(esc(k.name), `Age ${esc(k.band.replace('-', '–'))}`, '', btn('Switch or add', 'nav', 'who', 'small'))}
+    <div class="card me-av">
+      <div class="row gap">${av(k.avatar, 72, '')}<div><p class="kicker">Your face</p><p class="muted small">All thirty are yours to choose — swap any time.</p></div>
+        ${btn(R.ui.avEdit ? 'Done' : 'Change avatar', 'avEdit', '', 'small', `aria-expanded="${!!R.ui.avEdit}"`)}</div>
+      ${R.ui.avEdit ? avatarPicker(k.avatar, 'setAv', 'me') : ''}
+    </div>
+    ${themePicker(k)}
     <div class="two">
       <div class="card">
-        <p class="kicker">Your rank — ${k.xp} right answers</p>
+        <p class="kicker">Your rank —${k.xp} right answers</p>
         <ol class="ladder">${RANKS.map((r, i) => `<li class="${i < rk.i ? 'past' : i === rk.i ? 'now' : ''}"><span class="lb">${i + 1}</span><div><b>${esc(r.n)}</b><p>${esc(r.why)}</p></div><span class="lx">${r.xp}</span></li>`).join('')}</ol>
         <p class="muted small">Rank moves only with right answers — never with time spent. So it always tells the truth.</p>
       </div>
