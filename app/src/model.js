@@ -9,6 +9,14 @@
 
 import { TRICKS, WORLDS, byId, tricksIn } from './tricks.js';
 import { dayKey } from './rand.js';
+import { LEVELS } from './levels.js';
+
+/* The first journey level each stop appears in. A child on journey level L has
+   every lesson of level L and every level before it open in the Atlas — a
+   child placed at Level 6 must be able to go back to anything Levels 1–5 teach. */
+const FIRST_LEVEL = {};
+for (const L of LEVELS) for (const s of L.steps) if (!(s.stop in FIRST_LEVEL)) FIRST_LEVEL[s.stop] = L.n;
+export const levelOpen = (k, id) => !!(k.journey && k.journey.level && FIRST_LEVEL[id] <= k.journey.level);
 
 export const BANDS = [
   { id: '6-7', label: '6–7', blurb: 'Starting out' },
@@ -152,6 +160,7 @@ export function worldOpen(h, k, wid) {
   const w = WORLDS.find((x) => x.id === wid); if (!w) return false;
   if (firstIndex(wid) === 0 || bandRank(w.band) <= bandRank(k.band)) return true;
   if (k.placed != null && firstIndex(wid) <= k.placed) return true;
+  if (ROUTE.some((n) => n.world === wid && n.kind === 'stop' && levelOpen(k, n.id))) return true;
   const need = NEEDS[wid];
   return !!(need && k.checks[need] && k.checks[need].passed) || ROUTE.some((n) => n.world === wid && nodeDone(k, n));
 }
@@ -171,6 +180,7 @@ export function isOpen(h, k, i) {
   if (h.parent.tester) return true;
   const node = ROUTE[i]; if (!node) return false;
   if (nodeDone(k, node)) return true;
+  if (node.kind === 'stop' && levelOpen(k, node.id)) return true;
   if (!worldOpen(h, k, node.world)) return false;
   if (optional(k, node, i)) return true;
   const first = ROUTE.findIndex((n, j) => n.world === node.world && !nodeDone(k, n) && !optional(k, n, j));

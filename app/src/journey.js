@@ -13,7 +13,7 @@
    are secure below age 9 and learning at it. Like placement, it is a ceiling,
    never a score: it is shown once, to place them, and never in a report. */
 
-import { LEVELS, ageOf } from './levels.js';
+import { LEVELS, ageOf, CONCEPT_OF } from './levels.js';
 import { byId, dress } from './tricks.js';
 
 export const TOP = LEVELS.length;
@@ -32,10 +32,22 @@ export const startLevel = (band) => ({ '6-7': 1, '8-10': 3, '11-14': 6 }[band] |
 /* A step is done if the stop has been passed at this level or a harder one. */
 export const stepDone = (j, s) => [1, 2, 3].some((lv) => lv >= s.lv && j.done[`${s.stop}@${lv}`]);
 
+/* A child PLACED above Level 1 never walked the level below, so their journey
+   opens with a recap of it: one step per concept that level taught — the last
+   (hardest) step of each — before the level's own. A child who climbed here
+   by finishing the level below has just done it, and gets no recap. */
+export function recapOf(n) {
+  if (n <= 1) return [];
+  const seen = new Map();
+  for (const s of levelOf(n - 1).steps) seen.set(CONCEPT_OF[s.stop], s);   // last step of each concept wins
+  return [...seen.values()].map((s) => ({ ...s, recap: true }));
+}
+export const stepsOf = (j, n) => [...(j.recap === n ? recapOf(n) : []), ...levelOf(n).steps];
+
 export function progress(k) {
   const j = rec(k);
   if (!j.level) return null;
-  const L = levelOf(j.level), steps = L.steps.map((s, i) => ({ ...s, i, done: stepDone(j, s), t: byId[s.stop] }));
+  const L = levelOf(j.level), steps = stepsOf(j, j.level).map((s, i) => ({ ...s, i, done: stepDone(j, s), t: byId[s.stop] }));
   const done = steps.filter((s) => s.done).length;
   return { level: j.level, L, age: ageOf(j.level), steps, done, total: steps.length, next: steps.find((s) => !s.done) || null, top: j.level === TOP };
 }
@@ -46,13 +58,14 @@ export function passed(k, stop, lv) {
   const j = rec(k), key = `${stop}@${lv}`, was = !!j.done[key];
   j.done[key] = true;
   if (!j.level) return { ticked: false, finished: false };
-  const L = levelOf(j.level);
-  const ticked = !was && L.steps.some((s) => s.stop === stop && s.lv <= lv);
-  const all = L.steps.every((s) => stepDone(j, s));
+  const steps = stepsOf(j, j.level);
+  const ticked = !was && steps.some((s) => s.stop === stop && s.lv <= lv);
+  const all = steps.every((s) => stepDone(j, s));
   if (all && !j.finished.includes(j.level)) {
     j.finished.push(j.level);
     const from = j.level;
     if (j.level < TOP) j.level++;
+    j.recap = null;                       // they climbed here: the level below is fresh
     return { ticked, finished: true, from, to: j.level };
   }
   return { ticked, finished: false };
@@ -100,6 +113,7 @@ function finish(st, level) { st.done = true; st.result = level; return false; }
 export function place(k, level) {
   const j = rec(k);
   j.level = Math.max(1, Math.min(TOP, level));
+  j.recap = j.level > 1 ? j.level : null;   // placed, not climbed: recap the level below first
   j.tested = { level: j.level, at: Date.now() };
   return j.level;
 }

@@ -299,7 +299,7 @@ export function viewJourney() {
       <div class="row gap center"><button class="btn primary big" data-act="startLevelTest">Find my level</button><button class="btn" data-act="startLevel1">Start at Level 1</button></div></div></section>`;
   const show = R.ui.jlv && R.ui.jlv !== p.level ? R.ui.jlv : p.level, mine = show === p.level;
   const L = J.levelOf(show);
-  const steps = L.steps.map((s) => ({ ...s, done: J.stepDone(j, s), t: byId[s.stop] }));
+  const steps = J.stepsOf(j, show).map((s) => ({ ...s, done: J.stepDone(j, s), t: byId[s.stop] }));
   const next = mine ? steps.find((s) => !s.done) : null;
   const done = steps.filter((s) => s.done).length;
   const ladder = J.LEVELS.map((x) => {
@@ -314,11 +314,13 @@ export function viewJourney() {
         <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p></div>
       <div class="jprog"><b class="mono">${done}/${steps.length}</b><span class="meter"><i style="width:${Math.round(100 * done / steps.length)}%"></i></span><span class="muted small">steps done</span></div>
     </div>
-    ${!mine ? `<p class="muted center">You are on Level ${p.level}. You can open any step here, but only your own journey moves you on. <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to Level ${p.level}</button></p>` : ''}
+    ${!mine ? `<p class="muted center">${show < p.level ? `Every lesson from Level ${show} is open to you — here and in the Atlas. Only your own journey moves you on.` : `You are on Level ${p.level}. You can look at any step here, but only your own journey moves you on.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to Level ${p.level}</button></p>` : ''}
     <ol class="jsteps">${steps.map((s, i) => {
       const c = conceptOf(s.stop), w = worldOf(s.t.world);
-      const cl = s.done ? 'done' : s === next ? 'next' : '';
-      return `<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}">
+      const cl = (s.done ? 'done' : s === next ? 'next' : '') + (s.recap ? ' recap' : '');
+      const head = s.recap && i === 0 ? `<li class="jsec"><b>Recap of Level ${show - 1}</b> <span class="muted small">You started here, so first a quick look back — one step for each idea Level ${show - 1} taught.</span></li>`
+        : !s.recap && i > 0 && steps[i - 1].recap ? `<li class="jsec"><b>Level ${show}</b> <span class="muted small">Now the journey itself.</span></li>` : '';
+      return `${head}<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}">
         <span class="jn">${s.done ? '✓' : i + 1}</span>
         <span class="jx"><b>${esc(s.t.title)}</b><span class="muted small">${w.glyph} ${esc(w.short)} · ${c.glyph} ${esc(c.name)}</span></span>
         <span class="jlvtag lv${s.lv}">${LVNAME[s.lv]}</span>${s === next ? '<span class="btn primary small">Next</span>' : ''}</button></li>`;

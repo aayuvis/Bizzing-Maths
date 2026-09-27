@@ -49,8 +49,29 @@ let res;
 for (const s of p.steps) res = J.passed(k, s.stop, s.lv);
 ok(res.finished && res.from === 3 && res.to === 4 && J.rec(k).level === 4, 'finishing every step moves the child to the next level');
 ok(J.rec(k).finished.includes(3), 'the finished level is remembered');
-J.place(k, 10); for (const s of J.levelOf(10).steps) res = J.passed(k, s.stop, s.lv);
+J.place(k, 10); for (const s of J.stepsOf(J.rec(k), 10)) res = J.passed(k, s.stop, s.lv);
 ok(res.finished && J.rec(k).level === 10, 'the last journey finishes and stays at the top');
+// placed above Level 1 → a recap of the level below comes first; climbing up → no recap
+const kr = newKid('Cai', '11-14', 'koi'); J.place(kr, 6);
+let pr = J.progress(kr), rc = J.recapOf(6);
+ok(rc.length >= 4 && pr.steps.slice(0, rc.length).every((s) => s.recap) && pr.steps.length === rc.length + J.levelOf(6).steps.length, 'placed at Level 6: the journey opens with a recap of Level 5');
+ok(rc.every((s) => J.levelOf(5).steps.some((x) => x.stop === s.stop && x.lv === s.lv)), 'every recap step is a real Level 5 step');
+ok(new Set(rc.map((s) => s.stop)).size === rc.length, 'one recap step per idea, no repeats');
+for (const s of J.levelOf(6).steps) res = J.passed(kr, s.stop, s.lv);
+ok(!res.finished && J.rec(kr).level === 6, 'the level is not finished while the recap is still to do');
+for (const s of rc) res = J.passed(kr, s.stop, s.lv);
+ok(res.finished && J.rec(kr).level === 7, 'recap done too: on to Level 7');
+ok(J.progress(kr).steps.every((s) => !s.recap), 'a child who CLIMBED to Level 7 gets no recap');
+const k1 = newKid('Dee', '6-7', 'koi'); J.place(k1, 1);
+ok(J.progress(k1).steps.every((s) => !s.recap), 'Level 1 has nothing below it to recap');
+// placed at Level 6: every lesson of Levels 1–6 is open in the Atlas, and nothing only taught later
+const { isOpen, ROUTE, levelOpen } = await import('../src/model.js');
+const ka = newKid('Eli', '8-10', 'koi'), ha = { parent: { tester: false }, kids: [ka], active: ka.id };
+J.place(ka, 6);
+const early = new Set(J.LEVELS.filter((L) => L.n <= 6).flatMap((L) => L.steps.map((s) => s.stop)));
+ok(ROUTE.every((n, i) => n.kind !== 'stop' || !early.has(n.id) || isOpen(ha, ka, i)), 'placed at Level 6: every lesson from Levels 1–6 is open in the Atlas');
+const onlyLater = ROUTE.map((n, i) => [n, i]).filter(([n]) => n.kind === 'stop' && !early.has(n.id));
+ok(onlyLater.some(([n]) => !levelOpen(ka, n.id)), 'lessons first taught after Level 6 are not opened by the level');
 // a second child never inherits the first one's journey
 const k2 = newKid('Ben', '6-7', 'froggy');
 ok(J.progress(k2) === null && Object.keys(J.rec(k2).done).length === 0, "a second child starts with nobody's journey");

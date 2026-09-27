@@ -798,3 +798,5 @@ div.jcard{cursor:default}
 .jstep-note{margin:0 auto 12px;max-width:560px;padding:10px 14px;border-radius:12px;background:var(--action-tint);text-align:center}
 .big-age{display:block;font:800 clamp(34px,7vw,52px)/1.1 var(--display);color:var(--action);margin:6px 0}
 @media (max-width:760px){.jladder{grid-template-columns:repeat(5,1fr)}.jc-lv{width:52px;height:52px;font-size:24px}}
+.jsteps .jsec{padding:10px 4px 2px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.jsteps li.recap button{border-style:dashed}
