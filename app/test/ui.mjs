@@ -124,6 +124,30 @@ async function run(vp, tag) {
   await page.evaluate(() => window.__bzm.fire('openStop', 'crosswise')); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
   await page.evaluate(() => document.querySelector('.why').scrollIntoView());
   await shot('11-crosswise');
+  // the Far Isles: a new world, a stop with a drawing, a drill with the extra keys
+  await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; window.__bzm.go('atlas'); });
+  await page.click('[data-act=isle][data-arg="2"]'); await page.waitForTimeout(400);
+  await shot('26-far-isles');
+  for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare']]) {
+    await page.evaluate((w) => window.__bzm.fire('openWorld', w), wid); await page.waitForSelector('.board');
+    if (wid === 'clocktower') { await page.waitForTimeout(300); await shot('27-world-clocktower'); }
+    await page.evaluate((s2) => window.__bzm.fire('openStop', s2), sid); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
+    await shot(`28-learn-${sid}`);
+    await page.click('.seg [data-arg=drill]'); await page.click('[data-act=level][data-arg="2"]'); await page.click('[data-act=startDrill]');
+    for (let i = 0; i < 10; i++) {
+      const st = await R(); if (!st.run || st.run.over) break;
+      if (i === 1) await shot(`29-drill-${sid}`);
+      if (st.run.q.choices) await page.keyboard.press(String(st.run.q.choices.indexOf(st.run.q.ans) + 1)); else await typeAns(String(st.run.q.ans).replace('−', '-'));
+      await page.waitForTimeout(80);
+      const st2 = await R(); if (st2.run && st2.run.fb && !st2.run.over) { if (!st2.run.fb.right) { ok(false, `${sid}: typed its own answer ${st.run.q.ans} and was marked wrong`); } if (st2.run.fb) await page.keyboard.press('Enter'); }
+      await page.waitForTimeout(560);
+    }
+    await page.waitForTimeout(300);
+    ok((await R()).run && (await R()).run.over, `${sid}: drill finishes`);
+    ok(await page.evaluate((s2) => (window.__bzm.R.h.kids[0].tricks[s2] || {}).stars >= 2, sid), `${sid}: typing every answer passes the stop`);
+    await page.click('[data-act=endRun]');
+  }
+  await page.evaluate(() => { window.__bzm.R.h.parent.tester = false; });
   // stories shelf + a sutra story
   await page.evaluate(() => window.__bzm.go('stories')); await page.waitForSelector('.shelf');
   await shot('11b-shelf');

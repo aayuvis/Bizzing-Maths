@@ -62,7 +62,7 @@ export function viewAtlasMap() {
         const done = ROUTE.filter((n) => n.world === w.id).every((n) => nodeDone(k, n));
         const p = I.pins[w.id];
         return `<button class="map-pin${open ? '' : ' shut'}${here === w.id ? ' here' : ''}${done ? ' done' : ''}" style="left:${p.x}%;top:${p.y}%;--wi:${w.ink};--wt:${w.tint}" data-act="${open ? 'openWorld' : 'shutWorld'}" data-arg="${w.id}" aria-label="${esc(w.name)}${open ? '' : ', not reached yet'}">
-          <span class="mp-g">${w.glyph}</span><span class="mp-t"><b>${esc(w.name)}</b>${here === w.id ? '<i>You are here</i>' : done ? '<i>Done ✓</i>' : open ? '' : '<i>Not reached yet</i>'}</span></button>`;
+          <span class="mp-g">${w.glyph}</span><span class="mp-t"><b>${esc(isle === 2 ? w.short : w.name)}</b>${here === w.id ? '<i>You are here</i>' : done ? '<i>Done ✓</i>' : open ? '' : '<i>Not reached yet</i>'}</span></button>`;
       }).join('')}
     </div>
     <div class="world-list">

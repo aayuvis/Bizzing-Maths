@@ -7,7 +7,7 @@
    by actually reflecting the drawn corners), never from the name itself. */
 
 import { int, pick, shuffle } from '../rand.js';
-import { poly, angle, coords, svg, text } from './kit.js';
+import { poly, coords, svg, text } from './kit.js';
 
 export const WORLD = {
   id: 'shapecity', name: 'Shape City', short: 'Shape City', band: '6-7',
@@ -43,23 +43,35 @@ function fit(pts, size = 170) {
   return pts.map(([x, y]) => [R3((x - x0) * k), R3((y1 - y) * k)]);
 }
 
-/* A polygon with side labels AND corner labels (angles written inside each corner). */
-function figure(pts, sides = [], corners = [], pad = 34) {
+/* A polygon with side labels AND corner labels (angles written inside each corner).
+   Side labels sit just outside each side, anchored away from it so they never cross a line. */
+function figure(pts, sides = [], corners = [], fill = 'dg-fill2', padX = 56, padY = 30) {
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, w = Math.max(...xs) - x0 + pad, h = Math.max(...ys) - y0 + pad;
+  const x0 = Math.min(...xs) - padX, y0 = Math.min(...ys) - padY, w = Math.max(...xs) - x0 + padX, h = Math.max(...ys) - y0 + padY;
   const cx = xs.reduce((a, b) => a + b, 0) / pts.length, cy = ys.reduce((a, b) => a + b, 0) / pts.length;
-  let s = `<polygon points="${pts.map((p) => `${R3(p[0] - x0)},${R3(p[1] - y0)}`).join(' ')}" class="dg-fill2"/>`;
+  const area = pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0), sg = Math.sign(area) || 1;
+  let s = `<polygon points="${pts.map((p) => `${R3(p[0] - x0)},${R3(p[1] - y0)}`).join(' ')}" class="${fill}"/>`;
   sides.forEach((l, i) => {
-    if (!l) return; const a = pts[i], b = pts[(i + 1) % pts.length];
-    let mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; const dx = mx - cx, dy = my - cy, d = Math.hypot(dx, dy) || 1;
-    mx += (dx / d) * 16; my += (dy / d) * 16;
-    s += text(R3(mx - x0), R3(my - y0 + 5), l);
+    if (!l) return; const a = pts[i], b = pts[(i + 1) % pts.length], ex = b[0] - a[0], ey = b[1] - a[1], len = Math.hypot(ex, ey) || 1;
+    const nx = (ey / len) * sg, ny = (-ex / len) * sg;
+    const anchor = nx > 0.45 ? 'start' : nx < -0.45 ? 'end' : 'middle', dy = ny > 0.45 ? 15 : ny < -0.45 ? -5 : 5;
+    s += text(R3((a[0] + b[0]) / 2 + nx * 9 - x0), R3((a[1] + b[1]) / 2 + ny * 9 - y0 + dy), l, 'dg-text', anchor);
   });
   corners.forEach((l, i) => {
     if (!l) return; const [x, y] = pts[i]; const dx = cx - x, dy = cy - y, d = Math.hypot(dx, dy) || 1;
     s += text(R3(x + (dx / d) * 30 - x0), R3(y + (dy / d) * 30 - y0 + 5), l, 'dg-accent');
   });
   return svg(R3(w), R3(h), s, 'A shape');
+}
+
+/* An angle of d degrees: one arm along the bottom, the arc showing the turn. Room for reflex angles too. */
+function angleFig(d) {
+  const R = 100, ar = 30, cx = 120, cy = d > 180 ? 120 : 112, a = d * RAD;
+  const x2 = R3(cx + R * Math.cos(a)), y2 = R3(cy - R * Math.sin(a));
+  let s = `<line x1="${cx}" y1="${cy}" x2="${cx + R}" y2="${cy}" class="dg-line"/><line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" class="dg-line"/>`;
+  s += `<path d="M${cx + ar},${cy} A${ar},${ar} 0 ${d > 180 ? 1 : 0} 0 ${R3(cx + ar * Math.cos(a))},${R3(cy - ar * Math.sin(a))}" class="dg-arc"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="4" class="dg-dot"/>`;
+  return svg(240, d > 180 ? 240 : cy + 14, s, 'An angle');
 }
 
 /* A triangle from its three sides: c along the bottom, then a, then b. */
@@ -387,8 +399,8 @@ export const TRICKS = [
     ex: { d: 130, lv: 1, opts: ['acute', 'obtuse', 'right', 'reflex'] },
     gen(r, lv = 1) {
       const kind = lv === 1 ? pick(['acute', 'right', 'obtuse'], r) : pick(['acute', 'right', 'obtuse', 'reflex', 'acute', 'obtuse', 'reflex'], r);
-      const d = kind === 'right' ? 90 : kind === 'acute' ? (lv === 1 ? int(4, 14, r) * 5 : int(10, 86, r))
-        : kind === 'obtuse' ? (lv === 1 ? int(22, 32, r) * 5 : int(94, 172, r)) : int(195, 340, r);
+      const d = kind === 'right' ? 90 : kind === 'acute' ? (lv === 1 ? int(4, 14, r) * 5 : lv === 2 ? int(10, 80, r) : int(10, 88, r))
+        : kind === 'obtuse' ? (lv === 1 ? int(22, 32, r) * 5 : lv === 2 ? int(100, 172, r) : int(92, 175, r)) : int(195, 340, r);
       return this.q({ d, lv, opts: shuffle(KINDS, r) });
     },
     q({ d, lv, opts }) {
@@ -404,7 +416,7 @@ export const TRICKS = [
         { t: 'So it is', v: d < 90 ? 'acute' : d === 90 ? 'right' : d < 180 ? 'obtuse' : 'reflex', choices: opts },
       ];
     },
-    draw({ d }) { return angle(d); },
+    draw({ d }) { return angleFig(d); },
   },
   {
     id: 'coordinates-and-moves', world: 'shapecity', band: '8-10', title: 'Coordinates and moves',
@@ -504,7 +516,7 @@ export const TRICKS = [
     gen(r, lv = 1) {
       return fresh(() => {
         const kind = lv === 1 ? 'tri' : lv === 2 ? pick(['tri', 'iso', 'right'], r) : pick(['quad', 'quad', 'iso'], r);
-        if (kind === 'iso') return this.q({ kind, apex: int(10, 80, r) * 2 });
+        if (kind === 'iso') return this.q({ kind, apex: int(10, 60, r) * 2 });
         if (kind === 'right') { const a = int(15, 75, r), A = shuffle([90, a, 90 - a], r); return this.q({ kind: 'tri', angles: A, hide: A.indexOf(90) === 0 ? 1 : 0 }); }
         if (kind === 'tri') { const a = int(lv === 1 ? 6 : 20, lv === 1 ? 18 : 120, r) * (lv === 1 ? 5 : 1), b = int(20, 160 - a, r); const A = [a, b, 180 - a - b]; return this.q({ kind, angles: A, hide: int(0, 2, r) }); }
         let A; do { A = [0, 0, 0].map(() => int(12, 28, r) * 5); } while (360 - A[0] - A[1] - A[2] < 55 || 360 - A[0] - A[1] - A[2] > 165);

@@ -1,5 +1,5 @@
 /* test/model.mjs — the household, the atlas frontier, band gating, placement, the Store seam. */
-import { newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
+import { worldOpen, newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
 import { TRICKS, byId } from '../src/tricks.js';
 import { migrate } from '../src/store.js';
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 20) console.error('  ✗ ' + m); } };
@@ -24,6 +24,16 @@ ok(scoreRun(b, s1, 9, 10, true).stars === 3, 'third star: 90% in time');
 const fa = frontier(a); scoreRun(b, ROUTE[1].id, 10, 10, true); ok(frontier(a) === fa, "a sibling's progress is not shared");
 ok(byId[ROUTE[frontier(a)].id] && byId[ROUTE[frontier(a)].id].band === '8-10', "an 8–10 child's next stop is an 8–10 stop, not Make ten first");
 const c = newKid('Old', '11-14'); ok(ROUTE[frontier(c)].kind === 'stop' && byId[ROUTE[frontier(c)].id].band === '11-14', 'an 11–14 starts at the first 11–14 stop');
+// per-world gating: a 6–7 child reaches Time and Money at once, but not the Workshop
+{
+  const kid67 = newKid('Y', '6-7'); const hh = { parent: {} };
+  ok(worldOpen(hh, kid67, 'clocktower') && worldOpen(hh, kid67, 'carnival'), '6–7 worlds are open to a 6–7 child from day one');
+  ok(!worldOpen(hh, kid67, 'workshop'), 'an 8–10 world waits for a 6–7 child');
+  kid67.checks.market = { passed: true, best: 90 };
+  ok(worldOpen(hh, kid67, 'workshop'), '…until the place before it (the Market) is passed');
+  const ci = ROUTE.findIndex((n) => n.world === 'clocktower');
+  ok(isOpen(hh, kid67, ci) && !isOpen(hh, kid67, ci + 1), 'inside a world, stops open one at a time');
+}
 // placement
 ok(placeFrom(0) === null && placeFrom(3) === null, 'passing only the Gardens rungs starts at the beginning');
 const p = placeFrom(9); ok(p != null && ROUTE[p].world === byId[RUNGS[8].at].world && ROUTE[p - 1].kind === 'check', 'placement opens a world from its first stop');

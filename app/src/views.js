@@ -354,7 +354,7 @@ function learnTab(t) {
     <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p><p>${esc(t.hook)}</p></div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
-      <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">So <b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>. ${btn('Your turn →', 'stopTab', 'turn', 'primary')}</p>`}</div>
+      <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>.`} ${btn('Your turn →', 'stopTab', 'turn', 'primary')}</p>`}</div>
     </div>
     <div class="card why"><p class="kicker">Why it works</p>
       ${t.why.map((p) => `<p>${esc(p)}</p>`).join('')}

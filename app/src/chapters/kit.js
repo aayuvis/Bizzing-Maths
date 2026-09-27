@@ -57,14 +57,16 @@ export function poly(pts, labels = [], fill = 'dg-fill2', pad = 30) {
 /* A rectangle w×h (in units) drawn at scale u, labelled with its sides. */
 export const rect = (w, h, unit = 'cm', u = 18) => poly([[0, 0], [w * u, 0], [w * u, h * u], [0, h * u]], [`${w} ${unit}`, `${h} ${unit}`, '', '']);
 /* An angle of `deg` degrees with an arc; label optional (e.g. '?' or '40°'). */
-export function angle(deg, label = '', r = 110) {
-  const a = (deg * Math.PI) / 180, ox = 30, oy = 150;
+export function angle(deg, label = '', r = 100) {
+  // drawn round a centre with room on every side, so a wide or reflex angle
+  // is never clipped by the box
+  const a = (deg * Math.PI) / 180, ox = r + 24, oy = r + 24, S = 2 * r + 48;
   const x2 = ox + r * Math.cos(-a), y2 = oy + r * Math.sin(-a), ar = 34;
   const large = deg > 180 ? 1 : 0;
   let s = `<line x1="${ox}" y1="${oy}" x2="${ox + r}" y2="${oy}" class="dg-line"/><line x1="${ox}" y1="${oy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="dg-line"/>`;
   s += `<path d="M${ox + ar},${oy} A${ar},${ar} 0 ${large} 0 ${(ox + ar * Math.cos(-a)).toFixed(1)},${(oy + ar * Math.sin(-a)).toFixed(1)}" class="dg-arc"/>`;
   if (label) s += T((ox + (ar + 18) * Math.cos(-a / 2)).toFixed(1), (oy + (ar + 18) * Math.sin(-a / 2) + 5).toFixed(1), label, 'dg-accent');
-  return svg(170, 170, s, `An angle${label ? ' marked ' + label : ''}`);
+  return svg(S, S, s, `An angle${label ? ' marked ' + label : ''}`);
 }
 /* Vertical bar chart: labels[], values[], a scale step. */
 export function barChart(labels, values, step = 1, title = '') {

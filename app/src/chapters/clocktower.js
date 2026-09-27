@@ -8,7 +8,7 @@
    cannot hide behind the same slip in the other. */
 
 import { int, pick, shuffle } from '../rand.js';
-import { clock, poly, grid, cuboid, svg, text } from './kit.js';
+import { clock, grid, cuboid, svg, text } from './kit.js';
 
 export const WORLD = {
   id: 'clocktower', name: 'The Clock Tower', short: 'Clock Tower', band: '6-7',
@@ -34,6 +34,27 @@ const R3 = (x) => Math.round(x * 1000) / 1000;
 function twoClocks(H1, m1, H2, m2) {
   const a = clock(H1, m1, 62), b = clock(H2, m2, 62);
   return svg(320, 136, `<g>${a}</g><g transform="translate(184,0)">${b}</g>` + text(160, 72, '→', 'dg-big'), 'Two clocks: the start and the end');
+}
+/* A polygon whose side labels sit just outside each side, anchored away from it. */
+function shape(pts, labels, fill = 'dg-fill2', padX = 56, padY = 30) {
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const x0 = Math.min(...xs) - padX, y0 = Math.min(...ys) - padY, w = Math.max(...xs) - x0 + padX, h = Math.max(...ys) - y0 + padY;
+  const area = pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0), sg = Math.sign(area) || 1;
+  let s = `<polygon points="${pts.map((p) => `${R3(p[0] - x0)},${R3(p[1] - y0)}`).join(' ')}" class="${fill}"/>`;
+  labels.forEach((l, i) => {
+    if (!l) return; const a = pts[i], b = pts[(i + 1) % pts.length], ex = b[0] - a[0], ey = b[1] - a[1], len = Math.hypot(ex, ey) || 1;
+    const nx = (ey / len) * sg, ny = (-ex / len) * sg;
+    const anchor = nx > 0.45 ? 'start' : nx < -0.45 ? 'end' : 'middle', dy = ny > 0.45 ? 15 : ny < -0.45 ? -5 : 5;
+    s += text(R3((a[0] + b[0]) / 2 + nx * 9 - x0), R3((a[1] + b[1]) / 2 + ny * 9 - y0 + dy), l, 'dg-text', anchor);
+  });
+  return svg(R3(w), R3(h), s, 'A shape with its measurements');
+}
+/* kit.cuboid, given room on the left for its height label. */
+function box(l, h, w) {
+  const inner = cuboid(l, h, w, 'cm', Math.min(22, Math.floor(170 / Math.max(l, h, w))));
+  const [, W, H] = inner.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  const body = inner.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  return svg(R3(+W + 50), R3(+H), `<g transform="translate(50,0)">${body}</g>`, 'A box');
 }
 /* An L-shape: full width W and height H, with the top-right corner cut away,
    leaving a column w1 wide on the left and a strip h1 tall along the bottom. */
@@ -276,9 +297,9 @@ export const TRICKS = [
       return [{ t: `One length and one width: ${W} + ${H}`, v: W + H }, { t: 'Two of each: double it', v: 2 * (W + H) }];
     },
     draw({ kind, W, H, w1, h1 }) {
-      if (kind === 'L') return poly(lPoints(W, H, w1, h1, 18), lLabels(W, H, w1, h1));
+      if (kind === 'L') return shape(lPoints(W, H, w1, h1, 18), lLabels(W, H, w1, h1));
       const u = Math.min(18, Math.floor(220 / Math.max(W, H)));
-      return poly([[0, 0], [W * u, 0], [W * u, H * u], [0, H * u]], [`${W} cm`, `${H} cm`, '', '']);
+      return shape([[0, 0], [W * u, 0], [W * u, H * u], [0, H * u]], [`${W} cm`, `${H} cm`, '', '']);
     },
   },
   {
@@ -311,7 +332,7 @@ export const TRICKS = [
     draw({ lv, W, H, cols, rows, c0, r0 }) {
       if (lv === 1) { const s = new Set(); for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) s.add(`${r0 + i},${c0 + j}`); return grid(cols, rows, s); }
       const u = Math.min(18, Math.floor(200 / Math.max(W, H)));
-      return poly([[0, 0], [W * u, 0], [W * u, H * u], [0, H * u]], [`${W} cm`, lv === 3 ? '?' : `${H} cm`, '', '']);
+      return shape([[0, 0], [W * u, 0], [W * u, H * u], [0, H * u]], [`${W} cm`, lv === 3 ? '?' : `${H} cm`, '', '']);
     },
   },
   {
@@ -343,7 +364,7 @@ export const TRICKS = [
         { t: 'Add the two pieces', v: W * h1 + w1 * (H - h1) },
       ];
     },
-    draw({ W, H, w1, h1 }) { const u = Math.min(18, Math.floor(220 / Math.max(W, H))); return poly(lPoints(W, H, w1, h1, u), lLabels(W, H, w1, h1), 'dg-fill3'); },
+    draw({ W, H, w1, h1 }) { const u = Math.min(18, Math.floor(220 / Math.max(W, H))); return shape(lPoints(W, H, w1, h1, u), lLabels(W, H, w1, h1), 'dg-fill3'); },
   },
   {
     id: 'area-triangles', world: 'clocktower', band: '11-14', title: 'Triangles and parallelograms',
@@ -360,7 +381,7 @@ export const TRICKS = [
       return fresh(() => {
         if (lv === 1) return this.q({ kind: 'para', b: int(4, 12, r), h: int(3, 10, r), o: int(2, 4, r), sl: 0 });
         if (lv === 2) { const b = int(3, 12, r); let h = int(2, 12, r); if ((b * h) % 2) h++; return this.q({ kind: 'right', b, h, o: 0, sl: 0 }); }
-        if (r() < 0.5) { const [o, h, sl] = pick([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10], [5, 12, 13], [9, 12, 15], [12, 5, 13]], r); return this.q({ kind: 'para', b: int(4, 12, r), h, o, sl }); }
+        if (r() < 0.5) { const [o, h, sl] = pick([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10], [5, 12, 13], [9, 12, 15], [12, 5, 13]], r); return this.q({ kind: 'para', b: int(o + 2, o + 8, r), h, o, sl }); }
         const b = int(4, 14, r); let h = int(3, 12, r); if ((b * h) % 2) h++;
         return this.q({ kind: 'tri', b, h, o: int(1, b - 1, r), sl: 0 });
       });
@@ -417,7 +438,7 @@ export const TRICKS = [
       ];
       return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w }, { t: 'Number of layers', v: h }, { t: `${l * w} × ${h}`, v: l * w * h }];
     },
-    draw({ l, w, h }) { return cuboid(l, h, w, 'cm', Math.min(22, Math.floor(170 / Math.max(l, h, w)))); },
+    draw({ l, w, h }) { return box(l, h, w); },
   },
 ];
 

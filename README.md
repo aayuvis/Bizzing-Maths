@@ -10,7 +10,7 @@ Part of the Bizzing family with [Bizzing Bee](https://www.bizzingbee.com/),
 
 - **Facts** — adding, taking away, times tables and sharing, ordered by how *tricky* a fact is
   (7 × 8 before 12 × 12), with spaced review so "fluent" means still fast a week later.
-- **The Number Atlas** — a painted island of five worlds and 27 tricks, from *Make ten first* to *Vertically and
+- **The Number Atlas** — two painted islands, 14 worlds and 119 stops covering the whole of maths from 6 to 14 (place value, the four operations, fractions, decimals, percentages, ratio, factors, squares and powers, sets and algebra, geometry, measurement, time and money, data and chance), from *Make ten first* to *Vertically and
   crosswise*. Every stop: the trick as steps, **why it works** (a picture and the algebra),
   your turn to type every step, then a drill.
 - **The Sutra Observatory** — the Vedic methods, with an honest account of where they come from.
