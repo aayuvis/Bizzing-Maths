@@ -142,6 +142,80 @@ function planArgs(kind, r, lv) {
   const k = int(2, big ? 8 : 5, r), c = k * int(1, 4, r); return { n: int(2, big ? 8 : 5, r), c, k };
 }
 
+/* ------------------------------------------------------------ counting orders and choices */
+
+/* n! and the falling product n × (n − 1) × … (r factors). The drills keep every
+   value well inside the safe integers: products to 9!, quotients from at most 18!. */
+const fact = (n) => { let p = 1; for (let k = 2; k <= n; k++) p *= k; return p; };
+const fall = (n, r) => { let p = 1; for (let k = 0; k < r; k++) p *= n - k; return p; };
+const downFrom = (n, r) => Array.from({ length: r }, (_, k) => n - k);
+/* The independent routes the test evaluates: a factorial built upwards, and
+   Pascal's triangle — adding, never dividing — for a choice of r from n. */
+const FACT_JS = (n) => `[...Array(${n}).keys()].reduce((p,i)=>p*(i+1),1)`;
+const PASCAL_JS = (n, r) => `((n,r)=>{let row=[1];for(let i=0;i<n;i++)row=[...row,0].map((v,j)=>v+(j?row[j-1]:0));return row[r];})(${n},${r})`;
+const SUPD = '⁰¹²³⁴⁵⁶⁷⁸⁹', SUBD = '₀₁₂₃₄₅₆₇₈₉';
+const nP = (n, r) => `${[...String(n)].map((d) => SUPD[d]).join('')}P${[...String(r)].map((d) => SUBD[d]).join('')}`;
+const NAMES = ['Asha', 'Ben', 'Chen', 'Dev', 'Ela', 'Femi', 'Gita', 'Hugo', 'Jai'];
+const PLACE = ['first', 'second', 'third', 'fourth'];
+
+/* A row of boxes joined by × — what a factorial MEANS, never what it comes to.
+   A box marked `cut` is struck through: the part that cancels. */
+function chain(items, label, below = null) {
+  const w = 40, g = 22, x = (i) => 4 + i * (w + g); let s = '';
+  items.forEach((v, i) => {
+    s += `<rect x="${x(i)}" y="6" width="${w}" height="40" rx="7" class="${i % 2 ? 'dg-fill2' : 'dg-fill1'}"/>` + text(x(i) + w / 2, 32, v, 'dg-text');
+    if (i < items.length - 1) s += text(x(i) + w + g / 2, 32, '×', 'dg-text');
+  });
+  if (below) {
+    const i = items.length - 1;
+    s += text(x(i) - g / 2, 84, '÷', 'dg-text') + `<rect x="${x(i)}" y="58" width="${w}" height="40" rx="7" class="dg-fill3"/>` + text(x(i) + w / 2, 84, below, 'dg-text');
+    s += `<line x1="${x(i) - 2}" y1="100" x2="${x(i) + w + 2}" y2="4" class="dg-hand2"/>`;
+  }
+  return svg(8 + items.length * (w + g) - g, below ? 104 : 52, s, label);
+}
+/* The pattern walked downwards, 0! left for the child. */
+function ladder() {
+  const rows = [['4!', '24'], ['3!', '6'], ['2!', '2'], ['1!', '1'], ['0!', '?']]; let s = '';
+  rows.forEach(([a, b], i) => {
+    const y = 8 + i * 40;
+    s += `<rect x="4" y="${y}" width="104" height="30" rx="6" class="${i === 4 ? 'dg-fill2' : 'dg-blank'}"/>` + text(56, y + 20, `${a} = ${b}`, 'dg-text');
+    if (i < 4) s += text(116, y + 36, `÷ ${4 - i}`, 'dg-small', 'start');
+  });
+  return svg(170, 206, s, 'The factorials going down: 4! = 24, 3! = 6, 2! = 2, 1! = 1, and 0! is the question');
+}
+/* People as coloured tokens above a row of empty places. `fixed` puts one of
+   them in the first place already; `first` marks who may take the first place. */
+function lineup(n, { fixed = false, first = 0, slots = n } = {}) {
+  const u = 46, W = Math.max(n, slots) * u + 12; let s = '';
+  for (let i = 0; i < n; i++) {
+    const cx = 28 + i * u, cls = first ? (i < first ? 'dg-fill3' : 'dg-fill1') : ['dg-fill1', 'dg-fill2', 'dg-fill3'][i % 3];
+    if (!(fixed && i === 0)) s += `<circle cx="${cx}" cy="26" r="17" class="${cls}"/>` + text(cx, 31, NAMES[i][0], 'dg-text');
+  }
+  for (let i = 0; i < slots; i++) {
+    const x = 8 + i * u;
+    s += `<rect x="${x}" y="64" width="${u - 8}" height="38" rx="6" class="dg-blank" stroke-dasharray="5 4"/>`;
+    if (i === 0 && fixed) s += `<circle cx="${x + (u - 8) / 2}" cy="83" r="15" class="dg-fill1"/>` + text(x + (u - 8) / 2, 88, NAMES[0][0], 'dg-text');
+    else if (i === 0 && first) s += text(x + (u - 8) / 2, 88, '★', 'dg-accent');
+  }
+  return svg(W, 108, s, fixed ? `${n} people; the first place is taken already` : first ? `${n} people, ${first} of them may go first` : `${n} people and ${slots} places`);
+}
+/* Named places to fill (gold, silver…), each an empty box. */
+function slotsPic(names, note) {
+  const w = 96, g = 12; let s = '';
+  names.forEach((nm, i) => { const x = 4 + i * (w + g);
+    s += `<rect x="${x}" y="22" width="${w}" height="44" rx="8" class="dg-blank" stroke-dasharray="5 4"/>` + text(x + w / 2, 14, nm, 'dg-small') + text(x + w / 2, 50, '?', 'dg-accent'); });
+  s += text(4, 90, note, 'dg-small', 'start');
+  return svg(Math.max(8 + names.length * (w + g) - g, 230), 98, s, `${names.length} places to fill: ${names.join(', ')}`);
+}
+/* n people in a ring, and a loop that holds a group of r — no first, no last. */
+function ringGroup(n, r) {
+  const R = 64, C = 78; let s = '';
+  for (let i = 0; i < n; i++) { const t = (i / n) * 2 * Math.PI - Math.PI / 2;
+    s += `<circle cx="${(C + R * Math.cos(t)).toFixed(1)}" cy="${(C + R * Math.sin(t)).toFixed(1)}" r="10" class="dg-fill1"/>`; }
+  s += `<ellipse cx="${2 * C + 70}" cy="${C}" rx="52" ry="40" class="dg-blank" stroke-dasharray="6 5"/>` + text(2 * C + 70, C + 5, `a group of ${r}`, 'dg-small');
+  return svg(2 * C + 130, 2 * C, s, `${n} people, and a group of ${r} to choose`);
+}
+
 /* ------------------------------------------------------------ the stops */
 
 const CHANCE = ['impossible', 'unlikely', 'even chance', 'likely', 'certain'];
@@ -687,6 +761,232 @@ export const TRICKS = [
       return svg(x0 + items.length * cw + 6, y0 + names.length * rh + 6, s, `A logic grid: ${clues.length} clues`);
     },
   },
+
+  /* ================================================ COUNTING ORDERS AND CHOICES
+     list-outcomes multiplied the choices; these four count them when the
+     choices run out one by one (orders) and when order stops mattering (groups). */
+  {
+    id: 'factorials', world: 'carnival', band: '11-14', title: 'Factorials',
+    hook: 'How many ways can 5 friends line up for a photo? Now try 10 friends — without listing them.',
+    idea: 'n! means n × (n − 1) × … × 2 × 1: multiply every whole number from n down to 1.',
+    why: [
+      'Line up 4 friends. Any of the 4 can stand first. Whoever is first, any of the 3 left can stand second, then either of the last 2, and the last friend has no choice at all. So there are 4 × 3 × 2 × 1 = 24 line-ups. That product turns up so often it has a short name: 4 factorial, written 4!.',
+      'Every factorial holds the one below it: 5! = 5 × 4 × 3 × 2 × 1 = 5 × 4!. That is why 8! ÷ 6! is easy. 6! sits inside 8!, so it cancels, and only 8 × 7 = 56 is left. Never work out two huge numbers just to divide one by the other.',
+      'Walk the pattern down: 4! = 24, and dividing by 4 gives 3! = 6; divide by 3 and 2! = 2; divide by 2 and 1! = 1. One more step, divide by 1, gives 0! = 1. It is not a rule someone made up — it is the only value that keeps the pattern going, and there really is exactly one way to line up nobody.',
+    ],
+    alg: 'n! = n × (n − 1) × … × 2 × 1 = n × (n − 1)! · 0! = 1',
+    ex: { kind: 'fact', n: 5 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Work out n!', note: 'Build it upwards: each factorial is the one before, times the next number. 2! = 2, 3! = 3 × 2!, 4! = 4 × 3!…',
+        ex: { kind: 'fact', n: 5 } },
+      { label: 'Divide: cancel first', note: '6! is hiding inside 8!, so it cancels. Only the numbers from 8 down to 7 are left to multiply.',
+        ex: { kind: 'ratio', n: 8, m: 6 } },
+      { label: 'Zero factorial', note: 'Walk the pattern down, dividing as you go: 1! ÷ 1 = 0!. So 0! is 1 — one way to line up nobody.',
+        ex: { kind: 'zero', n: 3 } },
+    ],
+    gen(r, lv = 1) {
+      return fresh(() => {
+        if (lv === 1) return this.q({ kind: 'fact', n: int(3, 6, r) });
+        if (lv === 2) { if (r() < 0.5) return this.q({ kind: 'fact', n: int(5, 8, r) }); const n = int(6, 11, r); return this.q({ kind: 'ratio', n, m: n - 2 }); }
+        const k = pick(['fact', 'ratio', 'ratio', 'zero'], r);
+        if (k === 'fact') return this.q({ kind: 'fact', n: int(6, 9, r) });
+        if (k === 'zero') return this.q({ kind: 'zero', n: int(2, 6, r) });
+        const n = int(8, 18, r); return this.q({ kind: 'ratio', n, m: n - int(2, 3, r) });
+      });
+    },
+    q({ kind, n, m }) {
+      if (kind === 'fact') return { kind, n, text: `Work out ${n}!`, say: `work out ${n} factorial`, expr: FACT_JS(n), ans: fact(n) };
+      if (kind === 'ratio') return { kind, n, m, text: `Work out ${n}! ÷ ${m}!`, say: `${n} factorial divided by ${m} factorial`, expr: `${FACT_JS(n)}/${FACT_JS(m)}`, ans: fall(n, n - m) };
+      return { kind, n, text: `Work out ${n}! + 0!`, say: `${n} factorial plus 0 factorial`, expr: `${FACT_JS(n)}+${FACT_JS(0)}`, ans: fact(n) + 1 };
+    },
+    work({ kind, n, m }) {
+      const up = (to) => { const s = to > 5 ? [{ t: '5! = 5 × 4 × 3 × 2 × 1', v: 120 }] : [];
+        for (let k = to > 5 ? 6 : 2; k <= to; k++) s.push({ t: k === 2 ? '2! = 2 × 1' : `${k}! = ${k} × ${k - 1}!`, v: fact(k) }); return s; };
+      if (kind === 'fact') return up(n);
+      if (kind === 'ratio') {
+        const f = downFrom(n, n - m), s = [{ t: `${m}! cancels. How many numbers are left, counting down from ${n}?`, v: n - m }, { t: `${f[0]} × ${f[1]}`, v: f[0] * f[1] }];
+        if (f.length > 2) s.push({ t: `${f[0] * f[1]} × ${f[2]}`, v: fall(n, 3) });
+        return s;
+      }
+      return [...up(n).slice(-2), { t: '0! — walk the pattern down to it', v: 1 }, { t: `${fact(n)} + 1`, v: fact(n) + 1 }];
+    },
+    draw({ kind, n, m }) {
+      if (kind === 'zero') return ladder();
+      if (kind === 'ratio') return chain([...downFrom(n, n - m), `${m}!`], `${n}! written as ${downFrom(n, n - m).join(' × ')} × ${m}!, divided by ${m}!`, `${m}!`);
+      return chain(downFrom(n, n), `${n}! = ${downFrom(n, n).join(' × ')}`);
+    },
+  },
+  {
+    id: 'arrange-all', world: 'carnival', band: '11-14', title: 'Putting things in order',
+    hook: '6 friends queue for the Big Wheel. How many different orders — and what if Pip insists on going first?',
+    idea: 'Fill the places one at a time: n choices for the first, n − 1 for the next, down to 1. A place that is already decided has only 1 choice.',
+    why: [
+      'Think of a row of empty places. The first place can take any of the n things. Once it is filled, the second place has n − 1 left — and that is true whichever thing went first, so every first choice brings the same number of second choices. Multiply all the way down: n × (n − 1) × … × 1 = n!.',
+      'If Pip must be at the front, the first place has only 1 choice. Just the other n − 1 are free to move, so there are (n − 1)! orders. Check it with 3 friends: with Pip in front, only the other two can swap — 2 orders, and 2! = 2.',
+      'If the first place must go to one of a few — say one of 2 sprinters in a team of 5 — the first place has 2 choices, and after it the other 4 can go in any order: 2 × 4! = 48. Always fill the fussy place first.',
+    ],
+    alg: 'n things in a row: n! · one place fixed: (n − 1)! · first place from k of them: k × (n − 1)!',
+    ex: { kind: 'all', n: 4, c: 0 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Everyone in a row', note: 'n choices for the first place, one fewer for each place after it, down to 1: that is n!.',
+        ex: { kind: 'all', n: 4, c: 0 } },
+      { label: 'One place fixed', note: 'Pip is at the front already, so that place has 1 choice. Only the others move: (n − 1)!.',
+        ex: { kind: 'fixed', n: 5, c: 0 } },
+      { label: 'First from a few', note: 'Fill the fussy place first: 2 sprinters could run first. Then the rest go in any order.',
+        ex: { kind: 'first', n: 5, k: 2 } },
+    ],
+    gen(r, lv = 1) {
+      return fresh(() => {
+        if (lv === 1) return this.q({ kind: 'all', n: int(3, 5, r), c: int(0, 2, r) });
+        if (lv === 2) return this.q({ kind: r() < 0.5 ? 'all' : 'fixed', n: int(4, 7, r), c: int(0, 2, r) });
+        const kind = pick(['all', 'fixed', 'first'], r), n = int(5, 8, r);
+        return this.q({ kind, n, c: int(0, 2, r), k: int(2, n - 2, r) });
+      });
+    },
+    q({ kind, n, c = 0, k }) {
+      if (kind === 'first') return { kind, n, k, text: `A relay team has ${n} runners, and ${k} of them are sprinters. A sprinter must run first. In how many different orders can the team run?`, expr: `${FACT_JS(n)}*${k}/${n}`, ans: k * fact(n - 1) };
+      const T = kind === 'all'
+        ? [`${n} friends queue for the Big Wheel. In how many different orders can they stand?`, `${n} different prizes go in a row on the hoopla shelf. In how many different orders can they go?`, `${n} different flags hang in a line over the carnival gate. In how many different orders can they hang?`]
+        : [`${n} friends queue for the dodgems, and Pip must be at the front. In how many different orders can they stand?`, `${n} different prizes go in a row on the shelf, and the teddy must go at the left end. How many different orders?`, `${n} different flags hang in a line, and the red one must be first. How many different orders?`];
+      return { kind, n, c, text: T[c], expr: kind === 'all' ? FACT_JS(n) : `${FACT_JS(n)}/${n}`, ans: kind === 'all' ? fact(n) : fact(n - 1) };
+    },
+    work({ kind, n, k }) {
+      if (kind === 'fixed') return [{ t: 'The first place is decided. How many are left to arrange?', v: n - 1 }, { t: `Arrange them all: ${n - 1}! = ${downFrom(n - 1, n - 1).join(' × ')}`, v: fact(n - 1) }];
+      if (kind === 'first') return [{ t: 'How many could run first?', v: k }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1) }, { t: `${k} × ${fact(n - 1)}`, v: k * fact(n - 1) }];
+      return [{ t: 'Choices for the first place', v: n }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1) }, { t: `${n} × ${fact(n - 1)}`, v: fact(n) }];
+    },
+    draw({ kind, n, k }) { return lineup(n, { fixed: kind === 'fixed', first: kind === 'first' ? k : 0 }); },
+  },
+  {
+    id: 'permutations', world: 'carnival', band: '11-14', title: 'Permutations: order matters',
+    hook: '8 runners in the final. How many ways can gold, silver and bronze be given out?',
+    idea: 'When order matters and nothing repeats, count the choices for each place and multiply: n × (n − 1) × … for r places.',
+    why: [
+      'Draw three places: gold, silver, bronze. Any of the 8 runners could win gold. Whoever does, 7 are left for silver, then 6 for bronze. So 8 × 7 × 6 = 336 ways. Stop after 3 places — the other 5 runners get no medal, so their order does not count.',
+      'That is 8! with its tail cut off: 8 × 7 × 6 = 8! ÷ 5!. Choosing r things from n in order is written ⁿPᵣ = n! ÷ (n − r)!, and the ÷ (n − r)! simply removes the places nobody fills.',
+      'Watch for repeats. A padlock with 3 dials, each 0 to 9, can show 777 — so every dial keeps all 10 choices: 10 × 10 × 10 = 1,000 codes. With no repeats allowed, each place has one fewer: 10 × 9 × 8 = 720. Always ask first: can a thing be used twice?',
+    ],
+    alg: 'ⁿPᵣ = n × (n − 1) × … (r factors) = n! ÷ (n − r)! · with repeats: n × n × … = nʳ',
+    ex: { kind: 'order', n: 8, r: 3, c: 1 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Order, no repeats', note: 'Gold, silver and bronze are different places, and nobody wins two medals: 8, then 7, then 6 choices.',
+        ex: { kind: 'order', n: 8, r: 3, c: 1 } },
+      { label: 'Repeats allowed', note: 'A digit can come back, so every place keeps ALL its choices: 10 × 10 × 10, not 10 × 9 × 8.',
+        ex: { kind: 'repeat', n: 10, r: 3, c: 0 } },
+      { label: 'The ⁿPᵣ shorthand', note: '⁷P₃ means "choose 3 of 7, in order": start at 7 and multiply 3 numbers going down.',
+        ex: { kind: 'notation', n: 7, r: 3 } },
+    ],
+    gen(r, lv = 1) {
+      return fresh(() => {
+        if (lv === 1) return this.q({ kind: 'order', n: int(4, 9, r), r: 2, c: 0 });
+        if (lv === 2) {
+          if (r() < 0.3) return this.q({ kind: 'repeat', n: 10, r: int(2, 4, r), c: 0 });
+          const c = int(1, 2, r); return this.q({ kind: 'order', n: c === 2 ? int(5, 9, r) : int(5, 10, r), r: 3, c });
+        }
+        const kind = pick(['order', 'repeat', 'notation'], r);
+        if (kind === 'repeat') { const c = int(0, 2, r); return this.q({ kind, n: c === 0 ? 10 : int(3, 6, r), r: int(2, 4, r), c }); }
+        if (kind === 'notation') { const n = int(6, 12, r); return this.q({ kind, n, r: int(2, 4, r) }); }
+        const c = int(0, 2, r); return this.q({ kind, n: c === 2 ? int(6, 9, r) : int(6, 12, r), r: c === 0 ? 2 : c === 1 ? 3 : 4, c });
+      });
+    },
+    q({ kind, n, r, c = 0 }) {
+      if (kind === 'notation') return { kind, n, r, text: `Work out ${nP(n, r)}`, say: `${n} P ${r}: the number of ways to choose ${r} of ${n} in order`, expr: `${FACT_JS(n)}/${FACT_JS(n - r)}`, ans: fall(n, r) };
+      if (kind === 'repeat') {
+        const L = 'ABCDEF'.slice(0, n).split('').join(', ');
+        const T = [`A padlock has ${r} dials, each showing the digits 0 to 9. How many different codes can it show?`,
+          `A code is ${r} letters long, using only the letters ${L}. A letter may be used more than once. How many codes are there?`,
+          `A ${r}-digit code uses only the digits 1 to ${n}, and a digit may be used more than once. How many codes are there?`];
+        return { kind, n, r, c, text: T[c], expr: `Array(${r}).fill(${n}).reduce((a,b)=>a*b,1)`, ans: n ** r };
+      }
+      const T = [`${n} children are in the quiz club. How many ways can a captain and a vice-captain be chosen?`,
+        `${n} runners are in the final. How many ways can the gold, silver and bronze medals be given out?`,
+        `A ${r}-digit code uses only the digits 1 to ${n}, and no digit is used twice. How many codes are there?`];
+      return { kind, n, r, c, text: T[c], expr: `${FACT_JS(n)}/${FACT_JS(n - r)}`, ans: fall(n, r) };
+    },
+    work({ kind, n, r, c }) {
+      if (kind === 'repeat') return [{ t: 'Choices for each place — and a repeat is allowed', v: n }, { t: 'How many places?', v: r }, { t: `${Array(r).fill(n).join(' × ')}`, v: n ** r }];
+      const names = kind === 'order' && c === 0 ? ['captain', 'vice-captain'] : kind === 'order' && c === 1 ? ['gold', 'silver', 'bronze'] : PLACE.map((p) => `the ${p} place`);
+      const s = [{ t: `Choices for ${names[0]}`, v: n }];
+      for (let i = 1; i < r; i++) s.push({ t: `Then ${names[i]}: one fewer to choose from`, v: n - i });
+      s.push({ t: downFrom(n, r).join(' × '), v: fall(n, r) });
+      return s;
+    },
+    draw({ kind, n, r, c }) {
+      if (kind === 'order' && c === 0) return slotsPic(['captain', 'vice-captain'], `${n} to choose from · nobody twice`);
+      if (kind === 'order' && c === 1) return slotsPic(['gold', 'silver', 'bronze'], `${n} runners · nobody wins twice`);
+      if (kind === 'repeat') return slotsPic(PLACE.slice(0, r), 'repeats allowed');
+      return slotsPic(PLACE.slice(0, r), `${n} to choose from · no repeats`);
+    },
+  },
+  {
+    id: 'combinations', world: 'carnival', band: '11-14', title: 'Combinations: order doesn\'t matter',
+    hook: '7 players, a team of 3. How many different teams — and why are there fewer than ways to give out 3 medals?',
+    idea: 'Count as if order mattered, then divide by r! — the number of orders each group was counted in.',
+    why: [
+      'A team of Asha, Ben and Chen is the same team whichever order you pick them in. Count as if order mattered: 7 × 6 × 5 = 210. But every team of 3 has been counted once for each of its orders — ABC, ACB, BAC, BCA, CAB, CBA: 3! = 6 of them. So there are 210 ÷ 6 = 35 teams.',
+      'That is ⁿCᵣ = ⁿPᵣ ÷ r! = n! ÷ (r! × (n − r)!). Handshakes are the r = 2 case you have met before: n × (n − 1) counts every pair twice, once from each end, so halve it.',
+      'Choosing who is IN also chooses who is OUT. Picking 8 of 10 for a team is the same as picking the 2 to leave out, so ¹⁰C₈ = ¹⁰C₂ = 10 × 9 ÷ 2 = 45. Count the smaller side. And a chance can be counted this way too: the pairs you want, out of all the pairs.',
+    ],
+    alg: 'ⁿCᵣ = ⁿPᵣ ÷ r! = n! ÷ (r! × (n − r)!) · ⁿCᵣ = ⁿCₙ₋ᵣ',
+    ex: { kind: 'group', n: 7, r: 3, c: 0 },
+    caseKey: 'kind',
+    cases: [
+      { label: 'Pairs: halve it', note: 'Picking Asha then Ben gives the same pair as Ben then Asha. Count in order, then halve.',
+        ex: { kind: 'pairs', n: 6, c: 0 } },
+      { label: 'A group: ÷ r!', note: 'Count in order, then divide by the number of orders one team can be picked in: 3! = 6.',
+        ex: { kind: 'group', n: 7, r: 3, c: 0 } },
+      { label: 'Choose who stays out', note: 'Picking 8 to play is picking 2 to sit out — the same number of ways, and far quicker to count.',
+        ex: { kind: 'leave', n: 10, r: 8 } },
+      { label: 'A chance, by counting', note: 'Count the pairs you want, then all the pairs. The chance is one over the other, as a fraction.',
+        ex: { kind: 'prob', y: 4, b: 3 } },
+    ],
+    gen(r, lv = 1) {
+      return fresh(() => {
+        if (lv === 1) return this.q({ kind: 'pairs', n: int(4, 10, r), c: int(0, 2, r) });
+        if (lv === 2) return r() < 0.35 ? this.q({ kind: 'pairs', n: int(8, 16, r), c: int(0, 2, r) }) : this.q({ kind: 'group', n: int(5, 9, r), r: 3, c: int(0, 2, r) });
+        const kind = pick(['group', 'leave', 'prob'], r);
+        if (kind === 'group') { const R = int(3, 4, r); return this.q({ kind, n: int(R + 3, 12, r), r: R, c: int(0, 2, r) }); }
+        if (kind === 'leave') { const n = int(8, 15, r); return this.q({ kind, n, r: n - int(2, 3, r) }); }
+        return this.q({ kind, y: int(2, 6, r), b: int(1, 6, r) });
+      });
+    },
+    q({ kind, n, r, c = 0, y, b }) {
+      if (kind === 'prob') {
+        const N = y + b;
+        return { kind, y, b, text: `A drawer holds ${y} yellow and ${b} blue socks. You pull out 2 without looking. What is the chance both are yellow?`,
+          expr: `${y}/${N}*${y - 1}/${N - 1}`, ans: `${fall(y, 2) / 2}/${fall(N, 2) / 2}`, frac: true, keys: ['/'] };
+      }
+      if (kind === 'pairs') {
+        const T = [`${n} friends want to enter the three-legged race. How many different pairs could they make?`,
+          `${n} teams are in a football league, and every team plays every other team once. How many matches?`,
+          `The ice-cream stall has ${n} flavours. You choose 2 different scoops for a cup. How many different cups?`];
+        return { kind, n, c, text: T[c], expr: PASCAL_JS(n, 2), ans: fall(n, 2) / 2 };
+      }
+      if (kind === 'leave') return { kind, n, r, text: `${n} children want to play, but the team has ${r} places. How many different teams could be picked?`, expr: PASCAL_JS(n, r), ans: fall(n, n - r) / fact(n - r) };
+      const T = [`How many different teams of ${r} can be picked from ${n} players?`,
+        `A pizza has ${r} different toppings, chosen from ${n}. How many different pizzas can be made?`,
+        `You have tokens for ${r} rides, and there are ${n} different rides. Each ride once — how many different choices of rides?`];
+      return { kind, n, r, c, text: T[c], expr: PASCAL_JS(n, r), ans: fall(n, r) / fact(r) };
+    },
+    work({ kind, n, r, y, b }) {
+      if (kind === 'prob') { const N = y + b, want = fall(y, 2) / 2, all = fall(N, 2) / 2;
+        return [{ t: `Pairs of yellow socks: ${y} × ${y - 1} ÷ 2`, v: want }, { t: `All the pairs: ${N} × ${N - 1} ÷ 2`, v: all }, { t: 'The chance, as a fraction', v: `${want}/${all}` }]; }
+      if (kind === 'pairs') return [{ t: `In order: ${n} × ${n - 1}`, v: fall(n, 2) }, { t: 'Each pair was counted twice — halve it', v: fall(n, 2) / 2 }];
+      const k = kind === 'leave' ? n - r : r, s = [];
+      if (kind === 'leave') s.push({ t: `Choosing ${r} to play is choosing who sits out. How many sit out?`, v: k });
+      s.push({ t: `Pick ${k} in order: ${downFrom(n, k).join(' × ')}`, v: fall(n, k) });
+      s.push({ t: `Orders of one group of ${k}: ${k}!`, v: fact(k) });
+      s.push({ t: `${fall(n, k)} ÷ ${fact(k)}`, v: fall(n, k) / fact(k) });
+      return s;
+    },
+    draw({ kind, n, r, y, b }) {
+      if (kind === 'prob') return bag([...Array(y).fill('yellow'), ...Array(b).fill('blue')]);
+      return ringGroup(n, kind === 'pairs' ? 2 : r);
+    },
+  },
 ];
 
 function apply(v, [o, n]) { return o === '×' ? v * n : o === '÷' ? v / n : o === '+' ? v + n : v - n; }
@@ -790,5 +1090,38 @@ export const STORIES = {
     { who: 'panda', say: 'Theo has the teddy, so nobody else can. That tick crosses out a row and a column.' },
     { who: 'scopey', say: 'So Suki cannot have the kite or the teddy. Only the yo-yo is left for her.' },
     { who: 'panda', say: 'And Nova gets the last one: the kite. Three prizes, three people.', add: { t: '9 − 6', v: 3 } },
+  ] },
+  'factorials': { title: 'The photo booth', scene: 'fair', cast: ['beaker', 'comet'], beats: [
+    { who: null, say: 'At the fair photo booth, 5 friends want a picture in a row. Dax wants one photo for every different order.' },
+    { who: 'comet', say: 'Easy. Five people — maybe twenty orders? I will just try them all.' },
+    { who: 'beaker', say: 'Fill the row from the left. Any of the 5 can go first, then any of the 4 left.', add: { t: '5 × 4', v: 20 } },
+    { who: 'comet', say: 'Twenty already, and that is only two places. Then 3 for the middle, 2, and the last one has no choice.', add: { t: '20 × 3 × 2 × 1', v: 120 } },
+    { who: 'beaker', say: 'At one click a second, that is two whole minutes of photos.', add: { t: '120 ÷ 60', v: 2 } },
+    { who: 'comet', say: 'Every number from 5 down to 1, multiplied. Is there a name for that?' },
+    { who: 'beaker', say: 'Five factorial, written 5 with an exclamation mark. 120 orders.', add: { t: '5 × 4 × 3 × 2 × 1', v: 120 } },
+  ] },
+  'arrange-all': { title: 'The dodgem queue', scene: 'carnival', cast: ['pixel', 'panda'], beats: [
+    { who: null, say: 'Pip, Suki, Nova and Rafi queue for the dodgems. Pip says he must be at the front.' },
+    { who: 'pixel', say: 'Front is mine. How many ways can the rest of you stand behind me?' },
+    { who: 'panda', say: 'Your place has only one choice now. That leaves three of us to arrange.', add: { t: '4 − 1', v: 3 } },
+    { who: 'pixel', say: 'Three for the second place, two for the third, one for the last.', add: { t: '3 × 2 × 1', v: 6 } },
+    { who: 'panda', say: 'Without your rule it would have been all four of us in any order.', add: { t: '4 × 3 × 2 × 1', v: 24 } },
+    { who: 'pixel', say: 'So my rule keeps a quarter of them: 6 orders, every one with me in front.', add: { t: '24 ÷ 4', v: 6 } },
+  ] },
+  'permutations': { title: 'The medal table', scene: 'stadium', cast: ['scopey', 'samurai'], beats: [
+    { who: null, say: 'Eight runners line up for the final at the stadium. There are gold, silver and bronze medals to give out.' },
+    { who: 'scopey', say: 'How many different ways could the medals go? All eight in order — is it 8 factorial?' },
+    { who: 'samurai', say: 'Only three places get a medal. Any of the 8 could take gold, then 7 are left for silver.', add: { t: '8 × 7', v: 56 } },
+    { who: 'scopey', say: 'And 6 left for bronze.', add: { t: '56 × 6', v: 336 } },
+    { who: 'samurai', say: 'The last five get no medal, so their order does not count. Cut the tail off 8 factorial.' },
+    { who: 'scopey', say: 'Three hundred and thirty-six ways. Checked.', add: { t: '8 × 7 × 6', v: 336 } },
+  ] },
+  'combinations': { title: 'Picking the quiz team', scene: 'hall', cast: ['koi', 'goldlegend'], beats: [
+    { who: null, say: 'Seven children want to be in the quiz final, but a team is only 3. Nova is counting the possible teams.' },
+    { who: 'koi', say: 'Seven for the first place, six for the second, five for the third.', add: { t: '7 × 6 × 5', v: 210 } },
+    { who: 'goldlegend', say: 'A team has no first place.' },
+    { who: 'koi', say: 'Oh. Asha, Ben and Chen is the same team as Chen, Ben and Asha. How many orders does one team have?', add: { t: '3 × 2 × 1', v: 6 } },
+    { who: 'goldlegend', say: 'So every team was counted 6 times.', add: { t: '210 ÷ 6', v: 35 } },
+    { who: 'koi', say: 'Thirty-five teams. Count in order, then divide by the orders.', add: { t: '7 × 6 × 5 ÷ (3 × 2 × 1)', v: 35 } },
   ] },
 };

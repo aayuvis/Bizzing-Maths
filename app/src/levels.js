@@ -56,7 +56,8 @@ export const CONCEPT_OF = {
     kinds-of-angle coordinates-and-moves angles-on-a-line angles-in-a-shape round-the-circle construct-triangle
     perpendicular-bisector angle-bisector pythagoras-side trig-sides tan-height sin-cos-side special-angles bearings`),
   ...C('data', `pictogram-total bar-compare chance-words line-graph-read mean-fair-share median-mode data-range
-    chance-fraction list-outcomes scatter-correlation best-fit-estimate tree-diagram expected-frequency`),
+    chance-fraction list-outcomes factorials arrange-all permutations combinations scatter-correlation best-fit-estimate
+    tree-diagram expected-frequency`),
   ...C('factors', `factor-pairs multiples divisible-2-5-10 divisible-4-8 divisible-6-11 prime-or-not factor-tree
     hcf lcm prime-stones sieve-root coprime factor-count-stones digit-root divisible-3`),
   ...C('powers', `square-five square-near-100 square-dots odd-staircase teen-squares square-endings root-of-square
@@ -118,17 +119,17 @@ export const LEVELS = [
       either-side 1, index-laws 1, union-meet 2, venn-count 2, nth-term 1, line-graph 1, digit-root 1, divisible-3 1,
       diff-squares 1, square-up 1`) },
   { n: 9, age: '14', name: 'The Lighthouse',
-    blurb: 'Trigonometry and bearings, inequalities, irrational roots and decimals that never end, scatter graphs, tree diagrams and expected frequency.',
+    blurb: 'Trigonometry and bearings, inequalities, irrational roots and decimals that never end, factorials, orders and choices, scatter graphs, tree diagrams and expected frequency.',
     steps: S(`cost-of-borrowing 1, pythagoras-side 2, trig-sides 1, tan-height 1, sin-cos-side 1, special-angles 1,
-      bearings 1, ending-decimals 1, rational-roots 1, square-minus 1, square-near-100 1, index-laws 2, subset-count 1,
-      solve-balance 2, line-graph 2, percent-swap 1, chance-fraction 2, scatter-correlation 1,
+      bearings 1, ending-decimals 1, rational-roots 1, square-minus 1, square-near-100 1, subset-count 1,
+      percent-swap 1, factorials 1, arrange-all 1, permutations 1, combinations 1, scatter-correlation 1,
       best-fit-estimate 1, tree-diagram 1, expected-frequency 1, inequalities 1`) },
   { n: 10, age: '15+', name: 'The Stretch',
-    blurb: 'Every strand at its hardest: trigonometry, standard form, rational roots, inequalities, compound interest, sequences, equations and probability, with no stabilisers.',
-    steps: S(`negative-squares 3, divide-fractions 3, cube-and-root 3, factor-count-stones 3, substitute 3, percent-change 3,
-      ratio-share 3, interest-compound 3, round-the-circle 3, index-laws 3, rational-roots 3, solve-balance 3,
+    blurb: 'Every strand at its hardest: trigonometry, standard form, rational roots, inequalities, compound interest, sequences, equations, counting and probability, with no stabilisers.',
+    steps: S(`negative-squares 3, divide-fractions 3, factor-count-stones 3, substitute 3, percent-change 3,
+      interest-compound 3, round-the-circle 3, index-laws 3, rational-roots 3, solve-balance 3,
       nth-term 3, line-graph 3, pythagoras-side 3, tan-height 3, sin-cos-side 3, special-angles 3, bearings 3,
-      tree-diagram 3, expected-frequency 3, inequalities 3`) },
+      permutations 3, combinations 3, tree-diagram 3, expected-frequency 3, inequalities 3`) },
 ];
 
 /* 'maths age 6' … 'maths age 15+' */

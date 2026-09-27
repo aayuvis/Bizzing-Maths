@@ -845,6 +845,61 @@ export const CARDS = [
       { who: 'melody', say: 'Five of them are yours: 5 out of 50.', add: { t: '5 ÷ 50', v: 0.1 } },
       { who: 'pixel', say: 'One in ten. Not fifty-fifty at all.', add: { t: '1 ÷ 10', v: 0.1 } },
     ] } },
+  { id: 'factorial', title: 'Factorials', formula: 'n! = n × (n − 1) × … × 2 × 1, and 0! = 1', topic: 'Data & chance', band: '11-14', stops: ['factorials', 'arrange-all'],
+    picture: () => {
+      const rows = [['4!', '4 × 3 × 2 × 1', '24'], ['3!', '3 × 2 × 1', '6'], ['2!', '2 × 1', '2'], ['1!', '1', '1'], ['0!', '', '1']];
+      let s = '';
+      rows.forEach(([a, b, c], i) => {
+        const y = 8 + i * 38;
+        s += R(8, y, 210, 28, i === 4 ? 'dg-fill2' : 'dg-blank', 'rx="6"') + T(34, y + 19, a, 'dg-accent') + T(118, y + 19, b, 'dg-small') + T(196, y + 19, c, 'dg-text');
+        if (i < 4) s += T(228, y + 34, `÷ ${4 - i}`, 'dg-small', 'start');
+      });
+      return S(270, 200, s, 'The factorials walked downwards, dividing by 4, 3, 2 and 1: the last step gives 0! = 1');
+    },
+    caption: 'Each step down divides by one less. The last step, ÷ 1, leaves 0! = 1.',
+    why: ['n! counts the ways to put n different things in a row: n choices for the first place, n − 1 for the second, and so on down to 1 choice for the last. 4 books on a shelf can go in 4 × 3 × 2 × 1 = 24 orders.',
+      'Every factorial holds the one below it — n! = n × (n − 1)! — so walking down the pattern means dividing: 4! ÷ 4 = 3!, and so on. One step past 1! is 1! ÷ 1 = 0!, which is why 0! = 1. It also cancels: 8! ÷ 6! = 8 × 7.'],
+    f: (n) => range(n, (i) => i + 1).reduce((a, b) => a * b, 1),
+    example: { q: 'How many ways can 5 friends stand in a line?', args: [5], lines: ['5 choices, then 4, then 3, then 2, then 1', '5! = 5 × 4 × 3 × 2 × 1 = 120'], ans: 120, expr: '(((1*2)*3)*4)*5' },
+    gen(r) {
+      if (r() < 0.4) { const n = int(6, 12, r), m = n - 2; return { text: `${n}! ÷ ${m}!`, ans: n * (n - 1), expr: `${this.f(n)}/${this.f(m)}` }; }
+      const n = int(3, 8, r); return { text: `${n}!`, ans: this.f(n), expr: range(n, (i) => n - i).join('*') };
+    },
+    story: { title: 'Books on the shelf', scene: 'library', cast: ['beaker', 'koi'], beats: [
+      { who: null, say: 'Rafi has 4 new books for his shelf. He wants to try every different order before he chooses one.', add: { t: '4 × 3 × 2 × 1' } },
+      { who: 'koi', say: 'Any of the 4 can go at the left end. Then any of the 3 left next to it.', add: { t: '4 × 3', v: 12 } },
+      { who: 'beaker', say: 'Then 2 choices, and the last book goes where it must.', add: { t: '12 × 2 × 1', v: 24 } },
+      { who: 'koi', say: 'That is 4 factorial. A fifth book would make 5 times as many orders.', add: { t: '24 × 5', v: 120 } },
+      { who: 'beaker', say: 'Then I will stop at 4 books. Twenty-four orders is plenty.', add: { t: '4 × 3 × 2 × 1', v: 24 } },
+    ] } },
+  { id: 'combinations', title: 'Permutations and combinations', formula: 'ⁿPᵣ = n! ÷ (n − r)!  ·  ⁿCᵣ = n! ÷ (r! × (n − r)!)', topic: 'Data & chance', band: '11-14', stops: ['permutations', 'combinations'],
+    picture: () => {
+      const orders = ['ABC', 'ACB', 'BAC', 'BCA', 'CAB', 'CBA'];
+      let s = '';
+      orders.forEach((o, i) => { const y = 10 + i * 26; s += R(10, y, 64, 22, 'dg-fill1', 'rx="5"') + T(42, y + 16, o, 'dg-text') + L(78, y + 11, 150, 88, 'dg-thin'); });
+      s += `<circle cx="196" cy="88" r="42" class="dg-fill2"/>` + T(196, 84, 'A, B, C', 'dg-text') + T(196, 102, 'one team', 'dg-small');
+      s += T(42, 180, '3! = 6 orders', 'dg-small');
+      return S(250, 190, s, 'Six orders of A, B and C all make the same one team');
+    },
+    caption: 'In order, one team of 3 is counted 3! = 6 times. Divide by 3! to count teams.',
+    why: ['When order matters — gold, silver, bronze — fill the places one at a time: n choices, then n − 1, for r places. That is ⁿPᵣ = n × (n − 1) × … (r numbers), which is n! with the tail (n − r)! cancelled off.',
+      'When order does not matter — a team, a handful of toppings — every group of r was counted once for each of its r! orders. So divide: ⁿCᵣ = ⁿPᵣ ÷ r!. A team of 3 from 7 is 7 × 6 × 5 = 210 in order, and 210 ÷ 6 = 35 teams.'],
+    f: (n, k) => range(k, (i) => n - i).reduce((a, b) => a * b, 1) / range(k, (i) => i + 1).reduce((a, b) => a * b, 1),
+    example: { q: 'A team of 3 from 7 players.', args: [7, 3], lines: ['in order: 7 × 6 × 5 = 210', 'each team is counted 3! = 6 times', '210 ÷ 6 = 35'], ans: 35, expr: '[1,6,15,20,15,6,1].map((v,i,a)=>v+(i?a[i-1]:0))[3]' },
+    gen(r) {
+      const pascal = (n, k) => `((n,k)=>{let row=[1];for(let i=0;i<n;i++)row=[...row,0].map((v,j)=>v+(j?row[j-1]:0));return row[k];})(${n},${k})`;
+      if (r() < 0.5) { const n = int(5, 10, r), k = int(2, 3, r), what = k === 2 ? 'a captain and a vice-captain' : 'gold, silver and bronze';
+        return { text: `${n} in the final. How many ways to choose ${what}?`, ans: range(k, (i) => n - i).reduce((a, b) => a * b, 1), expr: `${pascal(n, k)}*${k === 2 ? 2 : 6}` }; }
+      const n = int(5, 12, r), k = int(2, 4, r);
+      return { text: `How many different teams of ${k} can be chosen from ${n} players?`, ans: this.f(n, k), expr: pascal(n, k) };
+    },
+    story: { title: 'Cone or cup?', scene: 'shop', cast: ['melody', 'scopey'], beats: [
+      { who: null, say: 'The ice-cream shop has 5 flavours. Theo wants 2 different scoops stacked on a cone; Ines wants 2 in a cup.' },
+      { who: 'scopey', say: 'On a cone the top scoop and the bottom scoop are different places: 5 choices, then 4.', add: { t: '5 × 4', v: 20 } },
+      { who: 'melody', say: 'In a cup there is no top. Mint with lemon is the same cup as lemon with mint.' },
+      { who: 'scopey', say: 'So every cup was counted twice in my 20.', add: { t: '20 ÷ 2', v: 10 } },
+      { who: 'melody', say: 'Twenty cones, ten cups. Order matters on a cone, not in a cup.', add: { t: '5 × 4 ÷ 2', v: 10 } },
+    ] } },
 ];
 export const byId = Object.fromEntries(CARDS.map((c) => [c.id, c]));
 

@@ -61,7 +61,7 @@ const RAW = [
   ['less than', 'phrase', 'number', 'Smaller than. The sign < points its narrow end at the smaller number.', '4 < 9.', ['greater than', 'inequality'], ['compare-big']],
   ['Roman numerals', 'noun', 'number', 'Numbers written with the letters I, V, X, L, C, D and M, added or taken away depending on where they sit.', 'XIV = 10 + 4 = 14.', ['digit', 'place value'], ['roman-numerals']],
   ['number line', 'noun', 'number', 'A straight line with values marked in order at equal steps, for counting on, back and in between.', '−2 sits two steps to the left of 0.', ['negative number', 'integer'], ['count-up', 'negative-numbers']],
-  ['factorial', 'noun', 'number', 'A whole number multiplied by every whole number below it, down to 1. Sign: !.', '5! = 5 × 4 × 3 × 2 × 1 = 120.', ['product', 'outcome'], ['list-outcomes']],
+  ['factorial', 'noun', 'number', 'A whole number multiplied by every whole number below it, down to 1 — the number of orders that many different things can go in. Sign: !.', '5! = 5 × 4 × 3 × 2 × 1 = 120, and 0! = 1.', ['product', 'arrangement', 'permutation'], ['factorials', 'arrange-all']],
   ['triangular number', 'noun', 'number', 'A count of dots that can be laid out as a triangle: 1, 3, 6, 10, 15, …', '10 dots make rows of 1, 2, 3 and 4.', ['square number', 'sequence'], []],
 
   /* ------------------------------------------------------------ calculating */
@@ -283,6 +283,9 @@ const RAW = [
   ['outcome', 'noun', 'chance', 'One possible result of something like a roll or a spin.', 'A dice has six: 1, 2, 3, 4, 5 and 6.', ['sample space'], ['list-outcomes']],
   ['equally likely', 'adjective', 'chance', 'Having exactly the same chance as each other.', 'Each face of a fair dice: 1/6 each.', ['probability'], ['chance-fraction']],
   ['sample space', 'noun', 'chance', 'A list or table of every possible outcome.', 'Two coins: HH, HT, TH, TT — 4 outcomes.', ['outcome'], ['list-outcomes']],
+  ['arrangement', 'noun', 'chance', 'One way of putting things in order, in a row or in named places.', 'A, B and C can go in 6 orders: ABC, ACB, BAC, BCA, CAB and CBA — that is 3! = 6.', ['factorial', 'permutation'], ['arrange-all', 'factorials']],
+  ['permutation', 'noun', 'chance', 'A choice of things where the order counts, so ABC and CBA are different. From n things, r in order: n! ÷ (n − r)!.', 'Gold, silver and bronze from 8 runners: 8 × 7 × 6 = 336.', ['combination', 'arrangement', 'factorial'], ['permutations'], { alias: ['npr'] }],
+  ['combination', 'noun', 'chance', 'A choice of things where the order does not count, so ABC and CBA are the same group. From n things, r of them: n! ÷ (r! × (n − r)!).', 'A team of 3 from 7 players: 7 × 6 × 5 ÷ 6 = 35.', ['permutation', 'factorial', 'subset'], ['combinations'], { alias: ['ncr', 'choose'] }],
 
   /* ------------------------------------------------------------ contest & Vedic */
   ['digit root', 'noun', 'contest', 'Add up the digits of a number, then again, until one digit is left — that last digit is it.', '4,787 → 26 → 8.', ['casting out nines', 'divisibility test'], ['digit-root'], { alias: ['digital root'] }],
