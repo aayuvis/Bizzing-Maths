@@ -150,6 +150,15 @@ async function run(vp, tag) {
     ok(await page.evaluate((s2) => (window.__bzm.R.h.kids[0].tricks[s2] || {}).stars >= 2, sid), `${sid}: typing every answer passes the stop`);
     await page.click('[data-act=endRun]');
   }
+  // Learn walks every idea in a stop: Kinds of triangle has six, stepped through by → alone
+  await page.evaluate(() => { window.__bzm.fire('openStop', 'kinds-of-triangle'); window.__bzm.fire('stopTab', 'learn'); });
+  await page.waitForSelector('.case-chip');
+  ok(await page.locator('.case-chip').count() === 6, 'Kinds of triangle shows six ideas to click through');
+  await shot('28b-cases-1');
+  for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowRight');
+  ok(await page.evaluate(() => window.__bzm.R.ui.lcase) === 5, '→ walks every idea to the last one');
+  ok(/obtuse/i.test(await page.locator('.learn').innerText()), 'the last idea is shown: obtuse-angled');
+  await shot('28c-cases-6');
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = false; });
   // stories shelf + a sutra story
   await page.evaluate(() => window.__bzm.go('stories')); await page.waitForSelector('.shelf');
