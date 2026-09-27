@@ -128,9 +128,12 @@ async function run(vp, tag) {
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; window.__bzm.go('atlas'); });
   await page.click('[data-act=isle][data-arg="2"]'); await page.waitForTimeout(400);
   await shot('26-far-isles');
-  for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare']]) {
+  await page.click('[data-act=isle][data-arg="3"]'); await page.waitForTimeout(400);
+  await shot('26b-outer-isles');
+  ok(await page.locator('.map-pin').count() === 3, 'the Outer Isles map shows its three places');
+  for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare'], ['quarry', 'prime-stones'], ['mine', 'subtract-negative'], ['coinstreet', 'fewest-coins'], ['coinstreet', 'interest-compound']]) {
     await page.evaluate((w) => window.__bzm.fire('openWorld', w), wid); await page.waitForSelector('.board');
-    if (wid === 'clocktower') { await page.waitForTimeout(300); await shot('27-world-clocktower'); }
+    if (wid === 'clocktower' || wid === 'mine') { await page.waitForTimeout(300); await shot(`27-world-${wid}`); }
     await page.evaluate((s2) => window.__bzm.fire('openStop', s2), sid); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
     await shot(`28-learn-${sid}`);
     await page.click('.seg [data-arg=drill]'); await page.click('[data-act=level][data-arg="2"]'); await page.click('[data-act=startDrill]');

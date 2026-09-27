@@ -726,7 +726,7 @@ export const CARDS = [
       { who: 'beaker', say: 'And a quarter is 25 per cent!', add: { t: '0.25 × 100', v: 25 } },
       { who: 'melody', say: 'Twenty-five per cent. Always divide by the start.', add: { t: '20 ÷ 80 × 100', v: 25 } },
     ] } },
-  { id: 'simple-interest', title: 'Simple interest', formula: 'I = P × r × t ÷ 100', topic: 'Money & rates', band: '11-14', stops: ['percent-of-amount'],
+  { id: 'simple-interest', title: 'Simple interest', formula: 'I = P × r × t ÷ 100', topic: 'Money & rates', band: '11-14', stops: ['interest-simple', 'percent-of-amount'],
     picture: PIC.simpleInterest, caption: 'The same block of interest is added every year.',
     why: ['Simple interest adds the same amount every year: r% of the starting money P. One year’s interest is P × r ÷ 100.',
       'After t years you have had t equal helpings, so I = P × r × t ÷ 100. (Many savings accounts use compound interest instead, where each year’s interest earns interest too, so they grow a little faster.)'],

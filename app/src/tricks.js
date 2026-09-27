@@ -687,11 +687,14 @@ import * as palace from './chapters/palace.js';
 import * as dock from './chapters/dock.js';
 import * as setisland from './chapters/setisland.js';
 import * as carnival from './chapters/carnival.js';
-export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival];
+import * as quarry from './chapters/quarry.js';
+import * as mine from './chapters/mine.js';
+import * as coinstreet from './chapters/coinstreet.js';
+export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival, quarry, mine, coinstreet];
 
-export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'shapecity', 'workshop', 'forest',
-  'observatory', 'palace', 'dock', 'setisland', 'harbour', 'carnival'];
-export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1 };   // everything else: island 2
+export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'coinstreet', 'shapecity', 'workshop', 'mine', 'forest',
+  'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'carnival'];
+export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, quarry: 3, mine: 3, coinstreet: 3 };   // everything else: island 2
 
 const ALL_WORLDS = [...CORE_WORLDS, ...CHAPTERS.map((c) => c.WORLD)];
 export const WORLDS = ORDER.map((id, i) => ({ ...ALL_WORLDS.find((w) => w.id === id), n: i + 1, island: ISLAND[id] || 2 }));

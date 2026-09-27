@@ -293,36 +293,6 @@ export const TRICKS = [
     },
   },
   {
-    id: 'minus-pairs', world: 'quarry', band: '11-14', title: 'Minus signs come in pairs', keys: ['−'],
-    hook: '(−3) × (−4) × (−2) — is the answer positive or negative?',
-    idea: 'Multiply the sizes, then count the minus signs: an even count gives a positive answer, an odd count a negative one.',
-    why: [
-      'Think of a minus sign as "turn round". 3 × 4 is twelve steps forwards on the number line; (−3) × 4 is the same twelve steps facing the other way. A second minus turns you round again, back to facing forwards: (−3) × (−4) = 12.',
-      'So the minus signs cancel in pairs, exactly like odd and even. Pair them off: if every minus has a partner, you end facing forwards and the answer is positive. If one is left over, you end facing backwards and the answer is negative.',
-      'The sizes do not care about any of this. Multiply 3 × 4 × 2 = 24 as usual, then let the count of minus signs choose the sign. Three minuses is one pair and one left over, so (−3) × (−4) × (−2) = −24.',
-    ],
-    alg: '(−a) × (−b) = a × b · sign of a product = (−1)^(number of minus signs)',
-    ex: { f: [-3, -4, -2] },
-    gen(r, lv = 1) {
-      const k = lv === 1 ? 2 : lv === 2 ? 3 : 4, hi = lv === 1 ? 12 : lv === 2 ? 9 : 6;
-      const f = Array.from({ length: k }, () => int(2, hi, r) * (r() < 0.55 ? -1 : 1));
-      if (f.every((x) => x > 0)) f[int(0, k - 1, r)] *= -1;
-      return this.q({ f });
-    },
-    q({ f }) {
-      const size = f.reduce((a, b) => a * Math.abs(b), 1), minus = f.filter((x) => x < 0).length;
-      return { f, text: f.map((x) => (x < 0 ? `(${neg(x)})` : String(x))).join(' × '), expr: f.map((x) => `(${x})`).join('*'), ans: minus % 2 ? -size : size };
-    },
-    work({ f }) {
-      const size = f.reduce((a, b) => a * Math.abs(b), 1), minus = f.filter((x) => x < 0).length;
-      return [
-        { t: `Multiply the sizes, ignoring the signs: ${f.map(Math.abs).join(' × ')}`, v: size },
-        { t: 'How many minus signs are there?', v: minus },
-        { t: minus % 2 ? 'An odd count — one minus is left without a partner. The answer is' : 'An even count — every minus pairs up. The answer is', v: minus % 2 ? -size : size },
-      ];
-    },
-  },
-  {
     id: 'coprime', world: 'quarry', band: '11-14', title: 'Coprime: no stone shared',
     hook: '35 and 48 — do they have any prime stone in common?',
     idea: 'Take the prime stones of the first number and test each one on the second. If none goes in, the two numbers are coprime.',
@@ -518,14 +488,6 @@ export const STORIES = {
     { who: 'panda', say: '14 × 14 is 196, past 187. So if it splits, one factor is 13 or smaller.', add: { t: '14 × 14', v: 196 } },
     { who: 'scopey', say: 'Then 2, 3, 5, 7, 11, 13 at most. 2 no, 3 no, 5 no, 7 no… 11!', add: { t: '11 × 17', v: 187 } },
     { who: 'panda', say: 'Not prime. And the biggest prime we could ever have needed was 13.', add: { t: '169 ÷ 13', v: 13 } },
-  ] },
-  'minus-pairs': { title: 'The turn-round cards', scene: 'room', cast: ['samurai', 'comet'], beats: [
-    { who: null, say: 'Kwame and Dax play a number-line card game. Every minus card makes you turn round to face the other way.', add: { t: '(−3) × (−4) × (−2)' } },
-    { who: 'comet', say: 'Three minus cards! So I turn, and turn, and… which way am I facing now?' },
-    { who: 'samurai', say: 'Leave the signs for a moment. Multiply the sizes.', add: { t: '3 × 4 × 2', v: 24 } },
-    { who: 'samurai', say: 'Now pair up the minus signs. Two turns put you back where you started.' },
-    { who: 'comet', say: 'Three minuses: one pair, and one left over. So I end up facing backwards!' },
-    { who: 'samurai', say: 'Minus 24. An odd number of minus signs gives a negative answer.', add: { t: '(−3) × (−4) × (−2)', v: -24 } },
   ] },
   'coprime': { title: 'The painted cogs', scene: 'fair', cast: ['melody', 'astro'], beats: [
     { who: null, say: 'At the fair, a machine has two cogs: one with 35 teeth, one with 48. A tooth on each is painted red, and the red teeth touch.', add: { t: '35 and 48' } },
