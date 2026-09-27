@@ -131,7 +131,7 @@ async function run(vp, tag) {
   await page.click('[data-act=isle][data-arg="3"]'); await page.waitForTimeout(400);
   await shot('26b-outer-isles');
   ok(await page.locator('.map-pin').count() === 4, 'the Outer Isles map shows its four places');
-  for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare'], ['quarry', 'prime-stones'], ['mine', 'subtract-negative'], ['coinstreet', 'fewest-coins'], ['coinstreet', 'interest-compound'], ['lighthouse', 'tan-height'], ['lighthouse', 'scatter-correlation'], ['lighthouse', 'tree-diagram']]) {
+  for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare'], ['quarry', 'prime-stones'], ['mine', 'subtract-negative'], ['coinstreet', 'fewest-coins'], ['coinstreet', 'interest-compound'], ['lighthouse', 'tan-height'], ['lighthouse', 'scatter-correlation'], ['lighthouse', 'tree-diagram'], ['lighthouse', 'expected-frequency'], ['shapecity', 'construct-triangle']]) {
     await page.evaluate((w) => window.__bzm.fire('openWorld', w), wid); await page.waitForSelector('.board');
     if (wid === 'clocktower' || wid === 'mine' || wid === 'lighthouse') { await page.waitForTimeout(300); await shot(`27-world-${wid}`); }
     await page.evaluate((s2) => window.__bzm.fire('openStop', s2), sid); await page.click('.seg [data-arg=learn]'); await page.click('[data-act=watchAll]');
@@ -199,6 +199,11 @@ async function run(vp, tag) {
     await page.waitForSelector(`.t-${id}`); await page.waitForTimeout(200);
     await shot(`31-lib-${id}`);
   }
+  // Shape Studio's Construct bench: a triangle from three sides, stepped through by keyboard
+  await page.evaluate(() => { window.__bzm.fire('openTool', 'shapes'); window.__bzm.fire('lib', 'bench|construct'); window.__bzm.fire('lib', 'kcon|sss'); });
+  await page.waitForSelector('.t-shapes'); for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(200); await shot('31b-construct');
+  ok(/why it/i.test(await page.locator('.t-shapes').innerText()), 'a construction steps through to its reason');
   await page.evaluate(() => window.__bzm.fire('openTool', 'explorer')); await page.waitForSelector('#t-explorer-n');
   await page.fill('#t-explorer-n', '360'); await page.press('#t-explorer-n', 'Enter'); await page.waitForTimeout(250);
   ok(/2³ × 3² × 5/.test(await page.locator('.t-explorer').innerText()), 'Number Explorer factorises 360');
