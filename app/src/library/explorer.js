@@ -154,7 +154,7 @@ function treeSvg(t) {
   lay(t, 0);
   const draw = (node) => {
     if (node.kids) for (const k of node.kids) { s += `<line x1="${node.x.toFixed(1)}" y1="${node.y + 8}" x2="${k.x.toFixed(1)}" y2="${k.y - 18}" class="dg-thin"/>`; draw(k); }
-    if (!node.kids) { const w = W(node.v) - 10; s += `<rect x="${(node.x - w / 2).toFixed(1)}" y="${node.y - 17}" width="${w}" height="26" rx="13" class="dg-fill3"/>`; }
+    if (!node.kids) { const w = W(node.v) - 10; s += `<rect x="${(node.x - w / 2).toFixed(1)}" y="${node.y - 17}" width="${w}" height="26" rx="13" class="dg-blank"/>`; }
     s += kit.text(node.x.toFixed(1), node.y + 1, node.v, 'dg-text');
   };
   draw(t);
@@ -162,7 +162,7 @@ function treeSvg(t) {
 }
 
 function lineSvg(n) {
-  const [lo, hi] = lineRange(n), W = 560, P = 34, X = (v) => P + ((v - lo) / (hi - lo)) * (W - 2 * P), st = (hi - lo) / 10;
+  const [lo, hi] = lineRange(n), W = 340, P = 30, X = (v) => P + ((v - lo) / (hi - lo)) * (W - 2 * P), st = (hi - lo) / 10;
   let s = `<line x1="${P - 12}" y1="52" x2="${W - P + 12}" y2="52" class="dg-line"/>`;
   for (let i = 0; i <= 10; i++) {
     const v = lo + i * st, big = i % 5 === 0;
@@ -206,7 +206,7 @@ function page(n, band) {
 
   // factors: dots while they can be counted, a list after that
   const drawable = ps.filter(([a, b]) => n <= 144 && b <= 30);
-  const dotted = drawable.map(([a, b]) => `<figure class="t-explorer-fig">${kit.dots(a, b, null, 14)}<figcaption>${a} × ${b}</figcaption></figure>`).join('');
+  const dotted = drawable.map(([a, b]) => `<figure class="t-explorer-fig">${kit.dots(a, b, () => true, 14)}<figcaption>${a} × ${b}</figcaption></figure>`).join('');
   const listed = ps.filter((p) => !drawable.includes(p)).map(([a, b]) => `<span class="t-explorer-pair">${group(a)} × ${group(b)}</span>`).join('');
   const factorBody = `<p>${num(n)} has <b>${nd}</b> factor${nd === 1 ? '' : 's'}, in <b>${ps.length}</b> pair${ps.length === 1 ? '' : 's'}${sq ? ` (one pair is ${r} × ${r} — the same number twice, which is why a square has an odd number of factors)` : ''}.</p>
     ${dotted ? `<div class="t-explorer-dots">${dotted}</div>` : ''}${listed ? `<div class="t-explorer-pairs">${listed}</div>` : ''}
@@ -382,7 +382,8 @@ export const CSS = `
 .t-explorer-pair{padding:3px 10px;border-radius:var(--r-sm);background:var(--surface2);font-size:var(--fs-label);font-weight:600}
 .t-explorer-dl{display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:6px 0}
 .t-explorer-dl dt{font-weight:700;color:var(--muted);font-size:var(--fs-label);padding-top:3px}
-.t-explorer-dl dd{margin:0;line-height:1.5;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.t-explorer-dl dd{margin:0;line-height:1.55}
+.t-explorer-dl dd .chip{margin:0 6px 6px 0}
 .t-explorer-tests{list-style:none;padding:0;margin:4px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 22px}
 .t-explorer-tests li{display:grid;grid-template-columns:42px 20px 1fr;gap:6px;align-items:baseline;line-height:1.45}
 .t-explorer-d{font-weight:800}
