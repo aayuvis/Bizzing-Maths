@@ -1,0 +1,19 @@
+The three families here are used under the SIL Open Font License 1.1. Each
+family's licence, as published with the font, is alongside; the copyright
+lines below are quoted from those files rather than from memory.
+
+  Fraunces        Copyright 2018 The Fraunces Project Authors
+                  https://github.com/undercasetype/Fraunces
+                  OFL-fraunces.txt
+
+  Hanken Grotesk  Copyright 2021 The Hanken Grotesk Project Authors
+                  https://github.com/marcologous/hanken-grotesk
+                  OFL-hankengrotesk.txt
+
+  Sono            Copyright 2020 The Sono Project Authors
+                  https://github.com/sursly/sono
+                  OFL-sono.txt
+
+The .woff2 files are the latin and latin-ext subsets as served by Google
+Fonts. They are checked in rather than fetched at build time so that the build
+is reproducible offline and the app has no third-party origin.

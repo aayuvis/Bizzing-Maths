@@ -1,0 +1,5 @@
+.site/
+.shots/
+node_modules/
+build/
+dist/

@@ -1,0 +1,78 @@
+/* ================================================================
+   BIZZING MATHS TOKENS v1
+   Inherits the family contract from Bizzing Bee's ds-src:
+   · ACTION (world accent) = "do it". One filled action per screen.
+   · TREASURE gold = stars and rank. Never a button.
+   · MASTERED green / FIX coral = answer states. Never decoration.
+   · Everything you READ is ink on paper.
+   The accent here is cobalt — the blue of a squared exercise book —
+   because Bee is violet, Finance is teal, gold is treasure and green
+   is "right". The page carries the family's dot motif as graph-paper
+   dots.
+   ================================================================ */
+:root{
+  --display:"Fraunces",Georgia,serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  /* numbers get the monospace face: every digit the same width, so a
+     column of answers lines up and 1 never looks thinner than 8 */
+  --mono:"Sono",ui-monospace,monospace;
+
+  --fs-meta:12px; --fs-label:13px; --fs-body:15px; --fs-lead:17px;
+  --fs-h3:20px; --fs-h2:24px; --fs-h1:30px;
+
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px; --r-pill:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+
+  /* fixed semantics — identical in both modes */
+  --treasure:#F0B429; --treasure-tint:#FFF3D6; --treasure-deep:#8A5B00;
+  --mastered:#178A4C; --mastered-tint:#E1F4E8;
+  --fix:#C4453C;      --fix-tint:#FBE9E7;
+  --medium:#B7791F;   --medium-tint:#FBF0DC;
+  --quick:#2E7FA8;    --quick-tint:#E2EFF6;
+}
+
+/* ---- light ---- */
+:root{
+  --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F5FA;
+  --tint:#EEF1FA; --tint-deep:#E2E7F6; --line:#DCE1EF; --line-soft:#E9ECF5;
+  --dot:rgb(45 91 216 / .10);
+  --ink:#1B2238; --muted:#5C6582;
+  --action:#2D5BD8; --action-ink:#FFFFFF; --action-tint:#E3EAFB; --action-deep:#1E43A8;
+  --sh:0 1px 2px rgb(20 30 60 / .05);
+  --sh-raised:0 2px 6px rgb(20 30 60 / .07), 0 12px 30px rgb(20 30 60 / .07);
+  --sh-overlay:0 24px 64px rgb(20 30 60 / .28);
+  --edge:inset 0 -2.5px 0 rgb(0 0 0 / .16);
+  --focus:0 0 0 3px color-mix(in srgb,var(--action) 34%,transparent);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-mode="light"]){
+    --paper:#11152A; --surface:#181D36; --surface2:#1E2442;
+    --tint:#0D1124; --tint-deep:#0A0D1D; --line:#2A3152; --line-soft:#222844;
+    --dot:rgb(127 162 245 / .10);
+    --ink:#E6EAF7; --muted:#9AA3C4;
+    --action:#7FA2F5; --action-ink:#0B1433; --action-tint:#1F2A55; --action-deep:#A9C0FA;
+    --treasure-tint:#33280F; --treasure-deep:#F0C25A;
+    --mastered:#5BC98C; --mastered-tint:#0F2E20;
+    --fix:#EC8B81; --fix-tint:#351A18;
+    --medium:#E8B45A; --medium-tint:#33260F;
+    --quick:#6EB6D8; --quick-tint:#122B36;
+    --sh:0 1px 2px rgb(0 0 0 / .4);
+    --sh-raised:0 2px 6px rgb(0 0 0 / .35), 0 12px 30px rgb(0 0 0 / .45);
+    --sh-overlay:0 24px 64px rgb(0 0 0 / .6);
+  }
+}
+:root[data-mode="dark"]{
+  --paper:#11152A; --surface:#181D36; --surface2:#1E2442;
+  --tint:#0D1124; --tint-deep:#0A0D1D; --line:#2A3152; --line-soft:#222844;
+  --dot:rgb(127 162 245 / .10);
+  --ink:#E6EAF7; --muted:#9AA3C4;
+  --action:#7FA2F5; --action-ink:#0B1433; --action-tint:#1F2A55; --action-deep:#A9C0FA;
+  --treasure-tint:#33280F; --treasure-deep:#F0C25A;
+  --mastered:#5BC98C; --mastered-tint:#0F2E20;
+  --fix:#EC8B81; --fix-tint:#351A18;
+  --medium:#E8B45A; --medium-tint:#33260F;
+  --quick:#6EB6D8; --quick-tint:#122B36;
+  --sh:0 1px 2px rgb(0 0 0 / .4);
+  --sh-raised:0 2px 6px rgb(0 0 0 / .35), 0 12px 30px rgb(0 0 0 / .45);
+  --sh-overlay:0 24px 64px rgb(0 0 0 / .6);
+}

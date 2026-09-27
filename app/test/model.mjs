@@ -1,0 +1,39 @@
+/* test/model.mjs — the household, the atlas frontier, band gating, placement, the Store seam. */
+import { newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
+import { TRICKS, byId } from '../src/tricks.js';
+import { migrate } from '../src/store.js';
+let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 20) console.error('  ✗ ' + m); } };
+
+const h = newHousehold(), a = newKid('Ahana', '8-10'), b = newKid('Kabir', '6-7');
+h.kids.push(a, b); h.active = a.id;
+ok(ROUTE.filter((n) => n.kind === 'stop').length === TRICKS.length, 'every trick is on the route');
+ok(frontier(b) === 0 && isOpen(h, b, 0) && !isOpen(h, b, 1), 'a new 6–7 starts at stop one with stop two shut');
+// band gating has an effect: an 8–10 child may wander stops meant for 6–7
+const i67 = ROUTE.findIndex((n) => n.kind === 'stop' && byId[n.id].band === '6-7' && ROUTE.indexOf(n) > 0);
+ok(isOpen(h, a, i67) && !isOpen(h, b, i67), 'younger-band stops open for an older child only');
+const i1114 = ROUTE.findIndex((n) => n.kind === 'stop' && byId[n.id].band === '11-14');
+ok(!isOpen(h, a, i1114), 'an 11–14 stop is shut for an 8–10 who has not walked there');
+h.parent.tester = true; ok(isOpen(h, a, ROUTE.length - 1), 'tester opens everything'); h.parent.tester = false;
+// passing stop one moves the frontier, and only the child who passed it
+const s1 = ROUTE[0].id;
+trickRec(b, s1).learned = true;
+ok(scoreRun(b, s1, 6, 10, true).stars === 1, '60% is not a pass');
+ok(scoreRun(b, s1, 7, 10, false).stars === 2 && frontier(b) === 1, '70% passes and moves the frontier');
+ok(scoreRun(b, s1, 10, 10, false).stars === 2, 'no third star when slow');
+ok(scoreRun(b, s1, 9, 10, true).stars === 3, 'third star: 90% in time');
+const fa = frontier(a); scoreRun(b, ROUTE[1].id, 10, 10, true); ok(frontier(a) === fa, "a sibling's progress is not shared");
+ok(byId[ROUTE[frontier(a)].id] && byId[ROUTE[frontier(a)].id].band === '8-10', "an 8–10 child's next stop is an 8–10 stop, not Make ten first");
+const c = newKid('Old', '11-14'); ok(ROUTE[frontier(c)].kind === 'stop' && byId[ROUTE[frontier(c)].id].band === '11-14', 'an 11–14 starts at the first 11–14 stop');
+// placement
+ok(placeFrom(0) === null && placeFrom(3) === null, 'passing only the Gardens rungs starts at the beginning');
+const p = placeFrom(9); ok(p != null && ROUTE[p].world === byId[RUNGS[8].at].world && ROUTE[p - 1].kind === 'check', 'placement opens a world from its first stop');
+for (const r of RUNGS) ok(byId[r.at], `rung points at a real stop: ${r.at}`);
+for (const r of RUNGS) ok(Function(`return ${r.q.text.replace(/×/g, '*').replace(/−/g, '-').replace(/(\d+)% of (\d+)/, '$1*$2/100')}`)() === r.q.ans, `rung answer: ${r.q.text}`);
+// ranks
+ok(rankOf(0).n === 'Pebble' && rankOf(RANKS.at(-1).xp).n === 'Aryabhata', 'rank ends');
+tick(a, false); ok(a.xp === 0, 'a wrong answer earns nothing'); tick(a, true, 2); ok(a.xp === 2, 'a right one does');
+// store migration
+const m = migrate({ kids: [] }); ok(m.v === 1 && m.parent && Array.isArray(m.kids), 'v0 → v1');
+ok(migrate({ v: 99, x: 1 }).v === 99, 'a newer save is never downgraded');
+console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement, ranks, migration`);
+if (fails) process.exit(1);

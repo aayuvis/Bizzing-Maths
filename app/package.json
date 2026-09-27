@@ -1,0 +1,18 @@
+{
+  "name": "bizzing-maths",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bizzing Maths — fast and fearless with numbers, and knowing why the trick works. Kids 6–14.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/tricks.mjs && node test/facts.mjs && node test/contest.mjs && node test/games.mjs && node test/model.mjs",
+    "check": "node test/ui.mjs",
+    "deploy": "./deploy.sh"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
