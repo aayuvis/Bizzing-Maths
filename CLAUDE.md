@@ -70,6 +70,11 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 12. **The story notepad is checked.** Every sum a character writes in `src/stories.js` is
     evaluated by `test/stories.mjs`. Stories star the Bee's same ten rivals and are labelled
     as stories.
+13. **The Times Table Explorer grows only on mastery**: 5 → 10 → 15 → 20, one step at a time,
+    when 9 in 10 of the level's facts are quick or fluent. The ×1 facts are drawn but not counted
+    (they show their own answer, so they cannot be drilled) — a decision the owner confirmed.
+14. **The journeys cite their history.** Every Vedic and Chinese stone carries `sources` and
+    `needsReview: true` until a second reader has checked it; the screen says so.
 
 ### Art
 
@@ -119,7 +124,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 | `app/src/puzzles.js` | The Puzzle Room: cube nets (folding rig), sudoku (unique), patterns, balance scales. |
 | `app/src/objectives.js` | The mission and 19 measured goals in 6 strands. |
 | `app/src/views2.js` | The painted Atlas map and world boards, the story stage, shelf, Puzzle Room, Goals. |
-| `app/src/store.js` | The seam (schema v2). |
+| `app/src/library/*.js` | The Library: nine tools (Number Explorer, Show Me the Working, Times Table Explorer, Shape Studio, Graphing, Dictionary, Formula Book, Vedic and Chinese journeys), one file each, to [docs/LIBRARY-CONTRACT.md](docs/LIBRARY-CONTRACT.md). Each proves its own maths in `selftest`; `test/library.mjs` runs them. |
+| `app/src/store.js` | The seam (schema v4; `k.lib` holds each tool's record). |
 
 ## Verify
 

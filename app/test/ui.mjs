@@ -108,7 +108,7 @@ async function run(vp, tag) {
   ok((await R()).run.i === 1, 'Enter moves on after a wrong answer');
   await page.keyboard.press('Escape');
   // facts
-  await nav('facts');
+  await page.evaluate(() => window.__bzm.go('facts'));
   await page.waitForSelector('.fgrid');
   await page.click('[data-act=startFacts]');
   for (let i = 0; i < 20; i++) { const s = await R(); if (!s.run || s.run.over) break; await typeAns(s.run.q.ans); await page.waitForTimeout(480); }
@@ -187,6 +187,28 @@ async function run(vp, tag) {
   await page.evaluate(() => window.__bzm.go('goals')); await page.waitForSelector('.strands');
   await shot('25-goals');
   ok(await page.locator('.goals li').count() >= 15, 'the goals page lists every goal');
+  // the Library: the shelf, every tool opens clean, and three real flows
+  await nav('library'); await page.waitForSelector('.lib-grid');
+  await page.waitForTimeout(300); await shot('30-library');
+  ok(await page.locator('.lib-tile').count() >= 11, 'the Library shelf shows every tool');
+  for (const id of ['explorer', 'working', 'tables', 'shapes', 'graphs', 'dictionary', 'formulas', 'vedic', 'chinese']) {
+    await page.evaluate((t) => window.__bzm.fire('openTool', t), id);
+    await page.waitForSelector(`.t-${id}`); await page.waitForTimeout(200);
+    await shot(`31-lib-${id}`);
+  }
+  await page.evaluate(() => window.__bzm.fire('openTool', 'explorer')); await page.waitForSelector('#t-explorer-n');
+  await page.fill('#t-explorer-n', '360'); await page.press('#t-explorer-n', 'Enter'); await page.waitForTimeout(250);
+  ok(/2³ × 3² × 5/.test(await page.locator('.t-explorer').innerText()), 'Number Explorer factorises 360');
+  await shot('32-explorer-360');
+  await page.evaluate(() => window.__bzm.fire('openTool', 'working')); await page.waitForSelector('#t-working-q');
+  await page.fill('#t-working-q', '23 × 47'); await page.press('#t-working-q', 'Enter'); await page.waitForTimeout(250);
+  ok(/1,?081/.test(await page.locator('.t-working').innerText()), 'Show Me the Working works 23 × 47');
+  await shot('33-working');
+  await page.evaluate(() => { window.__bzm.fire('openTool', 'tables'); window.__bzm.fire('lib', 'practise|'); });
+  await page.waitForTimeout(200);
+  for (let i = 0; i < 20; i++) { const s = await R(); if (!s.run || s.run.over) break; await typeAns(s.run.q.ans); await page.waitForTimeout(520); if (i === 2) await shot('34-tables-drill'); }
+  await page.waitForTimeout(400); await shot('35-tables-end');
+  ok(await page.evaluate(() => ((window.__bzm.R.h.kids[0].lib.tables || {}).level || 0) >= 10), 'a perfect 5 × 5 run opens the 10 × 10');
   // contest
   await page.evaluate(() => window.__bzm.go('contest')); await page.waitForSelector('.rivals');
   await shot('12-lobby');

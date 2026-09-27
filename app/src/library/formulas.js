@@ -1039,6 +1039,7 @@ export const CSS = `
 .t-formulas-th{font-family:var(--display);font-size:var(--fs-h3);margin:10px 0 0;display:flex;align-items:baseline;gap:10px}
 .t-formulas-th span{font-size:var(--fs-label);color:var(--muted)}
 .t-formulas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+@media (max-width:520px){.t-formulas-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.t-formulas-tpic{height:80px}.t-formulas-tpic svg{max-height:76px}.t-formulas-tt{font-size:15px}}
 .t-formulas-tile{display:flex;flex-direction:column;align-items:stretch;gap:6px;text-align:left;border:1.5px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:12px;cursor:pointer;box-shadow:var(--sh);transition:transform .15s,border-color .15s}
 .t-formulas-tile:hover{transform:translateY(-2px);border-color:var(--action)}
 .t-formulas-tile.got{border-color:var(--treasure);background:linear-gradient(180deg,var(--treasure-tint),var(--surface) 55%)}

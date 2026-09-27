@@ -555,6 +555,7 @@ export const CSS = `
 .t-dictionary-search:focus-within{border-color:var(--action);box-shadow:var(--focus)}
 .t-dictionary-glass{font-size:20px;color:var(--muted)}
 .t-dictionary-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:500 var(--fs-lead) var(--ui);padding:10px 0;outline:none}
+.t-dictionary-search input:focus,.t-dictionary-search input:focus-visible{outline:none;box-shadow:none}
 .t-dictionary-hint{margin:0;color:var(--muted);font-size:var(--fs-meta)}
 .t-dictionary-hint kbd{font-family:var(--mono)}
 .t-dictionary-az{display:flex;flex-wrap:wrap;gap:3px}
