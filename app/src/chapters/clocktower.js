@@ -46,12 +46,12 @@ function shoelace(pts) {
 }
 /* A flat shape in whole units with a dashed height line and labels. */
 function measured(pts, u, labels, heightLine) {
-  const P = pts.map(([x, y]) => [20 + x * u, 20 + y * u]);
-  const xs = P.map((p) => p[0]), ys = P.map((p) => p[1]);
-  const W = Math.max(...xs) + 60, H = Math.max(...ys) + 34;
+  const ox = 56, oy = 20, X = (x) => R3(ox + x * u), Y = (y) => R3(oy + y * u);
+  const P = pts.map(([x, y]) => [X(x), Y(y)]);
+  const W = Math.max(...P.map((p) => p[0])) + 70, H = Math.max(...P.map((p) => p[1])) + 34;
   let s = `<polygon points="${P.map((p) => p.join(',')).join(' ')}" class="dg-fill2"/>`;
-  if (heightLine) { const [x, y0, y1] = heightLine; s += `<line x1="${20 + x * u}" y1="${20 + y0 * u}" x2="${20 + x * u}" y2="${20 + y1 * u}" class="dg-line" stroke-dasharray="6 5"/>`; }
-  for (const [x, y, l, cls] of labels) s += text(R3(20 + x * u), R3(20 + y * u), l, cls || 'dg-text');
+  if (heightLine) { const [x, y0, y1] = heightLine; s += `<line x1="${X(x)}" y1="${Y(y0)}" x2="${X(x)}" y2="${Y(y1)}" class="dg-line" stroke-dasharray="6 5"/>`; }
+  for (const [x, y, l, cls, anchor] of labels) s += text(X(x), Y(y), l, cls || 'dg-text', anchor || 'middle');
   return svg(W, H, s, 'A shape with its measurements');
 }
 
@@ -376,14 +376,13 @@ export const TRICKS = [
       return [{ t: `The parallelogram (or rectangle) it is half of: ${b} × ${h}`, v: b * h }, { t: 'The triangle is half of that', v: (b * h) / 2 }];
     },
     draw({ kind, b, h, o, sl }) {
-      const u = Math.min(20, Math.floor(200 / Math.max(b + o, h)));
-      if (kind === 'para') {
-        const labels = [[b / 2, h + 1.1, `${b} cm`], [o + 0.25, h / 2, `${h} cm`, 'dg-accent']];
-        if (sl) labels.push([b + o / 2 + 0.9, h / 2, `${sl} cm`]);
-        return measured([[0, h], [b, h], [b + o, 0], [o, 0]], u, labels.map(([x, y, l, c]) => [x, y, l, c]), [o, 0, h]);
-      }
-      if (kind === 'right') return measured([[0, h], [b, h], [0, 0]], u, [[b / 2, h + 1.1, `${b} cm`], [-0.2, h / 2, `${h} cm`, 'dg-accent']].map(([x, y, l, c]) => [x + (x < 0 ? 0 : 0), y, l, c]), null);
-      return measured([[0, h], [b, h], [o, 0]], u, [[b / 2, h + 1.1, `${b} cm`], [o + 0.25, h / 2, `${h} cm`, 'dg-accent']], [o, 0, h]);
+      const u = Math.min(20, Math.floor(200 / Math.max(b + o, h))), under = h + 22 / u;
+      if (kind === 'right') return measured([[0, h], [b, h], [0, 0]], u, [[b / 2, under, `${b} cm`], [-6 / u, h / 2, `${h} cm`, 'dg-accent', 'end']], null);
+      const up = [o + 6 / u, h / 2 + 5 / u, `${h} cm`, 'dg-accent', 'start'];
+      if (kind === 'tri') return measured([[0, h], [b, h], [o, 0]], u, [[b / 2, under, `${b} cm`], up], [o, 0, h]);
+      const labels = [[b / 2, under, `${b} cm`], up];
+      if (sl) labels.push([b + o / 2 + 8 / u, h / 2, `${sl} cm`, 'dg-text', 'start']);
+      return measured([[0, h], [b, h], [b + o, 0], [o, 0]], u, labels, [o, 0, h]);
     },
   },
   {

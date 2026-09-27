@@ -9,6 +9,8 @@ import { fracBar, pie, numberLine, grid, svg, text } from './kit.js';
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 const lcm = (a, b) => (a / gcd(a, b)) * b;
 const F = (n, d) => `${n}/${d}`;
+/* A proper fraction in lowest terms, bottom from lo to hi: [top, bottom]. */
+function proper(r, lo, hi, minTop = 1) { let a, b; do { b = int(lo, hi, r); a = int(minTop, Math.max(minTop, b - 1), r); } while (a >= b || gcd(a, b) !== 1); return [a, b]; }
 
 /* The prompt must never show its own answer (test/tricks.mjs). A generator
    that could land on one re-rolls rather than hoping. */
@@ -87,8 +89,8 @@ export const TRICKS = [
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const b = pick([2, 3, 4], r); return this.q({ a: 1, b, n: b * int(2, 6, r) }); }
-        if (lv === 2) { const b = int(2, 6, r); return this.q({ a: int(1, b - 1, r), b, n: b * int(2, 10, r) }); }
-        const b = int(3, 12, r); return this.q({ a: int(2, b - 1, r), b, n: b * int(3, 12, r) });
+        if (lv === 2) { const [a, b] = proper(r, 2, 6); return this.q({ a, b, n: b * int(2, 10, r) }); }
+        const [a, b] = proper(r, 3, 12, 2); return this.q({ a, b, n: b * int(3, 12, r) });
       });
     },
     q({ a, b, n }) { return { a, b, n, text: `${a}/${b} of ${n}`, expr: `${n}*${a}/${b}`, ans: (n / b) * a }; },
@@ -317,8 +319,8 @@ export const TRICKS = [
     gen(r, lv = 1) {
       return fresh(() => {
         if (lv === 1) { const b = int(2, 8, r); return this.q({ w: int(2, 6, r), a: int(1, b - 1, r), b }); }
-        const hi = lv === 2 ? 6 : 12, b = int(2, hi, r), d = int(2, hi, r);
-        return this.q({ a: int(1, b - 1, r), b, c: int(1, d - 1, r), d });
+        const hi = lv === 2 ? 6 : 12, [a, b] = proper(r, 2, hi), [c, d] = proper(r, 2, hi);
+        return this.q({ a, b, c, d });
       });
     },
     q({ w, a, b, c, d }) {
@@ -326,7 +328,7 @@ export const TRICKS = [
       return { a, b, c, d, frac: true, text: `${a}/${b} × ${c}/${d}`, expr: `(${a}/${b})*(${c}/${d})`, ans: F(a * c, b * d) };
     },
     work({ w, a, b, c, d }) {
-      if (w) return [{ t: `${w} lots of ${a} pieces: ${w} × ${a}`, v: w * a }, { t: 'The pieces are the same size — keep the bottom', v: F(w * a, b) }];
+      if (w) return [{ t: `Tops: ${w} × ${a}`, v: w * a }, { t: 'The pieces are the same size — keep the bottom', v: F(w * a, b) }];
       return [{ t: `Tops: ${a} × ${c}`, v: a * c }, { t: `Bottoms: ${b} × ${d}`, v: b * d }, { t: 'Top over bottom', v: F(a * c, b * d) }];
     },
     draw: ({ w, a, b, d }) => {
@@ -355,8 +357,8 @@ export const TRICKS = [
           const c = int(2, 4, r), d = int(c + 1, 8, r);
           return this.q({ w: c * int(1, 4, r), c, d, kind: 'whole' });
         }
-        const b = int(2, 10, r), d = int(2, 10, r);
-        return this.q({ a: int(1, b - 1, r), b, c: int(1, d - 1, r), d, kind: 'frac' });
+        const [a, b] = proper(r, 2, 10), [c, d] = proper(r, 2, 10);
+        return this.q({ a, b, c, d, kind: 'frac' });
       });
     },
     q({ w, a, b, c, d, kind }) {
