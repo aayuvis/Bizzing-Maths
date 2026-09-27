@@ -108,7 +108,7 @@ export const optional = (k, n, i) => (k.placed != null && i < k.placed) || bandR
 
 /* ---- gating: worlds open by age band, or when the place before them is done.
 
-   Seventeen worlds cannot be one road: a six-year-old would stand behind the
+   Eighteen worlds cannot be one road: a six-year-old would stand behind the
    Mental Workshop and never reach Time and Money. So a WORLD opens when its
    age band is at or below the child's, or when its prerequisite world's
    checkpoint is passed (or placement put the child past it). Inside a world
@@ -116,7 +116,7 @@ export const optional = (k, n, i) => (k.placed != null && i < k.placed) || bandR
 export const NEEDS = {
   workshop: 'market', forest: 'market', observatory: 'workshop', palace: 'market',
   dock: 'bakery', setisland: 'forest', harbour: 'observatory',
-  quarry: 'forest', mine: 'library',
+  quarry: 'forest', mine: 'library', lighthouse: 'palace',
 };
 const firstIndex = (wid) => ROUTE.findIndex((n) => n.world === wid);
 

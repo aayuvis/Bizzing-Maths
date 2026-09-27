@@ -130,7 +130,7 @@ async function run(vp, tag) {
   await shot('26-far-isles');
   await page.click('[data-act=isle][data-arg="3"]'); await page.waitForTimeout(400);
   await shot('26b-outer-isles');
-  ok(await page.locator('.map-pin').count() === 3, 'the Outer Isles map shows its three places');
+  ok(await page.locator('.map-pin').count() === 4, 'the Outer Isles map shows its four places');
   for (const [wid, sid] of [['clocktower', 'read-the-clock'], ['bakery', 'fraction-of-amount'], ['shapecity', 'kinds-of-angle'], ['palace', 'teen-squares'], ['setisland', 'venn-count'], ['dock', 'add-decimals'], ['carnival', 'bar-compare'], ['quarry', 'prime-stones'], ['mine', 'subtract-negative'], ['coinstreet', 'fewest-coins'], ['coinstreet', 'interest-compound']]) {
     await page.evaluate((w) => window.__bzm.fire('openWorld', w), wid); await page.waitForSelector('.board');
     if (wid === 'clocktower' || wid === 'mine') { await page.waitForTimeout(300); await shot(`27-world-${wid}`); }

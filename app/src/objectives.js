@@ -110,6 +110,8 @@ export const STRANDS = [
     goals: [
       { id: 'setisland', can: 'I can use sets and Venn diagrams, and solve equations.', bar: 'every Set Island stop passed', band: '8-10',
         measure: (k) => m(worldShare(k, 'setisland'), '', 'world:setisland') },
+      { id: 'lighthouse', can: 'I can use Pythagoras and trigonometry, bearings, scatter graphs, tree diagrams and inequalities.', bar: 'every Lighthouse stop passed', band: '11-14',
+        measure: (k) => m(worldShare(k, 'lighthouse'), '', 'world:lighthouse') },
       { id: 'carnival', can: 'I can read charts, find averages, work out chances and solve multi-step problems.', bar: 'every Data Carnival stop passed',
         measure: (k) => m(worldShare(k, 'carnival'), '', 'world:carnival') },
     ] },

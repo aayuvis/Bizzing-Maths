@@ -130,12 +130,15 @@ LIB = {
 WORLD3 = {
     'w-quarry': "A wide panorama of a sunlit stone quarry in warm sandstone cliffs, where great smooth building blocks of a few different colours are stacked into towers, walls and arches, each tower clearly built from the same few kinds of block, a wooden crane, chisels and hammers on a bench, wildflowers on the ledges. Honey gold, terracotta, slate blue.",
     'w-mine': "A wide cutaway view of a friendly storybook mine: green meadow and a little winding-house at the top, and below the grass line a tall wooden lift shaft going straight down through layers of rock to several lamp-lit tunnels one under another, crystals glowing in the walls, mine carts on rails, a thermometer-like glass tube of coloured liquid on a post, lanterns. Earthy browns, glowing amber, cool crystal blue.",
+    'w-lighthouse': "A wide panorama of a rocky headland at dusk with a tall striped lighthouse casting a long clean beam across a calm sea, a keeper's cottage, a brass telescope on a tripod, a big compass rose set into the stone terrace made only of arrows, sailing boats far out at different distances, gulls. Deep sea blue, warm lamp gold, rose sky.",
     'w-coinstreet': "A wide panorama of a cheerful old market street of small shops with awnings, a little bank with columns, glass jars of shining round coins on a counter, a pair of brass weighing scales, a piggy bank on a window sill, baskets of fruit with blank price tags, bunting with no writing. Warm cream, coin gold, leafy green, brick red.",
 }
-ATLAS3 = ("A storybook fantasy map seen from above at a gentle angle of THREE separate islands in a calm sea: on the upper left an island "
-          "of warm sandstone cliffs with a quarry of stacked stone blocks, on the right an island with a winding-house and a lift shaft "
-          "going down into a hill with lamp-lit tunnels, and at the bottom an island with a little market town of shops with awnings and a small bank "
-          "with columns. Open water between them, dotted sea routes connecting them, a compass rose made only of arrows. Painted like the endpapers of a children's book.")
+ATLAS3 = ("A storybook fantasy map seen from above at a gentle angle of FOUR separate islands in a calm sea: on the upper left an island "
+          "of warm sandstone cliffs with a quarry of stacked stone blocks, on the upper right an island with a winding-house and a lift shaft "
+          "going down into a hill with lamp-lit tunnels, on the lower left a rocky island with a tall striped lighthouse on its point, "
+          "and on the lower right an island with a little market town of shops with awnings and a small bank with columns. "
+          "Every island fully in frame with sea all round it. Open water between them, dotted sea routes connecting them, little sailing boats, NO compass rose. "
+          "Painted like the endpapers of a children's book. Absolutely no writing, letters or numbers anywhere.")
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')

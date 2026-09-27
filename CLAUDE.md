@@ -62,7 +62,7 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
    strands; none is ticked for time spent or for visiting a screen. A goal for an older band
    shows as *coming later*, never as a failure. `test/objectives.mjs` proves each one moves.
 10. **Worlds open by age band or by the place before them** (`model.js` `worldOpen`, `NEEDS`);
-    stops open in order inside a world. Seventeen worlds cannot be one road — a six-year-old
+    stops open in order inside a world. Eighteen worlds cannot be one road — a six-year-old
     must reach Time and Money without first passing the Sutra Observatory.
 11. **Answers can be whole, decimal, negative or fractions** (`parseNum`), each with the keys it
     needs on the keypad (`keys: ['.', '−', '/']`). A non-whole answer on a stop not marked
