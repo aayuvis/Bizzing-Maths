@@ -1,10 +1,13 @@
 /* test/levels.mjs — the ten journeys hold their promises.
 
-   Ten levels, one per maths age; every stop somewhere; a stop comes back only
-   harder; nothing before its band; a spiral, not a list; Level 10 a real
-   stretch; and every step a question the app can actually ask and mark. */
-import { CONCEPTS, CONCEPT_OF, LEVELS, ageOf, matrix } from '../src/levels.js';
-import { TRICKS, byId, correct, parseNum } from '../src/tricks.js';
+   Ten levels, one per maths age; each a road of four to six lands, a land one
+   concept area long enough for a 20-question test; every stop somewhere; a
+   stop comes back only harder; nothing before its band; prerequisites first;
+   a spiral of lands, not a list; Level 10 a real stretch; and every step a
+   question the app can actually ask and mark. */
+import { existsSync } from 'node:fs';
+import { CONCEPTS, CONCEPT_OF, LEVELS, NEEDS, ageOf, landsOf, matrix } from '../src/levels.js';
+import { TRICKS, WORLDS, byId, correct, parseNum } from '../src/tricks.js';
 import { seeded } from '../src/rand.js';
 
 let fails = 0;
@@ -31,8 +34,35 @@ LEVELS.forEach((l, i) => {
   ok(ageOf(l.n) === `maths age ${AGES[i]}`, `ageOf(${l.n}) is "${ageOf(l.n)}"`);
   ok(typeof l.name === 'string' && l.name.length > 3 && l.name.length <= 28, `level ${l.n}: needs a short name`);
   ok(typeof l.blurb === 'string' && l.blurb.length > 20 && /\.$/.test(l.blurb), `level ${l.n}: needs a one-sentence blurb`);
-  ok(l.steps.length >= 12 && l.steps.length <= 22, `level ${l.n}: ${l.steps.length} steps, need 12–22`);
+  ok(l.steps.length >= 16 && l.steps.length <= 26, `level ${l.n}: ${l.steps.length} steps, need 16–26`);
 });
+
+/* ---- lands: each level a road of 4–6 lands, each land one concept area with a testable spread */
+const wids = WORLDS.map((w) => w.id);
+const landIds = new Set();
+ok(landsOf(0).length === 0 && landsOf(11).length === 0, 'landsOf(): a level that does not exist has no lands');
+for (const l of LEVELS) {
+  ok(Array.isArray(l.lands) && landsOf(l.n) === l.lands, `level ${l.n}: landsOf(${l.n}) is not its lands`);
+  if (!Array.isArray(l.lands)) continue;
+  ok(l.lands.length >= 4 && l.lands.length <= 6, `level ${l.n}: ${l.lands.length} lands, need 4–6`);
+  const flat = l.lands.flatMap((d) => d.steps);
+  ok(flat.length === l.steps.length && flat.every((s, i) => s.stop === l.steps[i].stop && s.lv === l.steps[i].lv), `level ${l.n}: steps is not its lands laid end to end`);
+  l.lands.forEach((d, i) => {
+    ok(typeof d.id === 'string' && !landIds.has(d.id), `level ${l.n}: land id ${d.id} missing or repeated`); landIds.add(d.id);
+    ok(cids.includes(d.concept), `${d.id}: unknown concept ${d.concept}`);
+    ok(typeof d.name === 'string' && d.name.length > 3 && d.name.length <= 30, `${d.id}: needs a short child-facing name (≤ 30), has "${d.name}"`);
+    ok(wids.includes(d.world), `${d.id}: world ${d.world} is not an Atlas world`);
+    ok(existsSync(new URL(`../public/art/w-${d.world}.webp`, import.meta.url)), `${d.id}: world ${d.world} has no painting`);
+    ok(d.steps.length >= 3 && d.steps.length <= 6, `${d.id}: ${d.steps.length} steps, need 3–6 for a 20-question land test`);
+    ok(new Set(d.steps.map((s) => s.stop)).size >= 3, `${d.id}: fewer than 3 distinct stops — too thin for a land test`);
+    const own = d.steps.filter((s) => CONCEPT_OF[s.stop] === d.concept).length;
+    ok(own * 2 >= d.steps.length, `${d.id}: only ${own} of ${d.steps.length} steps are ${d.concept} — the land is not that concept`);
+    if (i > 0) ok(l.lands[i - 1].concept !== d.concept, `level ${l.n}: ${l.lands[i - 1].id} and ${d.id} are the same concept back to back`);
+    // prerequisites first: no land comes before a later land its concept needs
+    for (const e of l.lands.slice(i + 1)) ok(!(NEEDS[d.concept] || []).includes(e.concept), `level ${l.n}: ${d.id} needs ${e.concept}, which comes later (${e.id})`);
+  });
+}
+for (const c of cids) ok(Array.isArray(NEEDS[c]) && NEEDS[c].every((x) => cids.includes(x) && x !== c), `NEEDS.${c} missing or names an unknown concept`);
 
 /* ---- steps: real stops, a real lv, no repeats, the spiral only climbs, nothing before its band */
 const BAND_FLOOR = { '6-7': 1, '8-10': 3, '11-14': 6 };
@@ -41,8 +71,7 @@ const first = {}, lastLv = {};
 let steps = 0;
 for (const l of LEVELS) {
   const seen = new Set();
-  const lastInWorld = {};
-  for (const s of l.steps) {
+  for (const d of l.lands || []) { const lastInWorld = {}; for (const s of d.steps) {
     steps++;
     const t = byId[s.stop];
     ok(t, `level ${l.n}: no such stop ${s.stop}`);
@@ -57,25 +86,26 @@ for (const l of LEVELS) {
       ok(s.lv >= lastLv[s.stop], `${s.stop}: lv goes down from ${lastLv[s.stop]} to ${s.lv} in level ${l.n}`);
     }
     lastLv[s.stop] = s.lv;
-    // prerequisites first: inside a level, a world's stops come in the world's own teaching order
+    // prerequisites first: inside a land, a world's stops come in the world's own teaching order
     const prev = lastInWorld[t.world];
-    ok(prev === undefined || order[prev] < order[s.stop], `level ${l.n}: ${s.stop} comes after ${prev}, but ${t.world} teaches ${s.stop} first`);
+    ok(prev === undefined || order[prev] < order[s.stop], `${d.id}: ${s.stop} comes after ${prev}, but ${t.world} teaches ${s.stop} first`);
     lastInWorld[t.world] = s.stop;
-  }
+  } }
 }
 const missing = TRICKS.filter((t) => first[t.id] === undefined).map((t) => t.id);
 ok(!missing.length, `stops on no journey: ${missing.join(', ')}`);
+ok(steps === LEVELS.reduce((a, l) => a + l.steps.length, 0), 'a step sits in no land');
 
-/* ---- a spiral, not a list */
+/* ---- a spiral, not a list: concepts come back as lands */
 const span = Object.fromEntries(cids.map((c) => [c, new Set()]));
 for (const l of LEVELS) {
   const here = new Set(l.steps.map((s) => CONCEPT_OF[s.stop]));
   ok(here.size >= 4, `level ${l.n} touches only ${here.size} concepts`);
-  for (const c of here) span[c] && span[c].add(l.n);
+  for (const d of l.lands || []) span[d.concept] && span[d.concept].add(l.n);
 }
-for (const c of cids) ok(span[c].size >= 2, `concept ${c} is in only ${span[c].size} level(s)`);
+for (const c of cids) ok(span[c].size >= 2, `concept ${c} is a land in only ${span[c].size} level(s)`);
 const spiral = cids.filter((c) => span[c].size >= 5);
-ok(spiral.length >= 6, `only ${spiral.length} concepts span 5+ levels (need 6)`);
+ok(spiral.length >= 6, `only ${spiral.length} concepts are lands in 5+ levels (need 6)`);
 
 /* ---- Level 10 is the stretch */
 const top = LEVELS[9];
@@ -124,5 +154,5 @@ ok(cellSteps === steps, `matrix(): ${cellSteps} cells entries for ${steps} steps
 const stops = Object.keys(first).length;
 console.log(fails
   ? `FAIL levels — ${fails} problem(s)`
-  : `ok levels — 10 levels, ${steps} steps, ${stops} stops, ${spiral.length} concepts spiral across ≥5 levels (${qn} questions checked)`);
+  : `ok levels — 10 levels, ${landIds.size} lands, ${steps} steps, ${stops} stops, ${spiral.length} concepts spiral across ≥5 levels (${qn} questions checked)`);
 if (fails) process.exit(1);

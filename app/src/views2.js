@@ -67,7 +67,8 @@ export function viewAtlasMap() {
   const h = R.h, k = kid(h), f = frontier(k, h);
   const here = ROUTE[f] ? ROUTE[f].world : WORLDS.at(-1).id;
   const stars = TRICKS.reduce((s, t) => s + ((k.tricks[t.id] || {}).stars || 0), 0);
-  const isle = R.ui.isle || (WORLDS.find((w) => w.id === here) || {}).island || 1;
+  const jp = onJourney(k) ? J.progress(k) : null, roadWorld = jp && jp.next ? jp.next.t.world : null;
+  const isle = R.ui.isle || (WORLDS.find((w) => w.id === (roadWorld || here)) || {}).island || 1;
   const I = ISLANDS[isle - 1];
   const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
@@ -308,46 +309,110 @@ export function viewTool(tool, ctx) {
 const LVNAME = ['', 'Warm-up', 'Stretch', 'Champion'];
 const conceptOf = (id) => CONCEPTS.find((c) => c.id === CONCEPT_OF[id]) || { name: '', glyph: '' };
 
+/* The Atlas for a child on a journey: ONE ROAD PER LEVEL, painted like the
+   rest of the Atlas. A level is a panorama of its lands — each land is its
+   world's own painting — with one road winding across all of them: stations,
+   a gate (the land test) at the end of every land, and the summit (the level
+   test) at the end of the road. Each land hides three secrets to stumble on.
+   The ladder switches between the ten roads: earlier ones stay open to walk
+   again, later ones are shown shut. */
+const PANEL = 100;                                  // each land is 100 units wide in the board's own space
+const bandY = (x) => 78 + 6 * Math.sin((x / PANEL) * Math.PI * 2 * 0.9 + 0.6);
+
+function levelBoard(k, show, mine, nodes) {
+  const tester = R.h.parent.tester;
+  // lands (with their nodes); the summit rides at the end of the last land
+  const lands = []; let summit = null;
+  for (const x of nodes) { if (x.kind === 'land') lands.push({ land: x.land, recap: x.recap, open: x.open, nodes: [] }); else if (x.kind === 'leveltest') summit = x; else lands.at(-1).nodes.push(x); }
+  const W = lands.length * PANEL, placed = [];
+  lands.forEach((L, li) => {
+    const n = L.nodes.length + (li === lands.length - 1 ? 1 : 0), x0 = li * PANEL + 9, x1 = li * PANEL + 93;
+    L.nodes.forEach((x, j) => placed.push({ x, li, px: x0 + ((x1 - x0) * j) / Math.max(1, n - 1) }));
+    if (li === lands.length - 1 && summit) placed.push({ x: summit, li, px: x1 });
+  });
+  let path = ''; for (let x = 0; x <= W; x += 2) path += `${x ? 'L' : 'M'}${x},${bandY(x).toFixed(2)} `;
+  const firstOpen = placed.findIndex((p) => !p.x.done);
+  const walkTo = firstOpen < 0 ? W : placed[firstOpen].px;
+  let wpath = ''; for (let x = 0; x <= walkTo; x += 2) wpath += `${x ? 'L' : 'M'}${x},${bandY(x).toFixed(2)} `;
+  const sel = R.ui.rpick != null && placed[R.ui.rpick] ? R.ui.rpick : Math.max(0, firstOpen);
+  const pct = (px) => (100 * px) / W;
+  const pins = placed.map((p, i) => {
+    const x = p.x, open = x.open || tester, cur = mine && i === firstOpen, left = pct(p.px), top = bandY(p.px);
+    if (x.kind === 'stop') {
+      const t = byId[x.stop], st = (k.tricks[t.id] || {}).stars || 0;
+      return `<button class="bpin${cls(x.done && ' done', cur && ' cur', !open && ' shut', sel === i && ' sel', x.recap && ' recap')}" style="left:${left}%;top:${top}%" data-act="roadPick" data-arg="${i}" aria-label="${esc(t.title)}${open ? '' : ', not reached yet'}">
+        <span>${x.done ? '✓' : open ? '' : '🔒'}</span><i class="rn-lv lv${x.lv}"></i>${st ? `<em>${'★'.repeat(st)}</em>` : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
+    }
+    const lvl = x.kind === 'leveltest';
+    return `<button class="bgate${cls(lvl && ' summit', x.done && ' done', cur && ' cur', !open && ' shut', sel === i && ' sel')}" style="left:${left}%;top:${top - 9}%" data-act="roadPick" data-arg="${i}" aria-label="${lvl ? `Level ${show} test` : `${esc(x.land.name)} test`}${open ? '' : ', not reached yet'}">
+      <img src="art/${lvl ? 'summit' : 'gate'}.webp" alt="" width="96" height="96">${x.done ? '<b class="bg-ok">✓</b>' : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
+  }).join('');
+  const panels = lands.map((L, li) => {
+    const done = L.nodes.filter((x) => x.kind === 'stop' && x.done).length, all = L.nodes.filter((x) => x.kind === 'stop').length;
+    const em = !L.recap && J.emblem(k, show, L.land.id);
+    const secrets = L.recap || !(L.open || tester) ? '' : J.secretsOf(k, L.land.id).map((s) => s.found ? '' :
+      `<button class="secret" style="left:${pct(li * PANEL + s.x)}%;top:${s.y}%" data-act="secret" data-arg="${s.k}|${L.land.id}" aria-label="${esc(s.name)}" title="${esc(s.name)}">${s.glyph}</button>`).join('');
+    return `<img class="panel" src="art/w-${L.land.world}.webp" alt="" style="left:${pct(li * PANEL)}%;width:${100 / lands.length}%">
+      <div class="land-tag${L.open || tester ? '' : ' shut'}" style="left:calc(${pct(li * PANEL)}% + 12px)"><b>${L.recap ? '↺' : li + 1 - (lands[0].recap ? 1 : 0)}</b><span>${esc(L.land.name)}<small>${done}/${all} stations${em ? ' · 🏅 fully explored' : ''}</small></span></div>${secrets}`;
+  }).join('');
+  return { html: `<div class="board-scroll" data-autoscroll="${pct(placed[sel] ? placed[sel].px : 0)}">
+      <div class="board lboard" style="min-width:${lands.length * 980}px;aspect-ratio:${lands.length * 1920}/815">
+        ${panels}
+        <svg class="road" viewBox="0 0 ${W} 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
+        </svg>
+        ${pins}
+      </div></div>`, placed, sel };
+}
+
+function roadCard(p, k, show, mine) {
+  if (!p) return '';
+  const x = p.x, open = x.open || R.h.parent.tester;
+  if (x.kind === 'stop') {
+    const t = byId[x.stop], s = STORIES[t.id], w = worldOf(t.world), r = k.tricks[t.id] || {};
+    return `<div class="card pick">
+      ${s ? `<div class="pick-cast">${s.cast.map((c) => av(c, 64, bot(c).name)).join('')}</div>` : ''}
+      <div class="pick-t"><p class="kicker">${x.recap ? 'Recap · ' : ''}${w.glyph} ${esc(w.short)} · ${LVNAME[x.lv]}</p>
+        <h2>${esc(t.title)}</h2><p class="pick-hook">${esc(t.hook)}</p>${starRow(r.stars || 0)}</div>
+      ${open ? `<button class="btn primary big" data-act="openStep" data-arg="${x.stop}|${x.lv}">${x.done ? 'Go back in' : 'Start here'}</button>` : '<p class="muted">Pass everything before it on the road to open it.</p>'}
+    </div>`;
+  }
+  const lvl = x.kind === 'leveltest', rec = lvl ? J.testRec(J.rec(k), show) : J.testRec(J.rec(k), show, x.land.id);
+  return `<div class="card pick">
+    <img class="pick-art" src="art/${lvl ? 'summit' : 'gate'}.webp" alt="" width="88" height="88">
+    <div class="pick-t"><p class="kicker">${lvl ? 'The summit' : 'The gate'}</p>
+      <h2>${lvl ? `Level ${show} test` : `${esc(x.land.name)} test`}</h2>
+      <p class="pick-hook">${lvl ? `${J.LEVEL_N} questions from every land, getting harder. ${J.LEVEL_PASS} right passes — and moves you up to ${esc(J.ageOf(Math.min(10, show + 1)))}. Then ${J.LEVEL_BONUS} bonus questions, double points.` : `${J.LAND_N} questions from this land, getting harder. ${J.LAND_PASS} right opens the road on. Then ${J.LAND_BONUS} bonus questions at almost the next level, double points.`}</p>
+      ${rec && rec.passed ? `<p class="gold-line">Passed ${'★'.repeat(rec.stars || 1)} · best ${rec.best} points</p>` : ''}</div>
+    ${open ? `<button class="btn primary big" data-act="${lvl ? 'startLevelExam' : 'startLandTest'}" data-arg="${lvl ? '' : x.land.id}">${rec && rec.passed ? 'Take it again' : 'Take the test'}</button>` : '<p class="muted">Pass every station before it first.</p>'}
+  </div>`;
+}
+
 export function viewJourney() {
   const k = kid(R.h), j = J.rec(k), p = J.progress(k);
-  if (!p) return `<section class="narrow">${pageHead('My road', 'Ten levels, from maths age 6 to 15+')}
+  if (!p) return `<section class="narrow">${pageHead('The Atlas', 'Ten levels, from maths age 6 to 15+')}
     <div class="card center-card"><p class="kicker">Not placed yet</p><h2>Find your level first</h2>
       <p>A few questions move up when you get them and down when you don't, until they find your maths age. Then your road starts there.</p>
       <div class="row gap center"><button class="btn primary big" data-act="startLevelTest">Find my level</button><button class="btn" data-act="startLevel1">Start at Level 1</button></div></div></section>`;
-  const show = R.ui.jlv && R.ui.jlv !== p.level ? R.ui.jlv : p.level, mine = show === p.level;
-  const L = J.levelOf(show);
-  // your own level: the live road (strict order). Another level: past ones all done-or-open, later ones shut.
-  const steps = mine ? p.steps : J.stepsOf({ ...j, recap: null }, show).map((s) => ({ ...s, done: J.stepDone(j, s), open: show < p.level, t: byId[s.stop] }));
-  const next = mine ? p.next : null, done = steps.filter((s) => s.done).length;
+  const show = R.ui.jlv && R.ui.jlv !== p.level ? R.ui.jlv : p.level, mine = show === p.level, L = J.levelOf(show);
+  const nodes = mine ? p.nodes : J.roadOf(k, show);
+  const stops = nodes.filter((x) => x.kind === 'stop'), done = stops.filter((x) => x.done).length;
   const ladder = J.LEVELS.map((x) => {
     const st = j.finished.includes(x.n) ? 'fin' : x.n === p.level ? 'now' : x.n < p.level ? 'past' : 'ahead';
     return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}"><b>${x.n}</b><span>${esc(x.age)}</span>${st === 'fin' ? '<i>✓</i>' : st === 'ahead' ? '<i>🔒</i>' : ''}</button>`;
   }).join('');
-  const check = `<li class="jcheck ${mine && p.checkOpen ? 'next' : mine ? 'shut' : show < p.level ? 'done' : 'shut'}">
-      <button data-act="${mine && p.checkOpen ? 'startLevelCheck' : 'jcheckShut'}" data-arg="${show}">
-        <span class="jn">${show < p.level ? '🏅' : mine && p.checkOpen ? '⚑' : '🔒'}</span>
-        <span class="jx"><b>Level ${show} check</b><span class="muted small">${J.CHECK_N} questions from the whole road · ${J.CHECK_PASS} right moves you up to ${esc(J.ageOf(Math.min(10, show + 1)))}</span></span>
-        ${mine && p.checkOpen ? '<span class="btn primary small">Take it</span>' : ''}</button></li>`;
+  const b = levelBoard(k, show, mine, nodes);
   return `<section class="journey-page">
-    ${pageHead('My road', `One road per level, walked in order. Every station opens the next; the check at the end moves you up.`, '', `<button class="btn small" data-act="startLevelTest">Find my level again</button>`)}
-    ${atlasSeg(k, 'road')}
+    ${pageHead('The Number Atlas', 'One road for each level. Every land ends at a gate; the summit moves you up.', '', `<button class="btn small" data-act="atlasView" data-arg="islands">🗺️ All 18 places</button>`)}
     <div class="jladder" role="tablist" aria-label="The ten levels">${ladder}</div>
     <div class="card jhead">
-      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your road' : show < p.level ? ' · walked' : ' · ahead of you'}</p>
+      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your road' : show < p.level ? ' · walked — open to revisit' : ' · ahead of you'}</p>
         <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p></div>
-      <div class="jprog"><b class="mono">${done}/${steps.length}</b><span class="meter"><i style="width:${Math.round(100 * done / steps.length)}%"></i></span><span class="muted small">stations passed</span></div>
+      <div class="jprog"><b class="mono">${done}/${stops.length}</b><span class="meter"><i style="width:${Math.round(100 * done / Math.max(1, stops.length))}%"></i></span><span class="muted small">stations passed</span></div>
     </div>
-    ${!mine ? `<p class="muted center">${show < p.level ? `Every lesson on the Level ${show} road is open to you — here and in the Atlas.` : `This road opens when you pass the Level ${show - 1} check.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
-    <ol class="jsteps jroad">${steps.map((s, i) => {
-      const c = conceptOf(s.stop), w = worldOf(s.t.world);
-      const cl = (s.done ? 'done' : s === next ? 'next' : !s.open ? 'shut' : '') + (s.recap ? ' recap' : '');
-      const head = s.recap && i === 0 ? `<li class="jsec"><b>Recap of Level ${show - 1}</b> <span class="muted small">You started here, so first a quick look back — one station for each idea Level ${show - 1} taught.</span></li>`
-        : !s.recap && i > 0 && steps[i - 1].recap ? `<li class="jsec"><b>Level ${show}</b> <span class="muted small">Now the road itself.</span></li>` : '';
-      return `${head}<li class="${cl}"><button data-act="openStep" data-arg="${s.stop}|${s.lv}" ${s.open || s.done ? '' : 'aria-disabled="true"'}>
-        <span class="jn">${s.done ? '✓' : s.open ? i + 1 : '🔒'}</span>
-        <span class="jx"><b>${esc(s.t.title)}</b><span class="muted small">${w.glyph} ${esc(w.short)} · ${c.glyph} ${esc(c.name)}</span></span>
-        <span class="jlvtag lv${s.lv}">${LVNAME[s.lv]}</span>${s === next ? '<span class="btn primary small">Next</span>' : ''}</button></li>`;
-    }).join('')}${check}</ol>
-    <p class="muted small center">A station is passed when its drill is passed at that difficulty or harder. Stations open one at a time, in order.</p>
+    ${!mine ? `<p class="muted center">${show < p.level ? `The whole Level ${show} road is open — walk any station again.` : `This road opens when you pass the Level ${show - 1} test.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
+    ${b.html}
+    ${roadCard(b.placed[b.sel], k, show, mine)}
+    <p class="muted small center">Tap a stop to see it, tap again to go in. 💡 🎭 🧩 — every land hides three secrets.</p>
   </section>`;
 }

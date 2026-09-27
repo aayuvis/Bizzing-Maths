@@ -209,8 +209,8 @@ function journeyCard(k) {
   return `<div class="hcard jcard">
       <button class="jc-lv" data-act="nav" data-arg="journey" aria-label="My journey">${p.level}</button>
       <span class="jc-t"><span class="kick">Level ${p.level} · ${esc(p.age)}</span><b>${esc(p.L.name)}</b>
-        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">Station ${Math.min(p.done + 1, p.total)} of ${p.total}${p.next ? ` · ${esc(p.next.t.title)}` : ' · the level check is next'}</span></span>
-      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : p.checkOpen && !p.finishedTop ? `<button class="btn primary" data-act="startLevelCheck">Take the Level ${p.level} check</button>` : `<button class="btn" data-act="nav" data-arg="journey">See my road</button>`}
+        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">Station ${Math.min(p.done + 1, p.total)} of ${p.total}${p.next ? ` · ${esc(p.next.t.title)}` : p.nextTest ? ` · next: ${p.nextTest.kind === 'landtest' ? esc(p.nextTest.land.name) + ' test' : 'the Level test'}` : ''}</span></span>
+      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : p.nextTest && p.nextTest.kind === 'landtest' ? `<button class="btn primary" data-act="startLandTest" data-arg="${p.nextTest.land.id}">Take the test</button>` : p.nextTest && !p.finishedTop ? `<button class="btn primary" data-act="startLevelExam">Take the Level ${p.level} test</button>` : `<button class="btn" data-act="nav" data-arg="atlas">See my road</button>`}
     </div>`;
 }
 
@@ -449,6 +449,7 @@ export function viewRun() {
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
+      ${q.bonus ? `<p class="bonus-bar"><span class="chip gold">Bonus ×2 · optional</span> <span class="muted small">Almost next-level hard. Only adds points — it cannot lose you the test.</span> ${fb ? '' : btn('Finish without the bonus', 'skipBonus', '', 'small')}</p>` : ''}
       ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
       ${q.choices
         ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
@@ -477,7 +478,7 @@ function viewRunEnd(run) {
     ${pageHead(esc(run.title), '', back('endRun', 'Done'))}
     <div class="card end-card">
       ${s.stars != null ? starRow(s.stars, 3, true) : ''}
-      ${placing ? '' : `<h2>${right} of ${n} right</h2>`}
+      ${placing ? '' : `<h2>${s.head || `${right} of ${n} right`}</h2>`}
       ${(s.lines || []).map((l) => `<p>${l}</p>`).join('')}
       ${!placing && run.missed && run.missed.length ? `<div class="missed"><p class="kicker">Worth another look</p><ul>${run.missed.map((q) => `<li><b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>${q.why ? ` <span class="why-chip">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul></div>` : ''}
       <div class="row gap center">${(s.buttons || []).join('')}${btn('Done', 'endRun', '', s.buttons && s.buttons.length ? '' : 'primary')}</div>

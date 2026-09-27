@@ -9,14 +9,14 @@ import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from '
 import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { newHousehold, newKid, kid, AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
-import { newContest, childQuestion, playRound, championship, runOut, timeFor } from './contest.js';
+import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
 import { toolById, SHELF } from './library/index.js';
 import { STORIES } from './stories.js';
-import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize } from './puzzles.js';
+import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel } from './puzzles.js';
 import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor } from './themes.js';
 
 const root = document.getElementById('app');
@@ -241,7 +241,7 @@ function finishRun() {
         // on a road, the road decides what is next — not the world's own order
         s.buttons = s.buttons.filter((b) => !/Next stop:|openCheck/.test(b));
         if (jr.ticked) s.lines.push(`<b>Station ${jp.done} of ${jp.total} on your Level ${jp.level} road.</b>`);
-        if (jp.checkOpen) s.buttons.unshift(`<button class="btn primary" data-act="startLevelCheck">Take the Level ${jp.level} check</button>`);
+        if (jp.nextTest) s.buttons.unshift(jp.nextTest.kind === 'landtest' ? `<button class="btn primary" data-act="startLandTest" data-arg="${jp.nextTest.land.id}">Take the ${escapeHtml(jp.nextTest.land.name)} test</button>` : `<button class="btn primary" data-act="startLevelExam">Take the Level ${jp.level} test</button>`);
         else if (jp.next) s.buttons.unshift(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next station: ${escapeHtml(jp.next.t.title)}</button>`);
       }
     } else {
@@ -290,19 +290,43 @@ function finishRun() {
     if (r) { if (r.stars != null) s.stars = r.stars; s.lines.push(...(r.lines || [])); s.buttons.push(...(r.buttons || [])); }
     else s.lines.push(right === n ? 'Every one.' : 'Try another set — it gets easier every time.');
   }
-  if (run.kind === 'levelcheck') {
-    const res = J.checkPassed(k, right), L = run.level;
-    s.stars = right >= J.CHECK_PASS ? (right === n ? 3 : 2) : 0;
-    if (res.moved || (right >= J.CHECK_PASS && L === J.TOP)) {
-      s.lines.push(`<span class="big-age">${escapeHtml(res.moved ? J.ageOf(res.to) : 'Level 10 complete')}</span>`);
-      s.lines.push(res.moved ? `<b>Level ${L} passed.</b> You are working at ${escapeHtml(J.ageOf(res.to))} now. Your Level ${res.to} road — ${escapeHtml(J.levelOf(res.to).name)} — is open.` : '<b>You have walked all ten roads.</b> Everything in the Atlas is yours to revisit.');
-      s.buttons.push('<button class="btn primary" data-act="nav" data-arg="journey">See my new road</button>');
-      confetti(120); sfx.level();
+  if (run.kind === 'secret') {
+    const need = run.secret === 'duel' ? 2 : 1, won = right >= need;
+    s.head = run.secret === 'duel' ? `You ${right} · ${bot(run.rival).name} ${n - right}` : won ? 'Found it!' : 'Not this time';
+    if (won) {
+      const first = J.secretFound(k, run.land, run.secret);
+      s.lines.push(run.secret === 'duel' ? `<b>You win the clearing.</b> ${escapeHtml(bot(run.rival).name)} tips their hat.` : run.secret === 'wisp' ? `<b>Right — and here is why:</b> ${escapeHtml(run.items[0].why || '')}` : '<b>The chest swings open.</b>');
+      const p = J.progress(k), n2 = p && p.level;
+      if (first && n2 && J.emblem(k, n2, run.land)) s.lines.push('🏅 <b>Land fully explored</b> — every secret found and its gate passed.');
+      confetti(first ? 50 : 20);
+    } else s.lines.push(run.secret === 'duel' ? 'Two out of three wins it. Have another go whenever you like — the rival waits.' : 'It stays hidden for now. Come back and try again any time.');
+    s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">Back to the map</button>');
+  }
+  if (run.kind === 'landtest' || run.kind === 'levelexam') {
+    const lvl = run.kind === 'levelexam';
+    const sc = lvl ? J.levelTestDone(k, run.items, run.results) : J.landTestDone(k, run.land, run.items, run.results);
+    s.stars = sc.stars;
+    s.head = `${sc.core} of ${sc.N} right${sc.bonusAsked ? ` · bonus ${sc.bonus} of ${sc.B} (×2)` : ''} · ${sc.points} points`;
+    if (sc.pass) {
+      if (lvl && sc.moved) {
+        s.lines.push(`<span class="big-age">${escapeHtml(J.ageOf(sc.to))}</span>`);
+        s.lines.push(`<b>Level ${sc.from} passed!</b> You are working at ${escapeHtml(J.ageOf(sc.to))} now. The Level ${sc.to} road — ${escapeHtml(J.levelOf(sc.to).name)} — is open.`);
+        s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">See my new road</button>'); confetti(140); sfx.level();
+      } else if (lvl) {
+        s.lines.push(sc.from === J.TOP ? '<b>Level 10 passed. You have walked all ten roads.</b>' : '<b>Passed.</b>');
+        s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">My road</button>');
+      } else {
+        s.lines.push(`<b>${escapeHtml(run.title)} passed${sc.first ? ' — the next part of your road is open' : ''}.</b>`);
+        const jp = J.progress(k);
+        if (jp && jp.next) s.buttons.push(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next station: ${escapeHtml(jp.next.t.title)}</button>`);
+        else if (jp && jp.nextTest && jp.nextTest.kind === 'leveltest') s.buttons.push(`<button class="btn primary" data-act="startLevelExam">Take the Level ${jp.level} test</button>`);
+        confetti(sc.first ? 70 : 30); if (sc.first) sfx.level();
+      }
     } else {
-      s.lines.push(`${J.CHECK_PASS} of ${J.CHECK_N} passes the check. Look at the ones below — each one is a station on your road you can go back to — then try the check again.`);
-      s.buttons.push('<button class="btn primary" data-act="startLevelCheck">Try the check again</button>');
-      s.buttons.push('<button class="btn" data-act="nav" data-arg="journey">Back to my road</button>');
+      s.lines.push(`${sc.PASS} of the ${sc.N} main questions pass. Look at the ones below — each one is a station you can go back to — then try again.`);
+      s.buttons.push(lvl ? '<button class="btn primary" data-act="startLevelExam">Try the level test again</button>' : `<button class="btn primary" data-act="startLandTest" data-arg="${run.land}">Try again</button>`);
     }
+    s.buttons.push('<button class="btn" data-act="nav" data-arg="atlas">Back to my road</button>');
   }
   if (run.kind === 'leveltest') {
     const L = J.place(k, run.st.result), lv = J.levelOf(L);
@@ -582,7 +606,7 @@ on('cell', (c) => { R.ui.cell = R.ui.cell === c ? null : c; render(); });
 on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
 on('nextQ', () => nextQ());
 on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
-on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && (r.kind === 'leveltest' || r.kind === 'levelcheck')) go('journey'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
 
 on('startContest', () => startContest());
 on('cChoose', (c) => cAnswer(c));
@@ -608,14 +632,41 @@ on('startPlace', () => {
   startRun('place', 'Find my start', items, { sub: 'Stop whenever they get tricky' });
 });
 on('skipPlace', () => go('atlas'));
-on('jcheckShut', (n) => toast(+n > (J.rec(kid(R.h)).level || 1) ? `The Level ${n} road opens after the Level ${n - 1} check.` : 'Pass every station on the road first — then the check opens.'));
+on('roadShut', () => toast('That part of the road opens when everything before it is passed.'));
+on('roadPick', (i) => {
+  // a tap selects; a second tap on the selected one goes in (the Bee's map rule)
+  const k = kid(R.h), p = J.progress(k), show = R.ui.jlv && p && R.ui.jlv !== p.level ? R.ui.jlv : p && p.level;
+  if (R.ui.rpick === +i) {
+    const nodes = (show === p.level ? p.nodes : J.roadOf(k, show)).filter((x) => x.kind !== 'land');
+    const x = nodes[+i]; if (!x) return;
+    if (!x.open && !R.h.parent.tester) return toast('That part of the road opens when everything before it is passed.');
+    if (x.kind === 'stop') return fire('openStep', `${x.stop}|${x.lv}`);
+    return x.kind === 'leveltest' ? fire('startLevelExam') : fire('startLandTest', x.land.id);
+  }
+  R.ui.rpick = +i; render();
+});
+on('secret', (a) => {
+  const [kind, landId] = a.split('|'), k = kid(R.h), s = J.SECRET_KINDS.find((x) => x.k === kind);
+  const rival = kind === 'duel' ? J.secretsOf(k, landId).find((x) => x.k === 'duel').rival : null;
+  let items = J.secretItems(k, landId, kind);
+  if (kind === 'chest') { const fam = ['patterns', 'balance', 'space'][Math.floor(Math.random() * 3)]; items = familySet(fam, bandLevel(k.band), 1); }
+  const title = kind === 'duel' ? `${bot(rival).name} challenges you!` : s.name;
+  startRun('secret', title, items, { secret: kind, land: landId, rival, sub: kind === 'duel' ? 'Best of three — win two' : s.blurb });
+});
 on('atlasView', (v) => { R.ui.atlasView = v; go('atlas'); });
 on('jlv', (n) => { R.ui.jlv = +n; render(); });
-on('startLevelCheck', () => {
-  const k = kid(R.h), p = J.progress(k);
-  if (!p || !p.checkOpen) return toast('Finish every station on your road first.');
-  startRun('levelcheck', `Level ${p.level} check`, J.checkItems(k), { level: p.level, sub: `${J.CHECK_PASS} of ${J.CHECK_N} to pass` });
+on('startLandTest', (landId) => {
+  const k = kid(R.h), p = J.progress(k), t = p && p.nodes.find((x) => x.kind === 'landtest' && x.land.id === landId);
+  if (!t || !t.open) return toast('Pass every station in this land first.');
+  const items = J.landTestItems(k, landId);
+  startRun('landtest', `${t.land.name} test`, items, { land: landId, bonusFrom: J.LAND_N, sub: `${J.LAND_PASS} of ${J.LAND_N} to pass · then ${J.LAND_BONUS} bonus questions, double points` });
 });
+on('startLevelExam', () => {
+  const k = kid(R.h), p = J.progress(k);
+  if (!p || !p.nextTest || p.nextTest.kind !== 'leveltest') return toast('Pass every land test on the road first.');
+  startRun('levelexam', `Level ${p.level} test`, J.levelTestItems(k), { bonusFrom: J.LEVEL_N, sub: `${J.LEVEL_PASS} of ${J.LEVEL_N} to pass · then ${J.LEVEL_BONUS} bonus questions, double points` });
+});
+on('skipBonus', () => { if (R.run && !R.run.over) finishRun(); });
 on('startLevel1', () => { J.place(kid(R.h), 1); R.ui.jlv = null; save(); go('journey'); });
 on('startLevelTest', () => {
   const k = kid(R.h), st = J.newTest(k.band);
@@ -802,4 +853,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J };   // for the headless checks, never for the app

@@ -22,7 +22,7 @@ export const levelOf = (n) => LEVELS[n - 1];
 export const stepKey = (s) => `${s.stop}@${s.lv}`;
 
 export function rec(k) {
-  return k.journey || (k.journey = { level: null, done: {}, finished: [], tested: null });
+  return k.journey || (k.journey = { level: null, done: {}, finished: [], tested: null, tests: {} });
 }
 
 /* Where the test starts: a guess from the age band, so nobody sits through
@@ -44,67 +44,148 @@ export function recapOf(n) {
 }
 export const stepsOf = (j, n) => [...(j.recap === n ? recapOf(n) : []), ...levelOf(n).steps];
 
-/* A level is ONE road. Its stations open strictly in order — station n+1 opens
-   when station n is passed — and after the last station comes the LEVEL CHECK:
-   CHECK_N mixed questions from the whole level, CHECK_PASS right to pass. Passing
-   the check is the moment a child moves up a maths age; nothing else moves them. */
-export const CHECK_N = 12, CHECK_PASS = 10;
+/* A level is ONE road through several LANDS (one concept area each — "Fractions
+   of an amount", "Below zero"). Everything on it opens strictly in order:
+
+     land 1: station, station, … → LAND TEST → land 2: … → LAND TEST → … → LEVEL TEST
+
+   A land test is LAND_N questions that get harder as they go (LAND_PASS right to
+   pass), then LAND_BONUS optional bonus questions at almost the next level's
+   difficulty, worth double. The level test is LEVEL_N mixed questions from every
+   land (LEVEL_PASS to pass) and LEVEL_BONUS bonus questions. Bonus answers only
+   ever add to the score — a pass is decided on the core questions alone. Passing
+   the level test is the one thing that moves a child up a maths age. */
+export const LAND_N = 20, LAND_PASS = 12, LAND_BONUS = 5;
+export const LEVEL_N = 50, LEVEL_PASS = 30, LEVEL_BONUS = 10;
+
+/* A level's lands, from levels.js — or, for a level written without lands, one
+   land per concept in first-appearance order. */
+export function landsOf(n) {
+  const L = levelOf(n);
+  if (L.lands && L.lands.length) return L.lands;
+  const by = new Map();
+  for (const s of L.steps) { const c = CONCEPT_OF[s.stop]; if (!by.has(c)) by.set(c, []); by.get(c).push(s); }
+  return [...by.entries()].map(([c, steps]) => ({ id: `l${n}-${c}`, concept: c, name: c, world: byId[steps[0].stop].world, steps }));
+}
+const testKey = (n, landId) => (landId ? `L${n}:${landId}` : `L${n}:level`);
+export const testRec = (j, n, landId) => (j.tests || {})[testKey(n, landId)] || null;
+
+/* The whole road of a level as one ordered list of nodes, each marked done/open. */
+export function roadOf(k, n) {
+  const j = rec(k), own = n === j.level, walked = n < (j.level || 0) || j.finished.includes(n), ahead = n > (j.level || 0);
+  const nodes = [];
+  if (own && j.recap === n) {
+    const rc = recapOf(n);
+    if (rc.length) nodes.push({ kind: 'land', recap: true, land: { id: `l${n}-recap`, name: `Recap of Level ${n - 1}`, world: byId[rc[0].stop].world, steps: rc } });
+    rc.forEach((s) => nodes.push({ kind: 'stop', recap: true, ...s }));
+  }
+  for (const land of landsOf(n)) {
+    nodes.push({ kind: 'land', land });
+    land.steps.forEach((s) => nodes.push({ kind: 'stop', land: land.id, ...s }));
+    nodes.push({ kind: 'landtest', land });
+  }
+  nodes.push({ kind: 'leveltest' });
+  let open = true;
+  for (const x of nodes) {
+    if (x.kind === 'land') { x.open = !ahead && (open || walked); x.done = false; continue; }
+    x.done = x.kind === 'stop' ? stepDone(j, x) : x.kind === 'landtest' ? !!(testRec(j, n, x.land.id) || {}).passed : j.finished.includes(n);
+    x.open = !ahead && (walked || x.done || open);
+    if (!x.done && !walked) open = false;       // everything after the first unfinished node waits
+  }
+  return nodes;
+}
 
 export function progress(k) {
   const j = rec(k);
   if (!j.level) return null;
-  const L = levelOf(j.level), raw = stepsOf(j, j.level);
-  const steps = []; let open = true;
-  raw.forEach((s, i) => {
-    const done = stepDone(j, s);
-    steps.push({ ...s, i, done, open: done || open, t: byId[s.stop] });
-    if (!done) open = false;                 // everything after the first unpassed station waits
-  });
-  const done = steps.filter((s) => s.done).length, next = steps.find((s) => !s.done) || null;
-  return { level: j.level, L, age: ageOf(j.level), steps, done, total: steps.length, next,
-    checkOpen: !next, top: j.level === TOP, finishedTop: j.finished.includes(TOP) };
+  const L = levelOf(j.level), nodes = roadOf(k, j.level);
+  const stops = nodes.filter((x) => x.kind === 'stop').map((x, i) => ({ ...x, i, t: byId[x.stop] }));
+  const next = nodes.find((x) => x.kind !== 'land' && !x.done) || null;
+  return { level: j.level, L, age: ageOf(j.level), nodes, steps: stops, done: stops.filter((s) => s.done).length, total: stops.length,
+    next: next && next.kind === 'stop' ? { ...next, t: byId[next.stop] } : null, nextTest: next && next.kind !== 'stop' ? next : null,
+    top: j.level === TOP, finishedTop: j.finished.includes(TOP) };
 }
 
-/* Is this stop open on the child's road? (Stops of earlier levels are always
-   open — see model.levelOpen; this is about the current level's order.) */
+/* Is this stop open on the child's road? */
 export function onRoad(k, stop) {
   const p = progress(k); if (!p) return null;
   const s = p.steps.find((x) => x.stop === stop);
   return s ? { open: s.open, done: s.done, n: s.i + 1 } : null;
 }
 
-/* A drill passed at `lv` on `stop` (70% or more): records it, and says whether
-   it ticked a station of the child's road. It never moves a level — the check does. */
+/* A drill passed at `lv` on `stop` (70% or more). It never moves a level. */
 export function passed(k, stop, lv) {
   const j = rec(k), key = `${stop}@${lv}`, was = !!j.done[key];
   j.done[key] = true;
-  if (!j.level) return { ticked: false, checkOpen: false };
+  if (!j.level) return { ticked: false };
   const ticked = !was && stepsOf(j, j.level).some((s) => s.stop === stop && s.lv <= lv);
   const p = progress(k);
-  return { ticked, checkOpen: p.checkOpen, next: p.next };
+  return { ticked, next: p.next, nextTest: p.nextTest };
 }
 
-/* The level check: CHECK_N questions, spread across the level's stations (each
-   at its own drill level), never the same stop twice in a row. */
-export function checkItems(k, r = Math.random) {
-  const j = rec(k), steps = levelOf(j.level).steps, out = [];
-  const order = steps.map((s) => [r(), s]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
-  for (let i = 0; out.length < CHECK_N; i++) {
-    const s = order[i % order.length], t = byId[s.stop];
-    out.push({ ...dress(t, t.gen(r, s.lv)), trick: s.stop });
+/* ------------------------------------------------------------- the tests */
+
+/* Questions that get harder as they go: the ramp climbs from warm-up to the
+   difficulty each step has on this road; bonus questions sit one notch above
+   (almost the next level). Steps are dealt round-robin so every stop is asked. */
+function ramp(steps, n, bonus, r) {
+  const deal = steps.map((s) => [r(), s]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+  const core = [], extra = [];
+  for (let i = 0; i < n; i++) {
+    const s = deal[i % deal.length], stage = i / Math.max(1, n - 1);
+    const lv = Math.max(1, Math.min(s.lv, 1 + Math.floor(stage * 3)));
+    core.push({ s, lv });
   }
-  return out;
+  core.sort((a, b) => a.lv - b.lv);                        // easiest first, hardest last
+  for (let i = 0; i < bonus; i++) { const s = deal[(i * 3 + 1) % deal.length]; extra.push({ s, lv: Math.min(3, s.lv + 1), bonus: true }); }
+  return [...core, ...extra].map(({ s, lv, bonus: b }) => { const t = byId[s.stop]; return { ...dress(t, t.gen(r, lv)), trick: s.stop, qlv: lv, bonus: !!b }; });
 }
 
-/* The check is passed: the level is finished and the next road opens. */
-export function checkPassed(k, right) {
-  const j = rec(k), p = progress(k);
-  if (!p || !p.checkOpen || right < CHECK_PASS) return { moved: false };
-  const from = j.level;
+export function landTestItems(k, landId, r = Math.random) {
+  const land = landsOf(rec(k).level).find((l) => l.id === landId);
+  return ramp(land.steps, LAND_N, LAND_BONUS, r);
+}
+export function levelTestItems(k, r = Math.random) {
+  const lands = landsOf(rec(k).level);
+  const all = lands.flatMap((l) => l.steps);
+  return ramp(all, LEVEL_N, LEVEL_BONUS, r);
+}
+
+/* Score a finished test. results[i].right for each item; core decides the pass,
+   bonus doubles. Stars: one for the pass, two for a strong core, three for a
+   strong core AND most of the bonus. */
+export function score(items, results, kind) {
+  const N = kind === 'level' ? LEVEL_N : LAND_N, PASS = kind === 'level' ? LEVEL_PASS : LAND_PASS;
+  let core = 0, bonus = 0, bonusAsked = 0;
+  items.forEach((q, i) => { const ok = results[i] && results[i].right; if (q.bonus) { if (results[i]) bonusAsked++; if (ok) bonus++; } else if (ok) core++; });
+  const B = kind === 'level' ? LEVEL_BONUS : LAND_BONUS;
+  const pass = core >= PASS;
+  const stars = !pass ? 0 : core >= N * 0.9 && bonus >= Math.ceil(B * 0.6) ? 3 : core >= N * 0.8 ? 2 : 1;
+  return { core, N, pass, PASS, bonus, B, bonusAsked, points: core + 2 * bonus, max: N + 2 * B, stars };
+}
+
+/* Record a land test. Returns the score and whether it opened the next part of the road. */
+export function landTestDone(k, landId, items, results) {
+  const j = rec(k), sc = score(items, results, 'land');
+  j.tests = j.tests || {};
+  const key = testKey(j.level, landId), was = j.tests[key] || { best: 0, passed: false, stars: 0 };
+  j.tests[key] = { best: Math.max(was.best, sc.points), passed: was.passed || sc.pass, stars: Math.max(was.stars, sc.stars) };
+  return { ...sc, first: sc.pass && !was.passed };
+}
+
+/* Record the level test; a pass finishes the level and opens the next road. */
+export function levelTestDone(k, items, results) {
+  const j = rec(k), p = progress(k), sc = score(items, results, 'level');
+  j.tests = j.tests || {};
+  const key = testKey(j.level), was = j.tests[key] || { best: 0, passed: false, stars: 0 };
+  const from = j.level, ready = p && p.nextTest && p.nextTest.kind === 'leveltest';
+  if (!ready) return { ...sc, moved: false, from, to: from };
+  j.tests[key] = { best: Math.max(was.best, sc.points), passed: was.passed || sc.pass, stars: Math.max(was.stars, sc.stars) };
+  if (!sc.pass) return { ...sc, moved: false, from, to: from };
   if (!j.finished.includes(from)) j.finished.push(from);
   if (j.level < TOP) j.level++;
   j.recap = null;                          // they climbed here: the level below is fresh
-  return { moved: j.level !== from, from, to: j.level };
+  return { ...sc, moved: j.level !== from, from, to: j.level };
 }
 
 /* ------------------------------------------------------------- the level test */
@@ -155,3 +236,44 @@ export function place(k, level) {
 }
 
 export { LEVELS, ageOf };
+
+/* ------------------------------------------------------------- secrets on the map */
+
+/* Every land hides three things to stumble on — the Bee's Expedition, without its
+   coins (this app has one rule about rewards: right answers only, no loot):
+     💡 a curiosity  — one question a notch harder than the land, with its reason
+     🎭 a rival      — one of the Bee's ten children, best of three on this land
+     🧩 a chest      — a puzzle from the Puzzle Tower
+   They sit VISIBLY on the painting (the Bee's play-tested rule: no fog), in spots
+   SEEDED per child and land, so a map reads as authored and a sibling's differs.
+   Finding all three, with the land test passed, earns the land's emblem. */
+export const SECRET_KINDS = [
+  { k: 'wisp', glyph: '💡', name: 'A curious question', blurb: 'One question a notch harder than this land. Get it right and it tells you why.' },
+  { k: 'duel', glyph: '🎭', name: 'A rival waits', blurb: 'Best of three on this land’s maths. Win two and the clearing is yours.' },
+  { k: 'chest', glyph: '🧩', name: 'A puzzle chest', blurb: 'A puzzle from the Tower. Solve it and the chest opens.' },
+];
+const RIVALS = ['pixel', 'koi', 'beaker', 'panda', 'comet', 'astro', 'scopey', 'melody', 'samurai', 'goldlegend'];
+function hash(str) { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+export function secretsOf(k, landId) {
+  const h = hash(`${k.id}|${landId}`), f = ((rec(k).finds || {})[landId]) || {};
+  const xs = [18 + (h % 20), 44 + ((h >>> 5) % 16), 70 + ((h >>> 9) % 18)];
+  const order = [0, 1, 2].sort((a, b) => ((h >>> (a * 3)) & 7) - ((h >>> (b * 3)) & 7));
+  return order.map((ki, i) => ({ ...SECRET_KINDS[ki], x: xs[i], y: 20 + ((h >>> (i * 4 + 2)) % 26), found: !!f[SECRET_KINDS[ki].k],
+    rival: RIVALS[(h >>> 13) % RIVALS.length] }));
+}
+export function secretItems(k, landId, kind, r = Math.random) {
+  const land = findLand(k, landId);
+  const pick = () => land.steps[Math.floor(r() * land.steps.length)];
+  const q = (s, lv) => { const t = byId[s.stop]; return { ...dress(t, t.gen(r, lv)), trick: s.stop }; };
+  if (kind === 'wisp') { const s = pick(); return [{ ...q(s, Math.min(3, s.lv + 1)), why: byId[s.stop].idea }]; }
+  if (kind === 'duel') return [0, 1, 2].map(() => { const s = pick(); return q(s, s.lv); });
+  return null;   // the chest is a puzzle: main.js asks puzzles.js
+}
+function findLand(k, landId) { for (const L of LEVELS) for (const l of landsOf(L.n)) if (l.id === landId) return l; return null; }
+export function secretFound(k, landId, kind) {
+  const j = rec(k); j.finds = j.finds || {};
+  const f = j.finds[landId] = j.finds[landId] || {};
+  const first = !f[kind]; f[kind] = true;
+  return first;
+}
+export const emblem = (k, n, landId) => SECRET_KINDS.every((s) => ((rec(k).finds || {})[landId] || {})[s.k]) && !!(testRec(rec(k), n, landId) || {}).passed;

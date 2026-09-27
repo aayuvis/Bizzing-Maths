@@ -5,6 +5,12 @@
    The placement test finds a child's maths age and puts them on that level's
    journey; finishing a journey opens the next one.
 
+   A level is one straight road made of LANDS, four to six of them. A land is
+   one concept area of that level (fractions, below zero, chance…) shown as one
+   Atlas world, three to six stops long, with a test at its end; the level
+   ends in a mixed test drawn from all its lands. `steps` is the whole road,
+   the lands laid end to end.
+
    A step is a stop at a difficulty (`lv` 1 easy, 2 medium, 3 stretch — the
    same `gen(r, lv)` the drills use). A stop may come back in a later level at
    a higher lv — that is the spiral — but never lower, never twice in one
@@ -71,66 +77,114 @@ export const CONCEPT_OF = {
 /* 'make-ten 1, near-doubles 2' → [{ stop: 'make-ten', lv: 1 }, { stop: 'near-doubles', lv: 2 }] */
 const S = (list) => list.trim().split(/\s*,\s*/).map((p) => { const [stop, lv] = p.split(/\s+/); return { stop, lv: Number(lv) }; });
 
+/* Which concept areas lean on which. Inside a level, a land comes after the
+   lands its concept needs — money after adding, algebra after negatives. */
+export const NEEDS = {
+  number: [], addsub: ['number'], muldiv: ['addsub'], fractions: ['muldiv'], decimals: ['fractions'],
+  money: ['addsub', 'decimals'], measure: ['addsub'], shape: [], data: ['number'], factors: ['muldiv'],
+  powers: ['muldiv'], negatives: ['addsub'], algebra: ['negatives'], sets: [],
+};
+
+/* A LAND is one concept area of one level: one straight stretch of the road,
+   painted as one Atlas world, with a 20-question test at its end. Its steps
+   are mostly its own concept; a stray stop joins the nearest related land. */
+const land = (n, concept, world, name, steps) => ({ id: `l${n}-${concept}`, concept, name, world, steps: S(steps) });
+const level = (n, age, name, blurb, lands) => ({ n, age, name, blurb, lands, steps: lands.flatMap((l) => l.steps) });
+
 export const LEVELS = [
-  { n: 1, age: '6', name: 'The Counting Garden',
-    blurb: 'Adding and taking away within twenty, what a digit is worth, halves and quarters, coins, the clock, flat shapes and first charts.',
-    steps: S(`make-ten 1, near-doubles 1, plus-nine 1, count-up 1, tens-then-ones 1, place-value 1, compare-big 1,
-      read-the-clock 1, fraction-parts 1, fewest-coins 1, money-left 1, sides-and-corners 1, lines-of-symmetry 1,
-      pictogram-total 1, bar-compare 1`) },
-  { n: 2, age: '7', name: 'Tens and Tables',
-    blurb: 'Bigger sums in columns, rounding to ten, the two, five and ten times tables, fractions of an amount, change, and the language of chance.',
-    steps: S(`make-ten 2, plus-nine 2, tens-then-ones 2, place-value 2, round-nearest 1, column-add 1, column-sub 1,
-      double-double 1, times-five 1, read-the-clock 2, fraction-parts 2, fraction-of-amount 1, giving-change 1,
-      fewest-coins 2, money-left 2, sides-and-corners 2, lines-of-symmetry 2, pictogram-total 2, bar-compare 2, chance-words 1`) },
-  { n: 3, age: '8', name: 'The Column Road',
-    blurb: 'Three-digit column sums and mental shortcuts, the nine and twelve times tables, equivalent fractions, time, length and perimeter, and kinds of angle.',
-    steps: S(`column-add 2, column-sub 2, round-add 1, round-sub 1, roman-numerals 1, times-nine 1, times-twelve 1,
-      split-multiply 1, nikhilam-10 1, giving-change 2, how-long 1, metric-units 1, perimeter 1, fraction-parts 3,
-      equivalent-fractions 1, compare-fractions 1, add-same-bottom 1, faces-edges-vertices 1, kinds-of-angle 1,
-      multiples 1, odd-even-rules 1, bar-compare 3`) },
-  { n: 4, age: '9', name: 'Tables to Twelve',
-    blurb: 'All the tables to twelve with their shortcuts, short division, below zero, tenths and hundredths, mixed numbers, area, and naming triangles and quadrilaterals.',
-    steps: S(`times-twelve 2, times-eleven 1, times-25 1, halve-double 1, all-from-nine 1, negative-numbers 1,
-      short-division 1, twenty-four-hour 1, area-rectangles 1, fraction-of-amount 2, simplify-fractions 1,
-      mixed-numbers 1, money-left 3, saving-goal 1, kinds-of-triangle 1, four-sided-shapes 1, coordinates-and-moves 1,
-      factor-pairs 1, divisible-2-5-10 1, decimal-places 1, times-ten-decimals 1, line-graph-read 1`) },
-  { n: 5, age: '10', name: 'Point and Per Cent',
-    blurb: 'Long multiplication, which sum comes first, primes, squares and cubes, decimals and percentages, sales and profit, angles on a line, and the mean.',
-    steps: S(`long-multiply 1, order-of-operations 1, compound-area 1, equivalent-fractions 2, compare-fractions 2,
-      best-buy 1, fraction-off 1, profit-and-loss 1, angles-on-a-line 1, divisible-4-8 1, prime-or-not 1,
-      square-five 1, square-dots 1, powers-index 1, add-decimals 1, round-decimals 1, fraction-decimal-percent 1,
-      percent-of-amount 1, mean-fair-share 1, data-range 1, think-of-a-number 1, multi-step-problems 1`) },
-  { n: 6, age: '11', name: 'Below Zero',
-    blurb: 'Adding and taking away negative numbers, prime factors, HCF and LCM, fractions with different bottoms, area of triangles, angles in a shape, and first letters for numbers.',
-    steps: S(`area-triangles 1, add-different-bottoms 1, multiply-fractions 1, angles-in-a-shape 1, compare-integers 1,
-      lift-moves 1, integer-gap 1, add-negative 1, subtract-negative 1, ups-and-downs 1, divisible-6-11 1,
-      factor-tree 1, hcf 1, lcm 1, prime-stones 1, teen-squares 1, root-of-square 1, percent-of-amount 2,
-      unitary-method 1, substitute 1, median-mode 1, who-has-which 1`) },
-  { n: 7, age: '12', name: 'Letters and Ratios',
-    blurb: 'Multiplying and dividing negatives, dividing fractions, ratio, percentage change and speed, circles and volume, sets, chance as a fraction, factorials and arrangements, and solving an equation.',
-    steps: S(`volume-cuboid 1, divide-fractions 1, interest-simple 1, round-the-circle 1,
-      construct-triangle 1, multiply-signs 1, divide-signs 1, negative-squares 1, number-types 2, sieve-root 2,
-      cube-and-root 1, percent-change 1, ratio-share 1, speed-distance-time 1, set-member 1,
-      set-count 1, like-terms 1, solve-balance 1, chance-fraction 1, list-outcomes 1, factorials 1, arrange-all 1`) },
-  { n: 8, age: '13', name: 'Powers and Proofs',
-    blurb: 'Pythagoras, the index laws, squares near fifty and a hundred, counting factors, Venn diagrams, straight-line graphs, the nth term, constructions, compound interest, and permutations and combinations.',
-    steps: S(`interest-compound 1, perpendicular-bisector 1, angle-bisector 1, pythagoras-side 1, nikhilam-100 2,
-      above-100 2, crosswise 1, number-families 2, coprime 1, factor-count-stones 1, odd-staircase 2, square-near-50 1,
-      index-laws 1, union-meet 2, venn-count 2, nth-term 1, line-graph 1, digit-root 1, divisible-3 1,
-      diff-squares 1, permutations 1, combinations 1`) },
-  { n: 9, age: '14', name: 'The Lighthouse',
-    blurb: 'Trigonometry and bearings, inequalities, irrational roots and decimals that never end, harder orders and choices, scatter graphs, tree diagrams and expected frequency.',
-    steps: S(`bill-split 1, cost-of-borrowing 1, pythagoras-side 2, trig-sides 1, tan-height 1, sin-cos-side 1, special-angles 1,
-      bearings 1, ending-decimals 1, rational-roots 1, square-endings 2, square-minus 1, either-side 1, square-near-100 1, subset-count 1,
-      percent-swap 1, square-up 1, scatter-correlation 1,
-      best-fit-estimate 1, tree-diagram 1, expected-frequency 1, inequalities 1`) },
-  { n: 10, age: '15+', name: 'The Stretch',
-    blurb: 'Every strand at its hardest: trigonometry, standard form, rational roots, inequalities, compound interest, sequences, equations, counting and probability, with no stabilisers.',
-    steps: S(`negative-squares 3, divide-fractions 3, factor-count-stones 3, substitute 3, percent-change 3,
-      interest-compound 3, round-the-circle 3, index-laws 3, rational-roots 3, solve-balance 3,
-      nth-term 3, line-graph 3, pythagoras-side 3, tan-height 3, sin-cos-side 3, special-angles 3, bearings 3,
-      permutations 3, combinations 3, tree-diagram 3, expected-frequency 3, inequalities 3`) },
+  level(1, '6', 'The Counting Garden',
+    'Adding and taking away within twenty, what a digit is worth, halves and quarters, coins, the clock, flat shapes and first charts.', [
+      land(1, 'number', 'library', 'Tens and ones', 'place-value 1, compare-big 1, tens-then-ones 1'),
+      land(1, 'addsub', 'gardens', 'Number bonds to ten', 'make-ten 1, near-doubles 1, plus-nine 1, count-up 1'),
+      land(1, 'money', 'coinstreet', 'Coins and the clock', 'fewest-coins 1, money-left 1, read-the-clock 1'),
+      land(1, 'shape', 'shapecity', 'Shapes and halves', 'sides-and-corners 1, lines-of-symmetry 1, fraction-parts 1'),
+      land(1, 'data', 'carnival', 'Pictures and bars', 'pictogram-total 1, bar-compare 1, chance-words 1'),
+    ]),
+  level(2, '7', 'Tens and Tables',
+    'Bigger sums in columns, rounding to ten, the two, five and ten times tables, fractions of an amount, change, and the language of chance.', [
+      land(2, 'number', 'library', 'Rounding to ten', 'place-value 2, compare-big 2, round-nearest 1'),
+      land(2, 'addsub', 'gardens', 'Column sums', 'make-ten 2, near-doubles 2, plus-nine 2, tens-then-ones 2, column-add 1, column-sub 1'),
+      land(2, 'muldiv', 'market', 'Doubles, fives and halves', 'double-double 1, times-five 1, fraction-of-amount 1'),
+      land(2, 'shape', 'shapecity', 'Shapes and fair halves', 'sides-and-corners 2, lines-of-symmetry 2, fraction-parts 2'),
+      land(2, 'money', 'coinstreet', 'Change and the clock', 'fewest-coins 2, money-left 2, read-the-clock 2, giving-change 1'),
+      land(2, 'data', 'carnival', 'Charts and chance', 'pictogram-total 2, bar-compare 2, chance-words 2'),
+    ]),
+  level(3, '8', 'The Column Road',
+    'Three-digit column sums and mental shortcuts, the nine and twelve times tables, equivalent fractions, time, length and perimeter, and kinds of angle.', [
+      land(3, 'addsub', 'workshop', 'Adding in your head', 'column-add 2, column-sub 2, round-add 1, round-sub 1'),
+      land(3, 'muldiv', 'market', 'Nines and twelves', 'times-nine 1, times-twelve 1, split-multiply 1, nikhilam-10 1'),
+      land(3, 'factors', 'forest', 'Odds, evens and multiples', 'odd-even-rules 1, multiples 1, divisible-2-5-10 1'),
+      land(3, 'fractions', 'bakery', 'Equal fractions', 'fraction-parts 3, equivalent-fractions 1, compare-fractions 1, add-same-bottom 1'),
+      land(3, 'measure', 'clocktower', 'Clocks, lengths and perimeter', 'giving-change 2, how-long 1, metric-units 1, perimeter 1, roman-numerals 1'),
+      land(3, 'shape', 'shapecity', 'Solids and angles', 'lines-of-symmetry 3, faces-edges-vertices 1, kinds-of-angle 1'),
+    ]),
+  level(4, '9', 'Tables to Twelve',
+    'All the tables to twelve with their shortcuts, short division, factor pairs, tenths and hundredths, mixed numbers, area, and naming triangles and quadrilaterals.', [
+      land(4, 'muldiv', 'market', 'Times-table shortcuts', 'times-twelve 2, times-eleven 1, times-25 1, halve-double 1, all-from-nine 1, short-division 1'),
+      land(4, 'factors', 'forest', 'Factor pairs', 'factor-pairs 1, multiples 2, divisible-2-5-10 2'),
+      land(4, 'fractions', 'bakery', 'Fractions and tenths', 'fraction-of-amount 2, simplify-fractions 1, mixed-numbers 1, decimal-places 1, times-ten-decimals 1'),
+      land(4, 'money', 'coinstreet', 'Money and 24-hour time', 'giving-change 3, twenty-four-hour 1, money-left 3, saving-goal 1'),
+      land(4, 'shape', 'shapecity', 'Shapes, grids and area', 'kinds-of-triangle 1, four-sided-shapes 1, coordinates-and-moves 1, area-rectangles 1'),
+      land(4, 'data', 'carnival', 'Reading graphs', 'pictogram-total 3, bar-compare 3, line-graph-read 1'),
+    ]),
+  level(5, '10', 'Point and Per Cent',
+    'Long multiplication, which sum comes first, primes, squares and cubes, decimals and percentages, sales and profit, area and angles on a line, and the mean.', [
+      land(5, 'muldiv', 'library', 'Long sums, in order', 'long-multiply 1, order-of-operations 1, multi-step-problems 1'),
+      land(5, 'powers', 'palace', 'Primes, squares and powers', 'divisible-4-8 1, prime-or-not 1, square-five 1, square-dots 1, powers-index 1'),
+      land(5, 'decimals', 'dock', 'Decimals and per cents', 'equivalent-fractions 2, compare-fractions 2, add-decimals 1, round-decimals 1, fraction-decimal-percent 1, percent-of-amount 1'),
+      land(5, 'money', 'coinstreet', 'Sales and profit', 'best-buy 1, fraction-off 1, profit-and-loss 1'),
+      land(5, 'measure', 'clocktower', 'Area and angles', 'perimeter 2, area-rectangles 2, compound-area 1, angles-on-a-line 1'),
+      land(5, 'data', 'carnival', 'Fair shares and puzzles', 'mean-fair-share 1, data-range 1, think-of-a-number 1'),
+    ]),
+  level(6, '11', 'Below Zero',
+    'Adding and taking away negative numbers, prime factors, HCF and LCM, square roots, all four sums with fractions, area of triangles, angles in a shape, and the middle of a list.', [
+      land(6, 'negatives', 'mine', 'Below zero', 'negative-numbers 1, compare-integers 1, lift-moves 1, integer-gap 1, add-negative 1, subtract-negative 1'),
+      land(6, 'factors', 'forest', 'Prime factors, HCF and LCM', 'divisible-6-11 1, factor-tree 1, hcf 1, lcm 1, prime-stones 1'),
+      land(6, 'powers', 'palace', 'Squares and roots', 'square-dots 2, teen-squares 1, root-of-square 1'),
+      land(6, 'fractions', 'bakery', 'Fractions with any bottom', 'mixed-numbers 2, add-different-bottoms 1, multiply-fractions 1, divide-fractions 1'),
+      land(6, 'shape', 'shapecity', 'Angles and triangles', 'angles-on-a-line 2, angles-in-a-shape 1, area-triangles 1'),
+      land(6, 'data', 'carnival', 'Mean, median and mode', 'mean-fair-share 2, median-mode 1, data-range 2'),
+    ]),
+  level(7, '12', 'Letters and Ratios',
+    'Multiplying and dividing negatives, kinds of number, ratio, percentage change and speed, first letters for numbers, circles and volume, chance as a fraction, and factorials and arrangements.', [
+      land(7, 'negatives', 'mine', 'Signs that multiply', 'ups-and-downs 1, multiply-signs 1, divide-signs 1, negative-squares 1'),
+      land(7, 'factors', 'quarry', 'Kinds of number', 'number-types 2, prime-stones 2, sieve-root 2, cube-and-root 1'),
+      land(7, 'decimals', 'dock', 'Per cent, ratio and speed', 'percent-of-amount 2, unitary-method 1, percent-change 1, ratio-share 1, speed-distance-time 1, interest-simple 1'),
+      land(7, 'algebra', 'setisland', 'Letters for numbers', 'think-of-a-number 2, substitute 1, like-terms 1, solve-balance 1'),
+      land(7, 'shape', 'shapecity', 'Circles and solids', 'round-the-circle 1, construct-triangle 1, volume-cuboid 1'),
+      land(7, 'data', 'carnival', 'Chance and arrangements', 'chance-fraction 1, list-outcomes 1, factorials 1, arrange-all 1'),
+    ]),
+  level(8, '13', 'Powers and Proofs',
+    'Vedic multiplying, digit roots and counting factors, the index laws, sets and Venn diagrams, constructions and Pythagoras, and permutations and combinations.', [
+      land(8, 'muldiv', 'observatory', 'Vedic multiplying', 'nikhilam-10 2, nikhilam-100 2, above-100 2, crosswise 1'),
+      land(8, 'factors', 'quarry', 'Factors and digit roots', 'number-families 2, coprime 1, factor-count-stones 1, digit-root 1, divisible-3 1'),
+      land(8, 'powers', 'palace', 'Index laws and squares', 'odd-staircase 2, square-near-50 1, index-laws 1, diff-squares 1'),
+      land(8, 'sets', 'setisland', 'Sets and Venn diagrams', 'set-member 1, set-count 1, union-meet 1, venn-count 1, subset-count 1, who-has-which 1'),
+      land(8, 'shape', 'shapecity', 'Constructions and Pythagoras', 'perpendicular-bisector 1, angle-bisector 1, pythagoras-side 1'),
+      land(8, 'data', 'carnival', 'Orders and choices', 'arrange-all 2, permutations 1, combinations 1'),
+    ]),
+  level(9, '14', 'The Lighthouse',
+    'Roots that never end, decimals that recur, loans and compound interest, sequences, straight-line graphs and inequalities, trigonometry and bearings, scatter graphs and tree diagrams.', [
+      land(9, 'powers', 'palace', 'Roots that never end', 'square-endings 2, square-minus 1, either-side 1, square-near-100 1, rational-roots 1, square-up 1'),
+      land(9, 'decimals', 'dock', 'Decimals that never end', 'ratio-share 2, ending-decimals 1, percent-swap 1'),
+      land(9, 'money', 'coinstreet', 'Bills, loans and interest', 'interest-simple 2, interest-compound 1, bill-split 1, cost-of-borrowing 1'),
+      land(9, 'algebra', 'setisland', 'Sequences and inequalities', 'like-terms 2, nth-term 1, line-graph 1, inequalities 1'),
+      land(9, 'shape', 'lighthouse', 'Trigonometry and bearings', 'trig-sides 1, tan-height 1, sin-cos-side 1, special-angles 1, bearings 1'),
+      land(9, 'data', 'carnival', 'Scatter graphs and trees', 'scatter-correlation 1, best-fit-estimate 1, tree-diagram 1, expected-frequency 1'),
+    ]),
+  level(10, '15+', 'The Stretch',
+    'Every strand at its hardest: powers and roots, per cents and compound interest, equations, sequences and inequalities, sets, Pythagoras and trigonometry, and counting and probability, with no stabilisers.', [
+      land(10, 'powers', 'palace', 'Powers, roots and factors', 'negative-squares 3, index-laws 3, factor-count-stones 3, rational-roots 3'),
+      land(10, 'decimals', 'dock', 'Per cents and growth', 'divide-fractions 3, percent-change 3, ratio-share 3, interest-compound 3'),
+      land(10, 'algebra', 'setisland', 'Equations and sequences', 'substitute 3, solve-balance 3, nth-term 3, line-graph 3, inequalities 3'),
+      land(10, 'sets', 'setisland', 'Sets and logic', 'union-meet 3, venn-count 3, subset-count 3'),
+      land(10, 'shape', 'lighthouse', 'Circles and triangles', 'round-the-circle 3, pythagoras-side 3, tan-height 3, sin-cos-side 3, special-angles 3, bearings 3'),
+      land(10, 'data', 'carnival', 'Counting and chance', 'permutations 3, combinations 3, tree-diagram 3, expected-frequency 3'),
+    ]),
 ];
+
+/* The lands of Level n, in road order. */
+export const landsOf = (n) => (LEVELS[n - 1] ? LEVELS[n - 1].lands : []);
 
 /* 'maths age 6' … 'maths age 15+' */
 export const ageOf = (n) => `maths age ${n >= 10 ? '15+' : n + 5}`;

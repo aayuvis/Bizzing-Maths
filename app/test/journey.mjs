@@ -53,28 +53,57 @@ ok(p3.steps[0].open && !p3.steps[1].open && !p3.steps.at(-1).open, 'only the fir
 J.passed(k3, p3.steps[0].stop, p3.steps[0].lv);
 p3 = J.progress(k3);
 ok(p3.steps[1].open && !p3.steps[2].open, 'passing station 1 opens station 2, and only that');
-// every station passed: the check opens, but only the check moves the level
-for (const s of p.steps) res = J.passed(k, s.stop, s.lv);
-ok(res.checkOpen && J.rec(k).level === 3, 'all stations passed: the level check opens, the level has not moved');
-const items = J.checkItems(k, seeded('chk'));
-ok(items.length === J.CHECK_N && items.every((q) => J.levelOf(3).steps.some((s) => s.stop === q.trick) && correct(q, String(q.ans))), 'the level check asks gradable questions from this level only');
-ok(!J.checkPassed(k, J.CHECK_PASS - 1).moved && J.rec(k).level === 3, `${J.CHECK_PASS - 1} of ${J.CHECK_N} does not pass the check`);
-res = J.checkPassed(k, J.CHECK_PASS);
-ok(res.moved && res.from === 3 && res.to === 4 && J.rec(k).level === 4 && J.rec(k).finished.includes(3), `${J.CHECK_PASS} of ${J.CHECK_N} passes: on to Level 4`);
-ok(!J.checkPassed(k, J.CHECK_N).moved, 'the Level 4 check cannot be passed before its stations');
-J.place(k, 10); for (const s of J.stepsOf(J.rec(k), 10)) J.passed(k, s.stop, s.lv);
-res = J.checkPassed(k, J.CHECK_N);
-ok(J.rec(k).level === 10 && J.rec(k).finished.includes(10), 'the last check finishes the last road and stays at the top');
+// lands: a land's test opens after its stations; the next land after its test
+const allRight = (items) => items.map(() => ({ right: true })), coreOnly = (items, n) => items.map((q, i) => ({ right: !q.bonus && i < n }));
+const walkLand = (kk, land) => { for (const s of land.steps) J.passed(kk, s.stop, s.lv); };
+J.rec(k).recap = null;                 // for this part, a child who CLIMBED to Level 3 (no recap)
+const lands3 = J.landsOf(3);
+ok(lands3.length >= 2 && lands3.every((l) => l.steps.length >= 1), 'Level 3 is a road of lands');
+walkLand(k, lands3[0]);
+let pk = J.progress(k);
+ok(pk.nextTest && pk.nextTest.kind === 'landtest' && pk.nextTest.land.id === lands3[0].id, 'a land passed station by station opens its land test');
+ok(!pk.nodes.find((x) => x.kind === 'stop' && x.land === lands3[1].id).open, 'the next land stays shut until the land test is passed');
+const li = J.landTestItems(k, lands3[0].id, seeded('land'));
+ok(li.length === J.LAND_N + J.LAND_BONUS && li.filter((q) => q.bonus).length === J.LAND_BONUS, `a land test is ${J.LAND_N} questions and ${J.LAND_BONUS} bonus`);
+ok(li.every((q) => lands3[0].steps.some((s) => s.stop === q.trick) && correct(q, String(q.ans))), 'every land test question comes from the land and grades its own answer');
+ok(li.slice(0, J.LAND_N).every((q, i, a) => !i || q.qlv >= a[i - 1].qlv), 'the core questions get harder as they go, never easier');
+ok(li.filter((q) => q.bonus).every((q) => q.qlv >= Math.max(...li.slice(0, J.LAND_N).map((x) => x.qlv))), 'bonus questions are the hardest');
+let sc = J.landTestDone(k, lands3[0].id, li, coreOnly(li, J.LAND_PASS - 1));
+ok(!sc.pass && !J.progress(k).nodes.find((x) => x.kind === 'stop' && x.land === lands3[1].id).open, `${J.LAND_PASS - 1} of ${J.LAND_N} does not pass; the next land stays shut`);
+sc = J.landTestDone(k, lands3[0].id, li, li.map((q, i) => ({ right: q.bonus || i < J.LAND_PASS - 1 })));
+ok(!sc.pass && sc.points === J.LAND_PASS - 1 + 2 * J.LAND_BONUS, 'bonus answers add double points but never turn a fail into a pass');
+sc = J.landTestDone(k, lands3[0].id, li, coreOnly(li, J.LAND_PASS));
+ok(sc.pass && sc.first && J.progress(k).nodes.find((x) => x.kind === 'stop' && x.land === lands3[1].id).open, `${J.LAND_PASS} of ${J.LAND_N} passes and opens the next land`);
+ok(J.landTestDone(k, lands3[0].id, li, allRight(li)).stars === 3, 'every question and the bonus right: three stars');
+// the level test: after every land; 50 mixed + 10 bonus; 30 passes and moves the level
+for (const land of lands3) { walkLand(k, land); J.landTestDone(k, land.id, li, coreOnly(li, J.LAND_N)); }
+pk = J.progress(k);
+ok(pk.nextTest && pk.nextTest.kind === 'leveltest' && J.rec(k).level === 3, 'every land passed: the level test opens; the level has not moved');
+const lt = J.levelTestItems(k, seeded('lvl'));
+ok(lt.length === J.LEVEL_N + J.LEVEL_BONUS && lands3.every((l) => lt.some((q) => l.steps.some((s) => s.stop === q.trick))), `the level test is ${J.LEVEL_N} + ${J.LEVEL_BONUS} questions mixed from every land`);
+ok(!J.levelTestDone(k, lt, coreOnly(lt, J.LEVEL_PASS - 1)).moved && J.rec(k).level === 3, `${J.LEVEL_PASS - 1} of ${J.LEVEL_N} does not move the level`);
+res = J.levelTestDone(k, lt, coreOnly(lt, J.LEVEL_PASS));
+ok(res.moved && res.from === 3 && res.to === 4 && J.rec(k).finished.includes(3), `${J.LEVEL_PASS} of ${J.LEVEL_N} passes: on to Level 4`);
+ok(!J.levelTestDone(k, lt, allRight(lt)).moved, 'the Level 4 test cannot be taken before its road');
+// earlier roads stay open; later ones are shut
+ok(J.roadOf(k, 1).every((x) => x.open) && J.roadOf(k, 3).every((x) => x.open), 'a Level 4 child can walk the whole Level 1 and Level 3 roads again');
+ok(J.roadOf(k, 5).every((x) => !x.open), 'the Level 5 road is shut to a Level 4 child');
+// the top
+J.place(k, 10); for (const x of J.roadOf(k, 10)) if (x.kind === 'stop') J.passed(k, x.stop, x.lv);
+for (const land of J.landsOf(10)) J.landTestDone(k, land.id, li, coreOnly(li, J.LAND_N));
+res = J.levelTestDone(k, J.levelTestItems(k, seeded('top')), coreOnly(lt, J.LEVEL_N));
+ok(J.rec(k).level === 10 && J.rec(k).finished.includes(10), 'the last test finishes the last road and stays at the top');
 // placed above Level 1 → a recap of the level below comes first; climbing up → no recap
 const kr = newKid('Cai', '11-14', 'koi'); J.place(kr, 6);
 let pr = J.progress(kr), rc = J.recapOf(6);
 ok(rc.length >= 4 && pr.steps.slice(0, rc.length).every((s) => s.recap) && pr.steps.length === rc.length + J.levelOf(6).steps.length, 'placed at Level 6: the road opens with a recap of Level 5');
 ok(rc.every((s) => J.levelOf(5).steps.some((x) => x.stop === s.stop && x.lv === s.lv)), 'every recap station is a real Level 5 step');
 ok(new Set(rc.map((s) => s.stop)).size === rc.length, 'one recap station per idea, no repeats');
-for (const s of J.levelOf(6).steps) res = J.passed(kr, s.stop, s.lv);
-ok(!res.checkOpen, 'the check stays shut while the recap is still to do');
-for (const s of rc) res = J.passed(kr, s.stop, s.lv);
-ok(res.checkOpen && J.checkPassed(kr, J.CHECK_N).moved && J.rec(kr).level === 7, 'recap done too: the check passes and Level 7 opens');
+for (const x of J.roadOf(kr, 6)) if (x.kind === 'stop' && !x.recap) J.passed(kr, x.stop, x.lv);
+for (const land of J.landsOf(6)) J.landTestDone(kr, land.id, li, coreOnly(li, J.LAND_N));
+ok(!(J.progress(kr).nextTest && J.progress(kr).nextTest.kind === 'leveltest'), 'the level test stays shut while the recap is still to do');
+for (const s of rc) J.passed(kr, s.stop, s.lv);
+ok(J.levelTestDone(kr, lt, coreOnly(lt, J.LEVEL_N)).moved && J.rec(kr).level === 7, 'recap done too: the level test passes and Level 7 opens');
 ok(J.progress(kr).steps.every((s) => !s.recap), 'a child who CLIMBED to Level 7 gets no recap');
 const k1 = newKid('Dee', '6-7', 'koi'); J.place(k1, 1);
 ok(J.progress(k1).steps.every((s) => !s.recap), 'Level 1 has nothing below it to recap');
@@ -90,6 +119,17 @@ ok(road[0].open && isOpen(ha, ka, idx(road[0].stop)), 'the first station of the 
 ok(firstShut && !isOpen(ha, ka, idx(firstShut.stop)), 'a Level 6 station the road has not reached is shut in the Atlas');
 const later = ROUTE.filter((n) => n.kind === 'stop' && firstLevel(n.id) > 6);
 ok(later.length && later.every((n) => !isOpen(ha, ka, idx(n.id))), 'lessons first taught after Level 6 are shut');
+// the secrets: three per land, on the painting, the rival a real one — for any child id
+const { bot } = await import('../src/contest.js');
+for (let i = 0; i < 400; i++) {
+  const kk = { ...newKid('S' + i, '8-10', 'koi'), id: 'k' + (i * 7919).toString(36) + i };
+  for (const land of J.landsOf(1 + (i % 10))) {
+    const ss = J.secretsOf(kk, land.id);
+    ok(ss.length === 3 && new Set(ss.map((x) => x.k)).size === 3, 'three different secrets per land');
+    ok(ss.every((x) => x.x >= 8 && x.x <= 92 && x.y >= 15 && x.y <= 50), `secrets sit on the painting, above the road (${ss.map((x) => x.x + ',' + x.y)})`);
+    ok(bot(ss[0].rival), `the rival is one of the ten (${ss[0].rival})`);
+  }
+}
 // a second child never inherits the first one's journey
 const k2 = newKid('Ben', '6-7', 'froggy');
 ok(J.progress(k2) === null && Object.keys(J.rec(k2).done).length === 0, "a second child starts with nobody's journey");

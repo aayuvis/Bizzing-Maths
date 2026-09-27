@@ -207,6 +207,54 @@ AVATAR = {
 }
 for k, v in AVATAR.items(): JOBS['av-' + k] = (v + ' ' + AV_STYLE, '1:1')
 
+# ------------------------------------------------------------------ level roads
+# The Atlas as ONE ROAD PER LEVEL (ten levels). Each level gets a wide header
+# landscape that grows in height and adventure with the level. The app draws its
+# own road on top, so the painted path is only scenery — but every one of them
+# must visibly lead into the distance. Signposts are asked for with BLANK boards
+# (a signpost is the likeliest place for a model to letter something).
+LEVELS = {
+    'lvl-1':  "A wide panorama of a gentle sunny spring meadow of wildflowers and soft low hills, a small winding garden path of pale earth and round stepping stones leading from the foreground away into the distance, a little wooden picket gate, two short wooden signposts whose boards are completely BLANK plain wood, butterflies, a small pond, a few round trees. Fresh greens, buttercup yellow, pale sky blue. Low, safe, cosy.",
+    'lvl-2':  "A wide panorama of a riverside country path winding beside a sparkling slow river towards a small cluster of cottages with thatched and tiled roofs, a little stone footbridge, a water mill with a turning wheel, willow trees, reeds, ducks far away. The path clearly leads from the foreground into the distance. Soft greens, river blue, warm cottage cream.",
+    'lvl-3':  "A wide panorama of rolling orchard hills in late summer, rows of round fruit trees heavy with red and golden fruit on the slopes, a winding dirt lane climbing between the orchard rows over one hill and down into the next valley, woven baskets of fruit and a wooden cart parked by the lane, a distant windmill. Apple red, golden ochre, leafy green.",
+    'lvl-4':  "A wide panorama of a deep old forest trail, tall trees with shafts of sunlight slanting through, ferns and moss, a winding earthen trail leading into the woods and across a sturdy wooden plank bridge over a rushing stream, mushrooms, a hollow log, fireflies in the shade. Deep emerald, moss gold, dappled light.",
+    'lvl-5':  "A wide panorama of dramatic sunlit coastal cliffs above a turquoise sea, a winding clifftop path of packed earth running along the grassy edge and away round the headlands into the distance, wooden fence posts, sea pinks and gorse, waves breaking on rocks below, gulls far off, a small stone lookout. Turquoise, chalk white, gorse yellow, grass green.",
+    'lvl-6':  "A wide panorama of a vast red-rock canyon in warm afternoon light, layered sandstone walls, a narrow trail cut into the canyon side winding onward, two long swaying rope-and-plank bridges spanning deep gaps between rock pillars, a thin river far below, desert flowers and hardy shrubs. Terracotta, rust orange, sage green, deep sky blue.",
+    'lvl-7':  "A wide panorama of high highland country with two still mirror-like mountain lakes reflecting the peaks, heather-covered slopes, a stony path winding along the lakeshore and up over a high green pass between the mountains, a small stone hut, mist lying low on the water, a waterfall. Heather purple, loch blue, slate grey, moss green.",
+    'lvl-8':  "A wide panorama of towering alpine mountains, a zig-zagging switchback road climbing a steep green slope in tight hairpin bends up towards a snowy pass, wooden fence posts along the bends, pine forests below, a small stone shelter hut, snowcapped peaks, clouds drifting at the level of the road. Snow white, pine green, cool blue, warm stone.",
+    'lvl-9':  "A wide panorama of a high rocky headland at dusk, a tall striped lighthouse at the far end of the headland casting a beam across the sea, a winding coastal road running along the cliff edge from the foreground out to the lighthouse, stone walls beside the road, a deep violet and rose evening sky with the first stars, the sea far below. Deep sea blue, rose and violet sky, warm lamp gold.",
+    'lvl-10': "A wide panorama of a starlit mountain summit high above a sea of soft clouds at night, a winding stone path and steps climbing along a ridge to the very top where a small round observatory dome stands with its shutter open to the sky, a slender stone arch bridge crossing a gap on the ridge, a vast deep-indigo sky full of stars and a glowing band of the milky way, a crescent moon, distant peaks poking through the clouds. Indigo, silver, starlight gold. The highest, most wondrous place of all.",
+}
+LVL_TAIL = (" The path or road clearly leads from the foreground into the distance. Seen from a slightly raised viewpoint. "
+            "Any signs, boards or banners are completely blank with nothing written or painted on them.")
+for k, v in LEVELS.items(): JOBS[k] = (v + LVL_TAIL + ' ' + STYLE + " Very wide landscape composition.", '21:9')
+
+# Road furniture: small isolated objects the app places on the road. Keyed to
+# alpha off a flat magenta ground, exactly like the avatars (process.py --roadart).
+ROAD_STYLE = (
+    "A single isolated storybook object for a children's maths app, painted in a warm hand-painted storybook style: "
+    "soft gouache and watercolour textures, gentle light from the upper left, rich but not garish colour, clean readable "
+    "shapes, a slightly chunky toy-like charm. The whole object centred and fully inside the frame with a comfortable margin "
+    "all round, seen from the front at a slight three-quarter angle. "
+    "THE ENTIRE BACKGROUND IS FLAT PURE MAGENTA (hex FF00FF), one solid uniform field with nothing in it: no sky, no scenery, "
+    "no cast shadow on the background, no border, no vignette, and no magenta or hot pink anywhere on the object itself. "
+    "ABSOLUTELY NO TEXT: no letters, no words, no numbers, no digits, no numerals, no symbols, no emblems, no writing of any "
+    "kind anywhere. No people, no figures, no faces, no animals."
+)
+ROADART = {
+    'gate':     "A small storybook stone archway gatehouse: a rounded arch of warm honey-coloured stone blocks with a little tiled roof on top, "
+                "an open wooden gate folded back so the way through is clear, a small plain teal pennant flag flying from a pole on the roof, "
+                "a glowing brass lantern hanging at one side of the arch, a patch of grass and a few flowers at its foot.",
+    'summit':   "A rocky mountain summit crag with a tall flagpole flying a large plain golden-yellow flag with no emblem, beside a small "
+                "round castle-like stone tower with a pointed blue roof and a warmly lit window, a little snow on the rocks. The flag and the tower "
+                "catch bright trophy-gold highlights, and a few small solid golden four-pointed sparkle stars float just above the peak. "
+                "The shine is painted ON the object only: no halo, no rays, no glow and no soft light spilling onto the background.",
+    'signpost': "A wooden fingerpost signpost: one sturdy weathered wooden post set in a small tuft of grass, with three wooden pointer "
+                "boards pointing in different directions, each board completely BLANK plain wood grain with nothing carved or painted "
+                "on it, a little moss and a small flower at the base.",
+}
+for k, v in ROADART.items(): JOBS[k] = (v + ' ' + ROAD_STYLE, '1:1')
+
 
 def call(model, prompt, ratio):
     body = {"contents": [{"parts": [{"text": prompt}]}],

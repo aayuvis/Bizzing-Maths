@@ -68,19 +68,49 @@ async function run(vp, tag) {
   await shot('02-placed');
   ok(!/of \d+ right/.test(await page.locator('.end-card').innerText()), 'finding a level is never scored');
   await page.click('[data-act=endRun]');
-  await page.waitForSelector('.jsteps');
-  ok(await page.evaluate(() => document.querySelector('.jprog .meter').getBoundingClientRect().height) > 4, 'the journey progress bar is drawn');
-  await page.waitForTimeout(200); await shot('02c-journey');
-  ok(await page.locator('.jsteps li').count() >= 12 && await page.locator('.jl').count() === 10, 'the journey page shows ten levels and this level\'s steps');
-  // the first journey step opens its stop with the journey's drill level chosen
-  await page.click('.jsteps li.next button'); await page.waitForSelector('.stop-page');
-  ok(await page.evaluate(() => !!window.__bzm.R.ui.jstep), 'a journey step opens as a journey step');
-  // the road is linear: the second station is locked; the Atlas opens on the road, with level badges
-  await page.evaluate(() => window.__bzm.go('atlas')); await page.waitForSelector('.jroad');
-  ok(await page.locator('.jroad li.shut').count() > 5 && await page.locator('.jcheck').count() === 1, 'the Atlas opens on My road: stations locked beyond the next, a level check at the end');
-  await page.click('.jroad li.shut button', { force: true }); await page.waitForTimeout(150);
-  ok(await page.evaluate(() => window.__bzm.R.ui.nav) === 'atlas', 'a locked station does not open');
-  await shot('02d-road');
+  await page.waitForSelector('.lboard');
+  ok(await page.evaluate(() => document.querySelector('.jprog .meter').getBoundingClientRect().height) > 4, 'the road progress bar is drawn');
+  await page.locator('.board-scroll').scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await shot('02c-journey');
+  ok(await page.locator('.land-tag').count() >= 4 && await page.locator('.jl').count() === 10, 'the Atlas is this level\'s road across its lands\' paintings, with the ten-level ladder');
+  ok(await page.locator('.bgate:not(.summit)').count() >= 4 && await page.locator('.bgate.summit').count() === 1, 'every land ends at a gate, and the road at the summit');
+  ok(await page.locator('.secret').count() === 0, 'a placed child\'s recap land has no secrets; they wait on the lands the road reaches');
+  await page.evaluate(() => { window.__bzm.R.h.kids[0].journey.recap = null; window.__bzm.render(); });   // from here: a child who climbed to Level 4
+  ok(await page.locator('.secret').count() >= 3, 'the open land hides secrets to find');
+  ok(await page.locator('.bpin.shut').count() > 5, 'the road is linear: everything beyond the next station is shut');
+  const shutI = await page.locator('.bpin.shut').first().getAttribute('data-arg');
+  await page.evaluate((i) => { window.__bzm.fire('roadPick', i); window.__bzm.fire('roadPick', i); }, shutI); await page.waitForTimeout(150);
+  ok(await page.evaluate(() => window.__bzm.R.ui.nav) === 'atlas', 'a shut station does not open');
+  // earlier levels stay open to walk again; later ones are shut
+  await page.evaluate(() => window.__bzm.fire('jlv', '2')); await page.waitForSelector('.lboard');
+  ok(await page.locator('.bpin.shut').count() === 0 && await page.locator('.bpin').count() > 10, 'the Level 2 road is fully open to a Level 4 child');
+  await page.locator('.board-scroll').scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await shot('02d-road-l2');
+  await page.evaluate(() => window.__bzm.fire('jlv', '6')); await page.waitForSelector('.lboard');
+  ok(await page.locator('.bpin:not(.shut)').count() === 0, 'the Level 6 road is shut to a Level 4 child');
+  await page.evaluate(() => { window.__bzm.R.ui.rpick = null; window.__bzm.fire('jlv', '4'); });
+  // a secret: the rival's best of three
+  await page.evaluate(() => { const b = document.querySelector('.secret[data-arg^=duel]'); window.__bzm.fire('secret', b.dataset.arg); });
+  ok(await page.evaluate(() => window.__bzm.R.run && window.__bzm.R.run.items.length === 3), 'a rival challenges you to a best of three');
+  await page.evaluate(() => { window.__bzm.R.run = null; window.__bzm.go('atlas'); }); await page.waitForSelector('.lboard');
+  // a land test, taken for real: its stations marked passed, 20 answers, the bonus skipped → the next land opens
+  const land = await page.evaluate(() => { const k = window.__bzm.R.h.kids[0], j = k.journey; j.recap = null;
+    const L = { 4: 1 }; const lands = window.__bzm.J.landsOf(j.level); for (const s of lands[0].steps) j.done[`${s.stop}@${s.lv}`] = true; window.__bzm.render(); return lands[0].id; });
+  await page.evaluate((id) => window.__bzm.fire('startLandTest', id), land);
+  for (let i = 0; i < 20; i++) {
+    const q = await page.evaluate(() => { const r = window.__bzm.R.run; const q = r.items[r.i]; return { ans: q.ans, choices: q.choices, fb: !!r.fb }; });
+    if (q.fb) { await page.keyboard.press('Enter'); await page.waitForTimeout(150); i--; continue; }
+    if (q.choices) await page.keyboard.press(String(q.choices.indexOf(q.ans) + 1)); else await typeAns(String(q.ans).replace('−', '-'));
+    await page.waitForTimeout(720);
+  }
+  ok(await page.locator('.bonus-bar').count() === 1, 'after 20 questions the optional bonus begins, marked ×2');
+  await shot('02f-bonus');
+  await page.click('[data-act=skipBonus]'); await page.waitForTimeout(300);
+  ok(/20 of 20 right/.test(await page.locator('.end-card').innerText()), 'the land test scores the 20 core questions');
+  ok(await page.evaluate((id) => { const j = window.__bzm.R.h.kids[0].journey; return Object.entries(j.tests || {}).some(([key, v]) => key.endsWith(id) && v.passed); }, land), 'the land test is recorded as passed');
+  await shot('02g-landtest-end');
+  await page.click('[data-act=endRun]'); await page.waitForSelector('.lboard');
+  // the next station opens its stop as a journey step
+  await page.evaluate(() => { const i = document.querySelector('.bpin.cur').dataset.arg; window.__bzm.fire('roadPick', i); window.__bzm.fire('roadPick', i); }); await page.waitForSelector('.stop-page');
+  ok(await page.evaluate(() => !!window.__bzm.R.ui.jstep), 'the next station opens as a journey step');
   await page.evaluate(() => window.__bzm.fire('atlasView', 'islands')); await page.waitForSelector('.map-board');
   ok(await page.locator('.mp-road').count() >= 1, 'the island map says how many road stations each place holds');
   await page.evaluate(() => window.__bzm.fire('openWorld', 'market')); await page.waitForSelector('.board');
@@ -90,7 +120,9 @@ async function run(vp, tag) {
   await page.waitForSelector('.map-board');
   await page.waitForTimeout(400);
   await shot('03-atlas');
-  ok(await page.locator('.map-pin.shut').count() > 0, 'some places are not reached yet');
+  await page.evaluate(() => window.__bzm.fire('isle', '3')); await page.waitForTimeout(250);
+  ok(await page.locator('.map-pin.shut').count() > 0, 'places first taught at later levels are not reached yet');
+  await page.evaluate(() => window.__bzm.fire('isle', '1')); await page.waitForTimeout(250);
   // travel to the market, pick "times-nine" on the board, tap again to go in
   await page.click('.map-pin[data-arg=market]');
   await page.waitForSelector('.board');

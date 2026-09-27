@@ -813,3 +813,68 @@ div.jcard{cursor:default}
 .lvb.later{opacity:.75}
 .bpin .lvb{position:absolute;top:-12px;left:50%;transform:translateX(-50%);margin:0;box-shadow:var(--sh)}
 .mp-road{color:var(--action);font-weight:700}
+.bonus-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:0 0 10px}
+
+/* ---- the Atlas: one road per level */
+.lvl-hero{position:relative;border-radius:var(--r-xl,22px);overflow:hidden;background:var(--surface2) center/cover no-repeat;min-height:220px;display:flex;align-items:flex-end;box-shadow:var(--sh-raised,var(--sh));margin-bottom:18px}
+.lvl-hero-tx{width:100%;padding:18px 22px;background:linear-gradient(transparent,rgb(0 0 0 / .62) 38%);color:#fff}
+.lvl-hero-tx .kicker{color:#fff;opacity:.9}.lvl-hero-tx h2{color:#fff;margin:2px 0 4px}.lvl-hero-tx p{margin:0 0 8px;max-width:70ch}
+.lvl-hero .jprog{flex-direction:row;align-items:center;gap:10px;min-width:0}.lvl-hero .jprog b{font-size:20px}.lvl-hero .jprog .meter{width:180px;flex:none}
+.lroad{max-width:760px;margin:0 auto;position:relative}
+.rland{margin:0 0 6px}.rland.shut{opacity:.72}
+.rl-banner{position:relative;display:flex;align-items:flex-end;gap:12px;min-height:110px;border-radius:18px;background:var(--surface2) center/cover no-repeat;overflow:hidden;box-shadow:var(--sh)}
+.rl-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 20%,rgb(0 0 0 / .6))}
+.rl-n{position:relative;z-index:1;margin:0 0 12px 14px;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--action);color:var(--action-ink);font:800 20px/1 var(--display)}
+.rl-tx{position:relative;z-index:1;display:flex;flex-direction:column;color:#fff;padding:0 14px 12px 0}.rl-tx b{font:800 20px/1.2 var(--display)}.rl-tx span{font-size:13px;opacity:.92}
+.summit-b{min-height:auto;padding:14px 18px;flex-direction:column;align-items:flex-start;background:linear-gradient(135deg,var(--treasure),color-mix(in srgb,var(--treasure) 55%,var(--action)))}
+.summit-b::after{display:none}.summit-b b{font:800 20px var(--display);color:#3b2a00}.summit-b span{color:#3b2a00}
+.rlink{height:26px;width:3px;margin:0 auto;background:repeating-linear-gradient(var(--line) 0 6px,transparent 6px 11px)}
+.rseg{position:relative;margin:8px 0}
+.rline{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.rl-edge{fill:none;stroke:color-mix(in srgb,var(--ink) 18%,transparent);stroke-width:26;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.rl{fill:none;stroke:var(--surface);stroke-width:18;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 0;vector-effect:non-scaling-stroke}
+.rnode{position:absolute;transform:translate(-50%,-50%);border:0;background:none;padding:0;cursor:pointer;font:inherit;color:var(--ink)}
+.rn-c{position:relative;display:grid;place-items:center;width:60px;height:60px;border-radius:50%;background:var(--surface);border:4px solid var(--action);box-shadow:0 5px 0 color-mix(in srgb,var(--action) 55%,#000),var(--sh);font:800 22px/1 var(--display);color:var(--ink)}
+.rnode.done .rn-c{background:var(--mastered);border-color:var(--mastered);color:#fff;box-shadow:0 5px 0 color-mix(in srgb,var(--mastered) 55%,#000)}
+.rnode.shut .rn-c{border-color:var(--line);box-shadow:0 5px 0 var(--line);font-size:18px}
+.rnode.next .rn-c{animation:rn-pulse 1.8s ease-in-out infinite}
+.rnode.recap .rn-c{border-style:dashed}
+.rn-lv{position:absolute;bottom:-3px;right:-3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--surface);background:var(--surface2)}
+.rn-lv.lv2{background:var(--action)}.rn-lv.lv3{background:var(--treasure)}
+.rn-t{position:absolute;top:50%;transform:translateY(-50%);width:max-content;max-width:190px;display:flex;flex-direction:column;text-align:left;background:var(--surface);padding:5px 10px;border-radius:10px;box-shadow:var(--sh);font-size:13px;line-height:1.25}
+.rn-t small{color:var(--muted)}
+.rn-t.rgt{left:calc(100% + 10px)}.rn-t.lft{right:calc(100% + 10px);text-align:right}
+.rnode.shut .rn-t{opacity:.7}
+.rnode.test img{display:block;width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 4px 6px rgb(0 0 0 / .25))}
+.rnode.test.shut img{filter:grayscale(1) opacity(.6)}
+.rnode.test:not(:has(img))::before{content:"⚑";display:grid;place-items:center;width:70px;height:70px;border-radius:18px;background:var(--treasure);font-size:30px}
+.rnode.test.done .rn-t b::after{content:" ✓";color:var(--mastered)}
+.rn-me{position:absolute;top:-34px;left:50%;transform:translateX(-50%);pointer-events:none}
+@keyframes rn-pulse{50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.rnode.next .rn-c{animation:none}}
+@media (max-width:560px){.rn-t{max-width:128px;font-size:12px}.rn-c{width:52px;height:52px}.rnode.test img{width:68px;height:68px}}
+
+/* ---- the Atlas board for a level: its lands' paintings side by side, one road across */
+.lboard .panel{position:absolute;top:0;height:100%;object-fit:cover;display:block}
+.land-tag{position:absolute;top:12px;z-index:3;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;background:rgb(255 255 255 / .92);color:#1b2135;box-shadow:0 4px 12px rgb(0 0 0 / .25);max-width:300px}
+.land-tag b{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--action);color:var(--action-ink);font:800 16px/1 var(--display)}
+.land-tag span{display:flex;flex-direction:column;font:700 14px/1.2 var(--display)}.land-tag small{font:600 11px var(--ui);color:#5b6275}
+.land-tag.shut{opacity:.8}.land-tag.shut b{background:#8c93a6}
+.secret{position:absolute;transform:translate(-50%,-50%);z-index:3;border:0;background:rgb(255 255 255 / .82);width:48px;height:48px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;box-shadow:0 0 0 4px rgb(255 255 255 / .35),0 6px 14px rgb(0 0 0 / .3);animation:secret-bob 3s ease-in-out infinite}
+.secret:nth-of-type(2n){animation-delay:-1.4s}
+@keyframes secret-bob{50%{transform:translate(-50%,-62%)}}
+.bgate{position:absolute;transform:translate(-50%,-50%);z-index:2;border:0;background:none;padding:0;cursor:pointer;width:96px;height:96px}
+.bgate img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgb(0 0 0 / .4))}
+.bgate.summit{width:112px;height:112px}
+.bgate.shut img{filter:grayscale(.85) brightness(.9) drop-shadow(0 6px 10px rgb(0 0 0 / .4))}
+.bgate.sel{outline:4px solid var(--action);outline-offset:2px;border-radius:18px}
+.bgate .bg-ok{position:absolute;right:4px;bottom:6px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--mastered);color:#fff;font-size:15px}
+.bgate .me,.bpin .me{position:absolute;bottom:100%;left:50%;transform:translateX(-50%)}
+.bpin .rn-lv{position:absolute;bottom:-4px;right:-4px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:#cfd6e6}
+.bpin .rn-lv.lv2{background:var(--action)}.bpin .rn-lv.lv3{background:var(--treasure)}
+.bpin.recap{border-style:dashed}
+.pick-art{flex:none;object-fit:contain}
+@media (prefers-reduced-motion:reduce){.secret{animation:none}}
+.journey-page .jhead{padding:14px 18px;margin-bottom:12px}.journey-page .jhead h2{font-size:22px}.journey-page .jhead p{font-size:14px}
+.journey-page .jprog{flex-direction:row;gap:10px;min-width:0}.journey-page .jprog b{font-size:20px}.journey-page .jprog .meter{width:120px;flex:none}
+@media (max-width:760px){.journey-page .jhead p:not(.kicker){display:none}.journey-page .jladder{gap:4px}.journey-page .jl{padding:5px 2px}}
