@@ -33,6 +33,15 @@ const PASS = 8, DRILL = 10;
 const LV = { '6-7': 1, '8-10': 2, '11-14': 3 };
 const LV_NAME = ['', 'Gentle', 'Steady', 'Stretch'];
 
+/* Drawings also appear inside drills, where this tool's CSS is not on the page — so
+   they colour themselves with inline styles, from the app's CSS variables only. */
+const ST = {
+  rod: 'stroke:var(--treasure-deep);stroke-width:4.5;stroke-linecap:round', hole: 'fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4',
+  board: 'fill:var(--surface2);stroke:var(--line)', frame: 'fill:var(--treasure-deep)', inner: 'fill:var(--surface2)', wire: 'stroke:var(--muted);stroke-width:3',
+  beam: 'fill:var(--treasure-deep)', sel: 'fill:var(--action-tint)', bead: 'fill:var(--surface);stroke:var(--ink);stroke-width:1.5', beadOn: 'fill:var(--fix);stroke:var(--ink);stroke-width:1.5',
+  dot1: 'fill:var(--surface);stroke:var(--ink);stroke-width:1.5', dot2: 'fill:var(--ink)',
+};
+
 /* ------------------------------------------------------------ sources */
 
 const NINE = 'Shen Kangshen, John N. Crossley and Anthony W.-C. Lun, The Nine Chapters on the Mathematical Art: Companion and Commentary (Oxford University Press, 1999).';
@@ -45,6 +54,7 @@ const CULLEN = 'Christopher Cullen, Astronomy and Mathematics in Ancient China: 
 
 const digitsOf = (n) => String(n).split('').map(Number);
 const PLACE = ['units', 'tens', 'hundreds', 'thousands', 'ten-thousands'];
+const SHORT = ['1s', '10s', '100s', '1000s', '10 000s'];
 const leaks = (q) => !q.choices && String(q.ans).length > 1 && q.text.split(/[^0-9./]/).includes(String(q.ans));
 const guard = (fn) => (r, lv = 1) => { let q; for (let i = 0; i < 80; i++) { q = fn(r, lv); if (!leaks(q)) break; } return q; };
 const choose = (n, k) => { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); let c = 1; for (let i = 1; i <= k; i++) c = (c * (n - k + i)) / i; return Math.round(c); };
@@ -428,9 +438,9 @@ export const JOURNEY = [
     sources: [MARTZLOFF, NEEDHAM], needsReview: true,
     ex: qYang(5, 2),
     gen: guard((r, lv) => {
-      const n = lv === 1 ? int(3, 6, r) : lv === 2 ? int(4, 9, r) : int(6, 14, r);
+      const n = lv === 1 ? int(4, 6, r) : lv === 2 ? int(4, 9, r) : int(6, 14, r);
       if (r() < 0.25) return qYangSum(lv === 1 ? int(2, 6, r) : n);
-      return qYang(n, int(1, n - 1, r));
+      return qYang(n, int(2, n - 2, r));   // never number 1: it is the row number itself, printed in the question
     }),
     work(q) {
       if (q.kind === 'yangsum') return [{ t: `Row ${q.n - 1} adds up to`, v: 2 ** (q.n - 1) }, { t: 'Every number is used twice in the row below: double it', v: q.ans }];
@@ -442,37 +452,37 @@ export const JOURNEY = [
 
 /* ------------------------------------------------------------ drawings */
 
-function svg(w, h, inner, label, cls = '') { return `<svg class="dg ${P}-svg ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${esc(label)}">${inner}</svg>`; }
+function svg(w, h, inner, label, cls = '') { return `<svg class="dg ${P}-svg ${cls}" style="max-width:100%;height:auto;display:block;margin:6px auto" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${esc(label)}">${inner}</svg>`; }
 function T(x, y, s, cls = 'dg-small', anchor = 'middle') { return `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(s)}</text>`; }
 
 /* One rod digit in a 40 × 60 cell at (x, y). */
 function rodCell(c, x, y) {
-  if (c.empty) return `<rect x="${x + 4}" y="${y + 4}" width="32" height="52" rx="4" class="${P}-hole"/>`;
+  if (c.empty) return `<rect x="${x + 4}" y="${y + 4}" width="32" height="52" rx="4" style="${ST.hole}"/>`;
   let s = '';
   if (c.form === 'upright') {
     const top = c.five ? y + 20 : y + 6;
-    for (let k = 0; k < c.ones; k++) { const xx = x + 20 + (k - (c.ones - 1) / 2) * 7; s += `<line x1="${xx}" y1="${top}" x2="${xx}" y2="${y + 56}" class="${P}-rod"/>`; }
-    if (c.five) s += `<line x1="${x + 4}" y1="${y + 12}" x2="${x + 36}" y2="${y + 12}" class="${P}-rod"/>`;
+    for (let k = 0; k < c.ones; k++) { const xx = x + 20 + (k - (c.ones - 1) / 2) * 7; s += `<line x1="${xx}" y1="${top}" x2="${xx}" y2="${y + 56}" style="${ST.rod}"/>`; }
+    if (c.five) s += `<line x1="${x + 4}" y1="${y + 12}" x2="${x + 36}" y2="${y + 12}" style="${ST.rod}"/>`;
   } else {
-    for (let k = 0; k < c.ones; k++) { const yy = y + 54 - k * 8; s += `<line x1="${x + 5}" y1="${yy}" x2="${x + 35}" y2="${yy}" class="${P}-rod"/>`; }
-    if (c.five) s += `<line x1="${x + 20}" y1="${y + 4}" x2="${x + 20}" y2="${y + 54 - (c.ones - 1) * 8 - 6}" class="${P}-rod"/>`;
+    for (let k = 0; k < c.ones; k++) { const yy = y + 54 - k * 8; s += `<line x1="${x + 5}" y1="${yy}" x2="${x + 35}" y2="${yy}" style="${ST.rod}"/>`; }
+    if (c.five) s += `<line x1="${x + 20}" y1="${y + 4}" x2="${x + 20}" y2="${y + 54 - (c.ones - 1) * 8 - 6}" style="${ST.rod}"/>`;
   }
   return s;
 }
 function rodGroup(n, x, y) { return rodEncode(n).map((c, i) => rodCell(c, x + i * 44, y)).join(''); }
 export function rodSvg(n, labels = false) {
   const cells = rodEncode(n), W = cells.length * 44 + 12, H = labels ? 90 : 68;
-  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" class="${P}-boardbg"/>` + rodGroup(n, 8, 4);
-  if (labels) cells.forEach((c, i) => { s += T(8 + i * 44 + 20, 82, PLACE[c.p]); });
+  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" style="${ST.board}"/>` + rodGroup(n, 8, 4);
+  if (labels) cells.forEach((c, i) => { s += T(8 + i * 44 + 20, 82, SHORT[c.p]); });
   return svg(W, H, s, labels ? `The number ${n} in rod numerals` : 'A number in rod numerals');
 }
 export function abSvg(ab, sel = -1, live = false) {
   const R = ab.h.length, W = R * 50 + 20, H = 230, beam = 74;
-  let s = `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="10" class="${P}-frame"/><rect x="12" y="12" width="${W - 24}" height="${H - 24}" rx="4" class="${P}-inner"/>`;
+  let s = `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="10" style="${ST.frame}"/><rect x="12" y="12" width="${W - 24}" height="${H - 24}" rx="4" style="${ST.inner}"/>`;
   for (let i = 0; i < R; i++) {
     const x = 35 + i * 50;
-    if (i === sel) s += `<rect x="${x - 22}" y="12" width="44" height="${H - 24}" rx="6" class="${P}-sel"/>`;
-    s += `<line x1="${x}" y1="12" x2="${x}" y2="${H - 12}" class="${P}-wire"/>`;
+    if (i === sel) s += `<rect x="${x - 22}" y="12" width="44" height="${H - 24}" rx="6" style="${ST.sel}"/>`;
+    s += `<line x1="${x}" y1="12" x2="${x}" y2="${H - 12}" style="${ST.wire}"/>`;
     for (let j = 0; j < 2; j++) {   // upper beads, j = 0 nearest the beam
       const on = j < ab.h[i], y = on ? beam - 4 - 16 * (j + 1) : 14 + 16 * (1 - j);
       s += bead(x, y, on, live ? `bead|${i}|u|${j}` : '');
@@ -482,17 +492,17 @@ export function abSvg(ab, sel = -1, live = false) {
       s += bead(x, y, on, live ? `bead|${i}|l|${j}` : '');
     }
   }
-  s += `<rect x="12" y="${beam - 3}" width="${W - 24}" height="6" class="${P}-beam"/>`;
+  s += `<rect x="12" y="${beam - 3}" width="${W - 24}" height="6" style="${ST.beam}"/>`;
   return svg(W, H, s, live ? 'A suanpan you can set: tap a bead, or use the arrow keys' : 'A number on a suanpan', live ? `${P}-live` : '');
 }
 function bead(x, y, on, arg) {
-  const shape = `<path d="M${x - 20},${y + 8} Q${x - 18},${y} ${x - 8},${y} L${x + 8},${y} Q${x + 18},${y} ${x + 20},${y + 8} Q${x + 18},${y + 16} ${x + 8},${y + 16} L${x - 8},${y + 16} Q${x - 18},${y + 16} ${x - 20},${y + 8} Z" class="${P}-bead${on ? ' on' : ''}"/>`;
+  const shape = `<path d="M${x - 20},${y + 8} Q${x - 18},${y} ${x - 8},${y} L${x + 8},${y} Q${x + 18},${y} ${x + 20},${y + 8} Q${x + 18},${y + 16} ${x + 8},${y + 16} L${x - 8},${y + 16} Q${x - 18},${y + 16} ${x - 20},${y + 8} Z" class="${P}-bead" style="${on ? ST.beadOn : ST.bead}"/>`;
   return arg ? `<g data-act="lib" data-arg="${arg}" class="${P}-tap">${shape}</g>` : shape;
 }
 function boardSvg(a, b, product = null) {
   const la = String(a).length, lb = String(b).length, lp = String(a * b).length, cols = Math.max(la + lb, lp), W = cols * 44 + 90, H = 230;
   const right = (len) => 76 + (cols - len) * 44;
-  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" class="${P}-boardbg"/>`;
+  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" style="${ST.board}"/>`;
   for (let k = 0; k <= cols; k++) s += `<line x1="${74 + k * 44}" y1="6" x2="${74 + k * 44}" y2="${H - 6}" class="dg-grid"/>`;
   s += T(38, 42, 'top') + T(38, 118, 'middle') + T(38, 194, 'bottom');
   s += rodGroup(a, right(la), 8);   // every row lined up by place: units under units
@@ -504,7 +514,7 @@ function loshuSvg(g, holes, ask) {
   const u = 56; let s = '';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
     const hole = holes.some(([hr, hc]) => hr === r && hc === c), isAsk = ask && ask[0] === r && ask[1] === c;
-    s += `<rect x="${4 + c * u}" y="${4 + r * u}" width="${u}" height="${u}" class="${isAsk ? 'dg-fill2' : hole ? 'dg-blank' : `${P}-cell`}"/>`;
+    s += `<rect x="${4 + c * u}" y="${4 + r * u}" width="${u}" height="${u}" class="${isAsk ? 'dg-fill2' : hole ? 'dg-blank' : 'dg-blank'}"/>`;
     s += `<text x="${4 + c * u + u / 2}" y="${4 + r * u + u / 2 + 8}" class="${isAsk ? 'dg-accent' : 'dg-big'}" text-anchor="middle">${isAsk ? '?' : hole ? '' : g[r][c]}</text>`;
   }
   return svg(3 * u + 8, 3 * u + 8, s, 'A three by three magic square');
@@ -513,8 +523,8 @@ function loshuDots() {
   const u = 56; let s = '';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
     const v = LOSHU[r][c], cx = 4 + c * u + u / 2, cy = 4 + r * u + u / 2;
-    s += `<rect x="${4 + c * u}" y="${4 + r * u}" width="${u}" height="${u}" class="${P}-cell"/>`;
-    for (let k = 0; k < v; k++) { const a = (k / v) * Math.PI * 2 - Math.PI / 2, rr = v === 1 ? 0 : 16; s += `<circle cx="${(cx + rr * Math.cos(a)).toFixed(1)}" cy="${(cy + rr * Math.sin(a)).toFixed(1)}" r="4.5" class="${v % 2 ? P + '-dot1' : P + '-dot2'}"/>`; }
+    s += `<rect x="${4 + c * u}" y="${4 + r * u}" width="${u}" height="${u}" class="dg-blank"/>`;
+    for (let k = 0; k < v; k++) { const a = (k / v) * Math.PI * 2 - Math.PI / 2, rr = v === 1 ? 0 : 16; s += `<circle cx="${(cx + rr * Math.cos(a)).toFixed(1)}" cy="${(cy + rr * Math.sin(a)).toFixed(1)}" r="4.5" style="${v % 2 ? ST.dot1 : ST.dot2}"/>`; }
   }
   return svg(3 * u + 8, 3 * u + 8, s, 'The Lo Shu drawn with dots: count the dots in each square') + `<p class="${P}-cap">The same square in dots. Count them: every line makes 15.</p>`;
 }
@@ -542,7 +552,7 @@ function yangSvg(n, ask, full = false) {
   const rows = n + 1, u = 34, W = rows * u + 20, H = rows * 30 + 14; let s = '';
   for (let r = 0; r < rows; r++) for (let k = 0; k <= r; k++) {
     const x = W / 2 + (k - r / 2) * u, y = 20 + r * 30, isAsk = r === n && k === ask, show = full || r < n || ask < 0;
-    s += `<circle cx="${x}" cy="${y}" r="14" class="${isAsk ? 'dg-fill2' : r === n && !show ? 'dg-blank' : `${P}-cell`}"/>`;
+    s += `<circle cx="${x}" cy="${y}" r="14" class="${isAsk ? 'dg-fill2' : r === n && !show ? 'dg-blank' : 'dg-blank'}"/>`;
     s += T(x, y + 5, isAsk ? '?' : show ? choose(r, k) : '', isAsk ? 'dg-accent' : 'dg-small');
   }
   return svg(W, H, s, `Yang Hui's triangle, rows 0 to ${n}`);
@@ -561,7 +571,7 @@ function buySvg(q) {
 }
 function arraySvg(a1, b1, c1, a2, b2, c2) {
   const colW = Math.max(String(c1).length, String(c2).length, 2) * 44 + 12, W = 2 * colW + 110, H = 3 * 72 + 30;
-  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" class="${P}-boardbg"/>`;
+  let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="8" style="${ST.board}"/>`;
   ['top', 'low', 'measures'].forEach((l, r) => { s += T(46, 50 + r * 72, l); s += `<line x1="90" y1="${14 + (r + 1) * 72}" x2="${W - 8}" y2="${14 + (r + 1) * 72}" class="dg-grid"/>`; });
   const col = (vals, x) => vals.map((v, r) => rodGroup(v, x + colW - String(v).length * 44 - 6, 18 + r * 72)).join('');
   s += col([a2, b2, c2], 94) + col([a1, b1, c1], 94 + colW);
@@ -572,7 +582,7 @@ function sunziSvg(n) {
   let s = '', y = 16;
   for (const m of [3, 5, 7]) {
     s += T(24, y + 5, `by ${m}s`, 'dg-small');
-    for (let i = 0; i < n; i++) { const g = Math.floor(i / m), left = i >= n - (n % m); s += `<circle cx="${60 + i * 11 + g * 5}" cy="${y}" r="4.2" class="${left ? P + '-dot2' : P + '-dot1'}"/>`; }
+    for (let i = 0; i < n; i++) { const g = Math.floor(i / m), left = i >= n - (n % m); s += `<circle cx="${60 + i * 11 + g * 5}" cy="${y}" r="4.2" style="${left ? ST.dot2 : ST.dot1}"/>`; }
     s += T(60 + n * 11 + Math.floor(n / m) * 5 + 14, y + 5, `${n % m} left`, 'dg-accent', 'start');
     y += 28;
   }
@@ -838,16 +848,7 @@ export const CSS = `
 .${P}-steps{margin:10px 0 0;padding-left:22px}.${P}-steps li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line-soft)}
 .${P}-steps b{color:var(--fix)}
 .${P}-cap{font-size:var(--fs-label);color:var(--muted);margin:4px 0 8px;text-align:center}
-.${P}-rod{stroke:var(--treasure-deep);stroke-width:4.5;stroke-linecap:round}
-.${P}-hole{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
-.${P}-boardbg{fill:var(--surface2);stroke:var(--line)}
-.${P}-cell{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
-.${P}-dot1{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}.${P}-dot2{fill:var(--ink)}
-.${P}-frame{fill:var(--treasure-deep)}.${P}-inner{fill:var(--surface2)}
-.${P}-wire{stroke:var(--muted);stroke-width:3}.${P}-beam{fill:var(--treasure-deep)}
-.${P}-sel{fill:var(--action-tint)}
-.${P}-bead{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}.${P}-bead.on{fill:var(--fix)}
-.${P}-live .${P}-tap{cursor:pointer}.${P}-live .${P}-tap:hover .${P}-bead{stroke-width:3}
+.${P}-live .${P}-tap{cursor:pointer}.${P}-live .${P}-tap:hover .${P}-bead{stroke-width:3!important}
 .${P}-play{margin:10px 0;padding:14px;border-radius:var(--r-md);background:var(--surface2);text-align:center}
 .${P}-in{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
 .${P}-in input{font:700 22px var(--mono);width:8ch;padding:6px 10px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface);color:var(--ink);text-align:center}
@@ -907,7 +908,7 @@ export function selftest(ok, makeCtx) {
   ok(formBad === 0, `chinese: every rod digit is 1–5 rods, or a five-rod and 1–4 (${formBad} failures)`);
   for (let n = 0; n <= 99999; n += 97) ok(ev(rodExpr(n)) === n && rodDecode(rodEncode(n)) === n, `chinese: rod ${n}`);
   ok(Number.isNaN(rodDecode([{ p: 0, form: 'flat', five: 0, ones: 3 }])), 'chinese: a units digit lying flat is refused');
-  ok(!/undefined|NaN/.test(rodSvg(40506, true)) && (rodSvg(40506).match(/-hole/g) || []).length === 2, 'chinese: 40506 draws two empty places');
+  ok(!/undefined|NaN/.test(rodSvg(40506, true)) && (rodSvg(40506).match(/stroke-dasharray:4 4/g) || []).length === 2, 'chinese: 40506 draws two empty places');
 
   // the suanpan: round trip 0–99999; each digit uses at most one upper and four lower beads
   let abBad = 0;
