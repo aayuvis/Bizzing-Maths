@@ -922,3 +922,37 @@ div.jcard{cursor:default}
 /* mid-width windows (a laptop at 1000px): the top bar fits — logo icon only, tighter tabs */
 @media (min-width:761px) and (max-width:1120px){.brand-t{display:none}.tab{padding:8px 11px}.top{gap:10px;padding:10px 14px}}
 .hook .case-note{margin:10px 0 0}
+
+/* ---- onboarding: one question per screen, Nova asking */
+.ob,.ob-land{max-width:620px;margin:0 auto}
+.ob-land{text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:2vh}
+.ob-land .display{font-size:clamp(26px,5vw,38px);line-height:1.1;margin:0}
+.ob-land .lead{margin:0;color:var(--muted)}
+.ob-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin-top:6px}
+.ob-stats div{display:flex;flex-direction:column;padding:10px 6px;border-radius:14px;background:var(--surface);box-shadow:var(--sh)}
+.ob-stats b{font:800 24px var(--display);color:var(--action)}.ob-stats span{font-size:12px;color:var(--muted)}
+.ob-promise{list-style:none;padding:0;margin:4px 0;text-align:left;display:flex;flex-direction:column;gap:8px}
+.ob-promise li{padding:10px 14px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);font-size:14px}
+.ob-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:0 0 14px}
+.ob-dots{display:flex;gap:8px}.ob-dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.ob-dots i.on{background:var(--action);transform:scale(1.25)}.ob-dots i.done{background:var(--mastered)}
+.ob-say{display:flex;gap:12px;align-items:flex-end;margin:0 0 14px}
+.ob-say .av{flex:none;border-radius:50%;background:var(--surface);box-shadow:var(--sh)}
+.ob-say .bubble2{margin:0;flex:1;font-size:17px}
+.ob-card{display:flex;flex-direction:column;gap:10px}
+.ob-opts{display:flex;flex-direction:column;gap:10px}
+.ob-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:16px 18px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;font:inherit;box-shadow:var(--sh)}
+.ob-opt b{font:800 22px var(--display)}.ob-opt span{color:var(--muted)}
+.ob-opt:hover,.ob-opt.on,.ob-face:hover,.ob-face.on,.ob-world:hover{border-color:var(--action)}
+.ob-faces{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.ob-face{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:16px;border:2px solid var(--line);background:var(--surface);cursor:pointer;font:600 13px var(--ui);color:var(--ink)}
+.ob-face .av{width:100%;height:auto;max-width:96px}
+.ob-worlds{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ob-world{display:flex;flex-direction:column;gap:4px;padding:0 0 14px;border-radius:18px;border:2px solid var(--line);background:var(--surface);cursor:pointer;overflow:hidden;text-align:left;font:inherit;color:var(--ink)}
+.ob-world > b,.ob-world > span{padding:0 14px}.ob-world > b{font:800 18px var(--display);margin-top:8px}.ob-world > span{font-size:13px;color:var(--muted)}
+.ob-sw{display:flex;align-items:center;justify-content:space-between;height:96px;padding:0 18px}
+.ob-sw b{font-size:40px}.ob-sw i{font-style:normal;font-size:20px}
+.ob-w-graph .ob-sw{background:#fff linear-gradient(#dfe7fb 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,#dfe7fb 1px,transparent 1px) 0 0/16px 16px;color:#2D5BD8}
+.ob-w-orbit .ob-sw{background:radial-gradient(circle at 70% 40%,#3b2f7a,#120f2e 70%);color:#f3eaff}
+@media (max-width:520px){.ob-faces{grid-template-columns:repeat(3,1fr)}.ob-stats{grid-template-columns:repeat(2,1fr)}.ob-worlds{grid-template-columns:1fr}}
+.ob-top > .btn{justify-self:start;width:auto}
+.ob-face .av{aspect-ratio:1}

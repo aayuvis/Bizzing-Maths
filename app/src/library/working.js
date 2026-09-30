@@ -710,16 +710,15 @@ export function view(ctx) {
   }
   return `<div class="t-working">
     <div class="card t-working-ask">
-      <label class="kicker" for="t-working-q">Type a sum</label>
       <div class="t-working-bar">
-        <input id="t-working-q" class="t-working-input" data-lib-input="q" autocomplete="off" spellcheck="false" placeholder="23 × 47" value="${esc(text)}" aria-label="A sum" onkeydown="${ONKEY}">
+        <input id="t-working-q" class="t-working-input" data-lib-input="q" autocomplete="off" spellcheck="false" placeholder="23 × 47" value="${esc(text)}" aria-label="Type a sum" onkeydown="${ONKEY}">
         <button class="btn primary" id="t-working-go" data-act="lib" data-arg="go|">Show me</button>
         <button class="btn ghost" id="t-working-clear" data-act="lib" data-arg="clear|">Clear</button>
       </div>
-      <p class="muted small t-working-hint">Use × or x or *, ÷ or /, + and −, brackets, fractions like 3/4, and “35% of 80”. Enter shows the working · Esc clears.</p>
-      ${recent.length ? `<div class="t-working-recent"><span class="muted small">Your recent sums:</span>${exButtons(recent)}<button class="btn small ghost" data-act="lib" data-arg="forget|">Forget them</button></div>` : ''}
     </div>
     ${body}
+    ${recent.length ? `<div class="t-working-recent"><span class="muted small">Your recent sums:</span>${exButtons(recent)}<button class="btn small ghost" data-act="lib" data-arg="forget|">Forget them</button></div>` : ''}
+    <p class="muted small t-working-hint">Use × or x or *, ÷ or /, + and −, brackets, fractions like 3/4, and “35% of 80”. Enter shows the working · Esc clears.</p>
   </div>`;
 }
 
@@ -727,11 +726,11 @@ export const CSS = `
 .t-working-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .t-working-input{font:700 24px var(--mono);padding:8px 14px;border:2px solid var(--line);border-radius:var(--r-md);background:var(--paper);color:var(--ink);flex:1 1 220px;min-width:0}
 .t-working-input:focus{outline:none;border-color:var(--action);box-shadow:var(--focus)}
-.t-working-hint{margin:10px 0 0}
+.t-working-hint{margin:6px 0 0;text-align:center}
 .t-working-ex{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .t-working-chip{border:1px solid var(--line);cursor:pointer;font-family:var(--mono);color:var(--ink)}
 .t-working-chip:hover{border-color:var(--action);background:var(--action-tint)}
-.t-working-recent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}.t-working-recent .t-working-ex{margin:0}
+.t-working-recent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}.t-working-recent .t-working-ex{margin:0}
 .t-working-empty{text-align:center;padding:30px}.t-working-empty .t-working-ex{justify-content:center}
 .t-working-lead{font:700 var(--fs-h2) var(--display);margin:0 0 6px}
 .t-working-err{font:600 var(--fs-lead) var(--display);color:var(--fix);margin:0 0 8px}

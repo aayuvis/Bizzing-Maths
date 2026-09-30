@@ -50,6 +50,9 @@ export const AVATAR_PACKS = [
   { id: 'tools', name: 'Tool Kit', blurb: 'Made from the geometry box.', avatars: ['protortle', 'compacrab', 'abacuhog', 'rulraffe', 'setsquin', 'pencilbird'] },
   { id: 'patterns', name: 'Pattern Pets', blurb: 'Spirals, hexagons and symmetry from nature.', avatars: ['nautilus', 'hexbee', 'tessgecko', 'flakefox', 'peacock', 'sunlion'] },
 ];
+/* A new child picks from five, one from each pack; the other twenty-five wait on
+   their own page under "Change avatar" — thirty faces is a menu, not a welcome. */
+export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'rocket', 'beaker'];
 export const AVATARS = AVATAR_PACKS.flatMap((p) => p.avatars);
 /* Names for the picker's labels (Bee's own names for the borrowed ones). */
 export const AVATAR_NAME = {

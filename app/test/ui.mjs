@@ -33,21 +33,25 @@ async function run(vp, tag) {
   const typeAns = async (ans) => { for (const ch of String(ans)) await page.keyboard.press(ch); };
 
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
-  await page.waitForSelector('.welcome');
+  // onboarding, one question per screen (Bizzing Finance's): landing → name → age → five faces → two worlds
+  await page.waitForSelector('.ob-land');
   await shot('01-welcome');
-  ok(await page.locator('[data-act=createKid]').isDisabled(), 'create is disabled until name and age');
-  await page.fill('#kname', 'Ahana');
+  ok(await page.locator('.ob-land [data-act=obStart]').count() === 1, 'a first visit opens on the landing page');
+  await page.click('[data-act=obStart]'); await page.waitForSelector('#kname');
+  ok(await page.locator('.ob-dots i').count() === 4, 'four steps, shown as dots');
+  await page.click('[data-act=obNext]'); await page.waitForTimeout(150);
+  ok(await page.locator('#kname').count() === 1, 'no name, no next step');
+  await page.fill('#kname', 'Ahana'); await page.press('#kname', 'Enter');
+  await page.waitForSelector('.ob-opt'); await shot('01a-age');
   await page.click('[data-act=draftBand][data-arg="8-10"]');
-  // the avatar picker: five labelled packs of six, all offered, keyboard and touch
-  ok(await page.locator('.av-pack').count() === 5 && await page.locator('.av-pick').count() === 30, 'the picker shows five packs of six');
-  await page.locator('.av-packs').scrollIntoViewIfNeeded(); await page.waitForTimeout(400);
-  await page.locator('.av-packs').screenshot({ path: `${SHOTS}/${tag}-01b-avatars.png` });
-  await page.focus('.av-pick[tabindex="0"]');
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
-  ok(await page.evaluate(() => window.__bzm.R.ui.draft.avatar) === 'astro', 'arrow keys + Enter choose a face (right, down → Star Crew\'s second)');
+  await page.waitForSelector('.ob-face');
+  ok(await page.locator('.ob-face').count() === 5, 'a new child picks from five faces, not thirty');
+  await shot('01b-faces');
   await page.click('[data-act=draftAv][data-arg="hexbee"]');
-  ok(await page.evaluate(() => window.__bzm.R.ui.draft.avatar) === 'hexbee', 'a tap chooses a face');
-  await page.click('[data-act=createKid]');
+  await page.waitForSelector('.ob-world');
+  ok(await page.locator('.ob-world').count() === 2, 'and from two worlds');
+  await shot('01c-worlds');
+  await page.click('[data-act=obTheme][data-arg="graph"]');
   await page.waitForSelector('[data-act=startLevelTest]');
   await shot('02a-start');
   // the level test: a child secure up to Level 3 and lost above it must be placed at Level 4
@@ -69,7 +73,7 @@ async function run(vp, tag) {
   ok(!/of \d+ right/.test(await page.locator('.end-card').innerText()), 'finding a level is never scored');
   await page.click('[data-act=endRun]');
   await page.waitForSelector('.lboard');
-  ok(await page.evaluate(() => document.querySelector('.jprog .meter').getBoundingClientRect().height) > 4, 'the road progress bar is drawn');
+  ok(await page.evaluate(() => document.querySelector('.road-bar .meter').getBoundingClientRect().height) > 4, 'the road progress bar is drawn');
   await page.locator('.board-scroll').scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await shot('02c-journey');
   ok(await page.locator('.land-tag').count() >= 4 && await page.locator('.jl').count() === 10, 'the Atlas is this level\'s road across its lands\' paintings, with the ten-level ladder');
   ok(await page.locator('.bgate:not(.summit)').count() >= 4 && await page.locator('.bgate.summit').count() === 1, 'every land ends at a gate, and the road at the summit');
@@ -340,6 +344,8 @@ async function run(vp, tag) {
   // Change avatar on the child's own page
   await page.click('.who[data-arg=me]'); await page.waitForSelector('[data-act=avEdit]');
   await page.click('[data-act=avEdit]'); await page.waitForSelector('.me-av .av-pick');
+  ok(await page.locator('.me-av .av-pack').count() === 5 && await page.locator('.me-av .av-pick').count() === 30, 'all thirty faces, five packs of six, wait on the child\'s page');
+  await page.locator('.me-av .av-packs').screenshot({ path: `${SHOTS}/${tag}-01b-avatars.png` }).catch(() => {});
   await page.click('[data-act=setAv][data-arg="protortle"]');
   ok(await page.evaluate(() => window.__bzm.R.h.kids[0].avatar) === 'protortle', 'Change avatar sets the child\'s face');
   await page.waitForTimeout(400); await shot('19b-change-avatar');

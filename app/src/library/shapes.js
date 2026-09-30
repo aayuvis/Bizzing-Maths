@@ -1283,10 +1283,10 @@ export const CSS = `
 .t-shapes-seg.seg{flex-wrap:nowrap;margin:0 auto 10px}
 .t-shapes-cols .seg.small{margin:0 auto 10px}
 .t-shapes-cols .card>.t-shapes-row:first-child,.t-shapes-cols .card>.t-shapes-solids:first-child{margin-top:0}
-@media (max-width:760px){.t-shapes-seg.seg{flex-wrap:wrap;gap:2px}.t-shapes-seg.seg button{padding:7px 10px;font-size:.92rem}}
+@media (max-width:760px){.t-shapes-seg.seg{flex-wrap:wrap;gap:2px}.t-shapes-seg.seg button{padding:6px 8px;font-size:.85rem}}
 .t-shapes-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:760px){.t-shapes-cols{grid-template-columns:minmax(0,1fr)}}
-.t-shapes-pic{text-align:center}
+.t-shapes-pic{text-align:center;padding-top:12px}
 .t-shapes-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:8px 0}
 .t-shapes-in{width:84px;padding:8px 10px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:700 18px var(--mono);text-align:center}
 .t-shapes-in:focus{outline:none;border-color:var(--action)}

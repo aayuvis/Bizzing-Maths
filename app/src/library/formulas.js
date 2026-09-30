@@ -934,16 +934,17 @@ export function view(ctx) {
 function album(ctx) {
   const ui = ctx.ui, n = count(ctx), topic = ui.topic && TOPICS.includes(ui.topic) ? ui.topic : null;
   const pct = Math.round((n / CARDS.length) * 100);
-  let first = 'yes';
-  const gotten = `<span class="t-formulas-got"><span class="t-formulas-count">★ <b class="mono">${n}</b> of <b class="mono">${CARDS.length}</b> collected</span>
-      <span class="t-formulas-bar" role="progressbar" aria-label="Cards collected" aria-valuemin="0" aria-valuemax="${CARDS.length}" aria-valuenow="${n}"><i style="width:${pct}%"></i></span></span>`;
-  return `<div class="seg t-formulas-seg" role="group" aria-label="Topics">
-      <button class="${topic ? '' : 'on'}" data-act="lib" data-arg="topic|" aria-pressed="${!topic}">All</button>
-      ${TOPICS.map((t) => `<button class="${topic === t ? 'on' : ''}" data-act="lib" data-arg="topic|${esc(t)}" aria-pressed="${topic === t}">${esc(t)}</button>`).join('')}
+  return `<div class="t-formulas-tools">
+      <label class="t-formulas-pick"><span class="t-formulas-sr">Topic</span><select id="t-formulas-topic" data-lib-input="topic">
+        <option value=""${topic ? '' : ' selected'}>All topics</option>
+        ${TOPICS.map((t) => `<option value="${esc(t)}"${topic === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}
+      </select></label>
+      <span class="t-formulas-got"><span class="t-formulas-count">★ <b class="mono">${n}</b> of <b class="mono">${CARDS.length}</b> collected</span>
+        <span class="t-formulas-bar" role="progressbar" aria-label="Cards collected" aria-valuemin="0" aria-valuemax="${CARDS.length}" aria-valuenow="${n}"><i style="width:${pct}%"></i></span></span>
     </div>
     ${TOPICS.filter((t) => !topic || t === topic).map((t) => {
       const cs = CARDS.filter((c) => c.topic === t), k = cs.filter((c) => got(ctx, c.id)).length;
-      return `<div class="t-formulas-thr"><h3 class="t-formulas-th">${esc(t)} <span class="mono">${k}/${cs.length}</span></h3>${first ? (first = '', gotten) : ''}</div>
+      return `<h3 class="t-formulas-th">${esc(t)} <span class="mono">${k}/${cs.length}</span></h3>
       <div class="t-formulas-grid">${cs.map((c) => tile(c, got(ctx, c.id))).join('')}</div>`;
     }).join('')}
     <p class="muted small t-formulas-how">Open a card and read its story to the last line — then it is yours. Locked cards show as silhouettes.</p>`;
@@ -1080,18 +1081,18 @@ export function done(run, ctx) {
 /* ------------------------------------------------------------- styles */
 
 export const CSS = `
-.t-formulas{display:flex;flex-direction:column;gap:10px}
-.t-formulas .t-formulas-seg{margin:0 auto}
-.t-formulas .t-formulas-seg button{padding:9px 14px}
-@media (max-width:760px){.t-formulas .t-formulas-seg{gap:2px;row-gap:2px}.t-formulas .t-formulas-seg button{padding:6px 10px;font-size:.88rem}.t-formulas-bar{display:none}.t-formulas-thr .t-formulas-th{font-size:1.1rem}}
+.t-formulas{display:flex;flex-direction:column;gap:8px}
+.t-formulas-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.t-formulas-pick select{width:100%;font:inherit;font-weight:650;padding:6px 14px;cursor:pointer;border-radius:var(--r-pill);border:1.5px solid var(--line);background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+.t-formulas-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px}
+.t-formulas-pick{flex:0 1 260px;min-width:180px}
 .t-formulas-got{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
-.t-formulas-thr{display:flex;align-items:center;gap:4px 12px;margin-top:4px}
 .t-formulas-got .t-formulas-count{font-size:.9rem;font-weight:700;color:var(--ink);white-space:nowrap}
 .t-formulas-count b{color:var(--treasure-deep)}
 .t-formulas-bar{display:block;width:90px;height:8px;border-radius:var(--r-pill);background:var(--surface2);overflow:hidden}
 .t-formulas-how{margin:0;text-align:center}
 .t-formulas-bar i{display:block;height:100%;background:var(--treasure);border-radius:inherit}
-.t-formulas-th{font-family:var(--display);font-size:var(--fs-h3);margin:0;display:flex;align-items:baseline;gap:10px}
+.t-formulas-th{font-family:var(--display);font-size:1.15rem;line-height:1.3;margin:0 0 -2px;display:flex;align-items:baseline;gap:10px}
 .t-formulas-th span{font-size:var(--fs-label);color:var(--muted)}
 .t-formulas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
 @media (max-width:520px){.t-formulas-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.t-formulas-tpic{height:80px}.t-formulas-tpic svg{max-height:76px}.t-formulas-tt{font-size:15px}}
@@ -1127,6 +1128,7 @@ export const CSS = `
 .t-formulas-src{margin-top:12px;color:var(--muted);font-size:var(--fs-label)}
 .t-formulas-act{margin-top:16px;flex-wrap:wrap}
 .t-formulas-won{font-size:var(--fs-label)}
+@media (max-width:520px){.t-formulas-pick{flex:1 1 150px;min-width:0}.t-formulas-bar{display:none}}
 `;
 
 /* ------------------------------------------------------------- selftest */

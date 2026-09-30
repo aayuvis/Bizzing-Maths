@@ -324,10 +324,9 @@ export function view(ctx) {
       : `<div class="card t-explorer-empty"><p class="t-explorer-lead">Every number has a page.</p><p class="muted">Type one above, or tap a number to open its page. Try 1729 — it has a secret.</p></div>`;
   return `<div class="t-explorer">
     <div class="card t-explorer-ask">
-      <label class="kicker" for="t-explorer-n">Type a whole number, from 0 to 1,000,000</label>
       <div class="t-explorer-bar">
         <button class="btn t-explorer-step" id="t-explorer-prev" data-act="lib" data-arg="step|-1" aria-label="One less" ${p.n > 0 ? '' : 'disabled'}>←</button>
-        <input id="t-explorer-n" class="t-explorer-input" data-lib-input="n" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="360" value="${esc(text)}" aria-label="A number" onkeydown="${ONKEY}">
+        <input id="t-explorer-n" class="t-explorer-input" data-lib-input="n" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="360" value="${esc(text)}" aria-label="Type a whole number, from 0 to 1,000,000" onkeydown="${ONKEY}">
         <button class="btn t-explorer-step" id="t-explorer-next" data-act="lib" data-arg="step|1" aria-label="One more" ${p.n != null && p.n < MAX ? '' : 'disabled'}>→</button>
         <button class="btn primary" id="t-explorer-go" data-act="lib" data-arg="go|">Look it up</button>
         <button class="btn ghost" id="t-explorer-clear" data-act="lib" data-arg="clear|">Clear</button>
@@ -337,10 +336,10 @@ export function view(ctx) {
         <button class="chip t-explorer-jump" data-act="lib" data-arg="random|">🎲 Random</button>
         <button class="chip t-explorer-jump t-explorer-gold" data-act="lib" data-arg="surprise|">✨ Surprise me</button>
       </div>
-      ${recent.length ? `<div class="t-explorer-recent"><span class="muted small">Your recent numbers:</span> ${recent.map((q) => `<button class="chip t-explorer-jump" data-act="lib" data-arg="set|${q}">${group(q)}</button>`).join('')} <button class="btn small ghost" data-act="lib" data-arg="forget|">Forget them</button></div>` : ''}
-      <p class="muted small t-explorer-hint">Enter looks it up · Esc clears · ← → step to the next number.</p>
     </div>
     ${body}
+    ${recent.length ? `<div class="t-explorer-recent"><span class="muted small">Your recent numbers:</span> ${recent.map((q) => `<button class="chip t-explorer-jump" data-act="lib" data-arg="set|${q}">${group(q)}</button>`).join('')} <button class="btn small ghost" data-act="lib" data-arg="forget|">Forget them</button></div>` : ''}
+    <p class="muted small t-explorer-hint">Enter looks it up · Esc clears · ← → step to the next number.</p>
   </div>`;
 }
 
@@ -349,12 +348,12 @@ export const CSS = `
 .t-explorer-input{font:700 26px var(--mono);padding:8px 14px;border:2px solid var(--line);border-radius:var(--r-md);background:var(--paper);color:var(--ink);flex:1 1 150px;min-width:0;width:10ch;letter-spacing:.02em}
 .t-explorer-input:focus{outline:none;border-color:var(--action);box-shadow:var(--focus)}
 .t-explorer-step{min-width:48px;font:800 20px var(--mono)}
-.t-explorer-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.t-explorer-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .t-explorer-jump{border:1px solid var(--line);cursor:pointer;font-family:var(--mono);color:var(--ink)}
 .t-explorer-jump:hover,.t-explorer-jump.on{border-color:var(--action);background:var(--action-tint)}
 .t-explorer-gold{background:var(--treasure-tint);color:var(--treasure-deep);font-family:var(--ui)}
-.t-explorer-recent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
-.t-explorer-hint{margin:10px 0 0}
+.t-explorer-recent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}
+.t-explorer-hint{margin:6px 0 0;text-align:center}
 .t-explorer-empty{text-align:center;padding:32px}
 .t-explorer-lead{font:700 var(--fs-h2) var(--display);margin:0 0 6px}
 .t-explorer-err{font:700 var(--fs-lead) var(--display);color:var(--fix);margin:0 0 6px}

@@ -228,7 +228,7 @@ function levelChip(ctx) {
   const d = data(ctx), L = d.level, t = tallyLevel(facts(ctx), L), nx = nextLevel(L);
   const pct = Math.round((t.good / t.total) * 100);
   return `<div class="t-tables-lvl">
-    <span class="t-tables-lvlt"><b class="mono">${L} × ${L}</b> · <b>${t.good}/${t.total}</b> quick</span>
+    <span class="t-tables-lvlt"><b>${L} × ${L}</b> · <b>${t.good}/${t.total}</b> quick</span>
     <span class="t-tables-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${t.total}" aria-valuenow="${t.good}" aria-label="Facts quick or fluent"><i style="width:${pct}%"></i><em style="left:90%" aria-hidden="true"></em></span>
     ${t.mastered && nx ? `<button class="btn primary small" data-act="lib" data-arg="grow">Grow to ${nx} × ${nx}</button>` : ''}
   </div>`;

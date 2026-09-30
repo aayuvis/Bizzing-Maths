@@ -451,24 +451,27 @@ export function view(ctx) {
       <b>${esc(e.word)}</b><i>${esc(e.pos)}</i><span>${esc(e.def)}</span></button></li>`).join('');
   return `<div class="t-dictionary">
     <div class="card t-dictionary-bar">
-      <label class="t-dictionary-label" for="t-dictionary-q">Look up a word</label>
-      <div class="t-dictionary-search">
-        <span class="t-dictionary-glass" aria-hidden="true">⌕</span>
-        <input id="t-dictionary-q" data-lib-input="q" type="text" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false"
-          placeholder="Try “median”, “prime” or “π”" value="${esc(ui.q || '')}" aria-controls="t-dictionary-list" aria-describedby="t-dictionary-hint">
-        ${filtered ? '<button class="btn small ghost" data-act="lib" data-arg="clear" aria-label="Clear the search">Clear <kbd>Esc</kbd></button>' : ''}
+      <div class="t-dictionary-row">
+        <div class="t-dictionary-search">
+          <span class="t-dictionary-glass" aria-hidden="true">⌕</span>
+          <input id="t-dictionary-q" data-lib-input="q" type="text" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+            placeholder="Look up a word, like “median”" value="${esc(ui.q || '')}" aria-label="Look up a word" aria-controls="t-dictionary-list" aria-describedby="t-dictionary-hint">
+          ${filtered ? '<button class="btn small ghost" data-act="lib" data-arg="clear" aria-label="Clear the search">Clear <kbd>Esc</kbd></button>' : ''}
+        </div>
+        <select id="t-dictionary-topic" class="t-dictionary-topicpick" data-lib-input="topic" aria-label="Topic">
+          <option value=""${ui.topic ? '' : ' selected'}>All topics</option>
+          ${Object.entries(TOPICS).map(([k, v]) => `<option value="${k}"${ui.topic === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}
+        </select>
       </div>
-      <p id="t-dictionary-hint" class="t-dictionary-hint"><kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear · <kbd>/</kbd> search</p>
       <nav class="t-dictionary-az" aria-label="Browse by letter">${'#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((L) => LETTERS.includes(L)
         ? `<button class="${ui.letter === L ? 'on' : ''}" data-act="lib" data-arg="letter|${L}" aria-pressed="${ui.letter === L}">${L}</button>`
         : `<button disabled aria-hidden="true" tabindex="-1">${L}</button>`).join('')}</nav>
-      <div class="t-dictionary-topics" role="group" aria-label="Topics">${Object.entries(TOPICS).map(([k, v]) =>
-        `<button class="t-dictionary-topic${ui.topic === k ? ' on' : ''}" data-act="lib" data-arg="topic|${k}" aria-pressed="${ui.topic === k}">${esc(v)}</button>`).join('')}</div>
     </div>
     <div class="t-dictionary-cols">
       <div class="t-dictionary-listwrap">
         <p class="t-dictionary-count">${res.length ? `<b class="mono">${res.length}</b> ${res.length === 1 ? 'word' : 'words'}${filtered ? '' : ' in the dictionary'}${res.length > SHOW ? ` — first ${SHOW} shown, pick a letter to see more` : ''}` : `No word matches “${esc(ui.q || '')}”. Try fewer letters.`}</p>
         <ul id="t-dictionary-list" class="t-dictionary-list" role="listbox" aria-label="Words">${list}</ul>
+        <p id="t-dictionary-hint" class="t-dictionary-hint"><kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear · <kbd>/</kbd> search</p>
       </div>
       <div class="t-dictionary-pane">
         ${open ? entryCard(open) : `
@@ -523,6 +526,7 @@ export function act(name, arg, ctx) {
 
 export function key(e, ctx) {
   const ui = ctx.ui;
+  if (e.target && e.target.tagName === 'SELECT') return false;   // the topic picker keeps its own arrow keys
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     act('move', e.key === 'ArrowDown' ? 1 : -1, ctx);
     if (typeof document !== 'undefined') setTimeout(() => { const el = document.querySelector('.t-dictionary-item.sel'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); });
@@ -553,21 +557,21 @@ if (typeof document !== 'undefined') {
 export const CSS = `
 .t-dictionary{display:flex;flex-direction:column;gap:16px}
 .t-dictionary-bar{display:flex;flex-direction:column;gap:10px}
-.t-dictionary-label{font-family:var(--display);font-size:var(--fs-h3);font-weight:650}
+.t-dictionary-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.t-dictionary-row .t-dictionary-search{flex:1 1 260px;min-width:0}
+.t-dictionary-topicpick{flex:0 1 200px;min-width:150px;font:650 var(--fs-label) var(--ui);padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);cursor:pointer}
+.t-dictionary-topicpick:focus-visible{outline:none;border-color:var(--action);box-shadow:var(--focus)}
 .t-dictionary-search{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:var(--r-pill);background:var(--paper);padding:4px 6px 4px 14px}
 .t-dictionary-search:focus-within{border-color:var(--action);box-shadow:var(--focus)}
 .t-dictionary-glass{font-size:20px;color:var(--muted)}
 .t-dictionary-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:500 var(--fs-lead) var(--ui);padding:10px 0;outline:none}
 .t-dictionary-search input:focus,.t-dictionary-search input:focus-visible{outline:none;box-shadow:none}
-.t-dictionary-hint{margin:0;color:var(--muted);font-size:var(--fs-meta)}
+.t-dictionary-hint{margin:8px 0 0;color:var(--muted);font-size:var(--fs-meta)}
 .t-dictionary-hint kbd{font-family:var(--mono)}
 .t-dictionary-az{display:flex;flex-wrap:wrap;gap:3px}
 .t-dictionary-az button{min-width:30px;min-height:32px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font:700 13px var(--mono);cursor:pointer}
 .t-dictionary-az button:disabled{opacity:.3;cursor:default}
 .t-dictionary-az button.on{background:var(--action);color:var(--action-ink);border-color:transparent}
-.t-dictionary-topics{display:flex;flex-wrap:wrap;gap:6px}
-.t-dictionary-topic{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:var(--r-pill);padding:6px 12px;font-weight:650;font-size:var(--fs-label);cursor:pointer;min-height:34px}
-.t-dictionary-topic.on{background:var(--action-tint);border-color:var(--action);color:var(--action)}
 .t-dictionary-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
 .t-dictionary-pane{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px}
 @media (max-width:760px){.t-dictionary-cols{grid-template-columns:1fr}.t-dictionary-pane{order:-1;position:static}}

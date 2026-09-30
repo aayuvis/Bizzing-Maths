@@ -6,14 +6,14 @@ import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
-import { BANDS, AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
+import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
 import { keypad } from './games.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
 import { summary } from './objectives.js';
 import { seeded, int, dayKey } from './rand.js';
-import { themePicker } from './themes.js';
+import { themePicker, THEMES } from './themes.js';
 
 /* ------------------------------------------------------------- helpers */
 
@@ -115,34 +115,51 @@ export function shell(body) {
 
 /* ------------------------------------------------------------- welcome */
 
+/* A new child, one question at a time — Bizzing Finance's onboarding: a
+   landing the first time, then Nova (one of the Bee's ten) asks for a name, an
+   age, a face from five and a world from two. Everything else waits until
+   they are in. Nothing typed here leaves the device. */
+const OB_STEPS = ['name', 'band', 'face', 'world'];
+export const OB_THEMES = ['graph', 'orbit'];
+function guide(text) {
+  return `<div class="ob-say">${av('koi', 72, 'Nova').replace('loading="lazy"', 'loading="eager"')}<p class="bubble2">${text}</p></div>`;
+}
 export function viewWelcome() {
-  const d = R.ui.draft || (R.ui.draft = { name: '', band: '', avatar: AVATARS[0] });
-  const first = !R.h.kids.length;
-  return `<section class="welcome">
-    <div class="wel-hero">
-      ${av('aryabhatta', 132, 'Aryabhata')}
-      <div>
-        <p class="kicker">${first ? 'Welcome to Bizzing Maths' : 'Add a mathematician'}</p>
-        <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
-        <p class="lead">Times tables that stick, mental maths that feels like a magic trick, and the Vedic methods with the reason each one works. For ages 6 to 14.</p>
-      </div>
-    </div>
-    <div class="card form">
+  const d = R.ui.draft || (R.ui.draft = { name: '', band: '', avatar: STARTER_AVATARS[0], step: 0 });
+  const first = !R.h.kids.length, step = d.step || 0;
+  if (first && !d.go) return `<section class="welcome ob-land">
+      <div class="ob-mark">${av('koi', 96, 'Nova')}</div>
+      <p class="kicker">Bizzing Maths</p>
+      <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
+      <p class="lead">For ages 6 to 15+. Ten levels, each one road through painted lands; every trick shown with the reason it works.</p>
+      ${btn('Start →', 'obStart', '', 'primary big')}
+      <div class="ob-stats">${[[TRICKS.length, 'lessons, each with a story'], [WORLDS.length, 'painted places'], [10, 'levels, age 6 to 15+'], [9, 'tools in the Library']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+      <ul class="ob-promise">
+        <li><b>Nothing leaves this device.</b> A first name and an age band — no email, no photo, no tracking.</li>
+        <li><b>No ads, no streaks, no loot.</b> A day off costs nothing.</li>
+        <li><b>Every trick has its reason.</b> A picture, the algebra, and the child doing the working.</li>
+      </ul>
+      <p class="fam">Part of the Bizzing family, with <a href="https://www.bizzingbee.com/">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/">Bizzing India</a> and <a href="https://aayuvis.github.io/bizzingfinance/">Bizzing Finance</a>.</p>
+    </section>`;
+  const dots = `<div class="ob-dots" aria-label="Step ${step + 1} of ${OB_STEPS.length}">${OB_STEPS.map((_, i) => `<i class="${i < step ? 'done' : i === step ? 'on' : ''}"></i>`).join('')}</div>`;
+  const back = step > 0 ? btn('← Back', 'obBack', '', 'small') : !first ? btn('Cancel', 'nav', 'home', 'small') : btn('← Back', 'obLand', '', 'small');
+  let body;
+  if (step === 0) body = `${guide(first ? 'Hello! I am Nova. I will walk the first road with you. What shall I call you?' : 'Another mathematician! What shall I call this one?')}
+    <div class="card ob-card">
       <label class="lab" for="kname">First name or nickname</label>
       <input id="kname" class="inp" data-draft="name" value="${esc(d.name)}" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="e.g. Ahana">
-      <p class="hint">Just a first name. We never ask for a surname, a birthday, a photo or an email — and nothing you type leaves this device.</p>
-      <p class="lab">Age</p>
-      <div class="chips" role="radiogroup" aria-label="Age">
-        ${BANDS.map((b) => `<button class="chip-btn${d.band === b.id ? ' on' : ''}" role="radio" aria-checked="${d.band === b.id}" data-act="draftBand" data-arg="${b.id}"><b>${b.label}</b><span>${b.blurb}</span></button>`).join('')}
-      </div>
-      <p class="lab">Pick a face</p>
-      ${avatarPicker(d.avatar, 'draftAv', 'new')}
-      <div class="row gap end">
-        ${!first ? btn('Cancel', 'nav', 'home') : ''}
-        ${btn("Let's go →", 'createKid', '', 'primary', !d.name.trim() || !d.band ? 'disabled' : '')}
-      </div>
-    </div>
-    <p class="fam">Bizzing Maths is part of the Bizzing family, with <a href="https://www.bizzingbee.com/">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/">Bizzing India</a> and <a href="https://aayuvis.github.io/bizzingfinance/">Bizzing Finance</a>. Two packs of faces are the Bee's own; the other three were painted for this app in the same style.</p>
+      <p class="hint">Just a first name — never a surname, a birthday or a photo.</p>
+      ${btn('Next →', 'obNext', '', 'primary big')}
+    </div>`;
+  else if (step === 1) body = `${guide(`Good to meet you, <b>${esc(d.name)}</b>. How old are you? It decides where your first road starts.`)}
+    <div class="ob-opts">${BANDS.map((b) => `<button class="ob-opt${d.band === b.id ? ' on' : ''}" data-act="draftBand" data-arg="${b.id}"><b>${b.label}</b><span>${b.blurb}</span></button>`).join('')}</div>`;
+  else if (step === 2) body = `${guide('Pick a face to walk the roads with. There are twenty-five more on your page, whenever you want a change.')}
+    <div class="ob-faces" role="radiogroup" aria-label="Pick a face">${STARTER_AVATARS.map((a) => `<button class="ob-face${d.avatar === a ? ' on' : ''}" role="radio" aria-checked="${d.avatar === a}" data-act="draftAv" data-arg="${a}">${av(a, 96, AVATAR_NAME[a] || a).replace('loading="lazy"', 'loading="eager"')}<span>${esc(AVATAR_NAME[a] || a)}</span></button>`).join('')}</div>`;
+  else body = `${guide('Last one. Which world should the app wear? You can swap it — there are four more — on your page any time.')}
+    <div class="ob-worlds">${THEMES.filter((t) => OB_THEMES.includes(t.id)).map((t) => `<button class="ob-world ob-w-${t.id}" data-act="obTheme" data-arg="${t.id}"><span class="ob-sw"><b style="font-family:'${t.display}'">Aa</b><i style="font-family:'${t.mono}'">7 × 8</i></span><b>${esc(t.name)}</b><span>${esc(t.blurb)}</span></button>`).join('')}</div>`;
+  return `<section class="welcome ob">
+    <div class="ob-top">${back}${dots}<span></span></div>
+    ${body}
   </section>`;
 }
 

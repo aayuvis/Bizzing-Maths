@@ -8,7 +8,7 @@ import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
 import { onJourney } from './model.js';
-import { newHousehold, newKid, kid, AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
+import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
@@ -616,14 +616,28 @@ on('quitContest', () => { clearTimeout(timerT); R.contest = null; go('contest');
 on('play', (id) => play(id));
 on('daily', () => daily());
 
-on('draftBand', (b) => { R.ui.draft.band = b; render(); });
-on('draftAv', (a) => { R.ui.draft.avatar = a; render(); });
+/* onboarding: one question per screen (views.js viewWelcome) */
+const draft = () => R.ui.draft || (R.ui.draft = { name: '', band: '', avatar: STARTER_AVATARS[0], step: 0 });
+on('obStart', () => { draft().go = true; sfx.click(); render(); });
+on('obLand', () => { draft().go = false; render(); });
+on('obBack', () => { const d = draft(); d.step = Math.max(0, (d.step || 0) - 1); render(); });
+on('obNext', () => {
+  const d = draft(), el = document.getElementById('kname');
+  if (el) d.name = el.value;
+  if (!String(d.name || '').trim()) { toast('Type a name first'); if (el) el.focus(); return; }
+  d.step = 1; sfx.click(); render();
+});
+on('draftBand', (b) => { const d = draft(); d.band = b; d.step = 2; sfx.click(); render(); });
+on('draftAv', (a) => { const d = draft(); d.avatar = a; if ((d.step || 0) === 2) d.step = 3; sfx.click(); render(); });
+on('obTheme', (t) => { const d = draft(); d.theme = t; fire('createKid'); });
 on('avEdit', () => { R.ui.avEdit = !R.ui.avEdit; render(); });
 on('setAv', (a) => { const k = kid(R.h); if (!k || !AVATARS.includes(a)) return; k.avatar = a; Store.saveNow(R.h); render(); });
 on('createKid', () => {
   const d = R.ui.draft; if (!d || !d.name.trim() || !d.band) return;
   const k = newKid(d.name, d.band, d.avatar);
+  if (d.theme) k.prefs.theme = d.theme;
   R.h.kids.push(k); R.h.active = k.id; R.ui.draft = null;
+  sfx.level(); confetti(40);
   Store.saveNow(R.h);
   go('start');
 });
@@ -827,7 +841,7 @@ root.addEventListener('input', (e) => {
     if (b) b.disabled = !R.ui.draft.name.trim() || !R.ui.draft.band;
   }
 });
-root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'kname') fire('createKid'); });
+root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'kname') fire('obNext'); });
 /* a tool's text inputs (Number Explorer, Show Me the Working, Graphs): the
    value goes into the tool's ui state and the screen re-renders; render()
    restores focus and caret by id, so typing is never interrupted */

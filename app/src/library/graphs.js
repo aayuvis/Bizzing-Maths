@@ -696,10 +696,11 @@ export function key(e, ctx) {
 }
 
 export const CSS = `
-.t-graphs-seg.seg{flex-wrap:nowrap;margin:0 auto 10px}
+.t-graphs-seg.seg{margin:0 auto 10px}
+@media (min-width:761px){.t-graphs-seg.seg{flex-wrap:nowrap}}
 .t-graphs-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:760px){.t-graphs-cols{grid-template-columns:minmax(0,1fr)}}
-.t-graphs-pic{text-align:center}
+.t-graphs-pic{text-align:center;padding-top:12px}
 .t-graphs-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:8px 0}
 .t-graphs-eqlab{display:flex;align-items:center;gap:8px;font-weight:650;flex-wrap:wrap}
 .t-graphs-eq{flex:1;min-width:150px;padding:9px 12px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:700 17px var(--mono)}

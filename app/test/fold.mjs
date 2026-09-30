@@ -52,8 +52,9 @@ const browser = await chromium.launch();
 for (const [vp, tag] of [[{ width: 1000, height: 560 }, 'laptop'], [{ width: 390, height: 844 }, 'phone']]) {
   const page = await browser.newPage({ viewport: vp });
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
-  await page.waitForSelector('#kname');
-  await page.fill('#kname', 'Fold'); await page.click('[data-act=draftBand][data-arg="8-10"]'); await page.click('[data-act=createKid]');
+  await page.click('[data-act=obStart]'); await page.waitForSelector('#kname');
+  await page.fill('#kname', 'Fold'); await page.press('#kname', 'Enter'); await page.click('[data-act=draftBand][data-arg="8-10"]');
+  await page.click('[data-act=draftAv][data-arg="hexbee"]'); await page.click('[data-act=obTheme][data-arg="graph"]');
   await page.waitForSelector('[data-act=startLevel1]'); await page.click('[data-act=startLevel1]');
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; });
   for (const [name, go, sel, see] of SCREENS) {

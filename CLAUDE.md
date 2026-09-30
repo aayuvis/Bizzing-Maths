@@ -76,6 +76,11 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 14. **The journeys cite their history.** Every Vedic and Chinese stone carries `sources` and
     `needsReview: true` until a second reader has checked it; the screen says so.
 
+15. **The thing itself comes first.** Every screen's core — the map, the board, the question,
+    the tool — starts in the top third of a 1000×560 laptop window and a phone, and no page
+    scrolls sideways. `test/fold.mjs` measures it from the live DOM (`npm run check`). A title,
+    a subtitle and a summary card are not content; put explanations below the thing they explain.
+
 ### Art
 
 - **Painted plates, composited characters.** `tools/art/gen.py` paints places only — no
