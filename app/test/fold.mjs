@@ -32,7 +32,7 @@ const SCREENS = [
   ['library', (b) => { b.R.run = null; b.go('library'); }, '.lib-grid'],
   ['tool · explorer', (b) => b.fire('openTool', 'explorer'), '#t-explorer-n'],
   ['tool · working', (b) => b.fire('openTool', 'working'), '#t-working-q'],
-  ['tool · tables', (b) => b.fire('openTool', 'tables'), '.t-tables table, .t-tables svg, .t-tables [data-arg^="cell|"]'],
+  ['tool · tables', (b) => b.fire('openTool', 'tables'), '.t-tables .board-scroll', '.t-tables .bpin.cur'],
   ['tool · shapes', (b) => b.fire('openTool', 'shapes'), '.t-shapes svg'],
   ['tool · graphs', (b) => b.fire('openTool', 'graphs'), '.t-graphs svg'],
   ['tool · dictionary', (b) => b.fire('openTool', 'dictionary'), '#t-dictionary-q'],

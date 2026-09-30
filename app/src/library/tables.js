@@ -19,6 +19,8 @@ export const TOOL = {
   blurb: 'Start with the 5 × 5 square, master it, and watch it grow to 20 × 20 — with a squares trainer inside.',
 };
 
+import { paintedRoad } from '../board.js';
+import { avatarFile } from '../model.js';
 export const LEVELS = [5, 10, 15, 20];
 export const PASS_TENTHS = 9;                 // 9 in every 10
 const RUN = 20;
@@ -408,11 +410,49 @@ function viewSquares(ctx) {
   </div>`;
 }
 
+/* ---------- the road ---------- */
+
+/* The tables as a painted road, like every journey in the app (board.js):
+   for each size, its table and then its squares — 5 × 5, squares to 5², 10 × 10,
+   squares to 10², … 20 × 20, squares to 20². A table stop is passed when that
+   size is mastered; a squares stop when its squares are. Only sizes the child
+   has opened are open. Tap a stop to see it, tap again to go in. */
+function roadStops(ctx) {
+  const d = data(ctx), L = d.level, f = facts(ctx), out = [];
+  for (const n of LEVELS) {
+    const t = tallyLevel(f, n), sq = tallySquares(f, n);
+    out.push({ kind: 'table', n, t, label: `The ${n} × ${n} table`, done: n < L || (n === L && t.mastered && !nextLevel(n)), open: n <= L });
+    out.push({ kind: 'squares', n, t: sq, label: `Squares to ${n}²`, done: meets(sq.good, sq.total), open: n <= L });
+  }
+  return out;
+}
+function roadView(ctx) {
+  const stops = roadStops(ctx), here = stops.findIndex((x) => x.open && !x.done);
+  const sel = ctx.ui.rsel != null && stops[ctx.ui.rsel] ? ctx.ui.rsel : Math.max(0, here);
+  const x = stops[sel], L = data(ctx).level, nx = nextLevel(L);
+  const me = `<img class="av" src="avatars/${esc(avatarFile(ctx.kid && ctx.kid.avatar))}.webp" width="34" height="34" alt="">`;
+  const board = paintedRoad({ img: 'j-tables', here, sel, me, minWidth: 1000, aspect: '1920/640', band: [76, 6, 1.1],
+    stops: stops.map((s, i) => ({ label: s.label, state: s.done ? 'done' : s.open ? 'open' : 'locked', act: 'lib', arg: `rpick|${i}` })) });
+  const need = x.kind === 'table' ? x.t.need : Math.ceil(x.t.total * 0.9);
+  const acts = !x.open ? `<p class="muted">Master the ${LEVELS[LEVELS.indexOf(x.n) - 1]} × ${LEVELS[LEVELS.indexOf(x.n) - 1]} to open it.</p>`
+    : x.kind === 'table' ? `${x.n === L ? `<button class="btn primary big" data-act="lib" data-arg="practise">Practise twenty</button>` : ''}
+        ${x.n === L && x.t.mastered && nx ? `<button class="btn primary" data-act="lib" data-arg="grow">Grow to ${nx} × ${nx}</button>` : ''}
+        <button class="btn" data-act="lib" data-arg="rexplore|${x.n}">Explore the grid</button>`
+    : `<button class="btn primary big" data-act="lib" data-arg="squares">Squares practice</button><button class="btn" data-act="lib" data-arg="tab|squares">See the staircase</button>`;
+  return `<div class="t-tables-road">${board}
+    <div class="card pick t-tables-pick">
+      <div class="pick-t"><p class="kicker">Stop ${sel + 1} of ${stops.length}${x.done ? ' · passed ✓' : ''}</p><h2>${esc(x.label)}</h2>
+        <p class="pick-hook">${x.open ? `<b>${x.t.good} of ${x.t.total}</b> ${x.kind === 'table' ? 'facts' : 'squares'} quick or fluent · ${need} passes it` : 'Not reached yet.'}</p></div>
+      <div class="t-tables-acts">${acts}</div>
+    </div></div>`;
+}
+
 export function view(ctx) {
   data(ctx);
   const tb = tab(ctx);
   const tabs = [['explore', 'Explore'], ['practise', 'Practise'], ['squares', 'Squares']];
   return `<div class="t-tables t-tables-m${tb}">
+    ${roadView(ctx)}
     <div class="t-tables-top">
       <div class="seg t-tables-tabs" role="tablist" aria-label="Mode">${tabs.map(([id, name]) => `<button role="tab" aria-selected="${tb === id}" class="${tb === id ? 'on' : ''}" data-act="lib" data-arg="tab|${id}">${name}</button>`).join('')}</div>
       ${levelChip(ctx)}
@@ -428,6 +468,15 @@ export function act(name, arg, ctx) {
   const d = data(ctx), ui = ctx.ui, L = d.level;
   switch (name) {
     case 'tab': ui.tab = arg; ctx.sfx.click(); return;
+    case 'rpick': {
+      const i = +arg, st = roadStops(ctx)[i]; if (!st) return;
+      if (ui.rsel === i && st.open) {                       // a second tap goes in
+        if (st.kind === 'squares') return act('squares', '', ctx);
+        return st.n === L ? act('practise', '', ctx) : act('rexplore', String(st.n), ctx);
+      }
+      ui.rsel = i; ctx.sfx.click(); return;
+    }
+    case 'rexplore': { const n = +arg; if (LEVELS.includes(n) && n <= L) { ui.size = n; ui.tab = 'explore'; } return; }
     case 'size': { const s = +arg; if (LEVELS.includes(s) && s <= L) { ui.size = s; ui.cur = ui.cur && ui.cur.a <= s && ui.cur.b <= s ? ui.cur : null; } return; }
     case 'lens': ui.lens = ui.lens === arg ? null : arg; return;
     case 'mult': ui.mult = Math.min(showSize(ctx), Math.max(2, +arg || 3)); return;
@@ -504,6 +553,7 @@ export function done(run, ctx) {
 export const CSS = `
 .t-tables .t-tables-head{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .t-tables-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 8px}
+.t-tables-pick{margin-bottom:12px}.t-tables-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .t-tables-lvl{display:flex;align-items:center;gap:10px;flex:1 1 220px;min-width:0;font-size:.9rem}
 .t-tables-lvlt{white-space:nowrap}
 .t-tables-lvl .t-tables-bar{flex:1 1 80px;min-width:60px;max-width:220px}
@@ -516,7 +566,8 @@ export const CSS = `
 .t-tables-side>*{margin:0}
 .t-tables-hint{margin:0}
 @media (min-width:760px){
-.t-tables-mexplore{grid-template-columns:minmax(0,1fr) minmax(280px,340px);grid-template-rows:auto 1fr auto;grid-template-areas:"g t" "g s" "l l";align-items:start}
+.t-tables-mexplore{grid-template-columns:minmax(0,1fr) minmax(280px,340px);grid-template-rows:auto auto 1fr auto;grid-template-areas:"r r" "g t" "g s" "l l";align-items:start}
+.t-tables-mexplore>.t-tables-road{grid-area:r}
 .t-tables-mexplore>.t-tables-top{grid-area:t}.t-tables-mexplore>.t-tables-ex{grid-area:g}.t-tables-mexplore>.t-tables-side{grid-area:s}.t-tables-mexplore>.t-tables-head{grid-area:l}
 .t-tables-mexplore .t-tables-lvl{flex-basis:100%}}
 .t-tables-ladder{display:flex;align-items:center;gap:6px;list-style:none;padding:0;margin:0;flex-wrap:wrap}
@@ -599,6 +650,21 @@ export const CSS = `
 /* ---------- selftest ---------- */
 
 export function selftest(ok, makeCtx) {
+  // the road: eight stops, table then squares for each size; open up to the child's size; passed at mastery
+  {
+    const c = makeCtx('tables', '8-10'), st = roadStops(c);
+    ok(st.length === 8 && st.every((x, i) => x.kind === (i % 2 ? 'squares' : 'table') && x.n === LEVELS[i >> 1]), 'tables road: 5×5, squares to 5², 10×10 … squares to 20², in order');
+    ok(st[0].open && st[1].open && !st[2].open && !st[7].open, 'tables road: only the 5 × 5 and its squares are open at the start');
+    ok(!st[0].done, 'tables road: nothing is passed at the start');
+    const h = view(c);
+    ok(h.includes('art/j-tables.webp') && (h.match(/class="bpin/g) || []).length === 8, 'tables road: a painted board with eight pins');
+    act('rpick', '2', c); ok(c.ui.rsel === 2, 'tables road: a tap selects a stop');
+    act('rpick', '2', c); ok(c.runs.length === 0, 'tables road: a second tap on a shut stop does nothing');
+    act('rpick', '0', c); act('rpick', '0', c); ok(c.runs.length === 1 && c.runs[0].extra.level === 5, 'tables road: a second tap on the open table starts its practice');
+    const c2 = makeCtx('tables', '8-10'); c2.data.level = 10;
+    const st2 = roadStops(c2);
+    ok(st2[0].done && st2[2].open && !st2[2].done && !st2[4].open, 'tables road: at 10 × 10, the 5 × 5 is passed and the 10 × 10 is the open one');
+  }
   const fast = () => F.record(F.blank(), true, 400, '8-10');
   const slowRight = () => F.record(F.blank(), true, 20000, '8-10');
   const trapRec = () => F.record(F.record(F.blank(), true, 400, '8-10'), false, 400, '8-10');
