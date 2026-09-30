@@ -222,9 +222,20 @@ export function grow(ctx) {
 const STATES = ['new', 'learning', 'quick', 'fluent', 'trap'];
 const tab = (ctx) => (['explore', 'practise', 'squares'].includes(ctx.ui.tab) ? ctx.ui.tab : 'explore');
 
-function ladder(ctx) {
+/* The level, as one slim chip for the top row: the grid comes first, the
+   ladder and its rule are explained below it. */
+function levelChip(ctx) {
   const d = data(ctx), L = d.level, t = tallyLevel(facts(ctx), L), nx = nextLevel(L);
   const pct = Math.round((t.good / t.total) * 100);
+  return `<div class="t-tables-lvl">
+    <span class="t-tables-lvlt"><b class="mono">${L} × ${L}</b> · <b>${t.good}/${t.total}</b> quick</span>
+    <span class="t-tables-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${t.total}" aria-valuenow="${t.good}" aria-label="Facts quick or fluent"><i style="width:${pct}%"></i><em style="left:90%" aria-hidden="true"></em></span>
+    ${t.mastered && nx ? `<button class="btn primary small" data-act="lib" data-arg="grow">Grow to ${nx} × ${nx}</button>` : ''}
+  </div>`;
+}
+
+function ladder(ctx) {
+  const d = data(ctx), L = d.level, t = tallyLevel(facts(ctx), L), nx = nextLevel(L);
   const steps = LEVELS.map((n) => {
     const cls = n < L ? 'done' : n === L ? 'now' : 'locked';
     return `<li class="t-tables-step ${cls}"><b class="mono">${n} × ${n}</b><span>${cls === 'done' ? 'Mastered' : cls === 'now' ? 'Now' : 'Locked'}</span></li>`;
@@ -232,12 +243,10 @@ function ladder(ctx) {
   const young = ctx.band === '11-14' && L === 5 && !t.mastered;
   return `<div class="card t-tables-head">
     <ol class="t-tables-ladder" aria-label="Your tables">${steps}</ol>
-    <div class="t-tables-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${t.total}" aria-valuenow="${t.good}" aria-label="Facts quick or fluent"><i style="width:${pct}%"></i><em style="left:90%" aria-hidden="true"></em></div>
     <p class="t-tables-count"><b>${t.good} of ${t.total}</b> facts in your ${L} × ${L} are quick or fluent.
       ${t.mastered ? (nx ? '<b>That is enough to grow!</b>' : '<b>The whole 20 × 20 is yours.</b>') : nx ? `${t.need} opens the ${nx} × ${nx}.` : `${t.need} masters it.`}</p>
     <p class="muted small">The rule: a table is yours when at least 9 in every 10 of its facts are <i>quick</i> or <i>fluent</i> — right, and fast, the last time you met them. The 1s are free — times one changes nothing — so they are not counted.</p>
     ${young ? '<p class="small">You probably know these already. One practice run covers all ten that count — show them, and the 10 × 10 opens straight away.</p>' : ''}
-    ${t.mastered && nx ? `<button class="btn primary big" data-act="lib" data-arg="grow">Grow my table to ${nx} × ${nx}</button>` : ''}
   </div>`;
 }
 
@@ -284,8 +293,8 @@ function viewExplore(ctx) {
   const symCur = cur && cur.a !== cur.b ? cur : n >= 8 ? { a: 7, b: 8 } : { a: 3, b: 4 };
   const arg = { n: mn, cur: symCur };
   const sizes = LEVELS.filter((s) => s <= d.level);
-  let cells = `<div class="t-tables-h t-tables-corner">×</div>`;
-  for (let b = 1; b <= n; b++) cells += `<div class="t-tables-h${cur && cur.b === b ? ' on' : ''}">${b}</div>`;
+  let cells = `<div class="t-tables-h t-tables-hc t-tables-corner">×</div>`;
+  for (let b = 1; b <= n; b++) cells += `<div class="t-tables-h t-tables-hc${cur && cur.b === b ? ' on' : ''}">${b}</div>`;
   for (let a = 1; a <= n; a++) {
     cells += `<div class="t-tables-h${cur && cur.a === a ? ' on' : ''}">${a}</div>`;
     for (let b = 1; b <= n; b++) {
@@ -299,28 +308,29 @@ function viewExplore(ctx) {
     }
   }
   const t = tallyLevel(fx, n);
-  return `<div class="card">
-    <p class="t-tables-purpose"><b>Explore</b> is for looking: tap a square to see its fact as a picture, and switch on a pattern to see why the table is not as big as it looks.</p>
-    ${sizes.length > 1 ? `<div class="seg" role="group" aria-label="Table size">${sizes.map((s) => `<button class="${s === n ? 'on' : ''}" aria-pressed="${s === n}" data-act="lib" data-arg="size|${s}">${s} × ${s}</button>`).join('')}</div>` : ''}
-    <div class="t-tables-lenses" role="group" aria-label="Pattern lenses (keys 1 to 6; 0 turns them off)">
-      ${LENSES.map((l, i) => `<button class="${lens === l ? 'on' : ''}" aria-pressed="${lens === l}" data-act="lib" data-arg="lens|${l.id}"><b class="t-tables-k">${i + 1}</b> ${l.name}</button>`).join('')}
-    </div>
-    ${lens && lens.id === 'mult' ? `<div class="row gap t-tables-mult"><span>Multiples of</span><button class="btn small" data-act="lib" data-arg="mult|${mn - 1}" aria-label="smaller" ${mn <= 2 ? 'disabled' : ''}>−</button><b class="mono">${mn}</b><button class="btn small" data-act="lib" data-arg="mult|${mn + 1}" aria-label="bigger" ${mn >= n ? 'disabled' : ''}>+</button></div>` : ''}
-    ${lens ? `<p class="t-tables-lensay">${esc(lens.say(mn, symCur))}</p>` : ''}
+  return `<div class="card t-tables-ex">
     <div class="t-tables-gwrap t-tables-w${n}"><div class="t-tables-grid t-tables-g${n}" role="grid" aria-label="${n} by ${n} times table" style="--n:${n + 1}">${cells}</div></div>
-    <p class="t-tables-legend">${STATES.map((s) => `<span><i class="t-tables-lg t-tables-${s}"></i>${F.STATE_LABEL[s]} <b>${t[s]}</b></span>`).join('')}<span><i class="t-tables-lg t-tables-freelg"></i>Times one: free</span></p>
-    ${cur ? explain(ctx, cur) : '<p class="muted small">Tap a square — or use the arrow keys and press Enter — to see the fact as a picture. Keys 1–6 switch on a pattern.</p>'}
+  </div>
+  <div class="card t-tables-side">
+      ${sizes.length > 1 ? `<div class="seg" role="group" aria-label="Table size">${sizes.map((s) => `<button class="${s === n ? 'on' : ''}" aria-pressed="${s === n}" data-act="lib" data-arg="size|${s}">${s} × ${s}</button>`).join('')}</div>` : ''}
+      ${cur ? explain(ctx, cur) : '<p class="muted small t-tables-hint">Tap a square — or use the arrow keys and press Enter — to see the fact as a picture. Switch on a pattern (keys 1–6) to see why the table is not as big as it looks.</p>'}
+      <div class="t-tables-lenses" role="group" aria-label="Pattern lenses (keys 1 to 6; 0 turns them off)">
+        ${LENSES.map((l, i) => `<button class="${lens === l ? 'on' : ''}" aria-pressed="${lens === l}" data-act="lib" data-arg="lens|${l.id}"><b class="t-tables-k">${i + 1}</b> ${l.name}</button>`).join('')}
+      </div>
+      ${lens && lens.id === 'mult' ? `<div class="row gap t-tables-mult"><span>Multiples of</span><button class="btn small" data-act="lib" data-arg="mult|${mn - 1}" aria-label="smaller" ${mn <= 2 ? 'disabled' : ''}>−</button><b class="mono">${mn}</b><button class="btn small" data-act="lib" data-arg="mult|${mn + 1}" aria-label="bigger" ${mn >= n ? 'disabled' : ''}>+</button></div>` : ''}
+      ${lens ? `<p class="t-tables-lensay">${esc(lens.say(mn, symCur))}</p>` : ''}
+      <p class="t-tables-legend">${STATES.map((s) => `<span><i class="t-tables-lg t-tables-${s}"></i>${F.STATE_LABEL[s]} <b>${t[s]}</b></span>`).join('')}<span><i class="t-tables-lg t-tables-freelg"></i>Times one: free</span></p>
   </div>`;
 }
 
 function viewPractise(ctx) {
   const d = data(ctx), L = d.level, fx = facts(ctx), t = tallyLevel(fx, L), lv = d.levels[L];
   return `<div class="card">
-    <p class="t-tables-purpose"><b>Practise</b> is for learning: twenty facts from your ${L} × ${L}, picked for you — your traps first, then facts you have not met, the trickiest last.</p>
     <div class="row gap wrap">
       <button class="btn primary big" data-act="lib" data-arg="practise">Start twenty</button>
       ${t.trap ? `<button class="btn big" data-act="lib" data-arg="traps">Just my traps (${t.trap})</button>` : ''}
     </div>
+    <p class="t-tables-purpose muted small">Twenty facts from your ${L} × ${L}, picked for you — your traps first, then facts you have not met, the trickiest last.</p>
     <div class="t-tables-tiles">${['fluent', 'quick', 'learning', 'trap', 'new'].map((s) => `<div class="t-tables-tile t-tables-${s}"><b>${t[s]}</b><span>${F.STATE_LABEL[s]}</span></div>`).join('')}</div>
     <p class="muted small">Quick means right and fast last time. Fluent means still quick after a week. ${lv && lv.runs ? `You have practised this table ${lv.runs} time${lv.runs > 1 ? 's' : ''}.` : ''}</p>
   </div>
@@ -387,11 +397,10 @@ function viewSquares(ctx) {
     chips.push(`<button class="t-tables-sqchip t-tables-${s2}${a === sel ? ' on' : ''}" aria-pressed="${a === sel}" data-act="lib" data-arg="sq|${a}" aria-label="${a} squared, ${F.STATE_LABEL[s2]}">${a}²</button>`);
   }
   return `<div class="card">
-    <p class="t-tables-purpose"><b>Squares</b> is for the numbers times themselves — learn every one up to ${L}² by heart, because they turn up everywhere.</p>
     <div class="row gap wrap t-tables-sqtop">${ring}<div><p><b>${sq.good} of ${sq.total}</b> squares are quick or fluent.</p>
       <button class="btn primary big" data-act="lib" data-arg="squares">Practise the squares (${L - 1})</button></div></div>
     ${staircase(L, sel)}
-    <p class="muted small">Each new step is the one before plus an L-shaped border — and those borders are 1, 3, 5, 7… the odd numbers.</p>
+    <p class="muted small">Learn every square up to ${L}² by heart — they turn up everywhere. Each new step is the one before plus an L-shaped border — and those borders are 1, 3, 5, 7… the odd numbers.</p>
     <div class="t-tables-sqchips" role="group" aria-label="Pick a square (left and right arrows)">${chips.join('')}</div>
     ${card}
     <p class="kicker">In the Atlas</p>
@@ -402,11 +411,14 @@ function viewSquares(ctx) {
 export function view(ctx) {
   data(ctx);
   const tb = tab(ctx);
-  const tabs = [['explore', 'Explore'], ['practise', 'Practise'], ['squares', 'Squares trainer']];
-  return `<div class="t-tables">
-    ${ladder(ctx)}
-    <div class="seg t-tables-tabs" role="tablist" aria-label="Mode">${tabs.map(([id, name]) => `<button role="tab" aria-selected="${tb === id}" class="${tb === id ? 'on' : ''}" data-act="lib" data-arg="tab|${id}">${name}</button>`).join('')}</div>
+  const tabs = [['explore', 'Explore'], ['practise', 'Practise'], ['squares', 'Squares']];
+  return `<div class="t-tables t-tables-m${tb}">
+    <div class="t-tables-top">
+      <div class="seg t-tables-tabs" role="tablist" aria-label="Mode">${tabs.map(([id, name]) => `<button role="tab" aria-selected="${tb === id}" class="${tb === id ? 'on' : ''}" data-act="lib" data-arg="tab|${id}">${name}</button>`).join('')}</div>
+      ${levelChip(ctx)}
+    </div>
     ${tb === 'explore' ? viewExplore(ctx) : tb === 'practise' ? viewPractise(ctx) : viewSquares(ctx)}
+    ${ladder(ctx)}
   </div>`;
 }
 
@@ -490,7 +502,23 @@ export function done(run, ctx) {
 /* ---------- styles ---------- */
 
 export const CSS = `
-.t-tables .t-tables-head{display:flex;flex-direction:column;gap:8px}
+.t-tables .t-tables-head{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.t-tables-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 8px}
+.t-tables-lvl{display:flex;align-items:center;gap:10px;flex:1 1 220px;min-width:0;font-size:.9rem}
+.t-tables-lvlt{white-space:nowrap}
+.t-tables-lvl .t-tables-bar{flex:1 1 80px;min-width:60px;max-width:220px}
+.t-tables-ex{padding:10px 20px 16px}
+.t-tables-mexplore{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.t-tables-mexplore>*{margin:0}
+.t-tables-h.t-tables-hc{aspect-ratio:auto;height:1.7em;align-self:end}
+.t-tables-ex .t-tables-gwrap{margin:0 auto;width:100%}
+.t-tables-side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.t-tables-side>*{margin:0}
+.t-tables-hint{margin:0}
+@media (min-width:760px){
+.t-tables-mexplore{grid-template-columns:minmax(0,1fr) minmax(280px,340px);grid-template-rows:auto 1fr auto;grid-template-areas:"g t" "g s" "l l";align-items:start}
+.t-tables-mexplore>.t-tables-top{grid-area:t}.t-tables-mexplore>.t-tables-ex{grid-area:g}.t-tables-mexplore>.t-tables-side{grid-area:s}.t-tables-mexplore>.t-tables-head{grid-area:l}
+.t-tables-mexplore .t-tables-lvl{flex-basis:100%}}
 .t-tables-ladder{display:flex;align-items:center;gap:6px;list-style:none;padding:0;margin:0;flex-wrap:wrap}
 .t-tables-step{display:flex;flex-direction:column;align-items:center;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);min-width:74px}
 .t-tables-step span{font-size:.72rem;color:var(--muted)}
@@ -498,21 +526,21 @@ export const CSS = `
 .t-tables-step.now{background:var(--action-tint);border-color:var(--action);box-shadow:0 0 0 2px var(--action-tint)}
 .t-tables-step.locked{opacity:.55}
 .t-tables-arrow{color:var(--muted)}
-.t-tables-bar{position:relative;height:14px;border-radius:7px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);overflow:visible}
+.t-tables-bar{position:relative;display:block;height:10px;border-radius:7px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);overflow:visible}
 .t-tables-bar i{display:block;height:100%;border-radius:7px;background:var(--mastered);transition:width .4s}
 .t-tables-bar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 .t-tables-count{margin:0}
-.t-tables-tabs{margin:12px 0}
-.t-tables-purpose{margin:0 0 10px;font-size:1.02rem}
-.t-tables-lenses{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.t-tables-tabs{margin:0}
+.t-tables-purpose{margin:10px 0 0}
+.t-tables-lenses{display:flex;flex-wrap:wrap;gap:6px}
 .t-tables-lenses button{font:inherit;font-weight:650;font-size:.9rem;padding:7px 12px;min-height:38px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .t-tables-lenses button.on{background:var(--action);color:var(--action-ink);border-color:transparent}
 .t-tables-k{display:inline-block;min-width:1.2em;font-size:.72rem;opacity:.7}
 .t-tables-mult{margin:6px 0}
 .t-tables-lensay{background:var(--action-tint);border-radius:10px;padding:8px 12px;margin:6px 0}
 .t-tables-gwrap{container-type:inline-size;max-width:680px;margin:10px auto}
-.t-tables-w5{max-width:400px}
-.t-tables-w10{max-width:560px}
+.t-tables-w5{max-width:min(400px,calc(100svh - 150px))}
+.t-tables-w10{max-width:min(560px,max(400px,calc(100svh - 150px)))}
 .t-tables-grid{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:2px}
 .t-tables-h{display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted);font-size:calc(100cqw / var(--n) * .36);aspect-ratio:1}
 .t-tables-h.on{color:var(--action-ink);background:var(--action);border-radius:4px}

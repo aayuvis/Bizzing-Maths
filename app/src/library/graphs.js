@@ -696,7 +696,7 @@ export function key(e, ctx) {
 }
 
 export const CSS = `
-.t-graphs-seg{flex-wrap:nowrap}
+.t-graphs-seg.seg{flex-wrap:nowrap;margin:0 auto 10px}
 .t-graphs-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:760px){.t-graphs-cols{grid-template-columns:minmax(0,1fr)}}
 .t-graphs-pic{text-align:center}

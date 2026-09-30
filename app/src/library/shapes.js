@@ -169,7 +169,7 @@ function viewProtractor(ctx) {
         ${e.round < 5 ? `<button class="btn primary" data-act="lib" data-arg="enext">Next angle</button>`
           : `<p><b>Five rounds: ${e.stars} stars out of 15.</b> ${ctx.data.estBest ? `Your best: ${ctx.data.estBest}.` : ''}</p><button class="btn primary" data-act="lib" data-arg="enext">Play again</button>`}`;
     }
-    return seg + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${pic}</div><div class="card">${side}</div></div>`;
+    return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${pic}</div><div class="card">${seg}${side}</div></div>`;
   }
   const rd = readProtractor(p.theta, p.base, p.rot);
   let msg = '';
@@ -200,7 +200,7 @@ function viewProtractor(ctx) {
     ${p.shown ? '' : `<div class="row gap t-shapes-row"><input id="t-shapes-pread" class="t-shapes-in" data-lib-input="pread" inputmode="numeric" autocomplete="off" aria-label="What you read, in degrees" placeholder="°" value="${esc(ui.pread || '')}"><button class="btn small" data-act="lib" data-arg="pcheck">Check my reading</button></div>`}
     ${p.msg ? `<p class="t-shapes-note">${esc(p.msg)}</p>` : ''}
     ${msg}`;
-  return seg + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${protractorSVG(p.theta, p.base, p.rot, { label: p.shown && rd.ok ? `${rd.angle}°` : '?' })}</div><div class="card">${side}</div></div>`;
+  return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${protractorSVG(p.theta, p.base, p.rot, { label: p.shown && rd.ok ? `${rd.angle}°` : '?' })}</div><div class="card">${seg}${side}</div></div>`;
 }
 function actProtractor(name, arg, ctx) {
   const p = prot(ctx), ui = ctx.ui, e = ui.e;
@@ -521,7 +521,7 @@ function viewArea(ctx) {
     const sh = `<div class="row gap t-shapes-row">${Object.keys(FSHAPES).map((k) => `<button class="btn small ${k === shape ? 'primary' : ''}" data-act="lib" data-arg="ashape|${k}">${k}</button>`).join('')}</div>`;
     const sliders = dims.map(([k, l, lo, hi], i) => `<label class="t-shapes-slider ${i === sel ? 'sel' : ''}">${l} = <b>${d[k]}</b> cm
       <input type="range" id="t-shapes-f-${shape}-${k}" data-lib-input="f_${shape}_${k}" min="${lo}" max="${hi}" value="${d[k]}" aria-label="${l}"></label>`).join('');
-    return tabs + sh + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${formulaSVG(shape, d)}</div><div class="card">${sliders}
+    return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${formulaSVG(shape, d)}</div><div class="card">${tabs}${sh}${sliders}
       <p class="muted">Drag a slider, or ↑ ↓ to pick one and ← → to change it.</p>
       <div class="t-shapes-formula">${c.work.join('<br>')}</div>${c.pwork ? `<p class="t-shapes-formula">${c.pwork}</p>` : ''}<p>${c.why}</p></div></div>`;
   }
@@ -534,9 +534,9 @@ function viewArea(ctx) {
   const bounds = cellsOf(a.on); let rectTxt = '';
   if (A) { const rs = bounds.map((x) => x[0]), cs = bounds.map((x) => x[1]), h = Math.max(...rs) - Math.min(...rs) + 1, w = Math.max(...cs) - Math.min(...cs) + 1;
     if (w * h === A) rectTxt = `<p>It is a ${w} × ${h} rectangle: area ${w} × ${h} = ${A}, perimeter 2 × (${w} + ${h}) = ${Pm}.</p>`; }
-  return tabs + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${gridSVG(a)}
+  return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${gridSVG(a)}
       <div class="row gap t-shapes-row"><button class="btn small" data-act="lib" data-arg="aclear">Clear</button></div></div>
-    <div class="card"><div class="t-shapes-stats"><div><span class="kicker">Area</span><b>${A}</b><span class="muted">squares</span></div><div><span class="kicker">Perimeter</span><b>${Pm}</b><span class="muted">edges</span></div></div>
+    <div class="card">${tabs}<div class="t-shapes-stats"><div><span class="kicker">Area</span><b>${A}</b><span class="muted">squares</span></div><div><span class="kicker">Perimeter</span><b>${Pm}</b><span class="muted">edges</span></div></div>
       <p class="muted">The perimeter is every edge between a coloured square and a blank one — drawn in red. Holes count too.</p>${rectTxt}
       ${chTxt}${st.msg ? `<p class="t-shapes-note ${st.win ? 'win' : ''}">${st.win ? '✓ ' : ''}${esc(st.msg)}</p>` : ''}
       <div class="row gap t-shapes-row"><button class="btn small ${ch && ch.kind === 'min' ? 'primary' : ''}" data-act="lib" data-arg="ach|min">Smallest edge</button>
@@ -757,10 +757,10 @@ function viewSolids(ctx) {
   const st = sState(ctx), sol = solidById[st.id], d = cdims(ctx.ui), m = sol.make(d), c = counts(m), young = ctx.band === '6-7';
   const pick = `<div class="t-shapes-solids">${SOLIDS.map((x) => `<button class="btn small ${x.id === st.id ? 'primary' : ''}" data-act="lib" data-arg="solid|${x.id}">${x.name}</button>`).join('')}</div>`;
   const vol = d.l * d.w * d.h, sa = 2 * (d.l * d.w + d.l * d.h + d.w * d.h);
-  return pick + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${solidSVG(m, st.yaw)}
+  return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${solidSVG(m, st.yaw)}
       <div class="row gap t-shapes-row"><button class="btn small" data-act="lib" data-arg="yaw|-15" aria-label="Turn left">⟲ Turn</button><button class="btn small" data-act="lib" data-arg="yaw|15" aria-label="Turn right">Turn ⟳</button></div>
       <p class="muted">Dashed edges are round the back. ← → turn it; ↑ ↓ pick another solid.</p></div>
-    <div class="card"><p class="kicker">${esc(sol.name)}</p><table class="t-shapes-facts">
+    <div class="card">${pick}<p class="kicker">${esc(sol.name)}</p><table class="t-shapes-facts">
       <tr><th>Faces F</th><td><b>${c.F}</b> <span class="muted">— ${faceSummary(m)}</span></td></tr>
       <tr><th>Edges E</th><td><b>${c.E}</b> <span class="muted">— where two faces meet</span></td></tr>
       <tr><th>Vertices V</th><td><b>${c.V}</b> <span class="muted">— corners</span></td></tr></table>
@@ -875,7 +875,7 @@ function viewMoves(ctx) {
       <button class="btn primary" data-act="lib" data-arg="mnext">Another one</button>`
       : '<button class="btn primary" data-act="lib" data-arg="mreveal">Show me</button>'}
     <p class="muted">Keys: arrows move the ring, Enter shows, Enter again for the next.</p>`;
-  return seg + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${movesSVG(m)}</div><div class="card">${side}</div></div>`;
+  return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${movesSVG(m)}</div><div class="card">${seg}${side}</div></div>`;
 }
 function actMoves(name, arg, ctx) {
   const m = mState(ctx);
@@ -1203,7 +1203,7 @@ function viewConstruct(ctx) {
     <p class="muted">A compass arc is every point the same distance from its centre. The dashed line shows the opening while you draw.</p>`;
   const why = last ? `<div class="card t-shapes-k-why"><p class="kicker">${res.fail ? 'Why it cannot be built' : 'Why it works'}</p>${res.why.map((w) => `<p>${w}</p>`).join('')}${young ? '' : `<p class="muted">${res.deep}</p>`}</div>` : '';
   const built = Object.keys(ctx.data.built || {}).length;
-  return pick + `<div class="t-shapes-cols"><div class="card t-shapes-pic">${conSVG(res, k.step, con, k)}${ctrl}</div><div class="card">${side}${built ? `<p class="muted">Constructions finished: ${built} of ${conList(ctx.band).length}.</p>` : ''}</div></div>${why}`;
+  return `<div class="t-shapes-cols"><div class="card t-shapes-pic">${conSVG(res, k.step, con, k)}${ctrl}</div><div class="card">${pick}${side}${built ? `<p class="muted">Constructions finished: ${built} of ${conList(ctx.band).length}.</p>` : ''}</div></div>${why}`;
 }
 function actConstruct(name, arg, ctx) {
   const k = kState(ctx), con = conById[k.id];
@@ -1280,7 +1280,10 @@ export function act(name, arg, ctx) {
 export function key(e, ctx) { const f = KEYS[bench(ctx)]; return f ? !!f(e, ctx) : false; }
 
 export const CSS = `
-.t-shapes-seg{flex-wrap:nowrap}
+.t-shapes-seg.seg{flex-wrap:nowrap;margin:0 auto 10px}
+.t-shapes-cols .seg.small{margin:0 auto 10px}
+.t-shapes-cols .card>.t-shapes-row:first-child,.t-shapes-cols .card>.t-shapes-solids:first-child{margin-top:0}
+@media (max-width:760px){.t-shapes-seg.seg{flex-wrap:wrap;gap:2px}.t-shapes-seg.seg button{padding:7px 10px;font-size:.92rem}}
 .t-shapes-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:760px){.t-shapes-cols{grid-template-columns:minmax(0,1fr)}}
 .t-shapes-pic{text-align:center}
