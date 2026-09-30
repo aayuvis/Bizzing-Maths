@@ -13,7 +13,7 @@ export const bandY = (x, b = 80, a = 5, f = 1.2) => b + a * Math.sin((x / 100) *
 /* stops: [{ label, state: 'done' | 'open' | 'locked', act, arg, badge? }]
    here: index of the stop the avatar stands on (or -1); sel: selected index;
    img: art file name (without .webp); me: the avatar's HTML. */
-export function paintedRoad({ img, stops, here = -1, sel = -1, me = '', minWidth = 980, band = [80, 5, 1.2] }) {
+export function paintedRoad({ img, stops, here = -1, sel = -1, me = '', minWidth = 980, band = [80, 5, 1.2], aspect = '1920/815' }) {
   const n = stops.length, xs = stops.map((_, j) => 6 + (88 * j) / Math.max(1, n - 1));
   const y = (x) => bandY(x, ...band);
   let path = ''; for (let x = 0; x <= 100; x += 2) path += `${x ? 'L' : 'M'}${x},${y(x).toFixed(2)} `;
@@ -22,8 +22,8 @@ export function paintedRoad({ img, stops, here = -1, sel = -1, me = '', minWidth
   let wpath = ''; for (let x = 0; x <= to; x += 2) wpath += `${x ? 'L' : 'M'}${x},${y(x).toFixed(2)} `;
   const at = sel >= 0 ? sel : Math.max(0, here);
   return `<div class="board-scroll" data-autoscroll="${xs[at] || 0}">
-    <div class="board" style="min-width:${minWidth}px">
-      <img src="art/${esc(img)}.webp" alt="" width="1920" height="815">
+    <div class="board" style="min-width:${minWidth}px;aspect-ratio:${aspect}">
+      <img src="art/${esc(img)}.webp" alt="" width="1920" height="815" style="object-position:50% 70%">
       <svg class="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
       </svg>

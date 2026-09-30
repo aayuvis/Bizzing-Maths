@@ -885,3 +885,40 @@ div.jcard{cursor:default}
 .t-vedic-lv,.t-chinese-lv{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px}
 .t-vedic-prog .t-vedic-bar,.t-chinese-prog .t-chinese-bar{width:140px;height:8px;border-radius:8px;background:var(--surface2);overflow:hidden;flex:none}
 .t-vedic-prog .t-vedic-bar i,.t-chinese-prog .t-chinese-bar i{display:block;height:100%;background:var(--action);border-radius:8px}
+
+/* ---- above the fold: a page head is one compact row; the thing itself comes first */
+.content{padding-top:14px}
+.phead{margin-bottom:10px;gap:10px}
+.phead-t h1{font-size:clamp(20px,2.4vw,26px)}
+.phead-t p{font-size:14px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62ch}
+@media (max-width:620px){.phead{grid-template-columns:auto 1fr auto;text-align:left;gap:8px}.phead-t{text-align:left}.phead-t p{display:none}.phead-r{justify-self:end}.phead .back{justify-self:start}}
+.case-bar{margin:0 0 10px}
+.case-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.case-chip{flex:none}
+.hook .case-note{margin:0 0 10px;text-align:left;font-size:14px}
+.stop-page .seg{margin-bottom:10px}
+.stop-page .sutra{margin:0 0 8px}
+/* the level road's one slim bar: level chips, where you are, progress */
+.road-bar{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:0 0 10px}
+.road-bar .jladder{display:flex;gap:4px;margin:0}
+.road-bar .jl{width:34px;height:34px;padding:0;border-radius:10px;justify-content:center;flex-direction:row}
+.road-bar .jl b{font-size:15px}.road-bar .jl i{top:-4px;right:-4px;font-size:10px}
+.road-bar .rb-t{margin:0;flex:1;min-width:180px;font-size:15px}
+.road-bar .rb-p{display:flex;align-items:center;gap:8px}.road-bar .rb-p .meter{width:90px;flex:none}
+.atlas-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}.atlas-bar .seg{margin:0}
+@media (max-width:620px){.road-bar .jladder{width:100%;justify-content:space-between}.road-bar .jl{width:30px;height:30px}}
+.t-vedic-head,.t-chinese-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 10px;font-family:var(--display);font-size:18px}
+.t-vedic-prog,.t-chinese-prog{flex-direction:row!important;min-width:0!important;gap:8px!important}
+.t-vedic-prog b,.t-chinese-prog b{font-size:16px!important}
+.stop-page .phead{margin-bottom:6px}
+.stop-page > .seg{margin:0 auto 8px}
+.stop-page .center-card{padding-top:16px}
+.stop-page .center-card .seg{margin:0 auto 10px}
+.jstep-note{margin-bottom:8px;padding:8px 12px}
+@media (max-width:620px){.atlas-bar{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.atlas-bar .seg{flex:none}.atlas-bar .seg button{padding:7px 11px;font-size:13px}}
+.hook .case-bar{margin:-6px -6px 10px;text-align:left}
+.drill-go{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:8px}.drill-go .seg{margin:0}
+.learn > *,.learn .hook{min-width:0}
+/* mid-width windows (a laptop at 1000px): the top bar fits — logo icon only, tighter tabs */
+@media (min-width:761px) and (max-width:1120px){.brand-t{display:none}.tab{padding:8px 11px}.top{gap:10px;padding:10px 14px}}
+.hook .case-note{margin:10px 0 0}

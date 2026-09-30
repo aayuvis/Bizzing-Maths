@@ -654,14 +654,13 @@ function pathView(ctx) {
   const stops = JOURNEY.map((s, i) => ({ label: `Stone ${i + 1}: ${s.title}`, state: isPassed(ctx, i) ? 'done' : isOpen(ctx, i) ? 'open' : 'locked', act: 'lib', arg: `pick|${i}` }));
   const open = isOpen(ctx, sel);
   return `<div class="${P}">
-    <div class="card ${P}-head"><div><p class="kicker">A journey of ${n} stones</p><h2>The Counting-Rod Road</h2><p class="muted">Methods from Chinese mathematical books and the counting board — what each one does, where the sources say it appears, and why it works.</p></div>
-      <div class="${P}-prog"><b class="mono">${walked}/${n}</b><div class="${P}-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${walked}"><i style="width:${Math.round((walked / n) * 100)}%"></i></div><span class="muted small">stones walked</span></div></div>
-    ${d.badge ? `<div class="card ${P}-won">${badge(true)}<div><p class="kicker">Journey complete</p><h3>Counting-Rod Traveller</h3><p>You walked every stone. Any stone can be walked again.</p></div></div>` : ''}
-    ${paintedRoad({ img: 'j-chinese', stops, here: here < n ? here : -1, sel, me: avatarImg(ctx), minWidth: 1280 })}
+    <div class="${P}-head"><b>The Counting-Rod Road</b><span class="${P}-prog"><b class="mono">${walked}/${n}</b><span class="${P}-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${walked}"><i style="width:${Math.round((walked / n) * 100)}%"></i></span><span class="muted small">stones</span></span></div>
+    ${paintedRoad({ img: 'j-chinese', stops, here: here < n ? here : -1, sel, me: avatarImg(ctx), minWidth: 1100, aspect: '1920/620', band: [74, 6, 1.2] })}
     <div class="card pick ${P}-pick">
       <div class="pick-t"><p class="kicker">Stone ${sel + 1} of ${n}${isPassed(ctx, sel) ? ' · walked ✓' : ''}</p><h2>${esc(st.title)}</h2><p class="pick-hook">${esc(st.kicker || '')}</p></div>
       ${open ? `<button class="btn primary big" data-act="lib" data-arg="open|${sel}">${isPassed(ctx, sel) ? 'Walk it again' : 'Step onto the stone'}</button>` : '<p class="muted">Walk the stone before it to open this one.</p>'}
     </div>
+    ${d.badge ? `<div class="card ${P}-won">${badge(true)}<div><p class="kicker">Journey complete</p><h3>Counting-Rod Traveller</h3><p>You walked every stone. Any stone can be walked again.</p></div></div>` : ''}
     <div class="${P}-lv"><span class="muted">Questions:</span><div class="seg">${[1, 2, 3].map((l) => `<button class="${l === lv ? 'on' : ''}" data-act="lib" data-arg="lv|${l}">${LV_NAME[l]}</button>`).join('')}</div></div>
   </div>`;
 }

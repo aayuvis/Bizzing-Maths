@@ -235,6 +235,8 @@ export function viewHome() {
   return `<section class="home2">
     <div class="sky" aria-hidden="true"><img src="art/home-hero.webp" alt="" width="1920" height="815"></div>
 
+    ${journeyCard(k)}
+
     <div class="h-r1">
       <div class="hcard hero">
         <button class="buddy" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${av(k.avatar, 150, '')}</button>
@@ -261,7 +263,6 @@ export function viewHome() {
       </div>
     </div>
 
-    ${journeyCard(k)}
 
     <div class="h-r2">
       ${J.progress(k) ? `<button class="journey" data-act="atlasView" data-arg="islands">
@@ -385,13 +386,14 @@ export function viewStop(id) {
 function learnTab(t) {
   const cs = learnCases(t), ci = Math.min(R.ui.lcase || 0, cs.length - 1), c = cs[ci];
   const q = c.q, steps = t.work(q), shown = R.ui.watch || 0, more = ci < cs.length - 1;
-  const strip = cs.length > 1 ? `<div class="case-bar"><p class="kicker">${cs.length} ideas in this stop · ${ci + 1} of ${cs.length}</p>
+  const strip = cs.length > 1 ? `<div class="case-bar" aria-label="${cs.length} ideas in this stop, ${ci + 1} of ${cs.length}">
       <div class="case-chips" role="tablist">${cs.map((x, i) => `<button role="tab" aria-selected="${i === ci}" class="chip case-chip${i === ci ? ' on' : ''}${i < ci ? ' seen' : ''}" data-act="learnCase" data-arg="${i}"><b>${i + 1}</b> ${esc(x.label)}</button>`).join('')}</div>
-      ${c.note ? `<p class="case-note"><b>${esc(c.label)}.</b> ${esc(c.note)}</p>` : ''}</div>` : '';
+</div>` : '';
+  const note = cs.length > 1 && c.note ? `<p class="case-note"><b>${esc(c.label)}.</b> ${esc(c.note)}</p>` : '';
   const next = more ? btn(`Next: ${esc(cs[ci + 1].label)} →`, 'learnCase', String(ci + 1), 'primary') : btn('Your turn →', 'stopTab', 'turn', 'primary');
   const figure = t.fig ? fig(t.fig(q)) : '';
-  return `${strip}<div class="learn">
-    <div class="card hook"><p class="kicker">Try this</p>${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${q.text === t.q(t.ex).text ? `<p>${esc(t.hook)}</p>` : ''}</div>
+  return `<div class="learn">
+    <div class="card hook">${strip}${note ? '' : '<p class="kicker">Try this</p>'}${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${note}${q.text === t.q(t.ex).text ? `<p>${esc(t.hook)}</p>` : ''}</div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
       <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${next}</p>`}</div>
@@ -428,11 +430,9 @@ function turnTab(t, rec) {
 function drillTab(t, rec, k) {
   const lv = R.ui.level || 1, js = R.ui.jstep && R.ui.jstep.stop === t.id ? R.ui.jstep : null;
   return `${js ? `<p class="jstep-note">🧭 Journey step: pass this drill at <b>${['', 'Warm-up', 'Stretch', 'Champion'][js.lv]}</b>${js.lv > 1 ? ' or harder' : ''} to tick it off.</p>` : ''}<div class="card center-card">
-    <p class="kicker">Drill</p><h2>Ten questions, using the trick</h2>
-    <p>Get seven right to pass this stop and open the next. Nine right, at a good pace, is the third star: fast <i>and</i> fearless. Get one wrong and it shows you the trick on that exact question.</p>
-    ${rec.best ? `<p class="muted">Your best so far: ${rec.best}%.</p>` : ''}
-    <div class="seg small" role="radiogroup" aria-label="Level">${[1, 2, 3].map((l) => `<button role="radio" aria-checked="${lv === l}" class="${lv === l ? 'on' : ''}" data-act="level" data-arg="${l}">${['', 'Warm-up', 'Stretch', 'Champion'][l]}</button>`).join('')}</div>
-    ${btn('Start the drill', 'startDrill', t.id, 'primary big')}
+    <div class="drill-go">${btn('Start the drill — ten questions', 'startDrill', t.id, 'primary big')}
+    <div class="seg small" role="radiogroup" aria-label="Level">${[1, 2, 3].map((l) => `<button role="radio" aria-checked="${lv === l}" class="${lv === l ? 'on' : ''}" data-act="level" data-arg="${l}">${['', 'Warm-up', 'Stretch', 'Champion'][l]}</button>`).join('')}</div></div>
+    <p class="muted small">Seven right passes the stop. Nine right at a good pace is the third star. A wrong answer shows you the trick on that exact question.${rec.best ? ` Your best: ${rec.best}%.` : ''}</p>
     ${!rec.learned ? '<p class="hint">Tip: “Your turn” first, if you have not done the working yourself yet.</p>' : ''}
   </div>`;
 }
@@ -528,7 +528,7 @@ export function viewArcade() {
       <span class="gart ${art}" aria-hidden="true"></span>
       <span class="gtxt"><b>${title}</b><span>${blurb}</span><span class="gmeta">${g(id).best != null ? `Best ${g(id).best} · ` : ''}${keys}</span></span></button>`;
   return `<section>
-    ${pageHead('The Arcade', 'Games that are practice in a costume. Every one works with a keyboard and with touch.')}
+    ${pageHead('The Arcade')}
     <div class="hero-tiles">
       <button class="card hero-t contest-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
       <button class="card hero-t daily-t" data-act="daily"><span class="kicker">Today's puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span>The same puzzle in every house today. Compare notes at breakfast.</span></button>

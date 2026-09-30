@@ -72,10 +72,9 @@ export function viewAtlasMap() {
   const I = ISLANDS[isle - 1];
   const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
-    ${pageHead('The Number Atlas', 'Eighteen places on three islands, each with its own tricks. Tap a place to travel there.', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Story shelf</button><span class="chip gold">★ ${stars}</span>`)}
-    ${atlasSeg(k, 'islands')}
-    <div class="seg isle-seg" role="tablist" aria-label="Island">${ISLANDS.map((x) => `<button role="tab" aria-selected="${x.n === isle}" class="${x.n === isle ? 'on' : ''}" data-act="isle" data-arg="${x.n}">${esc(x.name)}</button>`).join('')}</div>
-    <p class="muted center-t">${esc(I.blurb)}</p>
+    ${pageHead('The Number Atlas', '', '', `<button class="btn small" data-act="nav" data-arg="stories">📖 Stories</button><span class="chip gold">★ ${stars}</span>`)}
+    <div class="atlas-bar">${atlasSeg(k, 'islands')}
+    <div class="seg isle-seg" role="tablist" aria-label="Island">${ISLANDS.map((x) => `<button role="tab" aria-selected="${x.n === isle}" class="${x.n === isle ? 'on' : ''}" data-act="isle" data-arg="${x.n}">${esc(x.name)}</button>`).join('')}</div></div>
     <div class="map-board">
       <img src="art/${I.img}.webp" alt="A painted map of ${esc(I.name)}." width="${I.w}" height="${I.h}">
       <div class="map-amb" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => `<i style="--i:${i}"></i>`).join('')}</div>
@@ -97,6 +96,7 @@ export function viewAtlasMap() {
           <span class="wl-t"><span class="kicker">${w.glyph} ${ts.length} stops · from age ${esc(w.band.split('-')[0])}</span><b>${esc(w.name)}</b><span>${esc(w.blurb)}</span><span class="wl-s">${starRow(Math.round(s2 / Math.max(1, ts.length)))} ${open ? '' : '· not reached yet'}</span></span></button>`;
       }).join('')}
     </div>
+      <p class="muted center-t">${esc(I.blurb)}</p>
   </section>`;
 }
 
@@ -191,7 +191,7 @@ export function storyTab(t) {
 export function viewStories() {
   const k = kid(R.h);
   return `<section>
-    ${pageHead('The Story Shelf', 'Every trick starts as a story. The same ten children from the Bizzing Bee, solving ordinary problems in their heads.', back('nav', 'Map', 'atlas'))}
+    ${pageHead('The Story Shelf', 'A story for every trick.', back('nav', 'Map', 'atlas'))}
     ${WORLDS.map((w) => `<h2 class="sec-h">${w.glyph} ${esc(w.name)}</h2><div class="shelf">${tricksIn(w.id).map((t) => {
       const s = STORIES[t.id]; const read = k.stories && k.stories[t.id];
       return `<button class="book" data-act="openStory" data-arg="${t.id}">
@@ -257,9 +257,7 @@ export function viewTower() {
 export function viewGoals() {
   const k = kid(R.h), gs = goalsFor(k), sm = summary(k);
   return `<section>
-    ${pageHead('What you’re learning', esc(MISSION.line))}
-    <div class="card mission">${MISSION.body.map((p) => `<p>${esc(p)}</p>`).join('')}
-      <p class="mission-n"><b>${sm.met}</b> of <b>${sm.total}</b> goals reached${sm.going ? ` · ${sm.going} on the way` : ''}</p></div>
+    ${pageHead('What you’re learning', esc(MISSION.line), '', `<span class="chip gold">${sm.met} of ${sm.total} goals</span>`)}
     <div class="strands">${gs.map((s) => `<div class="card strand">
       <h2>${s.glyph} ${esc(s.name)}</h2><p class="muted">${esc(s.why)}</p>
       <ul class="goals">${s.goals.map((g) => `<li class="g-${g.status}">
@@ -269,6 +267,8 @@ export function viewGoals() {
         <span class="g-lab">${STATUS[g.status]}</span>
         ${!g.later && !g.met ? `<button class="btn small" data-act="goalGo" data-arg="${g.how}">Work on it</button>` : ''}
       </li>`).join('')}</ul></div>`).join('')}</div>
+      <div class="card mission">${MISSION.body.map((p) => `<p>${esc(p)}</p>`).join('')}
+      <p class="mission-n"><b>${sm.met}</b> of <b>${sm.total}</b> goals reached${sm.going ? ` · ${sm.going} on the way` : ''}</p></div>
   </section>`;
 }
 
@@ -296,7 +296,7 @@ export function viewTool(tool, ctx) {
   try { body = tool.view(ctx); } catch (e) { console.error(e); body = '<div class="card center-card"><p>Something went wrong in this tool.</p></div>'; }
   return `<section class="tool-page tool-${T.id}">
     ${tool.CSS ? `<style>${tool.CSS}</style>` : ''}
-    ${pageHead(esc(T.name), esc(T.blurb), back('nav', 'Library', 'library'))}
+    ${pageHead(esc(T.name), '', back('nav', 'Library', 'library'))}
     ${body}
   </section>`;
 }
@@ -399,20 +399,19 @@ export function viewJourney() {
   const stops = nodes.filter((x) => x.kind === 'stop'), done = stops.filter((x) => x.done).length;
   const ladder = J.LEVELS.map((x) => {
     const st = j.finished.includes(x.n) ? 'fin' : x.n === p.level ? 'now' : x.n < p.level ? 'past' : 'ahead';
-    return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}"><b>${x.n}</b><span>${esc(x.age)}</span>${st === 'fin' ? '<i>✓</i>' : st === 'ahead' ? '<i>🔒</i>' : ''}</button>`;
+    return `<button class="jl ${st}${x.n === show ? ' sel' : ''}" data-act="jlv" data-arg="${x.n}" aria-label="Level ${x.n}, ${esc(J.ageOf(x.n))}" title="Level ${x.n} · ${esc(J.ageOf(x.n))}"><b>${x.n}</b>${st === 'fin' ? '<i>✓</i>' : st === 'ahead' ? '<i>🔒</i>' : ''}</button>`;
   }).join('');
   const b = levelBoard(k, show, mine, nodes);
   return `<section class="journey-page">
-    ${pageHead('The Number Atlas', 'One road for each level. Every land ends at a gate; the summit moves you up.', '', `<button class="btn small" data-act="atlasView" data-arg="islands">🗺️ All 18 places</button>`)}
-    <div class="jladder" role="tablist" aria-label="The ten levels">${ladder}</div>
-    <div class="card jhead">
-      <div><p class="kicker">Level ${show} · ${esc(J.ageOf(show))}${mine ? ' · your road' : show < p.level ? ' · walked — open to revisit' : ' · ahead of you'}</p>
-        <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p></div>
-      <div class="jprog"><b class="mono">${done}/${stops.length}</b><span class="meter"><i style="width:${Math.round(100 * done / Math.max(1, stops.length))}%"></i></span><span class="muted small">stations passed</span></div>
+    <div class="road-bar">
+      <div class="jladder" role="tablist" aria-label="The ten levels">${ladder}</div>
+      <p class="rb-t"><b>Level ${show} · ${esc(L.name)}</b> <span class="muted">${esc(J.ageOf(show))}${mine ? '' : show < p.level ? ' · walked, open to revisit' : ' · ahead of you'}</span></p>
+      <span class="rb-p"><b class="mono">${done}/${stops.length}</b><span class="meter"><i style="width:${Math.round(100 * done / Math.max(1, stops.length))}%"></i></span></span>
+      <button class="btn small" data-act="atlasView" data-arg="islands" title="All 18 places on the islands">🗺️</button>
     </div>
-    ${!mine ? `<p class="muted center">${show < p.level ? `The whole Level ${show} road is open — walk any station again.` : `This road opens when you pass the Level ${show - 1} test.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
     ${b.html}
     ${roadCard(b.placed[b.sel], k, show, mine)}
-    <p class="muted small center">Tap a stop to see it, tap again to go in. 💡 🎭 🧩 — every land hides three secrets.</p>
+    ${!mine ? `<p class="muted center">${show < p.level ? `The whole Level ${show} road is open — walk any station again.` : `This road opens when you pass the Level ${show - 1} test.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
+    <p class="muted small center">${esc(L.blurb)} Tap a stop to see it, tap again to go in. 💡 🎭 🧩 — every land hides three secrets.</p>
   </section>`;
 }
