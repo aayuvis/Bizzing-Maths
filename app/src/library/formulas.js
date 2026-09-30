@@ -1083,8 +1083,9 @@ export const CSS = `
 .t-formulas{display:flex;flex-direction:column;gap:10px}
 .t-formulas .t-formulas-seg{margin:0 auto}
 .t-formulas .t-formulas-seg button{padding:9px 14px}
+@media (max-width:760px){.t-formulas .t-formulas-seg{gap:2px;row-gap:2px}.t-formulas .t-formulas-seg button{padding:6px 10px;font-size:.88rem}.t-formulas-bar{display:none}.t-formulas-thr .t-formulas-th{font-size:1.1rem}}
 .t-formulas-got{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
-.t-formulas-thr{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-top:4px}
+.t-formulas-thr{display:flex;align-items:center;gap:4px 12px;margin-top:4px}
 .t-formulas-got .t-formulas-count{font-size:.9rem;font-weight:700;color:var(--ink);white-space:nowrap}
 .t-formulas-count b{color:var(--treasure-deep)}
 .t-formulas-bar{display:block;width:90px;height:8px;border-radius:var(--r-pill);background:var(--surface2);overflow:hidden}
