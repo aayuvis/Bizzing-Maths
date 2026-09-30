@@ -19,6 +19,8 @@
    selftest() proves the rods, the abacus, the Lo Shu, the triples, the
    remainders and the triangle over whole ranges. */
 
+import { paintedRoad } from '../board.js';
+import { avatarFile } from '../model.js';
 import { int, pick, shuffle } from '../rand.js';
 
 export const TOOL = {
@@ -645,35 +647,25 @@ export function drillItems(st, lv, r = Math.random) {
 }
 
 function pathView(ctx) {
+  // the same painted road as every Atlas board (board.js): a painting, the dotted
+  // road, a pin per stone, the child's avatar on the next one — tap to see, tap again to walk
   const d = rec(ctx), n = JOURNEY.length, here = hereOf(ctx), walked = JOURNEY.filter((_, i) => isPassed(ctx, i)).length;
-  const pos = JOURNEY.map((_, i) => [50 - 30 * Math.sin(i * 1.05), 5 + (i * 90) / (n - 1)]);
-  const curve = (to) => { let p = `M${pos[0][0]},${pos[0][1]}`; for (let i = 1; i <= to; i++) { const [x0, y0] = pos[i - 1], [x1, y1] = pos[i], my = (y0 + y1) / 2; p += ` C${x0},${my} ${x1},${my} ${x1},${y1}`; } return p; };
-  const stones = JOURNEY.map((st, i) => {
-    const cls = isPassed(ctx, i) ? 'done' : i === here ? 'here' : 'locked', [x, y] = pos[i];
-    return `<button class="${P}-stone ${cls}${x < 50 ? ' lab-r' : ' lab-l'}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%" data-act="lib" data-arg="open|${i}" aria-label="Stone ${i + 1}: ${esc(st.title)}${cls === 'done' ? ', walked' : cls === 'locked' ? ', not open yet' : ', you are here'}">
-      <span class="${P}-num">${cls === 'done' ? '✓' : i + 1}</span>${i === here ? `<span class="${P}-you" aria-hidden="true">You</span>` : ''}
-      <span class="${P}-lab"><b>${esc(st.title)}</b><i>${esc(st.kicker)}</i></span></button>`;
-  }).join('');
-  const lv = level(ctx);
+  const sel = ctx.ui.sel != null ? ctx.ui.sel : Math.min(here, n - 1), st = JOURNEY[sel], lv = level(ctx);
+  const stops = JOURNEY.map((s, i) => ({ label: `Stone ${i + 1}: ${s.title}`, state: isPassed(ctx, i) ? 'done' : isOpen(ctx, i) ? 'open' : 'locked', act: 'lib', arg: `pick|${i}` }));
+  const open = isOpen(ctx, sel);
   return `<div class="${P}">
-    <div class="${P}-hero" style="background-image:url(art/lib-chinese.webp)">
-      <div class="${P}-hero-in"><p class="kicker">A journey of ${n} stones</p><h2>The Counting-Rod Road</h2>
-        <p>Methods from Chinese mathematical books and the counting board — what each one does, where the sources say it appears, and why it works.</p>
-        <div class="${P}-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${walked}"><i style="width:${Math.round((walked / n) * 100)}%"></i></div>
-        <p class="${P}-count">${walked} of ${n} stones walked</p></div>
-    </div>
+    <div class="card ${P}-head"><div><p class="kicker">A journey of ${n} stones</p><h2>The Counting-Rod Road</h2><p class="muted">Methods from Chinese mathematical books and the counting board — what each one does, where the sources say it appears, and why it works.</p></div>
+      <div class="${P}-prog"><b class="mono">${walked}/${n}</b><div class="${P}-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${walked}"><i style="width:${Math.round((walked / n) * 100)}%"></i></div><span class="muted small">stones walked</span></div></div>
     ${d.badge ? `<div class="card ${P}-won">${badge(true)}<div><p class="kicker">Journey complete</p><h3>Counting-Rod Traveller</h3><p>You walked every stone. Any stone can be walked again.</p></div></div>` : ''}
-    <div class="${P}-map" style="height:${n * 62}px">
-      <svg class="${P}-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${curve(n - 1)}" class="${P}-t0"/><path d="${curve(Math.min(here, n - 1))}" class="${P}-t1"/></svg>
-      ${stones}
+    ${paintedRoad({ img: 'j-chinese', stops, here: here < n ? here : -1, sel, me: avatarImg(ctx), minWidth: 1280 })}
+    <div class="card pick ${P}-pick">
+      <div class="pick-t"><p class="kicker">Stone ${sel + 1} of ${n}${isPassed(ctx, sel) ? ' · walked ✓' : ''}</p><h2>${esc(st.title)}</h2><p class="pick-hook">${esc(st.kicker || '')}</p></div>
+      ${open ? `<button class="btn primary big" data-act="lib" data-arg="open|${sel}">${isPassed(ctx, sel) ? 'Walk it again' : 'Step onto the stone'}</button>` : '<p class="muted">Walk the stone before it to open this one.</p>'}
     </div>
-    <div class="card ${P}-next">
-      ${here < n ? `<p class="kicker">Next stone · ${here + 1} of ${n}</p><h3>${esc(JOURNEY[here].title)}</h3><p class="muted">${esc(JOURNEY[here].kicker)}</p>
-      <button class="btn primary" data-act="lib" data-arg="open|${here}">Step onto the stone</button>` : `${badge(true)}<p>Every stone walked. Tap any stone to walk it again.</p>`}
-      <div class="${P}-lv"><span class="muted">Questions:</span><div class="seg">${[1, 2, 3].map((l) => `<button class="${l === lv ? 'on' : ''}" data-act="lib" data-arg="lv|${l}">${LV_NAME[l]}</button>`).join('')}</div></div>
-    </div>
+    <div class="${P}-lv"><span class="muted">Questions:</span><div class="seg">${[1, 2, 3].map((l) => `<button class="${l === lv ? 'on' : ''}" data-act="lib" data-arg="lv|${l}">${LV_NAME[l]}</button>`).join('')}</div></div>
   </div>`;
 }
+const avatarImg = (ctx) => `<img class="av" src="avatars/${esc(avatarFile(ctx.kid && ctx.kid.avatar))}.webp" width="34" height="34" alt="">`;
 
 function stepView(ctx, i) {
   const st = JOURNEY[i], d = rec(ctx), np = pages(st), c = Math.max(0, Math.min(np - 1, ctx.ui.card || 0)), lv = level(ctx);
@@ -721,6 +713,7 @@ export function view(ctx) {
 
 export function act(name, arg, ctx) {
   const ui = ctx.ui;
+  if (name === 'pick') { const i = +arg; if (ctx.ui.sel === i && isOpen(ctx, i)) return act('open', arg, ctx); ctx.ui.sel = i; return; }
   if (name === 'open') {
     const i = +arg;
     if (!isOpen(ctx, i)) { ctx.toast('Walk the stones before this one first.'); ctx.sfx.bad(); return; }

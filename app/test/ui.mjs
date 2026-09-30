@@ -282,6 +282,15 @@ async function run(vp, tag) {
   ok(await page.evaluate(() => [...document.querySelectorAll('.t-shapes-seg button')].every((b) => { const r = b.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; })), 'every Shape Studio tab is on screen');
   await page.waitForTimeout(200); await shot('31b-construct');
   ok(/why it/i.test(await page.locator('.t-shapes').innerText()), 'a construction steps through to its reason');
+  // the Library journeys wear the Atlas board: painting, dotted road, pins; tap to see, tap again to walk
+  for (const [tool, n] of [['vedic', 13], ['chinese', 12]]) {
+    await page.evaluate((t) => window.__bzm.fire('openTool', t), tool); await page.waitForSelector(`.t-${tool} .board`);
+    ok(await page.locator(`.t-${tool} .board img[src*="art/j-${tool}"]`).count() === 1 && await page.locator(`.t-${tool} .bpin`).count() === n, `${tool}: a painted board with ${n} stones on the road`);
+    ok(await page.locator(`.t-${tool} .bpin.shut`).count() === n - 1, `${tool}: only the first stone is open`);
+    await page.locator(`.t-${tool} .board-scroll`).scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await shot(`31c-journey-${tool}`);
+  }
+  await page.click('.t-chinese .bpin >> nth=0'); await page.click('.t-chinese .bpin >> nth=0'); await page.waitForTimeout(200);
+  ok(await page.evaluate(() => window.__bzm.R.ui.nav) === 'lib' && !(await page.locator('.t-chinese .board').count()), 'tapping the first stone twice walks onto it');
   await page.evaluate(() => window.__bzm.fire('openTool', 'explorer')); await page.waitForSelector('#t-explorer-n');
   await page.fill('#t-explorer-n', '360'); await page.press('#t-explorer-n', 'Enter'); await page.waitForTimeout(250);
   ok(/2³ × 3² × 5/.test(await page.locator('.t-explorer').innerText()), 'Number Explorer factorises 360');

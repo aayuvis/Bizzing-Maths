@@ -878,3 +878,10 @@ div.jcard{cursor:default}
 .journey-page .jhead{padding:14px 18px;margin-bottom:12px}.journey-page .jhead h2{font-size:22px}.journey-page .jhead p{font-size:14px}
 .journey-page .jprog{flex-direction:row;gap:10px;min-width:0}.journey-page .jprog b{font-size:20px}.journey-page .jprog .meter{width:120px;flex:none}
 @media (max-width:760px){.journey-page .jhead p:not(.kicker){display:none}.journey-page .jladder{gap:4px}.journey-page .jl{padding:5px 2px}}
+/* the Library journeys wear the Atlas board: head card and the level switch sit around it */
+.t-vedic-head,.t-chinese-head{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.t-vedic-prog,.t-chinese-prog{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:140px}
+.t-vedic-prog b,.t-chinese-prog b{font-size:22px}
+.t-vedic-lv,.t-chinese-lv{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px}
+.t-vedic-prog .t-vedic-bar,.t-chinese-prog .t-chinese-bar{width:140px;height:8px;border-radius:8px;background:var(--surface2);overflow:hidden;flex:none}
+.t-vedic-prog .t-vedic-bar i,.t-chinese-prog .t-chinese-bar i{display:block;height:100%;background:var(--action);border-radius:8px}

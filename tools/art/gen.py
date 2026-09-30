@@ -140,6 +140,10 @@ ATLAS3 = ("A storybook fantasy map seen from above at a gentle angle of FOUR sep
           "and on the lower right an island with a little market town of shops with awnings and a small bank with columns. "
           "Every island fully in frame with sea all round it. Open water between them, dotted sea routes connecting them, little sailing boats, NO compass rose. "
           "Painted like the endpapers of a children's book. Absolutely no writing, letters or numbers anywhere.")
+JOURNEYART = {
+    'j-vedic': "A wide panorama of a peaceful courtyard in old India at dawn: a great stone step-well with symmetrical stairs descending to green water, a huge banyan tree with hanging roots, carved sandstone pillars and arches, brass oil lamps glowing, a low wooden desk with a blank slate and a bowl of counting pebbles, marigold garlands, peacocks on a wall, distant temple-free hills. Warm saffron, sandstone gold and leaf green. Absolutely no writing, letters, digits or symbols anywhere.",
+    'j-chinese': "A wide panorama of a calm old Chinese scholar's garden at morning: a round moon gate in a white wall, a curved stone bridge over a lotus pond, bamboo groves, a small pavilion with a wooden suanpan abacus and bundles of bamboo counting rods on a low table, an ink stone and brushes, pine trees and misty mountains beyond. Soft jade, ink grey and vermilion accents. Absolutely no writing, characters, letters, digits or symbols anywhere.",
+}
 JOBS = {}
 for k, v in WORLD.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas'] = (ATLAS + ' ' + STYLE.replace('No people', 'No people'), '16:9')
@@ -151,6 +155,7 @@ HERO = ("A wide, joyful storybook panorama for the top of a children's maths app
 JOBS['home-hero'] = (HERO + ' ' + STYLE + ' Very wide banner.', '21:9')
 for k, v in WORLD2.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas2'] = (ATLAS2 + ' ' + STYLE, '16:9')
+for k, v in JOURNEYART.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 for k, v in WORLD3.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 JOBS['atlas3'] = (ATLAS3 + ' ' + STYLE, '16:9')
 for k, v in SCENE2.items(): JOBS[k] = (v + ' Leave the lower third fairly open and uncluttered, as a stage. ' + STYLE, '16:9')
