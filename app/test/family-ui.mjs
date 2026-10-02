@@ -53,40 +53,30 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.goto(BASE); await p.waitForSelector('.home2');
   await shot('home');
 
-  // Home anatomy: one filled primary, and it is Continue; ≤ 6 ways in; Continue above the fold
-  const prim = await p.$$eval('main .btn.primary', (bs) => bs.filter((b) => b.offsetParent).map((b) => b.closest('#continue') ? 'continue' : b.textContent.trim()));
+  // Home is Bee's (the shell's home()): ONE filled primary, and it is Continue, above the fold; the rest is checkShell's
+  const prim = await p.$$eval('main .bz-btn:not(.out), main .btn.primary', (bs) => bs.filter((b) => b.offsetParent).map((b) => b.closest('[data-bz=next]') ? 'continue' : b.textContent.trim()));
   ok(prim.length === 1 && prim[0] === 'continue', `${tag}: Home has ONE primary button and it is Continue (got ${JSON.stringify(prim)})`);
-  // v2 §6: no grid of "ways in" under Continue — the tabs and ☰ are the ways in
-  ok(await p.locator('.h-r3, .tile2').count() === 0, `${tag}: no extra tiles of ways in on Home`);
-  ok(await p.locator('.h-three > *').count() === 3, `${tag}: Today's three is three`);
-  const cb = await p.$eval('#continue .btn.primary', (b) => b.getBoundingClientRect().bottom);
-  ok(cb <= vp.height, `${tag}: Continue is above the fold (bottom ${Math.round(cb)} of ${vp.height})`);
-  ok(await p.$eval('.home2', (h) => h.querySelector('.nod2[data-card=hour]') && h.querySelector('.nod2').compareDocumentPosition(document.querySelector('#continue')) & Node.DOCUMENT_POSITION_FOLLOWING), `${tag}: the number of the hour comes before Continue, as §6 orders it`);
-  ok(await p.$eval('.hcard', (c) => getComputedStyle(c, '::before').content) === 'none', `${tag}: no decorative "+" badges on the cards`);
-
-  // the family top bar (v2 §3): ⬡ ☰ logo … search · coins · theme · 🔒 · avatar ▾ — on a phone ⬡ ☰ logo … coins · avatar
-  const order = await p.$$eval('header.top > *', (els) => els.filter((e) => e.offsetParent && !e.classList.contains('grow')).map((e) => e.classList.contains('hive') ? 'hive' : e.classList.contains('menu-btn') ? 'menu' : e.classList.contains('brand') ? 'name' : e.classList.contains('search-pill') ? 'search' : e.classList.contains('coin-chip') ? 'coins' : e.classList.contains('mode-btn') ? 'theme' : e.dataset.arg === 'grownups' ? 'grownups' : e.classList.contains('who') ? 'avatar' : e.className));
-  ok(order.join() === (vp.width < 900 ? 'hive,menu,name,coins,avatar' : 'hive,menu,name,search,coins,theme,grownups,avatar'), `${tag}: top bar in the family order (got ${order})`);
-  ok(Math.round(await p.$eval('header.top', (h) => h.getBoundingClientRect().height)) === 56, `${tag}: top bar is 56px`);
-  ok(await p.$eval('header .hive', (a) => a.href) === 'https://aayuvis.github.io/Bizzing_Schedule/', `${tag}: ⬡ goes back to the Hive`);
-
+  ok(await p.locator('.h-r3, .tile2, .h-three').count() === 0, `${tag}: no extra tiles on Home beyond Bee's three rows`);
+  const cb = await p.$eval('[data-bz=continue]', (b) => b.getBoundingClientRect().bottom);
+  ok(cb <= vp.height - (vp.width <= 720 ? 68 : 0), `${tag}: Continue is above the fold (bottom ${Math.round(cb)} of ${vp.height})`);
+  ok(await p.$eval('[data-bz=hive]', (a) => a.href) === 'https://aayuvis.github.io/Bizzing_Schedule/', `${tag}: ⬡ goes back to the Hive`);
   // no overflow at the device width (Chromium widens innerWidth under emulation: measure against the viewport we set)
   ok(await p.evaluate(() => document.documentElement.scrollWidth) <= vp.width, `${tag}: no sideways scroll on Home`);
 
   // the switcher: two children, one tap, nothing mixed
-  await p.click('header .who'); await p.waitForSelector('.sheet'); await p.waitForTimeout(300);
+  await p.click('[data-bz=kid]'); await p.waitForSelector('.sheet'); await p.waitForTimeout(300);
   await shot('sheet');
   ok(await p.locator('.sheet .sk[data-act=switchKid]').count() === 2, `${tag}: the sheet lists both children`);
   await p.evaluate(() => { const k = window.__bzm.R.h.kids[0]; k.xp = 37; k.tricks.zz = { stars: 2 }; });
   await p.click('.sheet .sk[data-arg=kb]'); await p.waitForSelector('.home2');
-  const sw = await p.evaluate(() => { const R = window.__bzm.R, b = R.h.kids.find((k) => k.id === R.h.active); return { active: R.h.active, xp: b.xp, tricks: Object.keys(b.tricks).length, name: document.querySelector('.hname').textContent }; });
+  const sw = await p.evaluate(() => { const R = window.__bzm.R, b = R.h.kids.find((k) => k.id === R.h.active); return { active: R.h.active, xp: b.xp, tricks: Object.keys(b.tricks).length, name: document.querySelector('[data-bz=greet] strong').textContent }; });
   ok(sw.active === 'kb' && sw.xp === 0 && sw.tricks === 0 && sw.name === 'Kabir', `${tag}: switching shows the other child's own record (got ${JSON.stringify(sw)})`);
   ok(await p.locator('.sheet').count() === 0, `${tag}: the sheet closes after switching`);
-  await p.click('header .who'); await p.click('.sheet .sk[data-arg=ka]'); await p.waitForSelector('.home2');
+  await p.click('[data-bz=kid]'); await p.click('.sheet .sk[data-arg=ka]'); await p.waitForSelector('.home2');
 
   // back stays in the app
-  await p.click(vp.width < 760 ? '.tb[data-arg=library]' : '.tab[data-arg=library]'); await p.waitForTimeout(150);
-  await p.click(vp.width < 760 ? '.tb[data-arg=puzzles]' : '.tab[data-arg=puzzles]'); await p.waitForTimeout(150);
+  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/library"]' : '[data-bz=tab][href="#/library"]'); await p.waitForTimeout(150);
+  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/puzzles"]' : '[data-bz=tab][href="#/puzzles"]'); await p.waitForTimeout(150);
   await p.goBack(); await p.waitForTimeout(250);
   ok((await state(p)).nav === 'library' && p.url().startsWith(BASE), `${tag}: back returns to the previous screen inside the app`);
   await p.goBack(); await p.waitForTimeout(250);
@@ -169,9 +159,9 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const real = await p.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)]))));
   await p.goto(BASE + '?demo'); await p.waitForSelector('.home2');
   await shot('home');
-  ok(/Sample/.test(await p.textContent('.demo-bar')) && /Asha/.test(await p.textContent('.hname')), '?demo opens a labelled sample child');
+  ok(/Sample/.test(await p.textContent('.demo-bar')) && /Asha/.test(await p.textContent('[data-bz=greet] strong')), '?demo opens a labelled sample child');
   ok(await p.evaluate(() => Object.keys(window.__bzm.R.h.kids[0].days).length) >= 6, 'the sample has weeks of progress');
-  await p.click('#continue .btn.primary'); await p.waitForTimeout(200);
+  await p.click('[data-bz=continue]'); await p.waitForTimeout(200);
   // things that save at once in a real household: a new face, the sound switch
   await p.evaluate(() => { window.__bzm.fire('setAv', 'rocket'); window.__bzm.fire('sound'); }); await p.waitForTimeout(400);
   for (let i = 0; i < 6; i++) { await p.keyboard.press('Shift'); await p.waitForTimeout(30); }

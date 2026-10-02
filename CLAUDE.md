@@ -83,13 +83,15 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 
 ### The family layer ([FAMILY-STANDARD](https://github.com/aayuvis/Bizzing_Schedule/blob/claude/amazing-knuth-4aemgz/docs/family/FAMILY-STANDARD.md))
 
-16. **The top bar is the family's (standard v2 §3)**: `⬡ Hive · ☰ · Octo + Bizzing Maths … search · coin chip · sun/moon · 🔒 · avatar ▾`,
-    56px; on a phone `⬡ ☰ logo … coins · avatar` and the rest move into ☰. The tab row (Home · Atlas · Library ·
-    Puzzles · Play) sits directly under it on a wide screen and is a 64px bottom bar on a phone. ☰ is the left
-    drawer in the family order. ⬡ hides only inside a timed contest question. `test/standard.mjs` checks it all.
-17. **Home is Bee's template (§6)**: Octo's greeting, the daily ring, the number of the hour, ONE Continue
-    (`continueTarget`, shared with the Hive's `#/continue`) — the only filled button — then Today's three.
-    Continue is wholly above the fold at 390×844. The trick and number of the day live in the Library.
+16. **The chrome IS Bizzing Bee's** — `src/integration/bizzing-shell.js` + `styles/bizzing-shell.css`, copied
+    byte for byte from Bizzing_Schedule: the bar (⬡ ☰ Octo+wordmark … search | coins theme 🔒 avatar ▾), the tab
+    row (Home · Atlas · Library · Puzzles · Play), the phone tab bar and the ☰ drawer in the family order, around
+    EVERY screen (`views.js shell()`, wired once by `bindShell` in main.js). This app passes words, mascot, tabs
+    and `--bz-*` colours only — never geometry. ⬡ hides only inside a timed contest question (`inRun`).
+17. **Home IS Bee's three rows** (`home()`): greeting · daily ring (with "Your level") · number of the hour; the
+    next stop (the ONE filled button, `#/continue`) · a second journey (the mistakes deck when something is due,
+    else the Puzzle Tower); trick of the hour · a fact from the story of numbers; the footer. Nothing else on Home.
+    `test/lib/shell-check.mjs` measures it against Bee at 1280×800 and 390×844, light and dark, and must return [].
 18. **Bizzing coins only through `Family.earn`/`Family.spend`, avatars and worlds only through
     `Family.buyAvatar`/`Family.buyWorld`** (store.js wraps the family's own `src/integration/` files — copy them
     from Bizzing_Schedule, never edit them here; `test/avatars.mjs` compares them byte for byte). Standard events

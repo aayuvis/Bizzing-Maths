@@ -21,7 +21,8 @@ import { MEDALS, medalStates, earnedCount, medalById } from './medals.js';
 import { FRAMES, owns, worn } from './shop.js';
 import { reportCard } from './report.js';
 import { icon, glyph } from './icons.js';
-import { topBar, tabRow, drawer, walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
+import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
+import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
 import * as MD from './mistakes.js';
 import { ownsAvatar, byAvatar } from './avatars.js';
 import { TIERS } from './integration/bizzing-avatars.js';
@@ -76,34 +77,38 @@ const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas'
   shop: null, collection: null, medals: null, settings: null, help: null, mistakes: null, search: null, privacy: null, who: null, start: null, welcome: null };
 export { icon };
 
-/* The family shell (standard v2 §3–§4), the same in every Bizzing app:
-   [⬡ Hive] [☰] [Octo + Bizzing Maths] … [search] [coin chip] [sun/moon] [🔒] [avatar ▾],
-   56px; the tab row directly under it on a wide screen, a bottom bar on a phone. The ⬡
-   hides only inside a timed contest question, where leaving should be a decision. */
+/* The family shell is Bizzing Bee's, as ONE measured drop-in (integration/bizzing-shell.js,
+   copied verbatim): the top bar ⬡ ☰ Octo+wordmark … search | coins theme 🔒 avatar ▾, the tab
+   row, the phone tab bar and the ☰ drawer in the family order. This app passes its words,
+   its mascot, its tabs and its colours (--bz-* tokens in styles/shell.css) — never geometry.
+   Inside a timed contest question ⬡ hides and nothing else moves (inRun). */
 export const HIVE = HIVE3;
+export const BZ_TABS = [
+  { id: 'home', label: 'Home', icon: 'home', href: '#/home' },
+  { id: 'atlas', label: 'Atlas', icon: 'map', href: '#/atlas' },
+  { id: 'library', label: 'Library', icon: 'book', href: '#/library' },
+  { id: 'puzzles', label: 'Puzzles', icon: 'puzzle', href: '#/puzzles' },
+  { id: 'play', label: 'Play', icon: 'play', href: '#/play' },
+];
+const FOOT = `Bizzing Maths · part of the Bizzing family with <a href="https://www.bizzingbee.com/" rel="noopener">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/" rel="noopener">Bizzing India</a>, <a href="https://aayuvis.github.io/bizzingfinance/" rel="noopener">Bizzing Finance</a> and the <a href="${HIVE3}" rel="noopener">Hive</a> · No ads, no tracking, nothing leaves this device. <a href="#/privacy">Privacy</a>`;
 export function shell(body) {
   const h = R.h, k = kid(h);
   const nav = NAV_OF[R.ui.nav] !== undefined ? NAV_OF[R.ui.nav] : R.ui.nav;
   const timed = R.ui.nav === 'contest' && R.contest && (R.contest.phase === 'ask' || R.contest.phase === 'champ');
-  return `
-  <a class="skip" href="#main">Skip to the content</a>
-  ${topBar(k, { timed, av: k ? mine(k, 34, '') : '' })}
-  ${k ? tabRow(nav, 'tabs', 'Main') : ''}
-  ${R.fromHive && !timed ? `<a class="hive-chip" href="${HIVE}">← back to my day</a>` : ''}
-  ${k && k.sample ? demoBar(k) : ''}
-  ${h.parent.tester ? '<div class="tester" role="note">TESTER MODE — every stop is open. Nothing about the child changes. <button data-act="testerOff">Turn off</button></div>' : ''}
-  ${R.ui.drawer ? drawer(k) : ''}
-  ${k && R.ui.sheet ? kidSheet(h, k) : ''}
-  ${k && R.ui.wallet ? walletSheet(k) : ''}
-  ${k && R.ui.cels && R.ui.cels.length ? celebration() : ''}
-  <main id="main" class="content" tabindex="-1">${body}</main>
-  ${k ? tabRow(nav, 'tabbar', 'Main') : ''}
-  <footer class="foot">Bizzing Maths · part of the Bizzing family with
-    <a href="https://www.bizzingbee.com/" rel="noopener">Bizzing Bee</a>,
-    <a href="https://aayuvis.github.io/bizzingindia.com/" rel="noopener">Bizzing India</a>,
-    <a href="https://aayuvis.github.io/bizzingfinance/" rel="noopener">Bizzing Finance</a> and the
-    <a href="${HIVE}" rel="noopener">Hive</a>
-    · No ads, no tracking, nothing leaves this device. <button class="linkish" data-act="nav" data-arg="privacy">Privacy</button></footer>`;
+  const p = k ? J.progress(k) : null;
+  const top = `${R.fromHive && !timed ? `<a class="hive-chip" href="${HIVE}">← back to my day</a>` : ''}${k && k.sample ? demoBar(k) : ''}${h.parent.tester ? '<div class="tester" role="note">TESTER MODE — every stop is open. Nothing about the child changes. <button data-act="testerOff">Turn off</button></div>' : ''}`;
+  return `<a class="skip" href="#main">Skip to the content</a>` + bzShell({
+    app: 'maths', name: 'Maths', mascot: 'mascot/octo-head.webp', tabs: BZ_TABS, active: nav,
+    coins: k ? Family.balance(k.name) : 0, dark: document.documentElement.getAttribute('data-mode') === 'dark',
+    kid: k ? { name: k.name, avatar: `avatars/${avatarFile(k.avatar)}.webp` } : null,
+    search: 'Search stops, stories, words', query: R.ui.nav === 'search' ? R.ui.q || '' : '', inRun: timed,
+    drawer: { sub: k ? (p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rankOf(k.xp).n}`) : '',
+      app: [{ icon: 'flag', label: 'My mistakes', sub: 'questions that come back after a gap', href: '#/mistakes' },
+        { icon: 'learn', label: 'What I’m learning', sub: 'every goal, measured from what you did', href: '#/goals' },
+        { icon: 'book', label: 'The Story Shelf', sub: 'a story for every trick', href: '#/stories' },
+        { icon: 'medal', label: 'Mock contest', sub: 'you and ten rivals', href: '#/contest' }] },
+    content: top + body + (R.ui.nav === 'home' && k ? '' : `<footer class="foot">${FOOT}</footer>`),
+  }) + `${k && R.ui.sheet ? kidSheet(h, k) : ''}${k && R.ui.wallet ? walletSheet(k) : ''}${k && R.ui.cels && R.ui.cels.length ? celebration() : ''}`;
 }
 
 /* ?demo and ?demo=try: a labelled sample, held in memory only (store.js DEMO). */
@@ -277,7 +282,6 @@ function continueCard(k) {
 export function viewHome() {
   const k = kid(R.h), d = dayKey(), today = k.days[d] || { q: 0, ok: 0 };
   const puzzleDone = k.daily[d] && k.daily[d].puzzle;
-  const t = tally(k.facts, k.prefs.op);
   const stopsToday = (k.dayStops || {})[d] || 0;
   const tg = (k.prefs && k.prefs.targets) || { answers: 20, stops: 1, puzzle: 1 };
   const parts = [
@@ -285,47 +289,36 @@ export function viewHome() {
     { n: 'Stops passed', s: 'Stops', v: stopsToday, goal: tg.stops || 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
     ...(tg.puzzle ? [{ n: 'Today’s puzzle', s: 'Puzzle', v: puzzleDone ? 1 : 0, goal: 1, col: '#178A4C', tint: 'rgb(23 138 76 / .15)' }] : []),
   ];
-  const p = J.progress(k), story = p && p.next ? p.next.t : TRICKS[0];
-  const nh = numberOfHour();
-  const mk = MD.count(k);
+  const c = continueTarget(k), p = c.p, nh = numberOfHour(), mk = MD.count(k), rk = rankOf(k.xp);
   const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
   const happy = k.last && ['stars', 'land', 'level', 'floor', 'stop'].includes(k.last.what);
+  const plain = (html) => String(html).replace(/<[^>]+>/g, '');
+  const tip = trickOfHour(k), fact = RANKS[Math.floor(seeded('fact:' + dayKey() + new Date().getHours())() * RANKS.length)];
+  /* Bee's home, three rows (standard §6): greeting · daily ring · number of the hour; the next
+     stop (the ONE filled button) beside a second journey; a tip and a fact from the story of
+     numbers. The world's painting lies behind it all. */
   return `<section class="home2">
     ${worldStage(themeOfKid(k), 'home-stage')}
-    <div class="h-grid">
-      <div class="hcard greet" data-card="greeting">
-        ${octo(happy ? 'cheer' : 'wave', 112, 'greet-octo', '')}
-        <div class="greet-t">
-          <span class="hi">${greet()}, <b class="hname">${esc(k.name)}</b></span>
-          <p class="bubble2">${lastLine(k)}</p>
-        </div>
-        <button class="buddy" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${mine(k, 64, '')}</button>
-      </div>
-      <div class="hcard today" data-card="ring">
-        ${ring(parts)}
-        <div class="today-t">
-          <b class="ct">Today’s ring</b>
-          <ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul>
-          <p class="muted small">Nothing expires. A day off costs nothing.</p>
-        </div>
-      </div>
-      <div class="hcard nod2" data-card="hour">
-        <span class="kick gold">Number of the hour</span>
-        <div class="nod-row">${icon('hash', 22, 'ico nod-ico')}<b class="nod-n mono">${nh.n}</b></div>
-        <ul>${nh.facts.slice(0, 2).map((f) => `<li>${f}</li>`).join('')}</ul>
-      </div>
-      <div class="h-cont" data-card="continue">
-        ${continueCard(k)}
-        ${mk.due ? `<div class="hcard jcard2"><span class="kick">${icon('retry', 16)} My mistakes</span><b>${mk.due} ready to try again</b><span class="muted small">They come back after a gap — that is how they stick.</span><button class="btn" data-act="nav" data-arg="mistakes">Look again</button></div>`
-          : `<div class="hcard jcard2"><span class="kick">${icon('puzzle', 16)} The Puzzle Tower</span><b>Floor ${Math.min(12, floors + 1)} of 12</b><span class="muted small">${floors} cleared · thinking puzzles</span><button class="btn" data-act="nav" data-arg="puzzles">Climb</button></div>`}
-      </div>
-      <div class="h-three" role="group" aria-label="Today’s three" data-card="three">
-        <button class="t3" data-act="startFacts" data-arg="${k.prefs.op}"><span class="ti" style="--c:#2D5BD8">${icon('bolt', 24)}</span><span><span class="kick">5 minutes</span><b>Twenty facts</b><span class="muted small">${OP_NAME[k.prefs.op]} · ${t.fluent} fluent${t.trap ? ` · ${t.trap} to fix` : ''}</span></span></button>
-        <button class="t3" data-act="daily"><span class="ti" style="--c:#E0673A">${icon('target', 24)}</span><span><span class="kick">Today’s challenge</span><b>${puzzleDone ? 'Solved' : 'Make the target'}</b><span class="muted small">Same puzzle in every house</span></span></button>
-        <button class="t3" data-act="openStop" data-arg="${story.id}"><span class="ti" style="--c:#178A4C">${icon('book', 24)}</span><span><span class="kick">A story</span><b>${esc(story.title)}</b><span class="muted small">Every trick starts as a story</span></span></button>
-      </div>
-    </div>
+    ${bzHome({
+      greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(lastLine(k)) },
+      ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
+        foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: '#/me' } },
+      hour: { kicker: 'Number of the hour', title: String(nh.n), sub: plain(nh.facts[0] || ''), icon: 'clock', href: '#/library' },
+      next: { plate: c.world ? `art/w-${c.world}.webp` : 'art/atlas.webp', icon: 'path', chip: p ? `stop ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'ten levels',
+        kicker: p ? `Next on your journey · Level ${p.level} · ${p.age}` : 'Ten levels · maths age 6 to 15+', title: c.title, sub: p ? p.L.name : 'A few questions find where your road starts.',
+        href: '#/continue', cta: c.label, progress: p ? { pct: Math.round(100 * p.done / p.total), label: `${p.done} of ${p.total} stops on this road` } : null },
+      second: mk.due ? { plate: 'art/lib-working.webp', icon: 'flag', chip: `${mk.due} ready`, kicker: 'My mistakes', title: `${mk.due} to try again`, sub: 'They come back after a gap — that is how they stick.', href: '#/mistakes', cta: 'Look again', ctaIcon: 'pen', progress: null }
+        : { plate: 'art/q-tower.webp', icon: 'puzzle', chip: `floor ${Math.min(12, floors + 1)} of 12`, kicker: 'Your puzzle journey', title: 'The Puzzle Tower', sub: 'Twelve floors of thinking puzzles — the kind contests are made of.', href: '#/puzzles', cta: 'Climb', ctaIcon: 'puzzle', progress: { pct: Math.round(100 * floors / 12), label: `${floors} of 12 floors cleared` } },
+      tip: { kicker: 'Trick of the hour', text: `${tip.title}: ${tip.idea}`, href: `#/stop/${tip.id}` },
+      quote: { kicker: 'From the story of numbers', text: fact.why, who: '', href: '#/me' },
+      foot: FOOT,
+    })}
   </section>`;
+}
+function trickOfHour(k) {
+  const learned = TRICKS.filter((t) => (k.tricks[t.id] || {}).stars);
+  const pool = learned.length ? learned : TRICKS.slice(0, 3);
+  return pool[Math.floor(seeded('toh:' + dayKey() + new Date().getHours())() * pool.length)];
 }
 
 /* The number of the HOUR (standard §6 card 3): the same number in every house this hour. */
@@ -561,6 +554,7 @@ export function viewArcade() {
     ${pageHead('Play')}
     <div class="hero-tiles">
       <button class="card hero-t contest-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
+      <button class="card hero-t facts-t" data-act="startFacts" data-arg="${k.prefs.op}"><span class="kicker">5 minutes</span><b>Twenty facts</b><span>Picked for you: your traps first, then what is due, then a few new ones.</span></button>
       <button class="card hero-t daily-t" data-act="daily"><span class="kicker">Today's puzzle</span><b>${puzzleDone ? 'Solved' : 'Make the target'}</b><span>The same puzzle in every house today. Compare notes at breakfast.</span></button>
     </div>
     <div class="gtiles">

@@ -42,7 +42,7 @@ export const bandRank = (b) => BANDS.findIndex((x) => x.id === b);
    once their world is open, and a Legendary first asks for its learning milestone. No
    draws, no chance. A new child picks a Common (onboarding shows six). */
 import { CATALOGUE, PACKS, AVATAR_IDS, COMMONS, byAvatar } from './avatars.js';
-export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'rocket', 'beaker', 'ladybird'];
+export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'phasefox', 'thermobear', 'ladybird'];
 export const AVATARS = AVATAR_IDS;
 export const AVATAR_PACKS = PACKS.map((p) => ({ ...p, avatars: CATALOGUE.filter((a) => a.pack === p.n).map((a) => a.id) }));
 export const AVATAR_NAME = Object.fromEntries(CATALOGUE.map((a) => [a.id, a.name]));
@@ -50,7 +50,9 @@ export const AVATAR_NAME = Object.fromEntries(CATALOGUE.map((a) => [a.id, a.name
    ceremony elder), and the first picker's animals, so a child who chose one long ago still
    sees themself. av() draws anything else as the first Common. */
 export const AVATAR_KEPT = ['pixel', 'koi', 'panda', 'melody', 'samurai', 'goldlegend', 'aryabhatta',
-  'redpanda', 'neko', 'pengu', 'froggy', 'capy', 'ottie', 'snowfox', 'bizzy'];
+  'redpanda', 'neko', 'pengu', 'froggy', 'capy', 'ottie', 'snowfox', 'bizzy',
+  // Bizzing Bee's cosmos and lab faces, out of this app's 96 (they are Bee's): a child who wears one still sees it
+  'rocket', 'astro', 'comet', 'luna', 'saturn', 'supernova', 'beaker', 'atom', 'magnet', 'scopey', 'robo', 'brainiac'];
 const AVATAR_FILES = new Set([...AVATARS, ...AVATAR_KEPT]);
 export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : COMMONS[0]);
 export { byAvatar };

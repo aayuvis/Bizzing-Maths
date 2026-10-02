@@ -404,6 +404,23 @@ AVATAR2 = {
     'glitchgecko': "A gecko whose body has offset colour stripes like a friendly screen glitch, cyan and lime, a curled tail.",
 }
 for k, v in AVATAR2.items(): JOBS['av-' + k] = (v + ' ' + AV2_STYLE, '1:1')
+# Two packs that replace the faces borrowed from Bizzing Bee (Star Crew, Lab Friends): no face may be
+# in two apps' 96 (standard §8), so world 4 gets Sky Counters and Measure Lab, painted here.
+AVATAR3 = {
+    'phasefox':     "A fox whose big fluffy tail is marked with the phases of the moon in a row along it — a full moon, a half moon and a crescent — silver and midnight blue fur, a small star on its forehead.",
+    'rocketrabbit': "A bunny riding inside a little rocket built from simple solids: a CYLINDER body, a CONE nose and three triangular fins, cream and red, a tiny puff of cloud below.",
+    'stardeer':     "A young deer whose antlers are a CONSTELLATION: small bright dots joined by thin straight lines, soft lavender coat with tiny star freckles.",
+    'slothsat':     "A smiling sloth hanging by its arms from a small SATELLITE with two rectangular grid-panel wings, soft brown fur.",
+    'ringturtle':   "A turtle whose round shell is a little ringed PLANET with a tilted ring around it, banded in cream and apricot, a green turtle head and stubby legs.",
+    'galaxysnail':  "A snail whose shell is a SPIRAL GALAXY, arms of glowing stars curling inward to a bright golden centre, a deep violet body with glowing antennae.",
+    'thermobear':   "A polar bear cub holding a tall THERMOMETER marked with ONLY plain tick lines (no numerals), the red line half way up, a woolly blue scarf.",
+    'jugmouse':     "A mouse sitting in a clear glass MEASURING JUG with a spout and a handle and NO markings at all on the glass, the jug half full of blue water, round ears.",
+    'tapesnail':    "A snail whose shell is a coiled yellow TAPE MEASURE marked with ONLY plain tick lines (no numerals), the tape's end pulled out a little.",
+    'levellizard':  "A lizard lying along a SPIRIT LEVEL tool, a long green bar with a small window holding a bubble exactly in the middle, orange and green scales.",
+    'pendulumpanda':"A panda cub swinging happily on a PENDULUM: a straight rod with a round brass bob, hanging from a little wooden frame.",
+    'fractaldragon':"A friendly small dragon whose wings are FRACTAL snowflake shapes, edges made of smaller and smaller triangles, icy blue and silver body, no teeth showing.",
+}
+for k, v in AVATAR3.items(): JOBS['av-' + k] = (v + ' ' + AV2_STYLE, '1:1')
 
 # Six worlds: a painted day plate and, from it, a painted night. Places only: no people, no lettering.
 MW = {

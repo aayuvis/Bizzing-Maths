@@ -32,6 +32,7 @@ import { music } from './ui.js';
 import { setSayRate } from './voice.js';
 import { byAvatar, avatarCtx, ownsAvatar } from './avatars.js';
 import { makeCert } from './cert.js';
+import { bindShell } from './integration/bizzing-shell.js';
 
 const root = document.getElementById('app');
 
@@ -234,7 +235,6 @@ function render() {
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
   syncMusic();
-  if (R.ui.drawer && !root.querySelector('.drawer').contains(document.activeElement)) { const b = root.querySelector('.drawer .dr-x'); if (b) b.focus(); }
   if (R.ui.cels.length) { const b = root.querySelector('.cel .btn'); if (b && document.activeElement !== b) b.focus(); }
   // a world board opens scrolled to the stop you are standing on (phones pan it)
   const sc = root.querySelector('.board-scroll[data-autoscroll]');
@@ -816,13 +816,10 @@ on('buyWorld', (n) => {
   render();
 });
 on('shopTab', (t) => { R.ui.shopTab = ['avatars', 'worlds', 'extras'].includes(t) ? t : 'avatars'; render(); });
-on('drawer', () => {
-  R.ui.drawer = !R.ui.drawer; R.ui.sheet = false; R.ui.wallet = false; render();
-  if (!R.ui.drawer) { const b = root.querySelector('.menu-btn'); if (b) b.focus(); }
-});
+
 on('wallet', () => {
   R.ui.wallet = !R.ui.wallet; R.ui.drawer = false; R.ui.sheet = false; render();
-  const b = root.querySelector(R.ui.wallet ? '.wallet .tool' : '.coin-chip'); if (b) b.focus();
+  const b = root.querySelector(R.ui.wallet ? '.wallet .tool' : '[data-bz=coins]'); if (b) b.focus();
 });
 on('setDev', (key) => {
   if (!['sfx', 'music', 'motion', 'calm'].includes(key)) return;
@@ -948,7 +945,7 @@ on('mode', () => {
 });
 /* hold the sun/moon for the world picker (standard §3) */
 let lpT = 0;
-root.addEventListener('pointerdown', (e) => { if (!e.target.closest || !e.target.closest('.mode-btn')) return; clearTimeout(lpT); lpT = setTimeout(() => { R.longPressed = true; go('settings'); const el = document.querySelector('.theme-card[aria-checked="true"]'); if (el) el.focus(); }, 550); });
+root.addEventListener('pointerdown', (e) => { if (!e.target.closest || !e.target.closest('[data-bz=theme]')) return; clearTimeout(lpT); lpT = setTimeout(() => { R.longPressed = true; go('settings'); const el = document.querySelector('.theme-card[aria-checked="true"]'); if (el) el.focus(); }, 550); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => root.addEventListener(ev, () => clearTimeout(lpT)));
 /* themes belong to the child: chosen on their page, applied at once */
 on('theme', (id) => {
@@ -1040,13 +1037,9 @@ function avKey(e) {
 }
 addEventListener('keydown', (e) => {
   if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
-  // the ☰ drawer and the wallet are dialogs: Esc closes them, Tab stays inside the drawer (standard §3)
-  if (e.key === 'Escape' && (R.ui.drawer || R.ui.wallet)) { e.preventDefault(); return fire(R.ui.drawer ? 'drawer' : 'wallet'); }
-  if (e.key === 'Tab' && R.ui.drawer) {
-    const f = [...root.querySelectorAll('.drawer button, .drawer a')].filter((x) => x.offsetParent);
-    if (f.length) { const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f.at(-1).focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } else if (i < 0) { e.preventDefault(); f[0].focus(); } }
-    return;
-  }
+  // the ☰ drawer is the shell's own (bindShell: Esc, focus, Tab); the wallet is ours
+  { const d = document.querySelector('[data-bz=drawer]'); if (d && !d.hidden) return; }
+  if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }
   if (avKey(e)) return;
   if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
@@ -1132,6 +1125,11 @@ root.addEventListener('input', (e) => {
 });
 
 bindRoot(root);
+/* Bee's chrome: one delegated binding for ☰ (open, Esc, focus back), and the bar's buttons */
+bindShell({
+  onTheme: () => fire('mode'), onLock: () => go('grownups'), onKid: () => fire('sheet'), onCoins: () => fire('wallet'), onSound: () => fire('sound'),
+  onSearch: (q) => { R.ui.q = q; R.ui.more = null; go('search'); if (q.length > 1) searchMore(q).then((m) => { if (R.ui.q === q && R.ui.nav === 'search') { R.ui.more = m; render(); } }).catch(() => {}); },
+});
 
 /* ------------------------------------------------------------- start */
 

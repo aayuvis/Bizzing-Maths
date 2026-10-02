@@ -365,7 +365,7 @@ function levelBoard(k, show, mine, nodes) {
       <div class="land-tag${L.open || tester ? '' : ' shut'}" style="left:calc(${pct(li * PANEL)}% + 12px)"><b>${L.recap ? icon('retry', 14) : li + 1 - (lands[0].recap ? 1 : 0)}</b><span>${esc(L.land.name)}<small>${done}/${all} stops${em ? ' · fully explored' : ''}</small></span></div>${secrets}`;
   }).join('');
   return { html: `<div class="board-scroll" data-autoscroll="${pct(placed[sel] ? placed[sel].px : 0)}">
-      <div class="board lboard" style="min-width:${lands.length * 980}px;aspect-ratio:${lands.length * 1920}/815">
+      <div class="board lboard" style="min-width:calc(${lands.length} * var(--land-w, 980px));aspect-ratio:${lands.length * 1920}/815">
         ${panels}
         <svg class="road" viewBox="0 0 ${W} 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}

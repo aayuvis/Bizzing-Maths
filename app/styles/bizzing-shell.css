@@ -1,0 +1,175 @@
+/* bizzing-shell.css — Bizzing Bee's top bar, tab row, ☰ drawer, phone tab bar and home grid,
+   measured from Bee's live DOM (2 Oct 2026, 1280×800 and 390×844) so every Bizzing app has the
+   SAME chrome in the same place, behaving the same way (FAMILY-STANDARD §3, §4, §6).
+
+   An app sets its colours on :root (or html[data-bz-dark] for night); it never restyles the
+   geometry. integration/shell-check.mjs measures an app against Bee and fails on drift. */
+
+:root {
+  --bz-accent: #6C4FE0;          /* the app's brand colour: active tab, primary button */
+  --bz-accent-ink: #fff;
+  --bz-ink: rgb(36, 30, 51);
+  --bz-muted: rgb(106, 100, 120);
+  --bz-line: rgb(233, 229, 240);
+  --bz-card: #fff;
+  --bz-card-line: rgb(236, 207, 150);   /* the warm hairline on Bee's top tiles */
+  --bz-chip: rgba(26, 21, 35, .07);     /* the grey of every top-bar button */
+  --bz-hdr: rgba(239, 235, 248, .82);
+  --bz-hour: #fcf2d8;                   /* the "… of the hour" wash */
+  --bz-pin: #f0b429;                    /* the little hexagon pin on each card */
+  --bz-tabbar: rgba(255, 255, 255, .94);
+  --bz-display: Fraunces, Georgia, serif;
+  --bz-body: "Hanken Grotesk", system-ui, sans-serif;
+}
+html[data-bz-dark] {
+  --bz-ink: #ece8f6; --bz-muted: #b4adc6; --bz-line: #3a3350; --bz-card: #221d33;
+  --bz-card-line: #4a3f2a; --bz-chip: rgba(255, 255, 255, .09); --bz-hdr: rgba(24, 20, 37, .82);
+  --bz-hour: #2c2538; --bz-tabbar: rgba(28, 24, 42, .94);
+}
+
+/* ---------- header: family bar + tab row (sticky, blurred) ---------- */
+.bz-hdr { position: sticky; top: 0; z-index: 20; background: var(--bz-hdr); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--bz-line); font-family: var(--bz-body); color: var(--bz-ink); }
+.bz-bar, .bz-tabs, .bz-content { max-width: 1177px; margin: 0 auto; box-sizing: border-box; padding-left: 35px; padding-right: 35px; }
+.bz-bar { display: flex; align-items: center; gap: 9px; height: 56px; }
+.bz-ib { width: 41px; height: 41px; flex: 0 0 41px; display: grid; place-items: center; border: 0; border-radius: 12px;
+  background: var(--bz-chip); color: var(--bz-ink); cursor: pointer; padding: 0; text-decoration: none; }
+.bz-ib svg { width: 21px; height: 21px; }
+.bz-ib:focus-visible, .bz-tab:focus-visible, .bz-dr a:focus-visible, .bz-dr button:focus-visible { outline: 3px solid var(--bz-accent); outline-offset: 2px; }
+.bz-brand { display: flex; align-items: center; gap: 10px; height: 41px; border: 0; background: none; padding: 0; cursor: pointer;
+  color: var(--bz-ink); text-decoration: none; flex: 0 0 auto; }
+.bz-brand img { width: 37px; height: 41px; object-fit: contain; }
+.bz-word { font: 800 21.8px/1 var(--bz-display); letter-spacing: -.2px; white-space: nowrap; }
+.bz-word i { font-style: italic; }
+.bz-word b { font-weight: 800; color: var(--bz-accent); }
+.bz-search { flex: 0 1 414px; margin: 0 0 0 auto; display: flex; min-width: 0; }   /* Bee: pushed against the right cluster */
+.bz-search label { position: relative; width: 100%; }
+.bz-search svg { position: absolute; left: 14px; top: 11px; width: 19px; height: 19px; color: var(--bz-muted); pointer-events: none; }
+.bz-search input { box-sizing: border-box; width: 100%; height: 41px; padding: 9px 36px 9px 41px; border-radius: 999px;
+  border: 1px solid var(--bz-line); background: var(--bz-chip); color: var(--bz-ink); font: 700 14.7px var(--bz-body); }
+.bz-coins { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 13px; border: 0; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(135deg, #ffd24d, #f0a93c); box-shadow: inset 0 -2px 0 rgba(0,0,0,.12); color: #5a3d00; font: 900 14.2px var(--bz-body); flex: 0 0 auto;
+  min-width: 66px; box-sizing: border-box; justify-content: center; }   /* Bee's chip with a two-digit balance: 0–99 never moves the search box */
+.bz-coins svg { width: 17px; height: 17px; }
+.bz-kid { display: flex; align-items: center; gap: 2px; height: 41px; box-sizing: border-box; padding: 0 7px 0 3px; border-radius: 999px; cursor: pointer;
+  background: var(--bz-chip); border: 1px solid color-mix(in srgb, var(--bz-accent) 45%, #fff); color: var(--bz-muted); flex: 0 0 auto; }
+.bz-kid img { width: 34px; height: 34px; border-radius: 50%; background: #fff; object-fit: cover; }
+.bz-kid span { font-size: 10px; padding-left: 2px; }
+
+.bz-tabs { display: flex; gap: 7px; height: 54px; padding-bottom: 10px; }
+.bz-tab { box-sizing: border-box; flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 9px; height: 45px; padding: 11px 13px;
+  border: 0; border-radius: 999px; background: transparent; color: var(--bz-muted); cursor: pointer; text-decoration: none;
+  font: 800 16.4px/1 var(--bz-display); letter-spacing: .16px; white-space: nowrap; }
+.bz-tab svg { width: 23px; height: 23px; flex: 0 0 23px; color: var(--tab-ink, currentColor); }
+.bz-tab[aria-current="page"] svg { color: currentColor; }
+.bz-tab[aria-current="page"] { background: var(--bz-accent); color: var(--bz-accent-ink); }
+.bz-tab:not([aria-current="page"]):hover { background: var(--bz-chip); }
+
+.bz-content { padding-top: 20px; padding-bottom: 65px; font-family: var(--bz-body); color: var(--bz-ink); }
+
+/* ---------- phone tab bar ---------- */
+.bz-tabbar { display: none; }
+
+/* ---------- ☰ drawer ---------- */
+.bz-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .5); }
+.bz-dr { position: fixed; top: 0; bottom: 0; left: 0; z-index: 61; width: 327px; max-width: 88vw; overflow-y: auto; box-sizing: border-box;
+  background: var(--bz-card); color: var(--bz-ink); box-shadow: 0 24px 64px rgba(26, 21, 35, .2); padding: 10px 10px 24px;
+  font-family: var(--bz-body); animation: bz-dr-in .18s ease-out; }
+.bz-scrim[hidden], .bz-dr[hidden] { display: none; }
+@keyframes bz-dr-in { from { transform: translateX(-24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .bz-dr { animation: none; } }
+.bz-dr-who { display: flex; align-items: center; gap: 12px; padding: 8px 6px 14px; border-bottom: 1px solid var(--bz-line); }
+.bz-dr-who img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+.bz-dr-who div { flex: 1; min-width: 0; }
+.bz-dr-who strong { display: block; font: 800 19px var(--bz-display); }
+.bz-dr-who small { color: var(--bz-muted); font-size: 12.5px; }
+.bz-dr h6 { margin: 14px 4px 4px; font: 800 11.5px var(--bz-body); letter-spacing: .08em; text-transform: uppercase; color: var(--bz-muted); }
+.bz-dr hr { border: 0; border-top: 1px solid var(--bz-line); margin: 8px 4px; }
+.bz-dr a, .bz-dr .bz-dr-item { display: grid; grid-template-columns: 34px 1fr; align-items: center; column-gap: 6px; padding: 9px 6px;
+  border-radius: 12px; color: var(--bz-ink); text-decoration: none; background: none; border: 0; width: 100%; text-align: left; cursor: pointer; font: inherit; }
+.bz-dr a:hover, .bz-dr .bz-dr-item:hover { background: var(--bz-chip); }
+.bz-dr a svg, .bz-dr .bz-dr-item svg { width: 20px; height: 20px; color: var(--bz-accent); justify-self: center; grid-row: span 2; }
+.bz-dr a b, .bz-dr .bz-dr-item b { font-weight: 700; font-size: 16px; }
+.bz-dr a small, .bz-dr .bz-dr-item small { grid-column: 2; color: var(--bz-muted); font-size: 12.5px; line-height: 1.3; }
+
+/* ---------- home grid (Bee's) ---------- */
+.bz-home { display: grid; gap: 13px; }
+.bz-r1 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+.bz-r2, .bz-r3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; align-items: start; }
+.bz-card { position: relative; box-sizing: border-box; background: var(--bz-card); color: var(--bz-ink); border: 1px solid var(--bz-card-line);
+  border-radius: 28px 11px; box-shadow: 0 1px 2px rgba(26, 21, 35, .05); padding: 15px; min-height: 194px; }
+.bz-card::after { content: ""; position: absolute; top: -7px; right: 22px; width: 14px; height: 16px; background: var(--bz-pin);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.bz-greet { display: flex; align-items: center; gap: 15px; }
+.bz-greet > img { width: 150px; height: 164px; object-fit: contain; flex: 0 0 auto; }
+.bz-greet small { color: var(--bz-muted); font-size: 14.5px; }
+.bz-greet strong { display: block; font: 800 24px var(--bz-display); margin: 2px 0 8px; }
+.bz-bubble { background: var(--bz-chip); border-radius: 14px; padding: 9px 12px; font-style: italic; font-size: 14.2px; line-height: 1.45; }
+.bz-ringcard { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.bz-ringcard > :first-child { flex: 1; padding: 15px; }
+.bz-ringfoot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--bz-line);
+  background: var(--bz-chip); text-decoration: none; color: inherit; }
+.bz-ringfoot small { display: block; font: 800 11px var(--bz-body); letter-spacing: .1em; text-transform: uppercase; color: var(--bz-muted); }
+.bz-ringfoot b { font: 800 16px var(--bz-display); }
+.bz-hour { display: flex; align-items: center; gap: 14px; padding: 15px 17px; border-radius: 15px;
+  background: linear-gradient(100deg, var(--bz-hour), var(--bz-card) 62%); text-decoration: none; color: inherit; }
+.bz-kicker { display: block; font: 800 11.5px var(--bz-body); letter-spacing: .1em; text-transform: uppercase; color: #8a5a00; }   /* 6.1:1 on white (Bee's #b07a10 was 3.7:1) */
+html[data-bz-dark] .bz-kicker { color: #f0c46a; }
+.bz-hour h3 { margin: 2px 0 4px; font: 800 24px var(--bz-display); }
+.bz-hour p { margin: 0; color: var(--bz-muted); font-size: 14.2px; line-height: 1.45; }
+.bz-badge { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 14px; display: grid; place-items: center; background: #E8962C; color: #fff; }
+.bz-badge svg { width: 24px; height: 24px; }
+.bz-journey { display: flex; flex-direction: column; border-radius: 15px; overflow: hidden; border: 1px solid var(--bz-line);
+  background: var(--bz-card); box-shadow: 0 1px 2px rgba(26, 21, 35, .05); color: inherit; text-decoration: none; }
+.bz-plate { position: relative; height: 100px; background-size: cover; background-position: center; }
+html[data-bz-dark] .bz-plate { filter: brightness(.8) saturate(.9); }
+.bz-plate .bz-badge { position: absolute; left: 16px; bottom: -22px; background: var(--bz-accent); border: 3px solid var(--bz-card); }
+.bz-next .bz-plate .bz-badge { background: #E8842C; }   /* Bee: the next step is orange, the long journey is the accent */
+.bz-chiprow { display: flex; justify-content: flex-end; padding: 10px 16px 0; min-height: 26px; }
+.bz-chiprow span { background: #1f1a2e; color: #fff; border-radius: 999px; padding: 4px 11px; font: 700 12.5px var(--bz-body); }
+.bz-jbody { padding: 4px 16px 15px; }
+.bz-jbody small { color: var(--bz-muted); font-size: 14.2px; }
+.bz-jbody h3 { margin: 2px 0 2px; font: 800 24px var(--bz-display); }
+.bz-jbody p { margin: 0 0 12px; color: var(--bz-muted); font-size: 14.2px; }
+.bz-jrow { display: flex; align-items: center; gap: 14px; }
+.bz-btn { display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 20px; border-radius: 12px; border: 0;
+  background: var(--bz-accent); color: var(--bz-accent-ink); font: 700 16.4px var(--bz-body); cursor: pointer; text-decoration: none;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .18); white-space: nowrap; }
+.bz-btn.out { background: var(--bz-card); color: var(--bz-ink); border: 1px solid var(--bz-line); box-shadow: none; }
+.bz-btn svg { width: 17px; height: 17px; }
+.bz-prog { flex: 1; min-width: 60px; }
+.bz-prog i { display: block; height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--bz-accent) 18%, transparent); overflow: hidden; }
+.bz-prog i b { display: block; height: 100%; background: var(--bz-accent); border-radius: 99px; }
+.bz-prog small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--bz-muted); }
+.bz-small { min-height: 144px; display: flex; align-items: center; gap: 14px; padding: 18px 20px; text-decoration: none; color: inherit; }
+.bz-small p { margin: 4px 0 0; font-size: 15.3px; line-height: 1.5; }
+.bz-small blockquote { margin: 4px 0 0; font: italic 600 16.4px/1.45 var(--bz-display); }
+.bz-foot { text-align: center; padding: 26px 0 0; color: var(--bz-muted); font-size: 13px; }
+.bz-foot a { color: var(--bz-accent); }
+
+/* ---------- phone (Bee's breakpoint) ---------- */
+@media (max-width: 720px) {
+  .bz-bar { flex-wrap: wrap; height: auto; padding: 9px 14px 9px; row-gap: 7px; gap: 4px; }
+  .bz-ib { width: 37px; height: 37px; flex-basis: 37px; border-radius: 11px; }
+  .bz-brand img { width: 28px; height: 37px; }
+  .bz-word { display: none; }
+  .bz-brand { margin-right: auto; }
+  .bz-search { order: 9; flex: 1 0 100%; margin: 0; }
+  .bz-coins { height: 37px; padding: 0 12px; }
+  .bz-kid { height: 37px; }
+  .bz-kid img { width: 29px; height: 29px; }
+  .bz-tabs { display: none; }
+  .bz-content { padding: 19px 15px 110px; }
+  .bz-tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 7px 7px calc(8px + env(safe-area-inset-bottom));
+    background: var(--bz-tabbar); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--bz-line); }
+  .bz-tabbar a, .bz-tabbar button { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 53px;
+    justify-content: center; border: 0; background: none; color: var(--bz-muted); text-decoration: none; font: 700 12px var(--bz-body); border-radius: 14px; }
+  .bz-tabbar svg { width: 25px; height: 25px; }
+  .bz-tabbar [aria-current="page"] { color: var(--bz-accent); background: color-mix(in srgb, var(--bz-accent) 12%, transparent); }
+  .bz-r1, .bz-r2, .bz-r3 { display: contents; }
+  .bz-home { grid-template-columns: 1fr; }
+  /* Bee's phone order: greeting, next on your journey, daily ring, of the hour, second journey, tip, quote */
+  .bz-greet { order: 1; } .bz-next { order: 2; } .bz-ringcard { order: 3; } .bz-hour { order: 4; } .bz-second { order: 5; }
+  .bz-tip { order: 6; } .bz-quote { order: 7; } .bz-foot { order: 9; }
+  .bz-greet > img { width: 120px; height: 140px; }
+}

@@ -7,10 +7,12 @@
 
    Every assertion here was watched to fail once before it was trusted. */
 import { site, household, kidRec, checker, SHOTS } from './lib/site.mjs';
+import { checkShell } from './lib/shell-check.mjs';
 
 const { BASE, browser, close } = await site('std', 5204);
 const { ok, fails } = checker();
 const errors = [];
+const SHELL = {};
 
 /* a child with something on the report: two stops starred, some facts, a land test */
 function seeded(parent = {}) {
@@ -66,9 +68,10 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   {
     const { p, ctx } = await open(vp, seeded());
     await p.evaluate(() => window.__bzm.fire('startFacts', '×')); await p.waitForTimeout(200);
-    ok(await nav(p) === 'run' && await p.locator('header.top .hive').count() === 1, `${tag}: ⬡ stays in the top bar during a drill`);
+    const hiveVis = () => p.$eval('[data-bz=hive]', (e) => getComputedStyle(e).visibility === 'visible');
+    ok(await nav(p) === 'run' && await hiveVis(), `${tag}: ⬡ stays in the top bar during a drill`);
     await p.evaluate(() => window.__bzm.go('contest')); await p.evaluate(() => window.__bzm.fire('startContest')); await p.waitForTimeout(200);
-    ok(await p.locator('header.top .hive').count() === 0, `${tag}: ⬡ hides inside a timed contest question`);
+    ok(!(await hiveVis()), `${tag}: ⬡ hides inside a timed contest question`);
     await ctx.close();
   }
 }
@@ -88,33 +91,16 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const phone = vp.width < 900;
   const { p, ctx } = await open(vp, seeded({ plan: 'family' }));
   await p.waitForSelector('.home2');
-  /* top bar in the family order, 56px (standard §3) */
-  const order = await p.$$eval('header.top > *', (els) => els.filter((e) => e.offsetParent && !e.classList.contains('grow')).map((e) =>
-    e.classList.contains('hive') ? 'hive' : e.classList.contains('menu-btn') ? 'menu' : e.classList.contains('brand') ? 'name' : e.classList.contains('search-pill') ? 'search'
-      : e.classList.contains('coin-chip') ? 'coins' : e.classList.contains('mode-btn') ? 'theme' : e.classList.contains('lock-btn') ? 'grownups' : e.classList.contains('who') ? 'avatar' : e.className));
-  ok(order.join() === (phone ? 'hive,menu,name,coins,avatar' : 'hive,menu,name,search,coins,theme,grownups,avatar'), `${tag}: top bar in the family order (got ${order})`);
-  ok(Math.round(await p.$eval('header.top', (h) => h.getBoundingClientRect().height)) === 56, `${tag}: top bar is 56px`);
-  ok(await p.$eval('.brand img', (i) => /octo-head/.test(i.src)) && /Bizzing\s*Maths/.test(await p.textContent('.brand')), `${tag}: the logo is Octo's head and "Bizzing Maths"`);
-  /* tabs (§4): Home first, Atlas second, five, Play not Arcade; a row under the bar on desk, a 64px bottom bar on phone */
-  const tabs = await p.$$eval(phone ? '.tabbar .tb' : '.tabs .tab', (b) => b.filter((x) => x.offsetParent).map((x) => x.textContent.trim()));
+  /* the chrome and Home are Bee's, by measurement (integration/shell-check.mjs): the bar, the tab row or the
+     phone tab bar, the three rows of Home, and ☰ — opens, Esc closes, focus returns */
+  ok(/Bizzing\s*Maths/.test(await p.textContent('[data-bz=brand]')) && await p.$eval('[data-bz=brand] img', (i) => /octo-head/.test(i.src)), `${tag}: the logo is Octo's head and "Bizzing Maths"`);
+  const tabs = await p.$$eval(phone ? '[data-bz=tabbar] a' : '[data-bz=tab]', (b) => b.map((x) => x.textContent.trim()));
   ok(tabs.join() === 'Home,Atlas,Library,Puzzles,Play', `${tag}: tabs are Home · Atlas · Library · Puzzles · Play (got ${tabs})`);
-  if (phone) ok(Math.round(await p.$eval('.tabbar', (t) => t.getBoundingClientRect().height)) >= 64, `${tag}: the bottom bar is 64px`);
-  else ok(await p.$eval('.tabs', (t) => Math.round(t.getBoundingClientRect().top)) >= 56, `${tag}: the tab row sits directly under the top bar`);
-  /* Home in the §6 order, one primary */
-  const cards = await p.$$eval('.home2 [data-card]', (c) => c.map((x) => x.dataset.card));
-  ok(cards.join() === 'greeting,ring,hour,continue,three', `${tag}: Home's cards in the standard's order (got ${cards})`);
-  ok(await p.locator('.greet .octo').count() === 1 && (await p.textContent('.greet .bubble2')).length > 20, `${tag}: Octo greets with a line about the child`);
-  /* ☰ opens and closes by keyboard, traps focus, in the standard's order */
-  await p.focus('.menu-btn'); await p.keyboard.press('Enter'); await p.waitForTimeout(150);
-  ok(await p.locator('.drawer').count() === 1 && await p.evaluate(() => !!document.activeElement.closest('.drawer')), `${tag}: ☰ opens by keyboard and takes the focus`);
-  const items = await p.$$eval('.dr-list li > *', (x) => x.map((e) => e.textContent.trim().replace(/\d+$/, '')));
+  ok(await p.locator('[data-bz=greet] img[src*=octo]').count() === 1 && (await p.textContent('[data-bz=greet] .bz-bubble')).length > 20, `${tag}: Octo greets with a line about the child`);
+  const items = await p.$$eval('[data-bz=drawer] a', (x) => x.map((e) => e.querySelector('b').textContent.trim()));
   ok(items.join('|') === 'My page|Shop|Collection|Medals|My mistakes|What I’m learning|The Story Shelf|Mock contest|Settings|Grown-ups|Help|Privacy|Back to the Hive', `${tag}: ☰ lists the family order (got ${items.join('|')})`);
-  for (let i = 0; i < 30; i++) await p.keyboard.press('Tab');
-  ok(await p.evaluate(() => !!document.activeElement.closest('.drawer')), `${tag}: Tab stays inside the drawer`);
-  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
-  ok(await p.locator('.drawer').count() === 0 && await p.evaluate(() => document.activeElement.classList.contains('menu-btn')), `${tag}: Esc closes ☰ and gives the focus back`);
   /* the coin chip opens the wallet history (§1.1) */
-  await p.click('.coin-chip'); await p.waitForTimeout(150);
+  await p.click('[data-bz=coins]'); await p.waitForTimeout(150);
   ok(await p.locator('.sheet.wallet').count() === 1 && /Bizzing coins/.test(await p.textContent('.sheet.wallet')), `${tag}: the coin chip opens the wallet`);
   await p.keyboard.press('Escape'); await p.waitForTimeout(100);
   /* every screen: no emoji in a control, no broken text, no sideways scroll */
@@ -129,8 +115,8 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   /* touch targets (P3): every control a child taps is at least 44px, on Home, Puzzles, Goals and Facts */
   if (phone) for (const r of ['home', 'puzzles', 'goals', 'facts', 'play', 'settings', 'shop']) {
     await p.evaluate((x) => { location.hash = '#/' + x; }, r); await p.waitForTimeout(250);
-    const small = await p.$$eval('main button, main a, main [role=tab], .tabbar button, header.top button, header.top a', (b) => b.filter((x) => {
-      if (!x.offsetParent || x.closest('p') || x.classList.contains('linkish')) return false;
+    const small = await p.$$eval('main button, main a, main [role=tab], [data-bz=tabbar] a', (b) => b.filter((x) => {
+      if (!x.offsetParent || x.closest('p, .bz-foot, .foot') || x.classList.contains('linkish')) return false;   // inline text links are exempt
       const r = x.getBoundingClientRect(); return r.width < 43.5 || r.height < 43.5; }).map((x) => (x.className || x.tagName) + ':' + Math.round(x.getBoundingClientRect().height)));
     ok(small.length === 0, `${tag}: every target on #/${r} is ≥ 44px (got ${small.length}: ${small.slice(0, 5).join(', ')})`);
   }
@@ -146,6 +132,19 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const secs = await p.$$eval('.set-sec', (s) => s.map((x) => x.dataset.sec));
   ok(secs.join() === 'me,sound,look,comfort,grownups', `${tag}: Settings sections in the standard's order (got ${secs})`);
   ok(await p.locator('.set-sec[data-sec=sound] input[type=range]').count() === 1, `${tag}: one volume slider`);
+  await ctx.close();
+}
+
+/* checkShell: Home with a child, desktop and phone, light and dark — must be [] */
+for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, height: 844 }, 'phone']]) for (const mode of ['light', 'dark']) {
+  const ctx = await browser.newContext({ viewport: vp, colorScheme: mode, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
+  const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
+  await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
+  await p.goto(BASE); await p.waitForSelector('[data-bz=home]'); await p.waitForTimeout(400);
+  const f = await checkShell(p, { phone: vp.width < 500 });
+  SHELL[`${tag} ${mode}`] = f;
+  ok(f.length === 0, `${tag} ${mode}: checkShell matches Bee (${f.join('; ')})`);
+  await p.screenshot({ path: `${SHOTS}/std-shell-${tag}-${mode}.png` });
   await ctx.close();
 }
 
@@ -191,7 +190,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
       await p.evaluate((id) => window.__bzm.fire('theme', id), w); await p.waitForTimeout(500);
       const st = await p.evaluate(() => { const pl = document.querySelector('.ws-plate'), cs = getComputedStyle(pl);
         return { bg: cs.backgroundImage, layers: [['.ws-plate'], ['.ws-near'], ['.ws-parts i'], ['.ws-idle', '.ws-idle > *']].filter((ss) => ss.some((s) => { const e = document.querySelector(s); return e && getComputedStyle(e).animationName !== 'none'; })).length,
-          card: getComputedStyle(document.querySelector('.greet')).backgroundColor, ink: getComputedStyle(document.querySelector('.greet .hname')).color, muted: getComputedStyle(document.querySelector('.greet .hi')).color }; });
+          card: getComputedStyle(document.querySelector('[data-bz=greet]')).backgroundColor, ink: getComputedStyle(document.querySelector('[data-bz=greet] strong')).color, muted: getComputedStyle(document.querySelector('[data-bz=greet] small')).color }; });
       ok(new RegExp(`world-${w}-${mode === 'dark' ? 'night' : 'day'}${vp.width < 701 ? '-s' : ''}\\.webp`).test(st.bg), `${tag} ${mode}: ${w} wears its ${mode === 'dark' ? 'painted night' : 'day'} plate (got ${st.bg.slice(-40)})`);
       ok(st.layers === 4, `${tag} ${mode}: ${w} has its ambient layers moving (got ${st.layers})`);
       ok(contrast(st.ink, st.card) >= 4.5 && contrast(st.muted, st.card) >= 4.5, `${tag} ${mode}: ${w} text over the world passes AA (${contrast(st.ink, st.card).toFixed(1)}, ${contrast(st.muted, st.card).toFixed(1)})`);
@@ -227,7 +226,8 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 /* search (C4): three known things, from three kinds */
 {
   const { p, ctx } = await open({ width: 1280, height: 800 }, seeded());
-  await p.click('.search-pill'); await p.waitForSelector('#q');
+  await p.fill('[data-bz=search] input', 'bakery'); await p.press('[data-bz=search] input', 'Enter'); await p.waitForSelector('#q');
+  ok(await p.evaluate(() => window.__bzm.R.ui.nav) === 'search' && await p.locator('.results button').count() > 0, 'the bar’s search opens the results');
   for (const [q, want, kind] of [['bakery', 'The Fraction Bakery', 'Place'], ['suki', '', 'Story'], ['hypotenuse', 'hypotenuse', 'Word']]) {
     await p.fill('#q', ''); await p.type('#q', q); await p.waitForTimeout(700);
     const res = await p.$$eval('.results button', (b) => b.map((x) => ({ kind: x.querySelector('.r-kind').textContent, t: x.querySelector('b').textContent })));
@@ -250,9 +250,9 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const d0 = await p.evaluate(() => Object.values(window.__bzm.R.h.kids[0].mistakes));
   ok(d0.length === 1 && d0[0].due > Date.now(), `a miss goes into the deck, not due today (got ${d0.length})`);
   await p.evaluate(() => window.__bzm.go('home')); await p.clock.runFor(200);
-  ok(await p.locator('.jcard2 [data-arg=mistakes]').count() === 0, 'Home does not offer it before its gap');
+  ok(await p.locator('[data-bz=second] a[href="#/mistakes"]').count() === 0, 'Home does not offer it before its gap');
   await p.clock.fastForward(26 * 3600e3); await p.evaluate(() => window.__bzm.render()); await p.clock.runFor(200);
-  ok(await p.locator('.jcard2 [data-arg=mistakes]').count() === 1, 'after a day it comes back on Home');
+  ok(await p.locator('[data-bz=second] a[href="#/mistakes"]').count() === 1, 'after a day it comes back on Home');
   await p.evaluate(() => window.__bzm.go('mistakes')); await p.clock.runFor(200);
   await p.click('[data-act=startMistakes]'); await p.clock.runFor(300);
   const ans = await p.evaluate(() => window.__bzm.R.run.items[0].ans);
@@ -293,6 +293,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 }
 
 ok(!errors.length, 'no page errors: ' + errors.slice(0, 4).join(' | '));
+for (const [k, f] of Object.entries(SHELL)) console.log(`checkShell ${k}: ${f.length ? f.join('; ') : '[]'}`);
 await close();
 console.log(`${fails() ? 'FAIL' : 'ok'} standard — fix-first; top bar, ☰, tabs, Home, Settings, emoji, overflow, targets; 96 avatars and the Shop; six worlds day and night; music; search; mistakes; certificates; fonts`);
 if (fails()) process.exit(1);

@@ -6,8 +6,9 @@
    and .css, copied verbatim); this file is only the list and what each Legendary asks for.
 
    Where the faces come from:
-   · the thirty this app already had, regrouped (Shape Pals, Tool Kit, Pattern Pets were
-     painted here; Star Crew and Lab Friends were borrowed from Bizzing Bee's set);
+   · the eighteen painted for this app before (Shape Pals, Tool Kit, Pattern Pets), regrouped
+     — the twelve faces once borrowed from Bizzing Bee's cosmos and lab packs are gone from the
+     96, because no face may be in two apps' collections (owner, 2 Oct 2026);
    · Bizzing Bee's Turbo and Origami packs, handed over (racers for Number Rush, folding for
      shapes) and re-tiered to 2/3/2/1;
    · fifty painted for this app (tools/art/gen.py AVATAR2), each built from a maths object
@@ -30,8 +31,8 @@ export const PACKS = [
   { n: 4, id: 'fractions', name: 'Fraction Feast', blurb: 'Cut into equal parts.' },
   { n: 5, id: 'origami', name: 'Origami', blurb: 'Folded from one square of paper. From Bizzing Bee.' },
   { n: 6, id: 'gears', name: 'Gear Gang', blurb: 'Cogs, springs, pulleys and balances.' },
-  { n: 7, id: 'stars', name: 'Star Crew', blurb: 'Rockets and moons. Friends from Bizzing Bee’s cosmos.' },
-  { n: 8, id: 'lab', name: 'Lab Friends', blurb: 'Light, magnets and measuring. Friends from Bizzing Bee’s lab.' },
+  { n: 7, id: 'sky', name: 'Sky Counters', blurb: 'Moon phases, constellations, rings and spirals.' },
+  { n: 8, id: 'measure', name: 'Measure Lab', blurb: 'Jugs, tapes, levels, light and swings.' },
   { n: 9, id: 'patterns', name: 'Pattern Pets', blurb: 'Spirals, hexagons and symmetry from nature.' },
   { n: 10, id: 'symmetry', name: 'Symmetry Friends', blurb: 'Mirror, turn and repeat.' },
   { n: 11, id: 'turbo', name: 'Turbo', blurb: 'Racers for Number Rush. From Bizzing Bee.' },
@@ -47,8 +48,8 @@ const ROWS = {
   4: [['pizzapanda', 'Pizza Panda', C], ['piepig', 'Pie Piglet', C], ['orangeotter', 'Orange Otter', Ra], ['sandhippo', 'Sandwich Hippo', Ra], ['pancakepeng', 'Pancake Penguin', Ra], ['chocobear', 'Choco Bear', E], ['cakecat', 'Cake Cat', E], ['melonwhale', 'Melon Whale', L]],
   5: [['paperplane', 'Paper Plane', C], ['cranefold', 'Crane', C], ['hopfold', 'Hop Frog', Ra], ['fanfold', 'Fan Dancer', Ra], ['lotusfold', 'Lotus', Ra], ['kabuto', 'Kabuto', E], ['flutterfold', 'Flutter', E], ['goldencrane', 'Golden Crane', L]],
   6: [['coggoat', 'Cog Goat', C], ['windmouse', 'Windmill Mouse', C], ['pulleyparrot', 'Pulley Parrot', Ra], ['springroo', 'Spring Roo', Ra], ['boltbeetle', 'Bolt Beetle', Ra], ['spannerwalrus', 'Spanner Walrus', E], ['scalebadger', 'Balance Badger', E], ['hourhamster', 'Hourglass Hamster', L]],
-  7: [['rocket', 'Rocket Rae', C], ['astro', 'Astro', C], ['comet', 'Comet', Ra], ['luna', 'Luna', Ra], ['meteorpup', 'Meteor Pup', Ra], ['saturn', 'Saturn', E], ['moonrover', 'Moon Rover', E], ['supernova', 'Supernova', L]],
-  8: [['beaker', 'Bubbly Beaker', C], ['atom', 'Atom', C], ['magnet', 'Magneto Max', Ra], ['scopey', 'Scopey', Ra], ['prismcat', 'Prism Cat', Ra], ['robo', 'Robo Helper', E], ['magnifly', 'Magnifying Firefly', E], ['brainiac', 'Brainiac', L]],
+  7: [['phasefox', 'Moon-phase Fox', C], ['rocketrabbit', 'Rocket Rabbit', C], ['meteorpup', 'Meteor Pup', Ra], ['stardeer', 'Constellation Deer', Ra], ['slothsat', 'Satellite Sloth', Ra], ['moonrover', 'Moon Rover', E], ['ringturtle', 'Ringed Turtle', E], ['galaxysnail', 'Galaxy Snail', L]],
+  8: [['thermobear', 'Thermometer Bear', C], ['jugmouse', 'Measuring-jug Mouse', C], ['prismcat', 'Prism Cat', Ra], ['tapesnail', 'Tape-measure Snail', Ra], ['levellizard', 'Spirit-level Lizard', Ra], ['magnifly', 'Magnifying Firefly', E], ['pendulumpanda', 'Pendulum Panda', E], ['fractaldragon', 'Fractal Dragon', L]],
   9: [['hexbee', 'Honeycomb Bee', C], ['nautilus', 'Spiral Snail', C], ['tessgecko', 'Tiling Gecko', Ra], ['flakefox', 'Snowflake Fox', Ra], ['pineporc', 'Pinecone Porcupine', Ra], ['mandalamoth', 'Mandala Moth', E], ['peacock', 'Spiral Peacock', E], ['sunlion', 'Sunflower Lion', L]],
   10: [['mirrorfly', 'Mirror Butterfly', C], ['pinpup', 'Pinwheel Pup', C], ['kitekitten', 'Kite Kitten', Ra], ['toptapir', 'Spinning-top Tapir', Ra], ['lanternlemur', 'Lantern Lemur', Ra], ['kaleidokoala', 'Kaleido Koala', E], ['rangolirabbit', 'Rangoli Rabbit', E], ['kolamturtle', 'Kolam Tortoise', L]],
   11: [['rally', 'Rally', C], ['turbo', 'Turbo', C], ['crash', 'Crash', Ra], ['rainbow', 'Rainbow Cart', Ra], ['champ', 'Champ', Ra], ['nitro', 'Nitro', E], ['mech', 'Mech', E], ['titan', 'Titan', L]],
@@ -58,7 +59,7 @@ const ROWS = {
 /* Each Legendary's learning milestone. `world:<id>` = every stop in that Atlas place passed. */
 const MILESTONE = {
   dodecadrake: 'world:shapecity', cubellama: 'world:gardens', setsquin: 'world:workshop', melonwhale: 'world:bakery',
-  goldencrane: 'medal:tower-4', hourhamster: 'world:clocktower', supernova: 'world:observatory', brainiac: 'medal:fluent-100',
+  goldencrane: 'medal:tower-4', hourhamster: 'world:clocktower', galaxysnail: 'world:observatory', fractaldragon: 'medal:fluent-100',
   sunlion: 'world:mine', kolamturtle: 'world:palace', titan: 'medal:fearless', glitchgecko: 'medal:tower-top',
 };
 const MEDAL_LABEL = { 'tower-4': 'clear four floors of the Puzzle Tower', 'tower-top': 'clear all twelve floors of the Puzzle Tower',

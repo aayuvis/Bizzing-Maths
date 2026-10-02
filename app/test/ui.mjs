@@ -32,7 +32,7 @@ async function run(vp, tag) {
   const click0 = page.click.bind(page);
   page.click = async (sel, o) => { for (let i = 0; i < 6 && sel !== '.cel .btn' && await page.locator('.cel .btn').count(); i++) await click0('.cel .btn'); return click0(sel, o); };
   const R = () => page.evaluate(() => { const r = window.__bzm.R; return { nav: r.ui.nav, run: r.run && { kind: r.run.kind, i: r.run.i, n: r.run.items.length, over: r.run.over, fb: r.run.fb, q: r.run.items[r.run.i] } }; });
-  const nav = (k) => page.click(vp.width < 900 ? `.tb[data-arg=${k}]` : `.tab[data-arg=${k}]`);
+  const nav = (k) => page.click(vp.width <= 720 ? `[data-bz=tabbar] a[href="#/${k}"]` : `[data-bz=tab][href="#/${k}"]`);
   const typeAns = async (ans) => { for (const ch of String(ans)) await page.keyboard.press(ch); };
 
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
@@ -453,7 +453,7 @@ async function run(vp, tag) {
   await page.click('.play-end [data-g=done]'); await page.waitForTimeout(100);
   ok(!(await page.locator('.play').count()) && await music() === 'off', 'a tap on Back leaves the game and the music stops');
   // Change avatar in the Collection (from the household sheet)
-  await page.click('header .who'); await page.click('.sheet [data-arg=collection]'); await page.waitForSelector('.avgrid');
+  await page.click('[data-bz=kid]'); await page.click('.sheet [data-arg=collection]'); await page.waitForSelector('.avgrid');
   ok(await page.locator('.pack').count() === 12 && await page.locator('.bz-av').count() === 96, 'all ninety-six faces, twelve packs of eight, in the Collection');
   await page.click('.bz-av[data-id=protortle] [data-act=setAv]');
   ok(await page.evaluate(() => window.__bzm.R.h.kids[0].avatar) === 'protortle', 'Wear sets the child\'s face');
@@ -463,8 +463,7 @@ async function run(vp, tag) {
   // home + grown-ups
   await nav('home'); await page.waitForSelector('.home2');
   await shot('20-home');
-  if (vp.width < 900) { await page.click('.menu-btn'); await page.click('.drawer [data-arg=grownups]'); }   // on a phone 🔒 lives in ☰
-  else await page.click('.lock-btn');
+  await page.click('[data-bz=lock]');
   for (const k of '1234') await page.keyboard.press(k);
   await page.waitForSelector('.report');
   await shot('21-grownups');
@@ -489,7 +488,7 @@ async function themes(page, vp, tag, shot) {
     ok(await page.evaluate(() => document.documentElement.dataset.theme) === id, `world ${id} is on <html>`);
     const ff = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
     ok(ff.replace(/["']/g, '').startsWith('Hanken Grotesk'), `world ${id}: the body is the family's Hanken Grotesk (got ${ff})`);
-    const hf = await page.evaluate(() => getComputedStyle(document.querySelector('.hname')).fontFamily);
+    const hf = await page.evaluate(() => getComputedStyle(document.querySelector('[data-bz=hour] h3')).fontFamily);
     ok(hf.replace(/["']/g, '').startsWith(face), `world ${id}: its display face is ${face} (got ${hf})`);
     ok(await page.evaluate((f) => document.fonts.check(`16px "${f}"`), face), `world ${id}: ${face} actually loaded`);
     faces.add(hf);
