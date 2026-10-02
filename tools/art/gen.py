@@ -261,6 +261,29 @@ ROADART = {
 }
 for k, v in ROADART.items(): JOBS[k] = (v + ' ' + ROAD_STYLE, '1:1')
 
+# ------------------------------------------------------------------ the Arcade
+# One backdrop per game (games.js). The game draws its own play on top — the
+# bubbles, the cards, the line — so each plate keeps its busy detail to the
+# edges and the bottom, and its middle is open sky or calm water the play can
+# sit on. None of them names the game: a named place gets lettered on a sign.
+GAMES = {
+    'g-rush':   "A wide view of a bright breezy summer sky above a meadow of wildflowers on rolling hills, dozens of shining "
+                "soap bubbles of many sizes drifting up from the flowers and catching rainbow light, a few small kites far off, "
+                "soft white clouds. The upper two thirds is open luminous sky with only bubbles and clouds; the meadow, "
+                "flowers and hills fill the lower edge. Sky blue, buttercup yellow, fresh green, rainbow glints.",
+    'g-target': "A wide view of a cheerful archery meadow at a village fair on a golden afternoon: round straw archery "
+                "butts with plain painted rings in red, white and gold standing on wooden easels at the left and right edges, "
+                "a few arrows stuck in them, bunting of plain coloured triangles strung between poles, a striped tent far off, "
+                "a quiver and a wooden bow resting on a hay bale. The centre is an open sunlit lawn under a soft sky. "
+                "Warm gold, poppy red, meadow green.",
+    'g-line':   "A wide view of a long straight wooden seaside pier stretching perfectly horizontally from the left edge to the "
+                "right edge across the middle of the picture, seen exactly side-on at eye level, its evenly spaced wooden posts "
+                "standing in calm turquoise water, a small round lamp post at each end, gulls in the sky, a calm sea and a "
+                "pale sunrise sky with soft clouds above, small sailing boats far away. Clean, calm and uncluttered. "
+                "Turquoise, sand, coral pink, soft sky blue.",
+}
+for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
+
 
 def call(model, prompt, ratio):
     body = {"contents": [{"parts": [{"text": prompt}]}],

@@ -43,6 +43,11 @@ const SCREENS = [
   ['arcade', (b) => b.go('arcade'), '.hero-tiles'],
   ['goals', (b) => b.go('goals'), '.strands'],
   ['story shelf', (b) => b.go('stories'), '.shelf'],
+  // the games: the title card, then the play itself (the how-to skipped by its own button)
+  ['game · title card', (b) => b.fire('play', 'rush'), '.g-card', '.g-card [data-g=go]'],
+  ['game · rush', () => document.querySelector('.g-intro [data-g=go]').click(), '.rush-stage', '.rush-in'],
+  ['game · target', (b) => { document.querySelector('.play-x').click(); b.fire('play', 'target'); document.querySelector('.g-intro [data-g=go]').click(); }, '.mt-target', '.mt-ops'],
+  ['game · line', (b) => { document.querySelector('.play-x').click(); b.fire('play', 'line'); document.querySelector('.g-intro [data-g=go]').click(); }, '.nl-track', '.nl-track'],
 ];
 // the core must START in the top 35% of what the window shows under the top bar,
 // and at least 45% of the window (or the whole core, if smaller) must be core

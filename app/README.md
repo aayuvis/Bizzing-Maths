@@ -20,7 +20,7 @@ npm run check      # drives build/ under /Bizzing-Maths/ in Chromium, desktop + 
 | `src/facts.js` | `BANK` (434 facts), `tricky()`, `why()`, `ramp()`, Leitner `record()`/`state()`, `session()` (discovery for a new child, then traps → due → ≤4 new → known). |
 | `src/model.js` | Household/kid shape, `RANKS`, `ROUTE`, `frontier()` (skips nodes optional for the child's band or placement), `isOpen()`, `scoreRun()` stars, `RUNGS` + `placeFrom()`. |
 | `src/contest.js` | `RIVALS` (the Bee's ten), the hardness ladder, `playRound()`, `championship()`, `runOut()`. |
-| `src/games.js` | Overlay frame, shared `keypad()`, `numberRush`, `makeTarget` (+ `solve`, `makePuzzle`), `numberLine`. |
+| `src/games.js` | Overlay frame on a painted plate (`public/art/g-*.webp`), the Family Standard §10 kit (title card + 3-second how-to, pop particles, wobble, a display-only combo meter, a finish screen naming what was practised), shared `keypad()`, `numberRush`, `makeTarget` (+ `solve`, `makePuzzle`), `numberLine`, `sudoku`. Styles in `styles/games.css`. |
 | `src/figs.js` | SVG figures: `jumps`, `area`, `grid`. |
 | `src/views.js` | Every screen. |
 | `src/main.js` | Boot, hash routing, the question runner, guided steps, contest driver, keys, all actions. |

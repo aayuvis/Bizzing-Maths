@@ -1,0 +1,132 @@
+/* games.css — the Arcade's paint and juice (games.js). Kept out of app.css so
+   the game layer can change without touching the screens around it.
+
+   Motion rules: every answer moves something, but nothing moves the SCREEN.
+   A right answer pops particles where the answer was; a wrong one wobbles the
+   thing that was wrong. Under reduced motion (the OS setting, or the app's
+   data-motion="reduced") the particles are dropped for a still, fading ring. */
+
+/* ---------------------------------------------------------- painted plates */
+.play.has-art{--veil:color-mix(in srgb,var(--paper) 30%,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
+.play.has-art .play-bar{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px)}
+.play.g-target .play-body,.play.g-line .play-body{background:linear-gradient(color-mix(in srgb,var(--paper) 42%,transparent),color-mix(in srgb,var(--paper) 42%,transparent))}
+
+/* Arcade tiles: the same plates the games are played on (set inline by viewArcade,
+   so the path is relative to the page, like every other plate) */
+.gart.art-rush,.gart.art-target,.gart.art-line{background-size:cover;background-position:center}
+.gart.art-line{background-position:center 55%}
+.gart.art-line::after{content:none}
+.gtile .gart{transition:transform .35s ease}
+.gtile:hover .gart{transform:scale(1.04)}
+
+/* ---------------------------------------------------------- the play bar */
+.play-m{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:18px;color:var(--ink);flex:none}
+.play-m[aria-pressed=false]{opacity:.45;text-decoration:line-through}
+.play-hud{margin-left:auto}
+.play-t{min-width:0}
+.play-t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play-hud .chip{white-space:nowrap}
+.play-t{flex:0 1 auto}
+.play-t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.play-t span{display:none}.play-t b{font-size:17px}.play-bar{gap:6px;padding:8px 10px}.play-hud{gap:4px}.play-hud .chip{padding:3px 7px;font-size:12px}.play-x,.play-m{width:36px;height:36px}}
+
+/* ---------------------------------------------------------- combo meter */
+.gcombo{display:none;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-pill);background:var(--treasure-tint);color:var(--treasure-deep);font-weight:750;white-space:nowrap}
+.gcombo.on{display:inline-flex}
+.gcombo b{font:800 18px var(--mono);line-height:1}
+.gc-l{font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.gc-pips{display:inline-flex;gap:3px}
+.gc-pips i{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--treasure-deep) 22%,transparent)}
+.gc-pips i.lit{background:var(--treasure);box-shadow:0 0 0 1.5px var(--treasure-deep) inset}
+.gcombo.hot{background:var(--treasure);color:#3a2a00}
+.gcombo.hot .gc-pips i.lit{background:#fff}
+.gcombo.bump{animation:gc-bump .32s cubic-bezier(.3,1.6,.5,1)}
+.gcombo.drop{animation:gc-drop .4s ease-out}
+@keyframes gc-bump{40%{transform:scale(1.22)}}
+@keyframes gc-drop{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(8px)}}
+@media (max-width:560px){.gc-l,.gc-pips{display:none}}
+
+/* ---------------------------------------------------------- pop particles */
+.gpop{position:absolute;width:0;height:0;pointer-events:none;z-index:5}
+.gpop i{position:absolute;left:calc(var(--s) / -2);top:calc(var(--s) / -2);width:var(--s);height:var(--s);border-radius:50%;background:hsl(var(--h) 85% 60%);animation:gp-fly .7s cubic-bezier(.15,.7,.3,1) forwards}
+.gpop i:nth-child(3n){border-radius:2px}
+@keyframes gp-fly{0%{transform:rotate(var(--a)) translateX(0) scale(1);opacity:1}100%{transform:rotate(var(--a)) translateX(var(--d)) scale(.3);opacity:0}}
+.gpop-ring{position:absolute;left:-24px;top:-24px;width:48px;height:48px;border-radius:50%;border:4px solid var(--treasure);animation:gp-ring .55s ease-out forwards}
+@keyframes gp-ring{from{transform:scale(.3);opacity:1}to{transform:scale(1.9);opacity:0}}
+.gpop b{position:absolute;left:0;top:-14px;transform:translateX(-50%);font:800 22px var(--mono);color:var(--mastered);text-shadow:0 2px 0 #fff,0 0 6px #fff;animation:gp-up .8s ease-out forwards;white-space:nowrap}
+@keyframes gp-up{from{transform:translate(-50%,0);opacity:1}to{transform:translate(-50%,-46px);opacity:0}}
+.gpop.calm .gpop-ring{animation:gp-fade .6s ease-out forwards;transform:scale(1.2)}
+.gpop.calm b{animation:gp-fade .8s ease-out forwards;transform:translateX(-50%)}
+@keyframes gp-fade{from{opacity:1}to{opacity:0}}
+
+/* ---------------------------------------------------------- the wobble */
+/* the thing that was wrong shakes its head — a small rotation, never the screen */
+.gwob{animation:g-wob .5s ease-in-out}
+@keyframes g-wob{20%{transform:rotate(-4deg) translateX(-3px)}40%{transform:rotate(3deg) translateX(3px)}60%{transform:rotate(-2deg)}80%{transform:rotate(1deg)}}
+.nl-mark.gwob{animation:g-wob-x .5s ease-in-out}
+@keyframes g-wob-x{20%{transform:translateX(-50%) rotate(-10deg)}40%{transform:translateX(-50%) rotate(8deg)}60%{transform:translateX(-50%) rotate(-5deg)}80%{transform:translateX(-50%) rotate(2deg)}}
+
+/* ---------------------------------------------------------- Number Rush */
+.rush-stage{flex:1;position:relative;min-height:240px}
+.rush-stage .rush-c{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+.rush-in{background:color-mix(in srgb,var(--surface) 82%,transparent);margin:0 auto;border-radius:16px;min-width:140px;padding:0 16px}
+.g-rush .pad{background:color-mix(in srgb,var(--surface) 55%,transparent);border-radius:18px;padding:8px;backdrop-filter:blur(4px)}
+/* a short laptop window: the pad tightens so all four rows stay on screen */
+@media (max-height:640px){.rush-stage{min-height:170px}.rush-in{height:44px;font-size:32px}.g-rush .pad{gap:6px;padding:6px;margin-top:4px}.rush .pk{height:36px}}
+
+/* ---------------------------------------------------------- Make the Target */
+.mt{position:relative}
+.mt-card.born{animation:g-born .38s cubic-bezier(.3,1.6,.5,1)}
+.mt-target.won{animation:g-born .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes g-born{from{transform:scale(.4);opacity:.2}}
+.g-target .mt-msg,.g-line .nl-msg{background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:12px;padding:4px 12px;display:inline-block}
+
+/* ---------------------------------------------------------- Number Line */
+.g-line .nl-track{background:color-mix(in srgb,var(--surface) 86%,transparent);border-radius:18px;box-shadow:var(--sh-raised)}
+.g-line .nl-q{display:inline-block;background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:16px;padding:4px 18px;margin:0}
+.nl-mark.set{animation:nl-drop .3s ease-out}
+@keyframes nl-drop{from{transform:translate(-50%,-14px)}to{transform:translate(-50%,0)}}
+.nl-true{animation:nl-rise .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes nl-rise{from{transform:translate(-50%,16px);opacity:0}}
+@media (max-width:560px){.nl{padding:20px 12px}.nl-q{font-size:20px}.nl-q b{font-size:34px}}
+
+/* ---------------------------------------------------------- Sudoku */
+.sdk-wrap{position:relative}
+.sc.born{animation:g-born .3s cubic-bezier(.3,1.6,.5,1)}
+
+/* ---------------------------------------------------------- the title card */
+.g-intro{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:clamp(12px,4vh,40px) 16px;cursor:pointer}
+.g-card{max-width:460px;width:100%;background:color-mix(in srgb,var(--surface) 93%,transparent);border-radius:var(--r-lg);box-shadow:var(--sh-raised);padding:22px 24px 18px;text-align:center;animation:g-cardin .35s cubic-bezier(.3,1.4,.5,1)}
+@keyframes g-cardin{from{transform:translateY(18px) scale(.96);opacity:0}}
+.g-card h2{font-family:var(--display);font-size:clamp(26px,5vw,34px);margin:0 0 10px;line-height:1.1}
+.g-card .kicker{color:var(--action)}
+.g-how{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;text-align:left}
+.g-how li{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:12px;background:var(--surface2);font-weight:600;opacity:0;animation:g-step .35s ease-out forwards;animation-delay:calc(var(--i) * 700ms + 150ms)}
+@keyframes g-step{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.g-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--action-tint);color:var(--action);font-size:18px;font-weight:800}
+.g-bar{height:6px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:0 0 14px}
+.g-bar i{display:block;height:100%;background:var(--action);transform-origin:left;animation:g-fill linear forwards}
+@keyframes g-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.g-skip{font-size:12px;color:var(--muted);margin:10px 0 0}
+@media (max-height:600px){.g-card{padding:14px 18px 12px}.g-how{gap:5px;margin-bottom:10px}.g-how li{padding:5px 10px}.g-card h2{margin-bottom:6px}.g-skip{display:none}}
+
+/* ---------------------------------------------------------- the finish */
+.play.has-art .play-end{background:color-mix(in srgb,var(--surface) 94%,transparent);border-radius:var(--r-lg);box-shadow:var(--sh-raised);margin:auto;padding:22px}
+.play-end h2{margin:6px 0 8px}
+.g-practised{text-align:left;background:var(--surface2);border-radius:14px;padding:12px 14px;margin:10px 0}
+.g-practised .kicker{margin:0 0 4px}
+.g-skill{font-weight:700;margin:0 0 8px}
+.g-facts{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.g-facts li{padding:3px 9px;border-radius:9px;background:var(--mastered-tint);color:var(--mastered);font-weight:700;font-size:14px;animation:g-born .35s cubic-bezier(.3,1.6,.5,1) both}
+.g-facts.again li{background:var(--fix-tint);color:var(--fix)}
+.g-facts li:nth-child(2){animation-delay:.05s}.g-facts li:nth-child(3){animation-delay:.1s}.g-facts li:nth-child(4){animation-delay:.15s}.g-facts li:nth-child(n+5){animation-delay:.2s}
+
+/* ---------------------------------------------------------- reduced motion */
+:root[data-motion=reduced] .gpop i{display:none}
+:root[data-motion=reduced] .gwob,:root[data-motion=reduced] .gcombo,:root[data-motion=reduced] .g-card,:root[data-motion=reduced] .mt-card.born,:root[data-motion=reduced] .sc.born,:root[data-motion=reduced] .nl-mark.set,:root[data-motion=reduced] .nl-true,:root[data-motion=reduced] .g-facts li{animation:none}
+:root[data-motion=reduced] .g-how li{animation:none;opacity:1}
+@media (prefers-reduced-motion:reduce){
+  .gpop i{display:none}
+  .gwob,.gcombo,.g-card,.mt-card.born,.sc.born,.nl-mark.set,.nl-true,.g-facts li,.mt-target.won{animation:none}
+  .g-how li{animation:none;opacity:1}
+}

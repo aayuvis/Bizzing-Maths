@@ -261,11 +261,14 @@ async function run(vp, tag) {
   await answerAll(''); await page.click('[data-act=endRun]'); await nav('puzzles');
   const pzr = await page.evaluate(() => window.__bzm.R.h.kids[0].puzzles);
   ok(pzr.space && pzr.space.right >= 6, 'Shapes & Space answers are recorded under their family');
-  await page.click('[data-act=sudokuPlay][data-arg="1"]'); await page.waitForSelector('.sdk');
+  await page.click('[data-act=sudokuPlay][data-arg="1"]'); await page.waitForSelector('.g-intro');
+  ok(/Sudoku/.test(await page.locator('.g-card h2').innerText()), 'sudoku opens on its title card');
+  await page.keyboard.press('Enter'); await page.waitForSelector('.sdk');
   await shot('24-sudoku');
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('1');
   for (let i = 0; i < 90 && await page.locator('.sdk').count() && !(await page.locator('.play-end').count()); i++) { await page.keyboard.press('h'); await page.waitForTimeout(15); }
   await page.waitForSelector('.play-end', { timeout: 5000 });
+  ok(/Logic/.test(await page.locator('.g-practised').innerText()), 'the sudoku finish names the skill practised');
   ok(true, 'sudoku solves'); await page.keyboard.press('Escape');
   // goals
   await page.evaluate(() => window.__bzm.go('goals')); await page.waitForSelector('.strands');
@@ -322,25 +325,130 @@ async function run(vp, tag) {
   const end = await page.evaluate(() => window.__bzm.R.contest && window.__bzm.R.contest.phase);
   ok(end === 'end', 'a contest answered perfectly runs to the end');
   await shot('15-contest-end');
-  // games by keyboard
+  // games: Family Standard §10 — a title card and a 3-second how-to, motion on
+  // every answer, sound (the music loop), a finish screen naming what was
+  // practised; keyboard AND touch.
   await nav('arcade'); await page.waitForSelector('.gtiles');
   await shot('16-arcade');
-  await page.click('[data-act=play][data-arg=rush]'); await page.waitForTimeout(2600);
-  await shot('17-rush');
-  const bub = await page.evaluate(() => 1); await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  ok(await page.evaluate(() => [...document.querySelectorAll('.gtile .gart')].every((e) => /g-(rush|target|line)\.webp/.test(e.style.backgroundImage))), 'every Arcade tile is painted, not a CSS circle');
+  const G = (fn) => page.evaluate(fn);
+  const juice = () => G(() => +document.querySelector('.play').dataset.juice);
+  const combo = () => G(() => +(document.querySelector('.gcombo').dataset.n || 0));
+  const music = () => G(() => document.documentElement.dataset.music);
+  const intro = async (name) => {
+    await page.waitForSelector('.g-intro');
+    ok((await page.locator('.g-card h2').innerText()).includes(name), `${name}: a title card`);
+    ok(await page.locator('.g-how li').count() === 3 && /Practises/i.test(await page.locator('.g-card .kicker').innerText()), `${name}: a three-step how-to saying what it practises`);
+  };
+  // Number Rush — the how-to starts the game by itself after three seconds
+  await page.click('[data-act=play][data-arg=rush]'); await intro('Number Rush');
+  await page.waitForTimeout(1800); await shot('17a-rush-intro');
+  await page.waitForSelector('.rush-stage', { timeout: 4500 });
+  ok(await music() === 'on', 'Rush: the music loop plays');
+  await page.waitForFunction(() => { const g = window.__bzmGames.active(); return g && g.probe.answers().length > 0; }, null, { timeout: 8000 });
+  const ans = await G(() => window.__bzmGames.active().probe.answers()[0]);
+  const j0 = await juice();
+  for (const ch of ans) await page.keyboard.press(ch);
+  ok(await page.locator('.rush-stage .gpop').count() >= 1, 'Rush: a right answer pops particles where the bubble was');
+  ok(await combo() === 1 && await juice() > j0, 'Rush: a right answer moves the combo meter');
+  await page.waitForTimeout(250); await shot('17-rush');
+  // a wrong answer: digits whose every prefix pops nothing, then Enter
+  const live = await G(() => window.__bzmGames.active().probe.answers());
+  let wrong = 1000; while (live.some((a) => String(wrong).startsWith(a))) wrong++;
+  for (const ch of String(wrong)) await page.keyboard.press(ch);
+  await page.keyboard.press('Enter');
+  ok(await combo() === 0 && await page.locator('.rush-in.gwob').count() === 1, 'Rush: a wrong answer wobbles the answer and resets the combo');
+  await G(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  ok(await music() === 'off', 'the music stops when the page is hidden');
+  await G(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  ok(await music() === 'on', 'and comes back with it');
+  await G(() => window.__bzm.fire('sound'));
+  ok(await music() === 'off', 'the music stops when the sound is switched off');
+  await G(() => window.__bzm.fire('sound'));
+  ok(await music() === 'on', 'and comes back with the sound');
+  await page.keyboard.press('m');
+  ok(await music() === 'off' && await page.locator('.play-m[aria-pressed=false]').count() === 1, 'M (or the ♪ button) turns the music off');
+  await page.click('.play-m');
+  ok(await music() === 'on', 'and a tap on ♪ turns it back on');
+  await G(() => window.__bzmGames.active().probe.finish()); await page.waitForSelector('.play-end');
+  ok(/at speed/.test(await page.locator('.g-practised').innerText()), 'Rush: the finish screen names the facts practised');
+  ok(await page.locator('.g-facts.ok li').count() >= 1, 'Rush: and lists the facts popped');
+  ok(await music() === 'off', 'the music stops on the finish screen');
+  await page.waitForTimeout(400); await shot('17b-rush-end');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   ok(!(await page.locator('.play').count()), 'Escape closes Number Rush');
-  await page.click('[data-act=play][data-arg=target]'); await page.waitForSelector('.mt-card');
-  await page.keyboard.press('1'); await page.keyboard.press('+');
+  // Make the Target — skipped by a key, played through by keyboard
+  await page.click('[data-act=play][data-arg=target]'); await intro('Make the Target');
+  await page.keyboard.press('Enter'); await page.waitForSelector('.mt-card');
+  const vals = () => page.$$eval('.mt-card b', (bs) => bs.map((b) => +b.textContent));
+  let v = await vals();
+  const lo = v.indexOf(Math.min(...v)), hi = v.indexOf(Math.max(...v));
+  if (v[lo] < v[hi]) {
+    const j1 = await juice();
+    await page.keyboard.press(String(lo + 1)); await page.keyboard.press('-'); await page.keyboard.press(String(hi + 1));
+    ok(await juice() > j1 && await page.locator('.mt-cards.gwob').count() === 1, 'Target: a move that goes below nought wobbles the cards');
+  }
   await shot('18-target');
+  // find a solution the game's own way (whole numbers, never below nought) and play it by keyboard
+  const tgt = +(await page.locator('.mt-target b').innerText());
+  const OPS = { '+': (a, b) => a + b, '-': (a, b) => (a >= b ? a - b : null), '*': (a, b) => a * b, '/': (a, b) => (b && a % b === 0 ? a / b : null) };
+  const find = (xs) => {
+    if (xs.length === 1) return xs[0] === tgt ? [] : null;
+    for (let i = 0; i < xs.length; i++) for (let k = 0; k < xs.length; k++) {
+      if (i === k) continue;
+      for (const [o, fn] of Object.entries(OPS)) {
+        const r = fn(xs[i], xs[k]); if (r == null) continue;
+        const s = find([r, ...xs.filter((_, x) => x !== i && x !== k)]);
+        if (s) return [[xs[i], o, xs[k]], ...s];
+      }
+    }
+    return null;
+  };
+  const plan = find(await vals());
+  ok(!!plan, 'Target: the puzzle has a solution the test can find');
+  for (const [a, o, b] of plan || []) {
+    v = await vals();
+    const sel = await page.$$eval('.mt-card', (cs) => cs.findIndex((c) => c.classList.contains('on')));
+    const ia = sel >= 0 && v[sel] === a ? sel : v.indexOf(a);
+    if (sel >= 0 && sel !== ia) await page.keyboard.press(String(sel + 1));   // drop a stale pick
+    if (sel !== ia) await page.keyboard.press(String(ia + 1));
+    const ib = v.findIndex((x, i) => x === b && i !== ia);
+    await page.keyboard.press(o); await page.keyboard.press(String(ib + 1));
+  }
+  ok(await page.locator('.mt-target.won').count() === 1, `Target: playing the sum by keyboard makes ${tgt}`);
+  ok(await page.locator('.mt .gpop').count() >= 1 && await combo() === 1, 'Target: a solved puzzle pops at the target and moves the combo');
+  await page.waitForTimeout(250); await shot('18b-target-won');
+  await page.waitForTimeout(1200);
   await page.keyboard.press('s'); await page.waitForTimeout(200);
   ok(/=/.test(await page.locator('.mt-msg').innerText()), 'Show me reveals a solution');
+  ok(await combo() === 0, 'Target: Show me resets the combo');
+  await G(() => window.__bzmGames.active().probe.finish()); await page.waitForSelector('.play-end');
+  const tp = await page.locator('.g-practised').innerText();
+  ok(/Joining numbers/.test(tp) && tp.includes(`= ${tgt}`), 'Target: the finish screen names the skill and the sums made');
   await page.keyboard.press('Escape');
-  await page.click('[data-act=play][data-arg=line]'); await page.waitForSelector('.nl-track');
-  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Enter'); await page.waitForTimeout(100);
-  ok(await page.locator('.nl-true').count() === 1, 'Number Line places by keyboard');
-  await shot('19-line');
-  await page.keyboard.press('Escape');
+  // Number Line — skipped by a TAP on the card, placed by keyboard
+  await page.click('[data-act=play][data-arg=line]'); await intro('Number Line');
+  await page.click('.g-how'); await page.waitForSelector('.nl-track');
+  for (let r = 0; r < 8; r++) {
+    const t = +(await page.locator('.nl-q b').innerText());
+    const j2 = await juice();
+    if (r === 0) for (let i = 0; i < Math.abs(t - 50); i++) await page.keyboard.press(t > 50 ? 'ArrowRight' : 'ArrowLeft');
+    if (r === 1) for (let i = 0; i < 6; i++) await page.keyboard.press(t > 50 ? 'Shift+ArrowLeft' : 'Shift+ArrowRight');
+    await page.keyboard.press('Enter'); await page.waitForTimeout(60);
+    ok(await juice() > j2, `Number Line: round ${r + 1} moves something`);
+    if (r === 0) {
+      ok(await page.locator('.nl-true').count() === 1, 'Number Line places by keyboard');
+      ok(await page.locator('.nl-track .gpop').count() >= 1 && await combo() === 1, 'Number Line: bang on pops at the number and moves the combo');
+      await page.waitForTimeout(200); await shot('19-line');
+    }
+    if (r === 1) ok(await page.locator('.nl-mark.gwob').count() === 1 && await combo() === 0, 'Number Line: a far miss wobbles the marker and resets the combo');
+    await page.keyboard.press('Enter'); await page.waitForTimeout(40);
+  }
+  await page.waitForSelector('.play-end');
+  ok(/Estimating/.test(await page.locator('.g-practised').innerText()) && await page.locator('.g-facts li').count() === 8, 'Number Line: the finish names the skill and all eight numbers placed');
+  await page.waitForTimeout(400); await shot('19b-line-end');
+  await page.click('.play-end [data-g=done]'); await page.waitForTimeout(100);
+  ok(!(await page.locator('.play').count()) && await music() === 'off', 'a tap on Back leaves the game and the music stops');
   // Change avatar on the child's own page
   await page.click('.who[data-arg=me]'); await page.waitForSelector('[data-act=avEdit]');
   await page.click('[data-act=avEdit]'); await page.waitForSelector('.me-av .av-pick');

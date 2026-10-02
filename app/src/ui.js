@@ -35,7 +35,7 @@ export function bindRoot(root) {
 
 /* ---- sound: tiny WebAudio blips, no assets ------------------------------ */
 let AC = null, soundOn = true;
-export function setSound(v) { soundOn = !!v; }
+export function setSound(v) { soundOn = !!v; if (!soundOn) music.stop(false); else if (musicWanted) music.start(musicWanted); }
 function ac() {
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = false; } }
   if (AC && AC.state === 'suspended') AC.resume();
@@ -59,7 +59,68 @@ export const sfx = {
   bad() { tone(220, 0.16, 'sawtooth', 0.07); tone(170, 0.2, 'sawtooth', 0.06, 0.08); },
   level() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.24, 'triangle', 0.11, i * 0.09)); },
   bell() { [784, 1175].forEach((f, i) => tone(f, 0.8, 'sine', 0.1, i * 0.14)); },
+  /* the Arcade's vocabulary: one small sound per action (the Duolingo rule) */
+  pop() { tone(740, 0.06, 'sine', 0.1); tone(1480, 0.08, 'triangle', 0.05, 0.03); },
+  // each consecutive right answer climbs a pentatonic step, capped so it never shrieks
+  combo(n) { const st = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21][Math.min(9, Math.max(0, n - 1))]; tone(523 * Math.pow(2, st / 12), 0.12, 'triangle', 0.08, 0.05); },
+  drop() { tone(330, 0.12, 'sine', 0.08); tone(247, 0.16, 'sine', 0.06, 0.06); },
+  place() { tone(392, 0.06, 'triangle', 0.08); },
+  fanfare() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i === 5 ? 0.5 : 0.16, 'triangle', 0.1, i * 0.11)); },
 };
+
+/* ---- a music loop: synthesised, no assets ------------------------------- */
+/* A soft pentatonic loop for the games — a bass note and a four-note figure on
+   a gentle sine, scheduled a beat ahead. It follows the sound toggle, it stops
+   when the game closes, and it stops whenever the page is hidden: a phone in a
+   pocket must not keep playing. `music.start(style)` names one of the loops;
+   document.documentElement[data-music] says whether it is playing, for the
+   headless checks and nothing else. */
+const LOOPS = {
+  bright: { bpm: 104, bass: [131, 131, 175, 196], notes: [523, 659, 784, 659, 587, 784, 880, 784] },
+  calm:   { bpm: 84,  bass: [147, 165, 131, 147], notes: [587, 698, 880, 698, 659, 784, 988, 784] },
+  sea:    { bpm: 90,  bass: [110, 131, 147, 131], notes: [440, 523, 659, 784, 659, 523, 587, 523] },
+};
+let musicWanted = null, musicTimer = 0, musicStep = 0, musicNext = 0, musicBus = null;
+function musicMark(on) { try { document.documentElement.dataset.music = on ? 'on' : 'off'; } catch (e) {} }
+export const music = {
+  start(style = 'bright') {
+    musicWanted = LOOPS[style] ? style : 'bright';
+    if (!soundOn || musicTimer || (typeof document !== 'undefined' && document.hidden)) return;
+    const c = ac(); if (!c) return;
+    musicBus = c.createGain(); musicBus.gain.value = 0.0001; musicBus.connect(c.destination);
+    musicBus.gain.exponentialRampToValueAtTime(1, c.currentTime + 1.2);   // fade in, never a jolt
+    musicStep = 0; musicNext = c.currentTime + 0.1;
+    const L = LOOPS[musicWanted], beat = 60 / L.bpm / 2;
+    const voice = (f, t, d, v, type) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + d + 0.05);
+    };
+    const tick = () => {
+      while (musicNext < c.currentTime + 0.4) {
+        const i = musicStep % L.notes.length;
+        voice(L.notes[i], musicNext, beat * 1.6, 0.022, 'sine');
+        if (i % 4 === 0) voice(L.bass[(musicStep / 4 | 0) % L.bass.length], musicNext, beat * 3.6, 0.03, 'triangle');
+        musicNext += beat; musicStep++;
+      }
+    };
+    tick(); musicTimer = setInterval(tick, 120);
+    musicMark(true);
+  },
+  /* `forget` false keeps the wish, so a hidden page resumes when it comes back */
+  stop(forget = true) {
+    if (forget) musicWanted = null;
+    clearInterval(musicTimer); musicTimer = 0;
+    if (musicBus) { const b = musicBus; musicBus = null; try { b.gain.cancelScheduledValues(0); b.gain.setValueAtTime(0.0001, AC.currentTime); setTimeout(() => b.disconnect(), 200); } catch (e) {} }
+    musicMark(false);
+  },
+  playing() { return !!musicTimer; },
+};
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (document.hidden) music.stop(false);
+  else if (musicWanted) music.start(musicWanted);
+});
 
 /* ---- transient chrome --------------------------------------------------- */
 let toastT = null;
