@@ -12,7 +12,7 @@ Each is an ordinary Atlas stop and follows [CHAPTER-CONTRACT.md](CHAPTER-CONTRAC
 letter (q / gen / work / expr / cases or oneIdea / why / story). Worlds carry `track: 'contest'`.
 
 **`strategy` — The Strategy School** (ways in that work on almost anything)
-`work-backwards` · `guess-check-improve` · `make-a-table` · `nth-term` · `bar-model` ·
+`work-backwards` · `guess-check-improve` · `make-a-table` · `find-the-rule` · `bar-model` ·
 `heads-and-legs` · `age-problems` · `simpler-case` · `meeting-and-overtaking` · `units-digit-cycles`
 
 **`logic` — The Logic Labyrinth** (reasoning about what MUST be true)
