@@ -12,6 +12,7 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { mkdirSync, existsSync, symlinkSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { gzipSync } from 'node:zlib';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW || '/opt/node22/lib/node_modules/playwright');
 
@@ -133,6 +134,21 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.click('.cel .btn'); await p.clock.runFor(500);
   await p.evaluate(() => window.__bzm.go('home')); await p.reload(); await p.waitForSelector('.home2');
   ok(await p.locator('.cel').count() === 0, 'a medal is celebrated once, not again on the next visit');
+  await ctx.close();
+}
+
+/* first-load weight (standard §11, audit N2): the phone's first screen ≤ 1.5 MB
+   transferred, initial JavaScript ≤ 400 KB gzipped. GitHub Pages gzips text, the
+   test server does not — so text is measured gzipped, images as they are. */
+{
+  const { p, ctx } = await page({ width: 390, height: 844 }, 'weight');
+  const got = [];
+  p.on('response', async (r) => { try { const b = await r.body(); const t = r.headers()['content-type'] || ''; got.push({ u: r.url(), n: /javascript|css|html|json|svg/.test(t) ? gzipSync(b).length : b.length, js: /javascript/.test(t) }); } catch {} });
+  await p.goto(BASE); await p.waitForSelector('.home2'); await p.waitForLoadState('networkidle');
+  const total = got.reduce((a, x) => a + x.n, 0), js = got.filter((x) => x.js).reduce((a, x) => a + x.n, 0);
+  ok(total <= 1.5 * 1024 * 1024, `first screen on a phone is ≤ 1.5 MB (got ${(total / 1048576).toFixed(2)} MB: ${got.sort((a, b) => b.n - a.n).slice(0, 4).map((x) => x.u.split('/').pop() + ' ' + Math.round(x.n / 1024) + 'K').join(', ')})`);
+  ok(js <= 400 * 1024, `initial JavaScript is ≤ 400 KB gzipped (got ${Math.round(js / 1024)} KB)`);
+  ok(!got.some((x) => /\/(shapes|formulas|dictionary|vedic|chinese)-/.test(x.u)), 'no Library tool is downloaded for Home');
   await ctx.close();
 }
 

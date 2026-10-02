@@ -17,12 +17,9 @@
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { seeded } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'working', name: 'Show Me the Working',
-  blurb: 'Type a sum and see it worked out step by step — two or three ways, side by side.',
-  art: 'lib-working',
-};
+export const TOOL = META.working;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const esc = kit.esc;
 const groupS = (s) => { const [i, f] = String(s).split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f != null ? '.' + f : ''); };

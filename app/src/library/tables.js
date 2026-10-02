@@ -14,13 +14,11 @@
    of it (all fifteen facts) is enough to show it and open the 10 × 10. */
 import * as F from '../facts.js';
 
-export const TOOL = {
-  id: 'tables', name: 'Times Table Explorer', art: 'lib-tables',
-  blurb: 'Start with the 5 × 5 square, master it, and watch it grow to 20 × 20 — with a squares trainer inside.',
-};
+export const TOOL = META.tables;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 import { paintedRoad } from '../board.js';
 import { avatarFile } from '../model.js';
+import { META } from './shelf.js';
 export const LEVELS = [5, 10, 15, 20];
 export const PASS_TENTHS = 9;                 // 9 in every 10
 const RUN = 20;

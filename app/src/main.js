@@ -18,7 +18,7 @@ import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
-import { toolById, SHELF } from './library/index.js';
+import { toolById, SHELF, isTool, loadTool } from './library/index.js';
 import { STORIES } from './stories.js';
 import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel } from './puzzles.js';
 import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor } from './themes.js';
@@ -161,7 +161,10 @@ function screen() {
     case 'stories': return V2.viewStories();
     case 'puzzles': return V2.viewTower();
     case 'library': return V2.viewLibrary(SHELF);
-    case 'lib': return toolById[R.ui.arg] ? V2.viewTool(toolById[R.ui.arg], libCtx(R.ui.arg)) : V2.viewLibrary(SHELF);
+    case 'lib':
+      if (toolById[R.ui.arg]) return V2.viewTool(toolById[R.ui.arg], libCtx(R.ui.arg));
+      if (isTool(R.ui.arg)) { const id = R.ui.arg; loadTool(id).then(() => { if (R.ui.arg === id) render(); }); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the tool…</p></div></section>'; }
+      return V2.viewLibrary(SHELF);
     case 'goals': return V2.viewGoals();
     case 'journey': return V2.viewJourney();
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();

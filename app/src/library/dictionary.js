@@ -9,11 +9,9 @@
 import * as kit from '../chapters/kit.js';
 import { TRICKS } from '../tricks.js';
 import { seeded, dayKey } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'dictionary', name: 'Maths Dictionary', art: 'lib-dictionary',
-  blurb: 'Every maths word from 6 to 14 — what it means, an example with real numbers, and where the Atlas teaches it.',
-};
+export const TOOL = META.dictionary;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

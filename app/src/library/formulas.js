@@ -14,11 +14,9 @@ import { TRICKS, parseNum, correct } from '../tricks.js';
 import { RIVALS } from '../contest.js';
 import { SCENES, evalSum } from '../stories.js';
 import { int, pick, rnd, seeded } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'formulas', name: 'Formula Book', art: 'lib-formulas',
-  blurb: 'Formula cards to collect — each with the picture that proves it, a story that uses it, and a quiz to keep it.',
-};
+export const TOOL = META.formulas;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = kit.svg, T = kit.text;

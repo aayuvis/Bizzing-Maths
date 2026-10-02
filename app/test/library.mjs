@@ -3,7 +3,9 @@
    back, a worked method ends on the true answer, a plotted point lies on its
    line…). Journeys and formula cards are held to the Atlas rules: every
    question checked three ways, every story sum evaluated. */
-import { TOOLS } from '../src/library/index.js';
+import { loadAll, ORDER } from '../src/library/index.js';
+import { META } from '../src/library/shelf.js';
+const TOOLS = await loadAll();
 import { parseNum, correct } from '../src/tricks.js';
 import { evalSum } from '../src/stories.js';
 import { RIVALS } from '../src/contest.js';

@@ -17,12 +17,9 @@ import { paintedRoad } from '../board.js';
 import { avatarFile } from '../model.js';
 import { int, pick } from '../rand.js';
 import { byId, WORLDS } from '../tricks.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'vedic', name: 'Vedic Maths Journey',
-  blurb: 'Walk the stepping stones of the sutras — each method, and the algebra that makes it work.',
-  art: 'lib-vedic',
-};
+export const TOOL = META.vedic;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const P = 't-vedic';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

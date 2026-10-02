@@ -15,12 +15,9 @@
 
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'explorer', name: 'Number Explorer',
-  blurb: 'Type any number and read its page — factors, primes, squares, Roman numerals and its neighbours.',
-  art: 'lib-explorer',
-};
+export const TOOL = META.explorer;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const MAX = 1000000;
 const esc = kit.esc;

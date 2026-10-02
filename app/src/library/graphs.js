@@ -20,12 +20,9 @@
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { seeded } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'graphs', name: 'Graphing',
-  blurb: 'Plot points, draw straight lines and curves, find where they cross — and read speed and conversions off real graphs.',
-  art: 'lib-graphs',
-};
+export const TOOL = META.graphs;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 /* ------------------------------------------------------------ helpers */
 

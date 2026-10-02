@@ -31,12 +31,9 @@ import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { fold } from '../puzzles.js';
 import { seeded } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'shapes', name: 'Shape Studio',
-  blurb: 'Measure angles with a protractor, build shapes on a grid, fold solids flat and move shapes about — and see why every rule is true.',
-  art: 'lib-shapes',
-};
+export const TOOL = META.shapes;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 /* ------------------------------------------------------------ helpers */
 

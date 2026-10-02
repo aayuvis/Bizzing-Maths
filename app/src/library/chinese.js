@@ -22,12 +22,9 @@
 import { paintedRoad } from '../board.js';
 import { avatarFile } from '../model.js';
 import { int, pick, shuffle } from '../rand.js';
+import { META } from './shelf.js';
 
-export const TOOL = {
-  id: 'chinese', name: 'Chinese Maths Journey',
-  blurb: 'Counting rods, the suanpan, the Lo Shu and the Nine Chapters — a path of stepping stones.',
-  art: 'lib-chinese',
-};
+export const TOOL = META.chinese;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
 const P = 't-chinese';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
