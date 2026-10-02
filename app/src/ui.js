@@ -2,6 +2,8 @@
    Rendering is `state -> render()` returning a string; clicks dispatch by
    [data-act]. Inherited from Bizzing Bee because the team is fluent in it. */
 
+import { setVoiceSound } from './voice.js';
+
 export function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35,7 +37,7 @@ export function bindRoot(root) {
 
 /* ---- sound: tiny WebAudio blips, no assets ------------------------------ */
 let AC = null, soundOn = true;
-export function setSound(v) { soundOn = !!v; if (!soundOn) music.stop(false); else if (musicWanted) music.start(musicWanted); }
+export function setSound(v) { soundOn = !!v; setVoiceSound(soundOn); if (!soundOn) music.stop(false); else if (musicWanted) music.start(musicWanted); }
 function ac() {
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = false; } }
   if (AC && AC.state === 'suspended') AC.resume();
@@ -161,27 +163,7 @@ export function nWord(n) { return WORDS[n] !== undefined ? WORDS[n] : String(n);
 /* ── read to me ───────────────────────────────────────────────────────────
    Questions can be read aloud for a child who reads slower than they
    calculate — a six-year-old should not lose a fact to the word "sixty".
-   There are no recorded clips here, so the device voice IS the reader. An Indian English
-   voice first, then any English. Rate follows the narration-speed setting. */
-let sayRate = 1;
-export function setSayRate(r) { sayRate = r || 1; }
-export function canSay() { return typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; }
-function pickVoice() {
-  const vs = speechSynthesis.getVoices() || [];
-  return vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang)) || null;
-}
-/* `onend` makes the voice the clock: a story beat advances when its line has
-   been SPOKEN, not on a timer hoping to match (the family's production rule). */
-export function say(text, onend) {
-  if (!canSay() || !text) return false;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
-    const v = pickVoice(); if (v) u.voice = v;
-    u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
-    if (onend) u.onend = onend;
-    speechSynthesis.speak(u);
-    return true;
-  } catch (e) { return false; }
-}
-export function hush() { try { if (canSay()) speechSynthesis.cancel(); } catch (e) {} }
+   voice.js plays the family narrator's recordings where every piece of the line
+   was recorded, and the device's own voice where it was not. The signatures are
+   the ones every caller already uses: say(text, onend) and hush(). */
+export { speak as say, hush, canSay, setSayRate } from './voice.js';

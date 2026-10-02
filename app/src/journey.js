@@ -58,6 +58,12 @@ export const stepsOf = (j, n) => [...(j.recap === n ? recapOf(n) : []), ...level
 export const LAND_N = 20, LAND_PASS = 12, LAND_BONUS = 5;
 export const LEVEL_N = 50, LEVEL_PASS = 30, LEVEL_BONUS = 10;
 
+/* What a test gate says before a child goes in (the Atlas road card). One
+   function, so the screen and its recording (tools/voice/clips.mjs) cannot differ. */
+export const testBlurb = (lvl, n) => (lvl
+  ? `${LEVEL_N} questions from every land, getting harder. ${LEVEL_PASS} right passes — and moves you up to ${ageOf(Math.min(10, n + 1))}. Then ${LEVEL_BONUS} bonus questions, double points.`
+  : `${LAND_N} questions from this land, getting harder. ${LAND_PASS} right opens the road on. Then ${LAND_BONUS} bonus questions at almost the next level, double points.`);
+
 /* A level's lands, from levels.js — or, for a level written without lands, one
    land per concept in first-appearance order. */
 export function landsOf(n) {
