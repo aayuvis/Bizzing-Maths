@@ -41,7 +41,8 @@ export function earn(app, who, event, now = Date.now()) {
   if (!APPS.test(app) || !(event in EARN)) return 0;
   const o = load(), k = kid(o, who);
   if (!k) return 0;
-  const today = k.ledger.filter((x) => x.a === app && x.n > 0 && day(x.t) === day(now)).reduce((a, x) => a + x.n, 0);
+  // only coins EARNED count toward the lid — a one-time migration or a refund is not earning
+  const today = k.ledger.filter((x) => x.a === app && x.n > 0 && x.why in EARN && day(x.t) === day(now)).reduce((a, x) => a + x.n, 0);
   const n = Math.min(EARN[event], Math.max(0, DAILY_CAP - today));
   if (!n) return 0;
   k.coins += n;
