@@ -28,6 +28,9 @@ async function run(vp, tag) {
   page.on('response', (r) => { if (r.status() === 404) errors.push(`${tag} 404: ${r.url()}`); });
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${tag} console: ${m.text()}`); });
   const shot = (n) => page.screenshot({ path: `${SHOTS}/${tag}-${n}.png`, fullPage: false });
+  // a land, level or medal ceremony sits over the screen until the child taps "Brilliant!" — as a child would, tap it
+  const click0 = page.click.bind(page);
+  page.click = async (sel, o) => { for (let i = 0; i < 6 && sel !== '.cel .btn' && await page.locator('.cel .btn').count(); i++) await click0('.cel .btn'); return click0(sel, o); };
   const R = () => page.evaluate(() => { const r = window.__bzm.R; return { nav: r.ui.nav, run: r.run && { kind: r.run.kind, i: r.run.i, n: r.run.items.length, over: r.run.over, fb: r.run.fb, q: r.run.items[r.run.i] } }; });
   const nav = (k) => page.click(vp.width < 760 ? `.tb[data-arg=${k}]` : `.tab[data-arg=${k}]`);
   const typeAns = async (ans) => { for (const ch of String(ans)) await page.keyboard.press(ch); };
@@ -342,7 +345,7 @@ async function run(vp, tag) {
   await shot('19-line');
   await page.keyboard.press('Escape');
   // Change avatar on the child's own page
-  await page.click('.who[data-arg=me]'); await page.waitForSelector('[data-act=avEdit]');
+  await page.click('header .who'); await page.click('.sheet [data-arg=me]'); await page.waitForSelector('[data-act=avEdit]');
   await page.click('[data-act=avEdit]'); await page.waitForSelector('.me-av .av-pick');
   ok(await page.locator('.me-av .av-pack').count() === 5 && await page.locator('.me-av .av-pick').count() === 30, 'all thirty faces, five packs of six, wait on the child\'s page');
   await page.locator('.me-av .av-packs').screenshot({ path: `${SHOTS}/${tag}-01b-avatars.png` }).catch(() => {});
@@ -395,7 +398,7 @@ async function themes(page, vp, tag, shot) {
   ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'arcade', 'switching back restores the first child\'s theme');
   await page.evaluate(() => { const h = window.__bzm.R.h; h.kids = h.kids.filter((k) => k.id !== 'theme-twin'); });
   // the picker: reachable from Home, keyboard and tap
-  await page.click('.theme-chip'); await page.waitForSelector('.theme-card');
+  await page.click('header [data-act=themes]'); await page.waitForSelector('.theme-card');
   ok(await page.locator('.theme-card').count() === 6, 'the picker shows six themes');
   ok(await page.evaluate(() => document.activeElement && document.activeElement.id) === 'theme-arcade', 'the Home chip lands on the chosen theme');
   await page.keyboard.press('ArrowRight');   // wraps round to the first

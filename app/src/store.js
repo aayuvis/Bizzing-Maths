@@ -14,9 +14,12 @@
    Never edit an old step — a device that skipped a release still has to walk
    every step in order. */
 
+import { trackActivity, trackMilestone } from './integration/bizzing-activity.js';
+import * as W from './integration/bizzing-wallet.js';
+
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 5;
+export const SCHEMA = 6;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -40,6 +43,11 @@ const STEPS = {
   3: (h) => { h.v = 4; for (const k of h.kids) k.lib = k.lib || {}; return h; },
   // v5: the ten-level journeys. Nobody is placed until they take the level test.
   4: (h) => { h.v = 5; for (const k of h.kids) k.journey = k.journey || { level: null, done: {}, finished: [], tested: null }; return h; },
+  // v6: the family layer. Medals earned from evidence, and the cosmetics bought
+  // with Bizzing coins. Maths had no currency of its own, so there is nothing
+  // to convert: the coins themselves live in the family wallet, not here.
+  // weeks: one snapshot of what the child can do per week, for the report's trend.
+  5: (h) => { h.v = 6; for (const k of h.kids) { k.medals = k.medals || {}; k.shop = k.shop || { owned: [], worn: {} }; k.weeks = k.weeks || {}; } return h; },
 };
 
 export function migrate(h) {
@@ -54,7 +62,12 @@ export function migrate(h) {
   return h;
 }
 
-const ls = (() => { try { const k = '__bzm'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return localStorage; } catch { return null; } })();
+/* Demo mode (family standard §14): ?demo runs on a sample child held in memory
+   only. It never reads or writes the real household, the device prefs or the
+   family's shared keys — `ls` is simply absent, so every path below falls
+   through to `mem`. Decided once, at load, before anything is read. */
+export const DEMO = typeof location !== 'undefined' && /[?&]demo\b/.test(location.search);
+const ls = DEMO ? null : (() => { try { const k = '__bzm'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return localStorage; } catch { return null; } })();
 const mem = {};
 
 function read(k) {
@@ -90,3 +103,24 @@ export const Store = {
 };
 
 if (typeof window !== 'undefined') window.addEventListener('pagehide', () => Store.flush());
+
+/* ---- the family's shared keys --------------------------------------------
+   bizzing.activity (minutes and milestones, read by the Hive) and
+   bizzing.wallet (Bizzing coins, one wallet per child across every app) are
+   written by the family's own drop-ins, copied verbatim from Bizzing_Schedule's
+   integration/ folder so the rules (standard amounts, daily cap, no network)
+   are the family's, not ours. They live behind this seam like everything else:
+   no other module imports them, and in demo mode none of them run. */
+export const APP_ID = 'maths';
+export const Family = {
+  track(getName) { return DEMO ? () => {} : trackActivity(APP_ID, getName); },
+  milestone(who, ev, label) { if (!DEMO && who) trackMilestone(APP_ID, who, ev, label); },
+  earn(who, event) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event); },
+  spend(who, price, why) { return DEMO || !who ? false : W.spend(APP_ID, who, price, why); },
+  balance(who) { return DEMO || !who ? 0 : W.balance(who); },
+  ledger(who) { return DEMO || !who ? [] : W.ledger(who); },
+  /* READ the activity feed (for the report card's minutes). This app writes it
+     only through the drop-in; here it is parsed, never changed. */
+  feed() { if (DEMO || !ls) return []; try { const o = JSON.parse(ls.getItem('bizzing.activity') || 'null'); return o && Array.isArray(o.s) ? o.s : []; } catch { return []; } },
+  EARN: W.EARN,
+};

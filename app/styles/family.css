@@ -1,0 +1,127 @@
+/* family.css — the Bizzing family layer (FAMILY-STANDARD.md): the top bar, the
+   household sheet, Home's anatomy, the medal shelf, the shop and the ceremony. */
+
+/* ---- the family top bar: 56px, the same order in every app */
+.top{height:56px;padding-top:0;padding-bottom:0;box-sizing:border-box}
+.hive{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:var(--treasure-deep);flex:none}
+.hive svg{width:24px;height:24px;fill:var(--treasure);stroke:var(--treasure-deep);stroke-width:1.4}
+.hive:hover{background:var(--treasure-tint)}
+.who{display:flex;align-items:center;gap:2px;border-radius:var(--r-pill);padding:2px 6px 2px 2px}
+.who:hover,.who[aria-expanded=true]{background:var(--action-tint)}
+.caret-d{font-size:11px;color:var(--muted)}
+.hive-chip{position:sticky;top:60px;z-index:19;display:block;width:max-content;margin:8px auto 0;padding:6px 14px;border-radius:var(--r-pill);background:var(--treasure-tint);color:var(--ink);font:700 13px var(--ui);text-decoration:none;box-shadow:0 2px 8px rgb(0 0 0 / .08)}
+.demo-bar{background:var(--treasure-tint);color:var(--ink);text-align:center;font:600 13px var(--ui);padding:7px 14px;border-bottom:1px solid var(--line)}
+.demo-bar a{color:var(--action);font-weight:750;margin-left:6px}
+@media (max-width:760px){ .hive{width:32px;height:32px} .brand-mark{width:32px;height:32px} }
+
+/* ---- the household sheet (avatar ▾) */
+.sheet-back{position:fixed;inset:0;z-index:40;background:rgb(10 15 30 / .28)}
+.sheet{position:fixed;z-index:41;top:62px;right:max(12px,calc(50vw - 560px));width:min(340px,calc(100vw - 24px));background:var(--surface);color:var(--ink);border-radius:18px;padding:16px;box-shadow:0 18px 50px rgb(10 15 30 / .28);animation:pop .18s ease-out}
+.sheet-kids{display:flex;flex-direction:column;gap:6px;margin:8px 0 12px}
+.sk{display:flex;align-items:center;gap:12px;padding:8px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.sk > span{display:flex;flex-direction:column}
+.sk.on{border-color:var(--action);box-shadow:0 0 0 2px var(--action) inset}
+.sk .av{border-radius:50%;background:var(--surface2)}
+.sk .plus{width:44px;height:44px;border-radius:50%;background:var(--action-tint);color:var(--action);font-size:24px;display:grid;place-items:center}
+.sheet-row{display:flex;align-items:center;gap:8px}.sheet-row .btn{margin-right:auto}
+
+/* ---- Home: greeting + ring, ONE Continue, Today's three, ways in */
+.h-r1{grid-template-columns:1fr 1.45fr;margin-top:48px}
+.h-r2b{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1.45fr;gap:16px}
+.h-r2b .h-three{grid-template-columns:1fr;gap:8px}
+.h-r1 .ccard{grid-template-columns:150px 1fr;grid-template-rows:auto auto;padding:14px}
+.h-r1 .ccard .cc-art{grid-row:1 / span 2}
+.h-r1 .ccard .cc-go{justify-self:start}
+.h-r4{grid-template-columns:1fr 1.15fr 1.2fr}
+.ccard{position:relative;z-index:1;display:grid;grid-template-columns:200px 1fr auto;align-items:center;gap:18px;padding:14px 20px 14px 14px;overflow:hidden}
+.cc-art{align-self:stretch;min-height:110px;border-radius:14px;background-size:cover;background-position:center}
+.cc-t{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cc-t b{font:800 24px/1.15 var(--display);letter-spacing:-.01em}
+.cc-t .meter{max-width:340px}
+.cc-go{white-space:nowrap}
+.h-three{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.t3{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;border:1px dashed var(--line);background:color-mix(in srgb,var(--surface) 80%,transparent);cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.t3:hover{border-style:solid;border-color:var(--action)}
+.t3 > span:last-child{display:flex;flex-direction:column;min-width:0}
+.t3 b{font:750 16px var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t3 .ti{width:40px;height:40px;font-size:19px}
+@media (max-width:1000px){ .h-r4{grid-template-columns:1fr 1fr} .h-r4 .yatra{grid-column:1 / -1} }
+@media (max-width:700px){
+  /* the greeting's row opens up so the ring can sit BELOW Continue: Continue stays above the fold */
+  .h-r1{display:contents}
+  .h-r2b{display:contents}
+  .hero{order:1;margin-top:20px;z-index:1} .ccard{order:2} .today{order:3;z-index:1} .h-three{order:4;grid-template-columns:1fr} .h-r3{order:5} .h-r4{order:6}
+  .sky{height:170px}
+  .hero{padding:12px 14px} .buddy .av{width:68px;height:68px} .hname{font-size:26px} .bubble2{margin-top:6px;font-size:13px}
+  .h-r1 .ccard,.ccard{grid-template-columns:1fr;gap:10px;padding:12px}
+  .h-r1 .ccard .cc-art{grid-row:auto}
+  .cc-art{min-height:84px}
+  .cc-t b{font-size:21px}
+  .cc-go{width:100%}
+  .h-three{grid-template-columns:1fr}
+  .h-r4{grid-template-columns:1fr}
+}
+
+/* ---- the medal shelf: the Hive's medallions */
+.medals{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px;margin:10px 0}
+.medal{text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:14px}
+.medal img{width:86px;height:86px;filter:grayscale(1) opacity(.35);transition:filter .3s,transform .3s}
+.medal.on img{filter:drop-shadow(0 4px 10px rgb(184 110 0 / .35))}
+.medal.on:hover img{transform:rotate(-6deg) scale(1.06)}
+.medal b{font:700 14px var(--display)} .medal small{font-size:11.5px;color:var(--muted);line-height:1.3}
+.medal .when{color:var(--treasure-deep);font-weight:700}
+.medal .bar{width:70%;height:6px;border-radius:6px;background:var(--line);overflow:hidden;display:block}
+.medal .bar i{display:block;height:100%;background:var(--treasure)}
+
+/* ---- the shop: frames at printed prices */
+.coins{font-size:15px;color:var(--ink)}
+.frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin:10px 0}
+.fr-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:14px;border:1px solid var(--line-soft,var(--line))}
+.fr-item.on{border-color:var(--action);box-shadow:0 0 0 2px var(--action) inset}
+.fr-item b{font-size:13px}
+.frame{display:inline-grid;place-items:center;border-radius:50%;padding:4px;line-height:0}
+.frame .av{border-radius:50%;background:var(--surface2)}
+.fr-graph{background:repeating-linear-gradient(0deg,#9db4ea 0 1px,#eef3ff 1px 6px),repeating-linear-gradient(90deg,#9db4ea 0 1px,transparent 1px 6px);background-blend-mode:multiply}
+.fr-chalk{background:#2f3d35;box-shadow:inset 0 0 0 2px #f4f1e6}
+.fr-gold{background:conic-gradient(#f6d77b,#b8860b,#ffe9a6,#c9971c,#f6d77b)}
+.fr-rainbow{background:conic-gradient(#e0673a,#f0b429,#178a4c,#2e7fa8,#6c4fe0,#c64b9a,#e0673a)}
+.fr-stars{background:radial-gradient(circle at 20% 25%,#fff 0 1.5px,transparent 2px),radial-gradient(circle at 75% 70%,#fff 0 1.5px,transparent 2px),radial-gradient(circle at 70% 20%,#fff 0 1px,transparent 1.5px),#2D5BD8}
+.fr-galaxy{background:conic-gradient(from 40deg,#1b1340,#6c4fe0,#c64b9a,#1b1340,#2e7fa8,#1b1340)}
+.who .frame{padding:2px}
+
+/* ---- the ceremony (J1): your face and Aryabhata, naming what was done */
+.cel-back{position:fixed;inset:0;z-index:60;background:rgb(10 15 30 / .5);animation:fadeIn .2s}
+.cel{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);color:var(--ink);border-radius:24px;padding:22px 22px 24px;text-align:center;box-shadow:0 30px 80px rgb(0 0 0 / .35)}
+.cel-stage{position:relative;height:190px;margin-bottom:6px}
+.cel-medal,.cel-badge{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:170px;height:170px;animation:spinIn .8s cubic-bezier(.2,.9,.3,1.3);filter:drop-shadow(0 10px 24px rgb(184 110 0 / .4))}
+.cel-badge{display:grid;place-items:center;border-radius:50%;background:conic-gradient(#f6d77b,#b8860b,#ffe9a6,#c9971c,#f6d77b);font:800 64px var(--display);color:#4a3200}
+.cel-kid{position:absolute;left:0;bottom:0;animation:hop 1s ease-in-out .5s 2}
+.cel-ary{position:absolute;right:0;bottom:0;animation:hop 1s ease-in-out .8s 2}
+.cel-kid .av,.cel-ary .av{border-radius:50%;background:var(--surface2);box-shadow:0 6px 16px rgb(0 0 0 / .18)}
+.cel h2{font:800 26px/1.15 var(--display);margin:2px 0 8px}
+.cel-say{background:var(--surface2);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-size:15px;line-height:1.45}
+@keyframes spinIn{from{transform:translateX(-50%) rotate(-200deg) scale(.2);opacity:0}}
+@keyframes hop{30%{transform:translateY(-16px)}60%{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.cel-medal,.cel-badge,.cel-kid,.cel-ary,.sheet{animation:none}}
+:root[data-motion=reduced] .cel-medal,:root[data-motion=reduced] .cel-badge,:root[data-motion=reduced] .cel-kid,:root[data-motion=reduced] .cel-ary{animation:none}
+
+/* the landing's taster link (A5): one stop before any account */
+.ob-try{display:block;margin:10px auto 0;width:max-content;max-width:100%;font:700 14px var(--ui);color:var(--action);text-underline-offset:3px}
+.sheet .tool[data-act=mode]{display:grid}   /* app.css hides the bar's moon on phones; the sheet is where it lives now */
+
+/* ---- the report card: Time · Progress · Mastery (M1) */
+.rc-three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+.rc-cell{background:var(--surface2);border-radius:14px;padding:12px 14px;min-width:0}
+.rc-big{display:block;font:800 26px/1.1 var(--display);margin:2px 0 8px}.rc-big small{font:600 13px var(--ui);color:var(--muted)}
+.rc-bars{display:flex;align-items:flex-end;gap:5px;height:54px}
+.rc-bars i{flex:1;min-height:3px;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--action) 35%,transparent)}
+.rc-bars i.now{background:var(--action)}
+.rc-bars.mast i{background:color-mix(in srgb,#178A4C 35%,transparent)}.rc-bars.mast i.now{background:#178A4C}
+.rc-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+.rc-strands{margin:4px 0 12px}
+.rc-st{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr 44px;gap:10px;align-items:center;font-size:14px;margin:5px 0}
+.rc-st .bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;display:block}.rc-st .bar i{display:block;height:100%;background:var(--treasure)}
+.chip-s{font:700 11px var(--ui);background:var(--treasure-tint);color:var(--ink);padding:2px 8px;border-radius:99px;vertical-align:middle}
+@media (max-width:760px){ .rc-three{grid-template-columns:1fr} }
+.rc-cell .meter{display:block;margin:10px 0 12px}

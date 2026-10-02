@@ -22,7 +22,7 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 
 // [name, how to get there, core selector]
 const SCREENS = [
-  ['home', (b) => b.go('home'), '.jcard'],
+  ['home', (b) => b.go('home'), '#continue'],
   ['atlas road', (b) => b.go('atlas'), '.board-scroll', '.lboard .bpin.cur'],
   ['atlas islands', (b) => b.fire('atlasView', 'islands'), '.map-board'],
   ['world board', (b) => b.fire('openWorld', 'market'), '.board-scroll'],

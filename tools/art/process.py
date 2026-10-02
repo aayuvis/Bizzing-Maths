@@ -57,12 +57,28 @@ if '--roadart' in sys.argv:
         print(f'roadart {n}: {sz}x{sz} {b // 1024} KB')
     sys.exit(0)
 
+# Medals: the Hive's own cut-out — the medallion is found by its bounding box on the
+# white ground and cut as a circle, 256 square with alpha, so it sits on any card.
+if '--medals' in sys.argv:
+    from PIL import ImageDraw, ImageChops
+    for f in sorted(os.listdir(RAW)):
+        if not (f.startswith('medal-') and f.endswith('.png')): continue
+        im = Image.open(os.path.join(RAW, f)).convert('RGB')
+        diff = ImageChops.difference(im, Image.new('RGB', im.size, (255, 255, 255))).convert('L').point(lambda v: 255 if v > 38 else 0)
+        x0, y0, x1, y1 = diff.getbbox(); side = max(x1 - x0, y1 - y0); cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+        im = im.crop((cx - side // 2, cy - side // 2, cx + side // 2, cy + side // 2)).resize((512, 512), Image.LANCZOS)
+        mask = Image.new('L', (2048, 2048), 0); ImageDraw.Draw(mask).ellipse((10, 10, 2038, 2038), fill=255)
+        im.putalpha(mask.resize((512, 512), Image.LANCZOS))
+        p = os.path.join(OUT, f[:-4] + '.webp'); im.resize((256, 256), Image.LANCZOS).save(p, 'WEBP', quality=84, method=6)
+        print(f'{f[:-4]}: 256x256 {os.path.getsize(p) // 1024} KB')
+    sys.exit(0)
+
 only = next((a.split('=', 1)[1] if '=' in a else sys.argv[sys.argv.index(a) + 1] for a in sys.argv if a.startswith('--only')), None)
 only = set(only.split(',')) if only else None
 if not only: print('no --only given: re-processing EVERY plate in raw/')
 total = 0
 for f in sorted(os.listdir(RAW)):
-    if not f.endswith('.png') or f.startswith('av-') or f[:-4] in ROADART: continue
+    if not f.endswith('.png') or f.startswith(('av-', 'medal-')) or f[:-4] in ROADART: continue
     if only and f[:-4] not in only: continue
     n = f[:-4]; im = Image.open(os.path.join(RAW, f)).convert('RGB')
     w = 1280 if n.startswith('s-') else 640 if n.startswith('lib-') else 1920

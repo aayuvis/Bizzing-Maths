@@ -2,7 +2,11 @@
    driver, keys, and every data-act in one table. */
 
 import { R } from './runtime.js';
-import { Store } from './store.js';
+import { Store, DEMO, Family } from './store.js';
+import { sampleHousehold, tasterHousehold, tasterStop } from './demo.js';
+import { award, medalById } from './medals.js';
+import { buy } from './shop.js';
+import { snapshot } from './report.js';
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
 import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
@@ -23,7 +27,12 @@ const root = document.getElementById('app');
 
 /* ------------------------------------------------------------- boot */
 
-R.h = Store.loadHousehold() || newHousehold();
+/* ?demo is a sample child, ?demo=try a one-stop taster; both live in memory
+   only (store.js DEMO) and are thrown away when the tab closes. */
+const TRY = DEMO && /[?&]demo=try\b/.test(location.search);
+R.h = DEMO ? (TRY ? tasterHousehold() : sampleHousehold()) : Store.loadHousehold() || newHousehold();
+R.fromHive = /[?&]from=hive\b/.test(location.search);   // the Hive sent us: offer the way back
+R.ui.cels = [];
 R.sound = Store.loadDevice('sound', true); setSound(R.sound);
 /* Light/dark is the device's. data-mode is ALWAYS set, so themes.css never has
    to guess the system scheme: a saved choice wins, otherwise the system's,
@@ -37,6 +46,37 @@ sysDark.addEventListener && sysDark.addEventListener('change', (e) => {
 });
 
 function save() { Store.saveHousehold(R.h); }
+
+/* ---------- the family layer: coins, milestones, medals, ceremonies.
+   Coins come only from the standard events at the standard amounts (the
+   family wallet enforces both, and the daily cap); they never touch xp, so
+   they can never move a rank. */
+const earn = (k, ev) => Family.earn(k.name, ev);
+const mile = (k, ev, label) => Family.milestone(k.name, ev, label);
+function celebrate(c) { R.ui.cels.push(c); }
+/* Award what the evidence now supports; each new medal gets its ceremony. */
+function medals(k) {
+  for (const m of award(k)) {
+    celebrate({ kind: 'medal', id: m.id, title: m.name, say: `${m.desc.replace(/\.$/, '')} — you did that. It is on your shelf now.` });
+    mile(k, 'mastery', `Medal: ${m.name}`);
+  }
+}
+/* Medals earned before the shelf existed go on it quietly, already seen — a
+   child opening the new build should not sit through a parade. */
+/* A medal earned but never seen (the tab closed on the ceremony) is
+   celebrated on the next visit — once: tapping "Brilliant!" marks it seen. */
+function unseen(k) {
+  for (const [id, m] of Object.entries((k && k.medals) || {})) if (!m.seen && medalById[id] && !R.ui.cels.some((c) => c.id === id)) {
+    const md = medalById[id];
+    celebrate({ kind: 'medal', id, title: md.name, say: `${md.desc.replace(/\.$/, '')} — you did that. It is on your shelf now.` });
+  }
+}
+function backfill() {
+  for (const k of R.h.kids) if (!k.sample && !k.medalsFilled) {
+    for (const m of award(k)) k.medals[m.id].seen = true;
+    k.medalsFilled = true;
+  }
+}
 
 /* ---------- the Library's context: everything a tool may touch, and no more
    (docs/LIBRARY-CONTRACT.md). ui is per-screen state, data is the child's
@@ -83,7 +123,16 @@ addEventListener('hashchange', () => { if (selfHash) { selfHash = false; return;
 const TRANSIENT = ['run'];     // screens that cannot be deep-linked back into
 
 function go(nav, arg = null, fromHash = false) {
+  // #/continue — the Hive's deep link — goes wherever Home's Continue would
+  if (nav === 'continue') {
+    const k = kid(R.h); if (!k) return go('welcome');
+    const c = V.continueTarget(k);
+    if (c.act === 'nav') return go(c.arg);
+    history.replaceState(null, '', '#/home'); R.ui.nav = 'home';
+    return fire(c.act, c.arg || undefined);
+  }
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
+  R.ui.sheet = false;
   if (nav === 'stop' && !byId[arg]) nav = 'atlas';
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
@@ -126,12 +175,15 @@ function screen() {
   }
 }
 
+let celShown = null;
 function render() {
   const focusId = document.activeElement && document.activeElement.id;
+  if (R.ui.cels.length && celShown !== R.ui.cels[0]) { celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); }
   applyTheme(themeOf(kid(R.h)));   // the active child's theme; switching child switches it
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
+  if (R.ui.cels.length) { const b = root.querySelector('.cel .btn'); if (b && document.activeElement !== b) b.focus(); }
   // a world board opens scrolled to the stop you are standing on (phones pan it)
   const sc = root.querySelector('.board-scroll[data-autoscroll]');
   if (sc && R.ui.scrolled !== R.ui.arg + ':' + R.ui.pick) {
@@ -192,6 +244,8 @@ function submit(given) {
   // record what this question is evidence of
   if (q.fact) F.record(k.facts[F.key(q.fact)] || (k.facts[F.key(q.fact)] = F.blank()), right, ms, k.band);
   if (run.kind !== 'place' && run.kind !== 'leveltest') tick(k, right, run.kind === 'facts' ? 1 : 2);
+  // a right answer in PRACTICE earns 1 coin; tests and placement pay on passing, not per answer
+  if (right && PRACTICE.includes(run.kind)) earn(k, 'answer');
   // the level test grows as it goes: each answer decides the next question's level
   if (run.kind === 'leveltest' && J.answer(run.st, right)) run.items.push(J.question(run.st));
   save();
@@ -203,6 +257,8 @@ function submit(given) {
   // placement stops after two misses in a row
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
+
+const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret'];
 
 function nextQ() {
   const run = R.run; if (!run) return;
@@ -221,6 +277,7 @@ function finishRun() {
     s.lines.push(fresh ? `You met ${V.nWord(fresh)} new fact${fresh > 1 ? 's' : ''}.` : '');
     s.lines.push(moved ? `${moved} of these are fluent now.` : 'Fluent takes a few days — a fact has to still be quick after a gap.');
     s.buttons.push(`<button class="btn primary" data-act="startFacts" data-arg="${run.op}">Twenty more</button>`);
+    k.last = { what: 'facts', title: `${right} of ${n}`, at: Date.now() };
   }
   if (run.kind === 'drill') {
     const avg = run.results.reduce((a, r) => a + r.ms, 0) / Math.max(1, n);
@@ -236,6 +293,8 @@ function finishRun() {
       if (nx) s.buttons.push(nx.kind === 'stop' ? `<button class="btn primary" data-act="openStop" data-arg="${nx.id}">Next stop: ${escapeHtml(byId[nx.id].title)}</button>` : `<button class="btn primary" data-act="openCheck" data-arg="${nx.world}">Take the checkpoint</button>`);
       if (res.stars < 3) s.lines.push(res.pct >= 0.9 ? 'Nine or more right — do it a little quicker for the third star.' : 'Nine right at a good pace is the third star.');
       if (res.gained) { confetti(res.stars === 3 ? 60 : 36); sfx.level(); }
+      if (res.gained && res.stars - res.gained < 2) { earn(k, 'stop'); mile(k, 'stop', t.title); }   // first pass of this stop
+      k.last = { what: res.stars === 3 ? 'stars' : 'stop', title: t.title, at: Date.now() };
       const jr = J.passed(k, run.trick, run.lv || 1), jp = J.progress(k);
       if (jp) {
         // on a road, the road decides what is next — not the world's own order
@@ -246,6 +305,7 @@ function finishRun() {
       }
     } else {
       s.lines.push('Seven right passes this stop. Look at the ones below, then have another go — or go back to “Your turn”.');
+      k.last = { what: 'tried', title: t.title, at: Date.now() };
       s.buttons.push(`<button class="btn primary" data-act="startDrill" data-arg="${run.trick}">Try again</button>`);
     }
     s.buttons.push(`<button class="btn" data-act="openStop" data-arg="${run.trick}">Back to the stop</button>`);
@@ -274,7 +334,7 @@ function finishRun() {
       if (right >= FLOOR_PASS) {
         const first = !q.passed; q.passed = true;
         s.lines.unshift(first ? `<b>Floor ${run.floor} cleared — the stairs to floor ${run.floor + 1} are open.</b>` : 'Cleared again.');
-        if (first) { sfx.level(); confetti(60); }
+        if (first) { sfx.level(); confetti(60); earn(k, 'stop'); k.last = { what: 'floor', title: `floor ${run.floor}`, at: Date.now() }; }
         if (run.floor < 12) s.buttons.push(`<button class="btn primary" data-act="climb" data-arg="${run.floor + 1}">Up to floor ${run.floor + 1}</button>`);
       } else {
         s.lines.unshift(`${FLOOR_PASS} of 6 opens the stairs. Every puzzle showed you its reason — try the floor again.`);
@@ -312,6 +372,9 @@ function finishRun() {
         s.lines.push(`<span class="big-age">${escapeHtml(J.ageOf(sc.to))}</span>`);
         s.lines.push(`<b>Level ${sc.from} passed!</b> You are working at ${escapeHtml(J.ageOf(sc.to))} now. The Level ${sc.to} road — ${escapeHtml(J.levelOf(sc.to).name)} — is open.`);
         s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">See my new road</button>'); confetti(140); sfx.level();
+        const coins = earn(k, 'mastery'); mile(k, 'band', `Level ${sc.from} passed`);
+        k.last = { what: 'level', title: `Level ${sc.to} — ${J.levelOf(sc.to).name}`, at: Date.now() };
+        celebrate({ kind: 'level', n: sc.to, coins, title: `Level ${sc.from} passed`, say: `${sc.core} of ${sc.N} on the Level ${sc.from} test. You are working at ${J.ageOf(sc.to)} now, and the ${J.levelOf(sc.to).name} road is yours.` });
       } else if (lvl) {
         s.lines.push(sc.from === J.TOP ? '<b>Level 10 passed. You have walked all ten roads.</b>' : '<b>Passed.</b>');
         s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">My road</button>');
@@ -321,6 +384,11 @@ function finishRun() {
         if (jp && jp.next) s.buttons.push(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next station: ${escapeHtml(jp.next.t.title)}</button>`);
         else if (jp && jp.nextTest && jp.nextTest.kind === 'leveltest') s.buttons.push(`<button class="btn primary" data-act="startLevelExam">Take the Level ${jp.level} test</button>`);
         confetti(sc.first ? 70 : 30); if (sc.first) sfx.level();
+        if (sc.first) {
+          const coins = earn(k, 'mastery'); mile(k, 'world', run.title);
+          k.last = { what: 'land', title: run.title.replace(/ test$/, ''), at: Date.now() };
+          celebrate({ kind: 'land', coins, title: run.title.replace(/ test$/, '') + ' — crossed', say: `${sc.core} of ${sc.N} right${sc.bonus ? `, and ${sc.bonus} bonus question${sc.bonus > 1 ? 's' : ''} that belong to the next level` : ''}. That land is yours.` });
+        }
       }
     } else {
       s.lines.push(`${sc.PASS} of the ${sc.N} main questions pass. Look at the ones below — each one is a station you can go back to — then try again.`);
@@ -347,6 +415,7 @@ function finishRun() {
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">Open my Atlas</button>');
   }
   run.summary = s;
+  medals(k); snapshot(k);
   const before = rankOf(k.xp - right * 2);
   save();
   render();
@@ -463,6 +532,7 @@ function cNext() {
     C.phase = 'end';
     if (!k.contest.best || c.field.find((f) => f.you).place < k.contest.best) k.contest.best = c.field.find((f) => f.you).place;
     if (c.winner === 'you') { k.contest.wins++; confetti(80); sfx.level(); }
+    k.contest.done = (k.contest.done || 0) + 1; earn(k, 'contest'); medals(k);
     save(); return render();
   }
   if (c.champ) return cAsk(true);
@@ -514,7 +584,7 @@ function beat(d) {
   const i = Math.max(0, Math.min(s.beats.length - 1, (R.ui.beat || 0) + d));
   if (i === (R.ui.beat || 0) && d > 0 && i === s.beats.length - 1) return;
   R.ui.beat = i; sfx.click();
-  if (i === s.beats.length - 1) { const k = kid(R.h); if (!k.stories[R.ui.arg]) { k.stories[R.ui.arg] = true; save(); } }
+  if (i === s.beats.length - 1) { const k = kid(R.h); if (!k.stories[R.ui.arg]) { k.stories[R.ui.arg] = true; medals(k); save(); } }
   render(); speakBeat();
 }
 function speakBeat() {
@@ -691,7 +761,27 @@ on('openStep', (a) => {
   if (road && !road.open && !R.h.parent.tester) return toast(`Station ${road.n} opens when the one before it is passed.`);
   fire('openStop', id); R.ui.level = +lv || 1; R.ui.jstep = { stop: id, lv: +lv || 1 }; render();
 });
-on('switchKid', (id) => { R.h.active = id; save(); go('home'); });
+on('switchKid', (id) => {
+  // a different child is a different record: drop every per-screen state that
+  // could carry the last child's run, draft or tool into this one
+  if (!R.h.kids.some((c) => c.id === id)) return;
+  R.h.active = id; R.run = null; R.contest = null; R.ui.lib = {}; R.ui.draft = null; R.ui.cels = []; unseen(kid(R.h));
+  save(); go('home');
+});
+on('sheet', () => { R.ui.sheet = !R.ui.sheet; render(); if (R.ui.sheet) { const b = root.querySelector('.sheet button'); if (b) b.focus(); } });
+on('celDone', () => {
+  const c = R.ui.cels.shift(), k = kid(R.h);
+  if (c && c.kind === 'medal' && k && k.medals[c.id]) { k.medals[c.id].seen = true; save(); }
+  if (R.ui.cels.length) { sfx.bell(); }
+  render();
+});
+on('buyFrame', (id) => {
+  const k = kid(R.h); if (!k) return;
+  if (buy(k, id, (price, why) => Family.spend(k.name, price, why))) { sfx.coin(); toast('Yours — and you are wearing it.'); save(); }
+  else toast('Not enough coins yet — right answers earn them.');
+  render();
+});
+on('wearFrame', (id) => { const k = kid(R.h); if (!k) return; k.shop.worn.frame = id || null; save(); render(); });
 on('addKid', () => { R.ui.draft = null; go('welcome'); });
 
 on('sound', () => { R.sound = !R.sound; setSound(R.sound); Store.saveDevice('sound', R.sound); if (R.sound) sfx.click(); render(); });
@@ -818,6 +908,8 @@ addEventListener('keydown', (e) => {
     if (nav === 'stop' && run && run.kind === 'guided' && run.si >= run.steps.length) { e.preventDefault(); return guidedNext(); }
     if (['run', 'contest', 'grownups'].includes(nav) || (nav === 'stop' && run)) { e.preventDefault(); return padKey('✓'); }
   }
+  if (e.key === 'Escape' && R.ui.cels.length) return fire('celDone');
+  if (e.key === 'Escape' && R.ui.sheet) return fire('sheet');
   if (e.key === 'Escape' && nav === 'run') { fire('quitRun'); }
   if (nav === 'stop' && R.ui.tab === 'story') {
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fire('beatNext'); }
@@ -857,7 +949,12 @@ bindRoot(root);
 
 /* ------------------------------------------------------------- start */
 
+backfill();
+unseen(kid(R.h));
+for (const k of R.h.kids) if (!k.sample) snapshot(k);   // this week's line on the report card
+if (!DEMO) Family.track(() => (kid(R.h) || {}).name);   // the Hive counts active minutes, per child
 if (!kid(R.h)) { R.ui.nav = 'welcome'; render(); }
+else if (TRY) fire('openStop', tasterStop());
 else if (location.hash) readHash();
 else go('home');
 
@@ -867,4 +964,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO };   // for the headless checks, never for the app

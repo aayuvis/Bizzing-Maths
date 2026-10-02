@@ -81,6 +81,22 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     scrolls sideways. `test/fold.mjs` measures it from the live DOM (`npm run check`). A title,
     a subtitle and a summary card are not content; put explanations below the thing they explain.
 
+### The family layer ([FAMILY-STANDARD](https://github.com/aayuvis/Bizzing_Schedule/blob/claude/amazing-knuth-4aemgz/docs/family/FAMILY-STANDARD.md))
+
+16. **The top bar is the family's**: ⬡ Hive · name · tabs · theme · 🔒 · avatar ▾ (the household
+    sheet: switch child, sound, light/dark), 56px. `test/family-ui.mjs` checks the order.
+17. **Home has ONE filled button — Continue** (`continueTarget`, shared with the Hive's `#/continue`),
+    above the fold at 390×844; Today's three; at most six ways in; number/trick of the day below.
+18. **Bizzing coins only through `Family.earn`/`Family.spend`** (store.js wraps the family's own
+    `src/integration/bizzing-wallet.js` — copy it from Bizzing_Schedule, never edit it here). Standard
+    events only: a right PRACTICE answer, a stop's first pass or a tower floor, a land or level
+    passed, a contest finished. Coins never touch xp. The shop (`shop.js`) sells frames at printed prices.
+19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
+20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
+    and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
+21. **The Hive's feed is written by the drop-in only** (`Family.track`, `Family.milestone`); the
+    report card (`report.js`) reads it for TIME and never counts minutes as learning.
+
 ### Art
 
 - **Painted plates, composited characters.** `tools/art/gen.py` paints places only — no

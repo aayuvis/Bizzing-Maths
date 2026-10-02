@@ -262,6 +262,33 @@ ROADART = {
 for k, v in ROADART.items(): JOBS[k] = (v + ' ' + ROAD_STYLE, '1:1')
 
 
+# Medals: the family medallion (Bizzing Hive's badge prompt, word for word in its
+# frame), so a Maths medal sits on the Hive's shelf beside the others. A medallion
+# HAS a rim, so it does not take STYLE's "no frame" line; it keeps every no-text rule.
+MEDAL_STYLE = (
+    "Painted illustration for a children's maths app, in a warm, modern storybook style: soft gouache and "
+    "watercolour textures, clean readable shapes, gentle light, joyful but calm colour. ABSOLUTELY NO TEXT: no "
+    "letters, no words, no numbers, no digits, no numerals, no mathematical symbols, no labels, no watermark, no "
+    "signature. No people, no human figures, no faces. A single round enamel-pin style MEDALLION badge, centred, "
+    "filling most of the square, with a bold honey-gold rim and a rich coloured inner field, on a plain pure white "
+    "background. Inside the medallion: ")
+MEDAL = {
+    'medal-first-star': "one big golden five-pointed star resting on a mossy stepping stone — a first step. Sky blue and gold.",
+    'medal-first-land': "a small green island with a plain triangular flag planted on its hill, calm sea around it. Sea green and gold.",
+    'medal-level-up':   "a staircase of chunky stone steps climbing up to a bright sunrise. Warm orange and gold.",
+    'medal-quick-25':   "a bright zig-zag lightning bolt over a little cloud. Electric blue and yellow.",
+    'medal-fluent-100': "a wooden abacus with rows of round coloured beads, every bead neatly pushed to one side. Deep teal and amber.",
+    'medal-fearless':   "a small rocket zooming upward past three little golden stars. Indigo and flame orange.",
+    'medal-tower-4':    "a round stone tower with a pennant on top and a little staircase winding up its side, halfway up a mossy hill. Violet and gold.",
+    'medal-tower-top':  "a tall stone tower above the clouds with a glowing golden crown on its roof. Royal purple and gold.",
+    'medal-puzzler':    "a chunky jigsaw piece slotting into place beside a small cube. Coral pink and cream.",
+    'medal-stories':    "an open storybook with a paper boat sailing off its pages. Warm red and cream.",
+    'medal-explorer':   "a small open treasure chest with a curl of golden light, a rolled map beside it. Forest green and gold.",
+    'medal-contest':    "a plain golden trophy cup with two handles and laurel leaves. Navy and gold.",
+}
+for k, v in MEDAL.items(): JOBS[k] = (MEDAL_STYLE + v, '1:1')
+
+
 def call(model, prompt, ratio):
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": ratio}}}

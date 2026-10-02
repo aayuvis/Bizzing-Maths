@@ -94,7 +94,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 5, kids: [], active: null, parent: { pin: null, tester: false } }; }
+export function newHousehold() { return { v: 6, kids: [], active: null, parent: { pin: null, tester: false } }; }
 
 export function newKid(name, band, avatar) {
   return {
@@ -112,6 +112,9 @@ export function newKid(name, band, avatar) {
     quest: {},            // tower floor → { stars, passed }
     lib: {},              // library tool id → that tool's own record
     journey: { level: null, done: {}, finished: [], tested: null },   // journey.js: the ten levels
+    medals: {},           // medal id → { at, seen } — earned from evidence, celebrated once
+    weeks: {},            // week (Monday's day key) → what the child could do that week — report.js
+    shop: { owned: [], worn: {} },   // cosmetics bought with Bizzing coins (the coins live in the family wallet)
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week

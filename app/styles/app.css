@@ -472,8 +472,6 @@ html.playing{overflow:hidden}
 .kick{display:block;font:700 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .kick.gold{color:var(--treasure-deep)}
 .hcard,.journey,.tile2{position:relative;background:var(--surface);border:0;border-radius:20px;box-shadow:0 1px 2px rgb(20 30 60 / .05),0 12px 30px rgb(20 30 60 / .09);text-align:left;color:var(--ink)}
-/* the family's card ornament: Bee has a hex pin, India a marigold notch; Maths has a gold plus */
-.hcard::before,.journey::before{content:"+";position:absolute;top:-9px;right:22px;width:20px;height:20px;border-radius:6px;background:var(--treasure);color:#5a3d00;font:800 15px/20px var(--ui);text-align:center;box-shadow:0 2px 4px rgb(0 0 0 / .15);z-index:2}
 button.hcard,.journey,.tile2{cursor:pointer;transition:transform .18s,box-shadow .18s}
 button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgb(20 30 60 / .06),0 18px 40px rgb(20 30 60 / .14)}
 .hero{display:flex;align-items:center;gap:14px;padding:18px 20px}

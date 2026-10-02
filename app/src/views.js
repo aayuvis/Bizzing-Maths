@@ -14,6 +14,10 @@ import { storyTab, goalsReport } from './views2.js';
 import { summary } from './objectives.js';
 import { seeded, int, dayKey } from './rand.js';
 import { themePicker, THEMES } from './themes.js';
+import { Family } from './store.js';
+import { MEDALS, medalStates, earnedCount, medalById } from './medals.js';
+import { FRAMES, owns, worn } from './shop.js';
+import { reportCard } from './report.js';
 
 /* ------------------------------------------------------------- helpers */
 
@@ -21,6 +25,10 @@ import { themePicker, THEMES } from './themes.js';
    picker face rather than a broken image — model.js avatarFile(). */
 export const av = (id, size = 48, alt = '') =>
   `<img class="av" src="avatars/${esc(avatarFile(id))}.webp" width="${size}" height="${size}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+
+/* The child's own face, in the frame they bought (shop.js). Only ever the
+   child's — Aryabhata and the rivals are drawn with plain av(). */
+export const mine = (k, size = 48, alt = '') => { const f = worn(k); return f ? `<span class="frame fr-${f}">${av(k.avatar, size, alt)}</span>` : av(k.avatar, size, alt); };
 
 /* The avatar picker: five labelled packs of six, all free. One tab stop (the
    chosen face); arrow keys move through the grid (main.js avKey), Enter or
@@ -77,40 +85,74 @@ export function icon(k) {
     sound: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" class="i2"/>',
     mute: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5" class="i2"/>',
     moon: '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+    palette: '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 1.9-.8 1.9-1.7 0-1.2-1-1.5-1-2.6 0-1 .8-1.7 1.9-1.7h2.2a3.5 3.5 0 0 0 3.5-3.5c0-4.2-3.8-7.5-8.5-7.5z"/><circle cx="7.8" cy="11" r="1.2" class="i2"/><circle cx="10.5" cy="7.6" r="1.2" class="i2"/><circle cx="14.6" cy="7.8" r="1.2" class="i2"/>',
   }[k] || '';
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 }
 
+/* The family top bar (family standard §3), the same in every Bizzing app, in
+   the same order: ⬡ back to the Hive · the app's name · [tabs] · theme ·
+   🔒 grown-ups · the child's avatar ▾, which opens the household. The ⬡ hides
+   only inside a running drill, where leaving should be a decision. */
+export const HIVE = 'https://aayuvis.github.io/Bizzing_Schedule/';
 export function shell(body) {
   const h = R.h, k = kid(h);
   const nav = NAV_OF[R.ui.nav] !== undefined ? NAV_OF[R.ui.nav] : R.ui.nav;
-  const rk = k ? rankOf(k.xp) : null;
+  const running = R.ui.nav === 'run' && R.run && !R.run.over;
   const tabs = (cl) => TABS.map((t) => `<button class="${cl}${nav === t.k ? ' on' : ''}" data-act="nav" data-arg="${t.k}" ${nav === t.k ? 'aria-current="page"' : ''}>${icon(t.icon)}<span>${t.n}</span></button>`).join('');
   return `
   <a class="skip" href="#main">Skip to the content</a>
   <header class="top">
+    ${running ? '' : `<a class="hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="The Bizzing Hive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 20.2 7.2v9.6L12 21.5 3.8 16.8V7.2z"/></svg></a>`}
     <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Maths — home">
       <svg viewBox="0 0 40 40" class="brand-mark" aria-hidden="true"><rect width="40" height="40" rx="11" class="bm-bg"/><path d="M20 9v22M9 20h22" class="bm-plus"/><path d="M13 13l14 14M27 13 13 27" class="bm-x"/></svg>
       <span class="brand-t">Bizzing <em>Maths</em></span>
     </button>
     ${k ? `<nav class="tabs" aria-label="Main">${tabs('tab')}</nav>` : '<span class="grow"></span>'}
     <div class="tools">
-      ${k ? `<button class="rank-pill" data-act="nav" data-arg="me" aria-label="Your rank: ${rk.n}. ${k.xp} points.">
-        <span class="rp-ico" aria-hidden="true">${rk.i + 1}</span><span class="rp-t"><b>${esc(rk.n)}</b><i style="--p:${rk.pct}%"></i></span></button>
-        <button class="who" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${av(k.avatar, 34, '')}</button>` : ''}
-      <button class="tool" data-act="sound" aria-label="Sound ${R.sound ? 'on' : 'off'}">${icon(R.sound ? 'sound' : 'mute')}</button>
-      <button class="tool" data-act="mode" aria-label="Light or dark">${icon('moon')}</button>
+      ${k ? `<button class="tool" data-act="themes" aria-label="Theme" title="Theme">${icon('palette')}</button>` : `<button class="tool" data-act="mode" aria-label="Light or dark">${icon('moon')}</button>`}
       <button class="tool" data-act="nav" data-arg="grownups" aria-label="Grown-ups" title="Grown-ups">${icon('lock')}</button>
+      ${k ? `<button class="who" data-act="sheet" aria-haspopup="dialog" aria-expanded="${!!R.ui.sheet}" aria-label="${esc(k.name)} — switch child, sound and your page">${mine(k, 34, '')}<span class="caret-d" aria-hidden="true">▾</span></button>` : ''}
     </div>
   </header>
+  ${R.fromHive && !running ? `<a class="hive-chip" href="${HIVE}">← back to my day</a>` : ''}
+  ${k && k.sample ? demoBar(k) : ''}
   ${h.parent.tester ? '<div class="tester" role="note">TESTER MODE — every stop is open. Nothing about the child changes. <button data-act="testerOff">Turn off</button></div>' : ''}
+  ${k && R.ui.sheet ? kidSheet(h, k) : ''}
+  ${k && R.ui.cels && R.ui.cels.length ? celebration() : ''}
   <main id="main" class="content" tabindex="-1">${body}</main>
   ${k ? `<nav class="tabbar" aria-label="Main">${tabs('tb')}</nav>` : ''}
   <footer class="foot">Bizzing Maths · part of the Bizzing family with
     <a href="https://www.bizzingbee.com/" rel="noopener">Bizzing Bee</a>,
-    <a href="https://aayuvis.github.io/bizzingindia.com/" rel="noopener">Bizzing India</a> and
-    <a href="https://aayuvis.github.io/bizzingfinance/" rel="noopener">Bizzing Finance</a>
+    <a href="https://aayuvis.github.io/bizzingindia.com/" rel="noopener">Bizzing India</a>,
+    <a href="https://aayuvis.github.io/bizzingfinance/" rel="noopener">Bizzing Finance</a> and the
+    <a href="${HIVE}" rel="noopener">Hive</a>
     · No ads, no tracking, nothing leaves this device. <button class="linkish" data-act="nav" data-arg="privacy">Privacy</button></footer>`;
+}
+
+/* ?demo and ?demo=try: a labelled sample, held in memory only (store.js DEMO). */
+function demoBar(k) {
+  return k.sample === 'try'
+    ? '<div class="demo-bar" role="note"><b>Trying a trick</b> — nothing here is saved. <a href="./">Make my own →</a></div>'
+    : '<div class="demo-bar" role="note"><b>Sample</b> — Asha is a made-up child with three weeks of play. Nothing here is saved or sent to the family. <a href="./">Leave the sample</a></div>';
+}
+
+/* The household sheet, from the avatar ▾: every child, one tap to switch
+   (Finance's "Children in this household"), plus the device's sound and
+   light/dark — the standard's one mute lives in this menu. */
+function kidSheet(h, k) {
+  const coins = Family.balance(k.name);
+  return `<div class="sheet-back" data-act="sheet" aria-hidden="true"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Who is playing">
+    <p class="kicker">Children in this household</p>
+    <div class="sheet-kids">${h.kids.map((c) => `<button class="sk${c.id === k.id ? ' on' : ''}" data-act="switchKid" data-arg="${c.id}" ${c.id === k.id ? 'aria-current="true"' : ''}>${av(c.avatar, 44, '')}<span><b>${esc(c.name)}</b><span class="muted small">Age ${esc(c.band.replace('-', '–'))}</span></span></button>`).join('')}
+      ${k.sample ? '' : '<button class="sk add" data-act="addKid"><span class="plus" aria-hidden="true">+</span><span><b>Add a child</b></span></button>'}</div>
+    <div class="sheet-row">
+      <button class="btn small" data-act="nav" data-arg="me">My page${coins ? ` · 🪙 ${coins}` : ''}</button>
+      <button class="tool" data-act="sound" aria-label="Sound ${R.sound ? 'on' : 'off'}">${icon(R.sound ? 'sound' : 'mute')}</button>
+      <button class="tool" data-act="mode" aria-label="Light or dark">${icon('moon')}</button>
+    </div>
+  </div>`;
 }
 
 /* ------------------------------------------------------------- welcome */
@@ -133,6 +175,7 @@ export function viewWelcome() {
       <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
       <p class="lead">For ages 6 to 15+. Ten levels, each one road through painted lands; every trick shown with the reason it works.</p>
       ${btn('Start →', 'obStart', '', 'primary big')}
+      <a class="ob-try" href="./?demo=try">Try a trick first — nothing is saved</a>
       <div class="ob-stats">${[[TRICKS.length, 'lessons, each with a story'], [WORLDS.length, 'painted places'], [10, 'levels, age 6 to 15+'], [9, 'tools in the Library']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
       <ul class="ob-promise">
         <li><b>Nothing leaves this device.</b> A first name and an age band — no email, no photo, no tracking.</li>
@@ -196,17 +239,32 @@ export function numberOfDay() {
   return { n, facts: facts.slice(0, 3) };
 }
 
-/* Home, in the family's language (Bee's viewHome, India's V.home): a painted
-   sky, the child's own companion greeting them by name, today's ring, two
-   painted journey cards, then small tiles and an honest progress panel.
-   Three rows: who you are today · what to do next · today's reading. */
+/* Home, in the family anatomy (standard §2, Bee's home as the template):
+   1 the top bar · 2 a greeting from the child's own face, with today's ring ·
+   3 ONE Continue — the only filled button on the screen · 4 Today's three,
+   small and skippable · 5 at most six ways in · then, below the fold, the
+   number and the trick of the day and the honest progress panel. */
 const LINES = [
   (n) => `Ready, ${n}? One stop, twenty facts and a puzzle — that is a great day.`,
-  (n) => `${n}, the Atlas has a new trick waiting for you.`,
+  (n) => `${n}, the road has a new trick waiting for you.`,
   (n) => `Every right answer moves your rank, ${n}. Nothing else does.`,
   (n) => `Let’s make a big sum small today, ${n}.`,
-  (n) => `The tower is taller than it looks, ${n}. Shall we climb a floor?`,
 ];
+/* What the child did last, said back to them — the greeting is about them. */
+function lastLine(k) {
+  const L = k.last, n = esc(k.name);
+  if (!L) return LINES[Math.floor(seeded('line:' + dayKey() + k.id)() * LINES.length)](n);
+  const what = esc(L.title || '');
+  return {
+    stop: `Last time you passed <b>${what}</b>, ${n}. Shall we keep walking?`,
+    stars: `Three stars on <b>${what}</b> last time, ${n} — fast and fearless.`,
+    land: `You passed the <b>${what}</b> test last time, ${n}. A new land is open.`,
+    level: `Level up! You are on <b>${what}</b> now, ${n}.`,
+    facts: `Last time: twenty facts, <b>${what}</b> right. Some more today, ${n}?`,
+    floor: `You cleared <b>${what}</b> of the Puzzle Tower last time, ${n}.`,
+    tried: `Last time you had a go at <b>${what}</b>, ${n}. It gets easier every try.`,
+  }[L.what] || LINES[0](n);
+}
 
 function ring(parts) {
   // concentric rings, one per part of today; each fills to its own goal
@@ -217,18 +275,30 @@ function ring(parts) {
   }).join('')}</svg>`;
 }
 
-/* The journey card on Home: where the child is on the ten levels, and the next step. */
-function journeyCard(k) {
+/* Where Continue goes — Home's card and the Hive's #/continue deep link share it. */
+export function continueTarget(k) {
   const p = J.progress(k);
-  if (!p) return `<button class="hcard jcard" data-act="startLevelTest">
-      <span class="jc-lv">🧭</span><span class="jc-t"><span class="kick">Ten levels · maths age 6 to 15+</span><b>Find my level</b><span class="muted">A few questions find your maths age and start your journey.</span></span><span class="btn primary">Start</span></button>`;
-  const pct = Math.round(100 * p.done / p.total);
-  return `<div class="hcard jcard">
-      <button class="jc-lv" data-act="nav" data-arg="journey" aria-label="My journey">${p.level}</button>
-      <span class="jc-t"><span class="kick">Level ${p.level} · ${esc(p.age)}</span><b>${esc(p.L.name)}</b>
-        <span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">Station ${Math.min(p.done + 1, p.total)} of ${p.total}${p.next ? ` · ${esc(p.next.t.title)}` : p.nextTest ? ` · next: ${p.nextTest.kind === 'landtest' ? esc(p.nextTest.land.name) + ' test' : 'the Level test'}` : ''}</span></span>
-      ${p.next ? `<button class="btn primary" data-act="openStep" data-arg="${p.next.stop}|${p.next.lv}">Continue</button>` : p.nextTest && p.nextTest.kind === 'landtest' ? `<button class="btn primary" data-act="startLandTest" data-arg="${p.nextTest.land.id}">Take the test</button>` : p.nextTest && !p.finishedTop ? `<button class="btn primary" data-act="startLevelExam">Take the Level ${p.level} test</button>` : `<button class="btn" data-act="nav" data-arg="atlas">See my road</button>`}
-    </div>`;
+  if (!p) return { act: 'nav', arg: 'start', label: 'Start my road', title: 'Find your level, or start at Level 1', p };
+  if (p.next) return { act: 'openStep', arg: `${p.next.stop}|${p.next.lv}`, label: 'Continue', title: p.next.t.title, world: p.next.t.world, p };
+  if (p.nextTest && p.nextTest.kind === 'landtest') return { act: 'startLandTest', arg: p.nextTest.land.id, label: 'Take the test', title: `${p.nextTest.land.name} test`, world: p.nextTest.land.world, p };
+  if (p.nextTest && !p.finishedTop) return { act: 'startLevelExam', arg: '', label: `Take the Level ${p.level} test`, title: `The Level ${p.level} test`, p };
+  return { act: 'nav', arg: 'atlas', label: 'See my road', title: 'Every road walked', p };
+}
+
+/* The ONE Continue card, painted with the world the next station is in. */
+function continueCard(k) {
+  const c = continueTarget(k), p = c.p;
+  const art = c.world ? `art/w-${c.world}.webp` : 'art/atlas.webp';
+  const pct = p ? Math.round(100 * p.done / p.total) : 0;
+  return `<div class="hcard ccard" id="continue">
+    <span class="cc-art" style="background-image:url(${art})" aria-hidden="true"></span>
+    <span class="cc-t">
+      <span class="kick">${p ? `Next on your journey · Level ${p.level} · ${esc(p.age)}` : 'Ten levels · maths age 6 to 15+'}</span>
+      <b>${esc(c.title)}</b>
+      ${p ? `<span class="meter"><i style="width:${pct}%"></i></span><span class="muted small">Station ${Math.min(p.done + 1, p.total)} of ${p.total} · ${esc(p.L.name)}</span>` : '<span class="muted small">A few questions find where your road starts.</span>'}
+    </span>
+    <button class="btn primary big cc-go" data-act="${c.act}" data-arg="${esc(c.arg)}">${esc(c.label)} →</button>
+  </div>`;
 }
 
 export function viewHome() {
@@ -237,76 +307,61 @@ export function viewHome() {
   const d = dayKey(), today = k.days[d] || { q: 0, ok: 0 };
   const puzzleDone = k.daily[d] && k.daily[d].puzzle;
   const t = tally(k.facts, k.prefs.op);
-  const w = at.world, next = at.trick;
   const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
   const stopsToday = (k.dayStops || {})[d] || 0;
   const parts = [
     { n: 'Right answers', v: today.ok, goal: 20, col: 'var(--action)', tint: 'color-mix(in srgb,var(--action) 14%,transparent)' },
-    { n: 'Atlas stars', v: stopsToday, goal: 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
+    { n: 'Stops passed', v: stopsToday, goal: 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
     { n: 'Today’s puzzle', v: puzzleDone ? 1 : 0, goal: 1, col: '#178A4C', tint: 'rgb(23 138 76 / .15)' },
   ];
-  const line = LINES[Math.floor(seeded('line:' + d + k.id)() * LINES.length)](esc(k.name));
   const sm = summary(k);
   const stars = TRICKS.reduce((a, x) => a + ((k.tricks[x.id] || {}).stars || 0), 0);
   const fluent = OPS.reduce((a, o) => a + tally(k.facts, o).fluent, 0);
+  const p = J.progress(k), story = p && p.next ? p.next.t : TRICKS[0];
   return `<section class="home2">
-    <div class="sky" aria-hidden="true"><img src="art/home-hero.webp" alt="" width="1920" height="815"></div>
-
-    ${journeyCard(k)}
+    <div class="sky" aria-hidden="true"><img src="art/home-hero.webp" alt="" width="1920" height="815" fetchpriority="high"></div>
 
     <div class="h-r1">
       <div class="hcard hero">
-        <button class="buddy" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${av(k.avatar, 150, '')}</button>
+        <button class="buddy" data-act="nav" data-arg="me" aria-label="${esc(k.name)}'s page">${mine(k, 150, '')}</button>
         <div class="hero-tx">
           <span class="hi">${greet()},</span>
           <b class="hname">${esc(k.name)}</b>
-          <p class="bubble2">“${line}”</p>
-          <button class="theme-chip" data-act="themes" aria-label="Choose a theme"><i aria-hidden="true"></i>Theme</button>
+          <p class="bubble2">${lastLine(k)}</p>
         </div>
       </div>
+      ${continueCard(k)}
+    </div>
+
+    <div class="h-r2b">
       <div class="hcard today">
         ${ring(parts)}
         <div class="today-t">
           <b class="ct">Today’s ring</b>
-          <ul class="legend2">${parts.map((p) => `<li><i style="background:${p.col}"></i>${p.n}<b class="mono">${Math.min(p.v, p.goal)}/${p.goal}</b></li>`).join('')}</ul>
+          <ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i>${x.n}<b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul>
           <p class="muted small">Nothing expires. A day off costs nothing.</p>
         </div>
-        <button class="today-foot" data-act="startFacts" data-arg="${k.prefs.op}"><span><span class="kick">Start with</span> Twenty facts</span><span>Go →</span></button>
       </div>
+      <div class="h-three" role="group" aria-label="Today’s three">
+      <button class="t3" data-act="startFacts" data-arg="${k.prefs.op}"><span class="ti" style="--c:#2D5BD8">⚡</span><span><span class="kick">5 minutes</span><b>Twenty facts</b><span class="muted small">${OP_NAME[k.prefs.op]} · ${t.fluent} fluent${t.trap ? ` · ${t.trap} to fix` : ''}</span></span></button>
+      <button class="t3" data-act="daily"><span class="ti" style="--c:#E0673A">🎯</span><span><span class="kick">Today’s challenge</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span class="muted small">Same puzzle in every house</span></span></button>
+      <button class="t3" data-act="openStop" data-arg="${story.id}"><span class="ti" style="--c:#178A4C">📖</span><span><span class="kick">A story</span><b>${esc(story.title)}</b><span class="muted small">Every trick starts as a story</span></span></button>
+      </div>
+    </div>
+
+    <div class="h-r3" role="group" aria-label="Ways in">
+      <button class="tile2" data-act="atlasView" data-arg="islands"><span class="ti" style="--c:#2E7FA8">🗺️</span><span><span class="kick">The Atlas</span><b>Explore</b><span class="muted small">${WORLDS.length} painted places</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="puzzles"><span class="ti" style="--c:#8A5BD6">🧩</span><span><span class="kick">Puzzle Tower</span><b>Floor ${Math.min(12, floors + 1)} of 12</b><span class="muted small">${floors} cleared</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="contest"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Mock contest</span><b>${k.contest.best ? `Best: ${ordinal(k.contest.best)}` : 'Ten rivals'}</b><span class="muted small">One question each round</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="me"><span class="ti" style="--c:#C98A00">🏅</span><span><span class="kick">Medals</span><b>${earnedCount(k)} of ${MEDALS.length}</b><span class="muted small">Each from something you did</span></span></button>
+    </div>
+
+    <div class="h-r4">
       <div class="hcard nod2">
         <span class="kick gold">Number of the day</span>
         <div class="nod-row"><span class="nod-ico" aria-hidden="true">#</span><b class="nod-n mono">${nod.n}</b></div>
         <ul>${nod.facts.map((f) => `<li>${f}</li>`).join('')}</ul>
       </div>
-    </div>
-
-
-    <div class="h-r2">
-      ${J.progress(k) ? `<button class="journey" data-act="atlasView" data-arg="islands">
-        <span class="jb" style="background-image:url(art/atlas.webp)"><span class="jchip">🗺️</span><span class="jtag">Three islands · 18 places</span></span>
-        <span class="jt"><span class="kick">Explore the Atlas</span><b>Wander back through everything you have reached</b><span class="jh">Every lesson from your earlier levels is open, and every station your road has reached.</span>
-        <span class="jgo"><span class="btn">Explore</span></span></span></button>` : next ? `<button class="journey" data-act="openStop" data-arg="${next.id}">
-        <span class="jb" style="background-image:url(art/w-${w.id}.webp)"><span class="jchip">${w.glyph}</span><span class="jtag">Part ${w.n} · ${esc(w.short)}</span></span>
-        <span class="jt"><span class="kick">Next on your Atlas</span><b>${esc(next.title)}</b><span class="jh">${esc(next.hook)}</span>
-        <span class="jgo"><span class="btn primary">Start</span><span class="meter"><i style="width:${Math.round(100 * at.stars / at.maxStars)}%"></i></span></span></span></button>`
-      : `<button class="journey" data-act="${at.allDone ? 'nav' : 'openCheck'}" data-arg="${at.allDone ? 'atlas' : at.node.world}">
-        <span class="jb" style="background-image:url(art/w-${w.id}.webp)"><span class="jchip">${w.glyph}</span><span class="jtag">${at.allDone ? 'Every stop passed' : 'Checkpoint'}</span></span>
-        <span class="jt"><span class="kick">${at.allDone ? 'The Atlas' : 'Checkpoint · ' + esc(w.name)}</span><b>${at.allDone ? 'Go back for three stars' : 'Prove the ' + esc(w.short)}</b><span class="jh">${at.allDone ? 'Fast and fearless on every stop.' : 'A mixed round from every stop here. Pass it to open the next place.'}</span>
-        <span class="jgo"><span class="btn primary">${at.allDone ? 'Open the Atlas' : 'Take it'}</span></span></span></button>`}
-      <button class="journey" data-act="nav" data-arg="puzzles">
-        <span class="jb tower" style="background-image:url(art/q-tower.webp)"><span class="jchip">🧩</span><span class="jtag">Floor ${Math.min(12, floors + 1)} of 12</span></span>
-        <span class="jt"><span class="kick">The Puzzle Tower</span><b>${floors ? `${floors} floor${floors > 1 ? 's' : ''} cleared` : 'Climb the first floor'}</b><span class="jh">Nets and cube stacks, magic squares, patterns, scales — every floor mixes them.</span>
-        <span class="jgo"><span class="btn">Climb</span><span class="meter"><i style="width:${Math.round(100 * floors / 12)}%"></i></span></span></span></button>
-    </div>
-
-    <div class="h-r3">
-      <button class="tile2" data-act="startFacts" data-arg="${k.prefs.op}"><span class="ti" style="--c:#2D5BD8">⚡</span><span><span class="kick">Facts</span><b>${OP_NAME[k.prefs.op]}</b><span class="muted small">${t.fluent} fluent${t.trap ? ` · ${t.trap} to fix` : ''}</span></span></button>
-      <button class="tile2" data-act="daily"><span class="ti" style="--c:#E0673A">🎯</span><span><span class="kick">Today’s puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span class="muted small">Same puzzle in every house</span></span></button>
-      <button class="tile2" data-act="nav" data-arg="contest"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Mock contest</span><b>${k.contest.best ? `Best: ${ordinal(k.contest.best)}` : 'Ten rivals'}</b><span class="muted small">One question each, every round</span></span></button>
-      <button class="tile2" data-act="nav" data-arg="stories"><span class="ti" style="--c:#178A4C">📖</span><span><span class="kick">Story shelf</span><b>${Object.keys(k.stories || {}).length} of ${TRICKS.length} read</b><span class="muted small">Every trick starts as a story</span></span></button>
-    </div>
-
-    <div class="h-r4">
       <div class="hcard tipcard">
         ${av('aryabhatta', 64, 'Aryabhata')}
         <div><span class="kick gold">Trick of the day</span>${trickOfDay(k)}</div>
@@ -649,6 +704,8 @@ export function viewMe() {
         ${btn(R.ui.avEdit ? 'Done' : 'Change avatar', 'avEdit', '', 'small', `aria-expanded="${!!R.ui.avEdit}"`)}</div>
       ${R.ui.avEdit ? avatarPicker(k.avatar, 'setAv', 'me') : ''}
     </div>
+    ${medalShelf(k)}
+    ${shopCard(k)}
     ${themePicker(k)}
     <div class="two">
       <div class="card">
@@ -666,6 +723,54 @@ export function viewMe() {
       </div>
     </div>
   </section>`;
+}
+
+/* The medal shelf: every medal, earned or not, with exactly what earns it
+   and how far along the child is — Finance's deeds shelf in the Hive's style. */
+export function medalShelf(k) {
+  const ms = medalStates(k), n = ms.filter((m) => m.earned).length;
+  return `<div class="card" id="medals"><p class="kicker">Medals · ${n} of ${ms.length}</p>
+    <div class="medals">${ms.map((m) => `<div class="medal${m.earned ? ' on' : ''}">
+      <img src="art/medal-${m.id}.webp" alt="" width="86" height="86" loading="lazy">
+      <b>${esc(m.name)}</b><small>${esc(m.desc)}</small>
+      ${m.earned ? `<small class="when">Earned ${new Date(m.earned.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small>` : `<span class="bar" role="img" aria-label="${m.now} of ${m.need}"><i style="width:${Math.round(100 * m.now / m.need)}%"></i></span><small>${m.now} of ${m.need}</small>`}
+    </div>`).join('')}</div>
+    <p class="muted small">Every medal comes from something you did — never from time on the app or a run of days.</p></div>`;
+}
+
+/* Bizzing coins and what they buy here: frames, at printed prices. */
+function shopCard(k) {
+  const coins = Family.balance(k.name), on = worn(k);
+  return `<div class="card shop" id="shop"><div class="row gap"><p class="kicker">Bizzing coins · <b class="coins">🪙 ${coins}</b></p></div>
+    <p class="muted small">Earned for right answers, finished stops and passed tests — the same coins in every Bizzing app, and the money you learn with in Bizzing Finance. They buy a frame for your face. They never change your rank.</p>
+    <div class="frames">${FRAMES.map((f) => { const have = owns(k, f.id); return `<div class="fr-item${on === f.id ? ' on' : ''}">
+      <span class="frame fr-${f.id}">${av(k.avatar, 56, '')}</span><b>${esc(f.name)}</b>
+      ${have ? btn(on === f.id ? 'Wearing' : 'Wear', 'wearFrame', on === f.id ? '' : f.id, 'small') : btn(`🪙 ${f.price}`, 'buyFrame', f.id, 'small', coins < f.price ? 'disabled aria-disabled="true"' : '')}
+    </div>`; }).join('')}</div>
+    ${on ? btn('Take the frame off', 'wearFrame', '', 'small linkish') : ''}</div>`;
+}
+
+/* The celebration (audit J1): a short, specific ceremony when a land, a level
+   or a medal is reached — the child's own face and Aryabhata, naming exactly
+   what was done. One at a time; each medal once (its `seen` flag). Never a
+   comparison with anyone. */
+export function celebration() {
+  const c = (R.ui.cels || [])[0]; if (!c) return '';
+  const k = kid(R.h);
+  const art = c.kind === 'medal' ? `<img class="cel-medal" src="art/medal-${c.id}.webp" alt="" width="180" height="180">`
+    : `<span class="cel-badge" aria-hidden="true">${c.kind === 'level' ? c.n : '⛳'}</span>`;
+  return `<div class="cel-back" aria-hidden="true"></div>
+  <div class="cel" role="dialog" aria-modal="true" aria-labelledby="celh">
+    <div class="cel-stage">${art}
+      <span class="cel-kid">${mine(k, 96, '')}</span>
+      <span class="cel-ary">${av('aryabhatta', 84, 'Aryabhata')}</span>
+    </div>
+    <p class="kicker">${c.kind === 'medal' ? 'New medal' : c.kind === 'level' ? 'Level up' : 'Land crossed'}</p>
+    <h2 id="celh">${esc(c.title)}</h2>
+    <p class="cel-say"><b>Aryabhata:</b> “${esc(c.say)}”</p>
+    ${c.coins ? `<p class="muted small">🪙 +${c.coins} Bizzing coins</p>` : ''}
+    <button class="btn primary big" data-act="celDone" autofocus>Brilliant!</button>
+  </div>`;
 }
 
 export function viewWho() {
@@ -697,6 +802,7 @@ export function viewGrownups() {
   return `<section>
     ${pageHead("Grown-ups", 'What your child has learned, and the settings.', back('nav', 'Back', 'home'), btn('Lock', 'lock', '', 'small'))}
     ${h.kids.map((c) => report(c)).join('')}
+    <p class="muted small rc-hive">Every Bizzing app keeps the same three measures. <a href="https://aayuvis.github.io/Bizzing_Schedule/#grown" rel="noopener">See the whole family's week in the Hive →</a></p>
     <div class="two">
       <div class="card">
         <p class="kicker">Settings${k ? ` for ${esc(k.name)}` : ''}</p>
@@ -718,19 +824,35 @@ export function viewGrownups() {
 
 const toggle = (key, on) => `<button class="tog${on ? ' on' : ''}" role="switch" aria-checked="${!!on}" data-act="toggle" data-arg="${key}"><i></i></button>`;
 
+/* The report card, in the family's three measures (report.js): TIME, PROGRESS,
+   MASTERY — then the detail a grown-up can act on. Weekly bars for the trend,
+   one bar per strand for where the learning is. Never usage as achievement. */
 function report(c) {
+  const rc = reportCard(c, c.sampleFeed || Family.feed());
   const learned = TRICKS.filter((t) => (c.tricks[t.id] || {}).stars >= 2);
-  const started = TRICKS.filter((t) => { const r = c.tricks[t.id]; return r && r.stars && r.stars < 2; });
   const lapsed = Object.entries(c.facts).filter(([, r]) => r.lapsed).map(([k2]) => parseKey(k2)).filter(Boolean);
   const traps = Object.entries(c.facts).filter(([, r]) => fstate(r) === 'trap').map(([k2]) => parseKey(k2)).filter(Boolean);
-  const week = []; for (let i = 0; i < 7; i++) { const v = c.days[dayKey(new Date(Date.now() - i * 86400000))]; if (v) week.push(v); }
-  const wq = week.reduce((a, v) => a + v.q, 0), wok = week.reduce((a, v) => a + v.ok, 0);
-  return `<div class="card report">
-    <div class="row gap">${av(c.avatar, 48, '')}<div><h2>${esc(c.name)}</h2><p class="muted">Age ${esc(c.band.replace('-', '–'))} · rank ${esc(rankOf(c.xp).n)}</p></div></div>
+  const wk = rc.weeks, maxM = Math.max(10, ...wk.map((w) => w.minutes)), maxF = Math.max(5, ...wk.map((w) => w.fluent || 0));
+  const bars = (vals, max, cls) => `<span class="rc-bars ${cls}">${vals.map((v, i) => `<i style="height:${Math.round(100 * (v || 0) / max)}%" title="${v || 0}"${i === vals.length - 1 ? ' class="now"' : ''}></i>`).join('')}</span>`;
+  const day = (t) => new Date(t + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const whenTot = rc.time.when.morning + rc.time.when.afternoon + rc.time.when.evening;
+  return `<div class="card report rc" data-report='${esc(JSON.stringify({ v: rc.v, app: rc.app, who: rc.who, time: rc.time.week, progress: rc.progress.stations, mastery: rc.mastery.fluent }))}'>
+    <div class="row gap">${av(c.avatar, 48, '')}<div><h2>${esc(c.name)}${c.sample ? ' <span class="chip-s">Sample</span>' : ''}</h2><p class="muted">Age ${esc(c.band.replace('-', '–'))} · rank ${esc(rankOf(c.xp).n)}</p></div></div>
+    <div class="rc-three">
+      <div class="rc-cell"><p class="kicker">Time</p><b class="rc-big">${rc.time.week}<small> min this week</small></b>
+        ${bars(wk.map((w) => w.minutes), maxM, 'time')}<span class="rc-axis"><span>${day(wk[0].wk)}</span><span>this week</span></span>
+        <p class="muted small">${whenTot ? `Mostly in the ${Object.entries(rc.time.when).sort((x, y) => y[1] - x[1])[0][0]}. ` : ''}Active minutes only — the app stops counting when nobody is touching it.</p></div>
+      <div class="rc-cell"><p class="kicker">Progress</p><b class="rc-big">${rc.progress.level ? `Level ${rc.progress.level}` : '—'}<small>${rc.progress.level ? ` · ${rc.progress.stations} of ${rc.progress.total} stations` : ''}</small></b>
+        ${rc.progress.total ? `<span class="meter"><i style="width:${Math.round(100 * rc.progress.stations / rc.progress.total)}%"></i></span>` : ''}
+        <p class="muted small">${esc(rc.progress.label)}. ${rc.progress.lands} land test${rc.progress.lands === 1 ? '' : 's'} and ${rc.progress.levels} level test${rc.progress.levels === 1 ? '' : 's'} passed.</p></div>
+      <div class="rc-cell"><p class="kicker">Mastery</p><b class="rc-big">${rc.mastery.fluent}<small> facts fluent</small></b>
+        ${bars(wk.map((w) => w.fluent), maxF, 'mast')}<span class="rc-axis"><span>${day(wk[0].wk)}</span><span>this week</span></span>
+        <p class="muted small">${rc.mastery.mastered} stops mastered · ${rc.mastery.goals} of ${rc.mastery.goalsTotal} goals. Fluent means still fast after a gap of days.</p></div>
+    </div>
+    <div class="rc-strands"><p class="kicker">Where the learning is — goals met, by strand</p>
+      ${rc.mastery.strands.map((st) => `<div class="rc-st"><span>${st.glyph} ${esc(st.name)}</span><span class="bar"><i style="width:${st.total ? Math.round(100 * st.met / st.total) : 0}%"></i></span><b class="mono">${st.met}/${st.total}</b></div>`).join('')}</div>
     <div class="rep-grid">
-      <div><p class="kicker">This week</p><p><b>${wq}</b> questions tried on <b>${week.length}</b> day${week.length === 1 ? '' : 's'}, <b>${wq ? Math.round(100 * wok / wq) : 0}%</b> right.</p></div>
-      <div><p class="kicker">Tricks mastered</p><p>${learned.length ? learned.map((t) => esc(t.title)).join(' · ') : 'None yet.'}</p>${started.length ? `<p class="muted small">Started: ${started.map((t) => esc(t.title)).join(' · ')}</p>` : ''}</div>
-      <div><p class="kicker">Facts fluent</p><p>${OPS.map((o) => `${OP_NAME[o]} <b>${tally(c.facts, o).fluent}</b>/${tally(c.facts, o).total}`).join(' · ')}</p></div>
+      <div><p class="kicker">Tricks mastered</p><p>${learned.length ? learned.map((t) => esc(t.title)).join(' · ') : 'None yet.'}</p></div>
       <div><p class="kicker">Worth a hand with</p><p>${traps.length ? traps.slice(0, 8).map((f) => `<span class="mono">${esc(ftext(f))}</span>`).join(', ') : 'Nothing is tripping them up right now.'}</p>
         ${lapsed.length ? `<p class="muted small">Slipped since they were fluent: ${lapsed.slice(0, 8).map((f) => esc(ftext(f))).join(', ')}. That is normal — it comes back quickly.</p>` : ''}</div>
     </div>
@@ -749,6 +871,8 @@ export function viewPrivacy() {
       <p>There are no accounts, no analytics, no advertising, no trackers and no third-party scripts. The app makes no network requests about your child. The pages themselves are served by GitHub Pages, which, like any web host, sees the request for the page.</p>
       <p>We never ask for a surname, a birthday, an email, a photo or a location. Read-aloud uses your device's own voice, on the device.</p>
       <p>A grown-up can save a backup file, restore it, or delete a child's record at any time from the Grown-ups page.</p>
+      <p><b>The Bizzing family, on this device.</b> Like every Bizzing app, this one writes two small shared notes in this browser: <i>bizzing.activity</i> — a child's first name, the date, and how many minutes they were actively using the app (and milestones such as "passed a stop"), which the Bizzing Hive planner reads to show a family's week — and <i>bizzing.wallet</i> — the Bizzing coins earned for right answers and passed stops. Neither is ever sent anywhere; they stay on this device, where the other Bizzing apps on the same site can read them. Coins are never bought with real money and never change a child's rank.</p>
+      <p>The sample child at <i>?demo</i> and the "try a trick" page are held in memory only and touch none of this.</p>
     </div>
   </section>`;
 }
