@@ -1,0 +1,11 @@
+/* voice.css — the 🔊 read-it-aloud button (voice.js). Small, round, never in the way. */
+.say-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin:0 0 0 8px;padding:0;
+  border:0;border-radius:50%;background:var(--surface2);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;
+  vertical-align:middle;font-style:normal;box-shadow:var(--sh);flex:none}
+.say-btn:hover{filter:brightness(1.06)}
+.say-btn:focus-visible{outline:none;box-shadow:var(--focus)}
+/* on a question it sits in the card's corner, clear of the question itself */
+.qcard{position:relative}
+.qcard > .say-q{position:absolute;top:10px;right:10px;margin:0}
+@media (max-width:520px){.say-btn{width:30px;height:30px;font-size:15px}}
+.bubble2 .say-btn{background:var(--surface)}

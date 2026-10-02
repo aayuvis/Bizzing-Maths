@@ -96,6 +96,11 @@ export function rankOf(xp) {
 
 export function newHousehold() { return { v: 5, kids: [], active: null, parent: { pin: null, tester: false } }; }
 
+/* Read-aloud: a choice a grown-up made wins; until one is made it follows the
+   band — on for 6–7, on tap for everyone older. Decided at read time, so no
+   stored child is rewritten and a band change carries it along. */
+export const readOn = (k) => !!k && (k.prefs && k.prefs.read != null ? !!k.prefs.read : k.band === '6-7');
+
 export function newKid(name, band, avatar) {
   return {
     id: 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
@@ -116,7 +121,7 @@ export function newKid(name, band, avatar) {
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week
     created: Date.now(),
-    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: false },
+    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: null },   // read: null follows the band (readOn)
   };
 }
 

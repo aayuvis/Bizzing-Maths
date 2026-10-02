@@ -8,6 +8,8 @@ import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
 import { onJourney } from './model.js';
+import { readOn } from './model.js';
+import { guideSay, FEEDBACK } from './lines.js';
 import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
@@ -160,8 +162,12 @@ function ask() {
   run.t0 = performance.now(); run.input = ''; run.fb = null;
   render();
   const k = kid(R.h), q = run.items[run.i];
-  if (k && k.prefs.read) say(q.say || V.spoken(q.text));
+  if (readOn(k)) say(q.say || V.spoken(q.text));
 }
+/* A wrong answer holds until the child moves on, so its reply can be heard in
+   full: "Not this time. It is fifty-six." A right one moves on by itself, and
+   the chime says it. */
+function speakFeedback(q, fb) { say([fb.given === '' ? FEEDBACK.late : FEEDBACK.wrong, FEEDBACK.itIs, String(q.ans)]); }
 
 function patchAnswer(v) {
   const el = document.getElementById('ans');
@@ -197,6 +203,7 @@ function submit(given) {
   save();
   right ? sfx.good() : sfx.bad();
   render();
+  if (!right && readOn(k)) speakFeedback(q, run.fb);
   // a puzzle holds on a right answer too, so its rule can be read
   if (q.puzzle) { const p = k.puzzles[q.puzzle] || (k.puzzles[q.puzzle] = { right: 0, tries: 0, solved: {} }); p.tries++; if (right) p.right++; save(); }
   if (right && !q.puzzle) setTimeout(() => { if (R.run === run && run.fb) nextQ(); }, fast ? 420 : 650);
@@ -418,7 +425,7 @@ function cAsk(champ = false) {
   if (champ) { C.c.rq = 1; C.q = childQuestion(C.c); C.c.rq = 0; }
   C.phase = champ ? 'champ' : 'ask'; C.input = ''; C.t0 = performance.now();
   render();
-  const k = kid(R.h); if (k.prefs.read) say(C.q.say || V.spoken(C.q.text));
+  const k = kid(R.h); if (readOn(k)) say(C.q.say || V.spoken(C.q.text));
 }
 let timerT = null;
 function armTimer() {
@@ -497,9 +504,12 @@ on('openStop', (id) => {
   const k = kid(R.h);
   // a stop opens on its story until the story has been read once
   R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
-  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; R.ui.jstep = null; go('stop', id);
+  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; R.ui.jstep = null; storyVoice(k); go('stop', id); speakBeat();
 });
-on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; go('stop', id); });
+on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; storyVoice(kid(R.h)); go('stop', id); speakBeat(); });
+/* 'Read it to me' starts on for a child whose questions are read aloud; once
+   they switch it off it stays off for the rest of the visit. */
+function storyVoice(k) { if (k && R.ui.storyFor !== k.id) { R.ui.storyFor = k.id; R.ui.storyRead = readOn(k); } }
 on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
 on('shutWorld', () => toast('Not reached yet — finish the place before it on the road.'));
 on('isle', (n) => { R.ui.isle = +n; render(); });
@@ -518,7 +528,7 @@ function beat(d) {
   render(); speakBeat();
 }
 function speakBeat() {
-  if (!R.ui.storyRead) return;
+  if (!R.ui.storyRead || R.ui.nav !== 'stop' || R.ui.tab !== 'story') return;
   const s = STORIES[R.ui.arg], b = s && s.beats[R.ui.beat || 0]; if (!b) return;
   const at = R.ui.beat;
   say(b.say, () => { if (R.ui.storyRead && R.ui.beat === at && R.ui.nav === 'stop' && R.ui.tab === 'story' && at < s.beats.length - 1) setTimeout(() => { if (R.ui.beat === at) beat(1); }, 450); });
@@ -562,7 +572,7 @@ on('goalGo', (how) => {
   if (a === 'lib') return go('lib', b);
   go(a);
 });
-on('stopTab', (t) => { if (t !== 'turn' && R.run && R.run.kind === 'guided') R.run = null; R.ui.tab = t; render(); });
+on('stopTab', (t) => { if (t !== 'turn' && R.run && R.run.kind === 'guided') R.run = null; R.ui.tab = t; hush(); render(); if (t === 'story') speakBeat(); });
 on('watch', () => { R.ui.watch = (R.ui.watch || 0) + 1; sfx.click(); render(); });
 on('watchAll', () => { R.ui.watch = 99; render(); });
 on('learnCase', (i) => { R.ui.lcase = +i || 0; R.ui.watch = 0; R.ui.tab = 'learn'; sfx.click(); render(); });
@@ -604,6 +614,9 @@ on('factOp', (o) => { R.ui.factOp = o; R.ui.cell = null; render(); });
 on('cell', (c) => { R.ui.cell = R.ui.cell === c ? null : c; render(); });
 
 on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
+/* 🔊: read this question again (the runner), or read this line (a guide, a road card) */
+on('sayQ', () => { const run = R.run, q = run && run.items[run.i]; if (!q) return; if (!R.sound) return toast('Sound is off — turn it on at the top.'); if (run.fb && !run.fb.right) speakFeedback(q, run.fb); else say(q.say || V.spoken(q.text)); });
+on('sayIt', (t) => { if (!R.sound) return toast('Sound is off — turn it on at the top.'); say(t); });
 on('nextQ', () => nextQ());
 on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
 on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
@@ -627,8 +640,10 @@ on('obNext', () => {
   if (!String(d.name || '').trim()) { toast('Type a name first'); if (el) el.focus(); return; }
   d.step = 1; sfx.click(); render();
 });
-on('draftBand', (b) => { const d = draft(); d.band = b; d.step = 2; sfx.click(); render(); });
-on('draftAv', (a) => { const d = draft(); d.avatar = a; if ((d.step || 0) === 2) d.step = 3; sfx.click(); render(); });
+on('draftBand', (b) => { const d = draft(); d.band = b; d.step = 2; sfx.click(); render(); obSay(); });
+on('draftAv', (a) => { const d = draft(); const was = d.step || 0; d.avatar = a; if (was === 2) d.step = 3; sfx.click(); render(); if (was === 2) obSay(); });
+/* Nova reads her line aloud to a six- or seven-year-old, once their age is known */
+function obSay() { const d = draft(); if (d.band === '6-7') say(guideSay(['name', 'band', 'face', 'world'][d.step || 0])); }
 on('obTheme', (t) => { const d = draft(); d.theme = t; fire('createKid'); });
 on('avEdit', () => { R.ui.avEdit = !R.ui.avEdit; render(); });
 on('setAv', (a) => { const k = kid(R.h); if (!k || !AVATARS.includes(a)) return; k.avatar = a; Store.saveNow(R.h); render(); });
@@ -658,6 +673,7 @@ on('roadPick', (i) => {
     return x.kind === 'leveltest' ? fire('startLevelExam') : fire('startLandTest', x.land.id);
   }
   R.ui.rpick = +i; render();
+  if (readOn(k)) { const b = root.querySelector('.pick .say-btn'); if (b) say(b.getAttribute('data-arg')); }
 });
 on('secret', (a) => {
   const [kind, landId] = a.split('|'), k = kid(R.h), s = J.SECRET_KINDS.find((x) => x.k === kind);
@@ -730,7 +746,7 @@ on('lock', () => { R.ui.gate = false; go('home'); });
 on('toggle', (key) => {
   const k = kid(R.h);
   if (key === 'tester') R.h.parent.tester = !R.h.parent.tester;
-  if (key === 'read' && k) k.prefs.read = !k.prefs.read;
+  if (key === 'read' && k) k.prefs.read = !readOn(k);
   save(); render();
 });
 on('setBand', (b) => { const k = kid(R.h); if (k) { k.band = b; save(); render(); } });
@@ -819,6 +835,7 @@ addEventListener('keydown', (e) => {
     if (['run', 'contest', 'grownups'].includes(nav) || (nav === 'stop' && run)) { e.preventDefault(); return padKey('✓'); }
   }
   if (e.key === 'Escape' && nav === 'run') { fire('quitRun'); }
+  if (e.key.toLowerCase() === 'r' && nav === 'run' && run && !run.over) { e.preventDefault(); fire('sayQ'); }
   if (nav === 'stop' && R.ui.tab === 'story') {
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fire('beatNext'); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); fire('beatBack'); }

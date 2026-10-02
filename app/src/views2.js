@@ -19,7 +19,7 @@ import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen, onJourney, firstLeve
 import { STORIES } from './stories.js';
 import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
-import { av, starRow, pageHead } from './views.js';
+import { av, starRow, pageHead, sayBtn } from './views.js';
 import { bot } from './contest.js';
 import * as J from './journey.js';
 import { CONCEPTS, CONCEPT_OF } from './levels.js';
@@ -373,7 +373,7 @@ function roadCard(p, k, show, mine) {
     return `<div class="card pick">
       ${s ? `<div class="pick-cast">${s.cast.map((c) => av(c, 64, bot(c).name)).join('')}</div>` : ''}
       <div class="pick-t"><p class="kicker">${x.recap ? 'Recap · ' : ''}${w.glyph} ${esc(w.short)} · ${LVNAME[x.lv]}</p>
-        <h2>${esc(t.title)}</h2><p class="pick-hook">${esc(t.hook)}</p>${starRow(r.stars || 0)}</div>
+        <h2>${esc(t.title)}</h2><p class="pick-hook">${esc(t.hook)}${sayBtn(t.hook)}</p>${starRow(r.stars || 0)}</div>
       ${open ? `<button class="btn primary big" data-act="openStep" data-arg="${x.stop}|${x.lv}">${x.done ? 'Go back in' : 'Start here'}</button>` : '<p class="muted">Pass everything before it on the road to open it.</p>'}
     </div>`;
   }
@@ -382,7 +382,7 @@ function roadCard(p, k, show, mine) {
     <img class="pick-art" src="art/${lvl ? 'summit' : 'gate'}.webp" alt="" width="88" height="88">
     <div class="pick-t"><p class="kicker">${lvl ? 'The summit' : 'The gate'}</p>
       <h2>${lvl ? `Level ${show} test` : `${esc(x.land.name)} test`}</h2>
-      <p class="pick-hook">${lvl ? `${J.LEVEL_N} questions from every land, getting harder. ${J.LEVEL_PASS} right passes — and moves you up to ${esc(J.ageOf(Math.min(10, show + 1)))}. Then ${J.LEVEL_BONUS} bonus questions, double points.` : `${J.LAND_N} questions from this land, getting harder. ${J.LAND_PASS} right opens the road on. Then ${J.LAND_BONUS} bonus questions at almost the next level, double points.`}</p>
+      <p class="pick-hook">${esc(J.testBlurb(lvl, show))}${sayBtn(J.testBlurb(lvl, show))}</p>
       ${rec && rec.passed ? `<p class="gold-line">Passed ${'★'.repeat(rec.stars || 1)} · best ${rec.best} points</p>` : ''}</div>
     ${open ? `<button class="btn primary big" data-act="${lvl ? 'startLevelExam' : 'startLandTest'}" data-arg="${lvl ? '' : x.land.id}">${rec && rec.passed ? 'Take it again' : 'Take the test'}</button>` : '<p class="muted">Pass every station before it first.</p>'}
   </div>`;

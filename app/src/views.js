@@ -6,7 +6,8 @@ import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
-import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS } from './model.js';
+import { GUIDE, guideSay } from './lines.js';
+import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
 import { keypad } from './games.js';
 import { fig } from './figs.js';
@@ -121,9 +122,12 @@ export function shell(body) {
    they are in. Nothing typed here leaves the device. */
 const OB_STEPS = ['name', 'band', 'face', 'world'];
 export const OB_THEMES = ['graph', 'orbit'];
-function guide(text) {
-  return `<div class="ob-say">${av('koi', 72, 'Nova').replace('loading="lazy"', 'loading="eager"')}<p class="bubble2">${text}</p></div>`;
+function guide(text, line) {
+  return `<div class="ob-say">${av('koi', 72, 'Nova').replace('loading="lazy"', 'loading="eager"')}<p class="bubble2">${text}${sayBtn(guideSay(line), 'Hear Nova say it')}</p></div>`;
 }
+/* 🔊 — read this line aloud (voice.js). Any band, any time; a plain button, so Tab and Space reach it. */
+export const sayBtn = (line, label = 'Read it aloud') =>
+  `<button class="say-btn" data-act="sayIt" data-arg="${esc(line)}" aria-label="${esc(label)}" title="${esc(label)}"><span aria-hidden="true">🔊</span></button>`;
 export function viewWelcome() {
   const d = R.ui.draft || (R.ui.draft = { name: '', band: '', avatar: STARTER_AVATARS[0], step: 0 });
   const first = !R.h.kids.length, step = d.step || 0;
@@ -144,18 +148,18 @@ export function viewWelcome() {
   const dots = `<div class="ob-dots" aria-label="Step ${step + 1} of ${OB_STEPS.length}">${OB_STEPS.map((_, i) => `<i class="${i < step ? 'done' : i === step ? 'on' : ''}"></i>`).join('')}</div>`;
   const back = step > 0 ? btn('← Back', 'obBack', '', 'small') : !first ? btn('Cancel', 'nav', 'home', 'small') : btn('← Back', 'obLand', '', 'small');
   let body;
-  if (step === 0) body = `${guide(first ? 'Hello! I am Nova. I will walk the first road with you. What shall I call you?' : 'Another mathematician! What shall I call this one?')}
+  if (step === 0) body = `${guide(first ? GUIDE.nameFirst : GUIDE.nameMore, first ? 'nameFirst' : 'nameMore')}
     <div class="card ob-card">
       <label class="lab" for="kname">First name or nickname</label>
       <input id="kname" class="inp" data-draft="name" value="${esc(d.name)}" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="e.g. Ahana">
       <p class="hint">Just a first name — never a surname, a birthday or a photo.</p>
       ${btn('Next →', 'obNext', '', 'primary big')}
     </div>`;
-  else if (step === 1) body = `${guide(`Good to meet you, <b>${esc(d.name)}</b>. How old are you? It decides where your first road starts.`)}
+  else if (step === 1) body = `${guide(`${GUIDE.bandHi}, <b>${esc(d.name)}</b>. ${GUIDE.bandAsk}`, 'band')}
     <div class="ob-opts">${BANDS.map((b) => `<button class="ob-opt${d.band === b.id ? ' on' : ''}" data-act="draftBand" data-arg="${b.id}"><b>${b.label}</b><span>${b.blurb}</span></button>`).join('')}</div>`;
-  else if (step === 2) body = `${guide('Pick a face to walk the roads with. There are twenty-five more on your page, whenever you want a change.')}
+  else if (step === 2) body = `${guide(GUIDE.face, 'face')}
     <div class="ob-faces" role="radiogroup" aria-label="Pick a face">${STARTER_AVATARS.map((a) => `<button class="ob-face${d.avatar === a ? ' on' : ''}" role="radio" aria-checked="${d.avatar === a}" data-act="draftAv" data-arg="${a}">${av(a, 96, AVATAR_NAME[a] || a).replace('loading="lazy"', 'loading="eager"')}<span>${esc(AVATAR_NAME[a] || a)}</span></button>`).join('')}</div>`;
-  else body = `${guide('Last one. Which world should the app wear? You can swap it — there are four more — on your page any time.')}
+  else body = `${guide(GUIDE.world, 'world')}
     <div class="ob-worlds">${THEMES.filter((t) => OB_THEMES.includes(t.id)).map((t) => `<button class="ob-world ob-w-${t.id}" data-act="obTheme" data-arg="${t.id}"><span class="ob-sw"><b style="font-family:'${t.display}'">Aa</b><i style="font-family:'${t.mono}'">7 × 8</i></span><b>${esc(t.name)}</b><span>${esc(t.blurb)}</span></button>`).join('')}</div>`;
   return `<section class="welcome ob">
     <div class="ob-top">${back}${dots}<span></span></div>
@@ -468,6 +472,7 @@ export function viewRun() {
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
       ${q.bonus ? `<p class="bonus-bar"><span class="chip gold">Bonus ×2 · optional</span> <span class="muted small">Almost next-level hard. Only adds points — it cannot lose you the test.</span> ${fb ? '' : btn('Finish without the bonus', 'skipBonus', '', 'small')}</p>` : ''}
       ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
+      <button class="say-btn say-q" data-act="sayQ" aria-label="Read the question aloud" title="Read it aloud (R)"><span aria-hidden="true">🔊</span></button>
       ${q.choices
         ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
         : `<p class="answer mono" id="ans" aria-live="polite">${fb ? esc(fb.given) : esc(run.input) || '<span class="caret"></span>'}</p>`}
@@ -701,7 +706,7 @@ export function viewGrownups() {
       <div class="card">
         <p class="kicker">Settings${k ? ` for ${esc(k.name)}` : ''}</p>
         ${k ? `<div class="set"><span>Age band</span><span class="chips">${BANDS.map((b) => `<button class="chip-btn small${k.band === b.id ? ' on' : ''}" data-act="setBand" data-arg="${b.id}">${b.label}</button>`).join('')}</span></div>
-        <div class="set"><span>Read questions aloud</span>${toggle('read', k.prefs.read)}</div>` : ''}
+        <div class="set"><span>Read questions aloud <span class="muted small">on by itself for 6–7; 🔊 on any question for everyone</span></span>${toggle('read', readOn(k))}</div>` : ''}
         <div class="set"><span>Tester mode <span class="muted small">opens every stop; changes nothing about the child</span></span>${toggle('tester', h.parent.tester)}</div>
       </div>
       <div class="card">
@@ -747,7 +752,8 @@ export function viewPrivacy() {
     <div class="card prose">
       <p>Bizzing Maths keeps a child's first name, age band, chosen avatar and progress in this browser's local storage, on this device. That is all it stores.</p>
       <p>There are no accounts, no analytics, no advertising, no trackers and no third-party scripts. The app makes no network requests about your child. The pages themselves are served by GitHub Pages, which, like any web host, sees the request for the page.</p>
-      <p>We never ask for a surname, a birthday, an email, a photo or a location. Read-aloud uses your device's own voice, on the device.</p>
+      <p>We never ask for a surname, a birthday, an email, a photo or a location. </p>
+      <p>Read-aloud plays recordings of the Bizzing narrator that are part of the app. Each clip is fetched from this same site the first time it is needed and then kept on the device, like the app's pictures; nothing about your child goes with it. A line with no recording is read by your device's own voice, on the device.</p>
       <p>A grown-up can save a backup file, restore it, or delete a child's record at any time from the Grown-ups page.</p>
     </div>
   </section>`;
