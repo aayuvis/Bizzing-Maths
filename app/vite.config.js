@@ -29,6 +29,10 @@ export default defineConfig({
      path, or a folder someone opens through a local server. */
   base: './',
   plugins: [copySW()],
-  build: { outDir: 'build', emptyOutDir: true, target: 'es2020' },
+  /* Vite's 500 kB warning measures MINIFIED size; the family budget is what a phone
+     downloads — initial JS ≤ 400 KB gzipped, first screen ≤ 1.5 MB — and
+     test/family-ui.mjs enforces that on every check. The chapters are the engine
+     Home needs, so they stay in the first chunk; the Library loads by route. */
+  build: { outDir: 'build', emptyOutDir: true, target: 'es2020', chunkSizeWarningLimit: 1000 },
   server: { port: 8080, open: false },
 });

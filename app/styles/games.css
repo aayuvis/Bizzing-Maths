@@ -130,3 +130,6 @@
   .gwob,.gcombo,.g-card,.mt-card.born,.sc.born,.nl-mark.set,.nl-true,.g-facts li,.mt-target.won{animation:none}
   .g-how li{animation:none;opacity:1}
 }
+/* the won target pops (g-born) but does not stay enlarged: at 1.08 its 20px rings reached the cards */
+.mt-target.won{transform:none}
+.mt-target{margin-bottom:40px}
