@@ -68,7 +68,8 @@ export function viewAtlasMap() {
   const here = ROUTE[f] ? ROUTE[f].world : WORLDS.at(-1).id;
   const stars = TRICKS.reduce((s, t) => s + ((k.tricks[t.id] || {}).stars || 0), 0);
   const jp = onJourney(k) ? J.progress(k) : null, roadWorld = jp && jp.next ? jp.next.t.world : null;
-  const isle = R.ui.isle || (WORLDS.find((w) => w.id === (roadWorld || here)) || {}).island || 1;
+  const isle0 = R.ui.isle || (WORLDS.find((w) => w.id === (roadWorld || here)) || {}).island || 1;
+  const isle = ISLANDS[isle0 - 1] ? isle0 : 1;   // a Contest Hall world has no island map
   const I = ISLANDS[isle - 1];
   const worlds = WORLDS.filter((w) => w.island === isle);
   return `<section>
