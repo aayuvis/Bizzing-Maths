@@ -861,10 +861,12 @@ import * as mine from './chapters/mine.js';
 import * as coinstreet from './chapters/coinstreet.js';
 import * as lighthouse from './chapters/lighthouse.js';
 import * as strategy from './chapters/strategy.js';
-export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival, quarry, mine, coinstreet, lighthouse, strategy];
+import * as logic from './chapters/logic.js';
+export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival, quarry, mine, coinstreet, lighthouse, strategy, logic];
 
 export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'coinstreet', 'shapecity', 'workshop', 'mine', 'forest',
-  'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'lighthouse', 'carnival', 'strategy'];
+  'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'lighthouse', 'carnival',
+  'strategy', 'logic'];   // the Contest Hall's strategy worlds (track: 'contest') come after the Atlas road
 export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, quarry: 3, mine: 3, coinstreet: 3, lighthouse: 3,
   strategy: 'hall', logic: 'hall', figures: 'hall' };   // everything else: island 2. 'hall': the Contest Hall's road, not an island
 
