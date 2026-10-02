@@ -13,35 +13,68 @@
 
 import { ramp, key as fkey, answer, text as ftext, state as fstate } from './facts.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
-import { esc, sfx, confetti } from './ui.js';
+import { esc, sfx, confetti, music } from './ui.js';
 import { makeSudoku, conflicts, SUDOKU } from './puzzles.js';
 
 /* ------------------------------------------------------------ the frame */
 
-let current = null;
-export const active = () => current;
+/* Every game here meets Family Standard §10, and the shared kit below is how:
+   a title card with a three-second how-to (`intro`), motion on every answer
+   (`pop` on a right one, `wobble` on a wrong one — a wobble of the thing that
+   was wrong, never a screen shake), a small sound per action, a soft music
+   loop (ui.js `music`), a combo meter, and a finish screen that names what was
+   practised (`resultCard`). Keyboard and touch reach all of it.
 
-function frame(title, sub, onClose) {
+   The combo is DISPLAY ONLY. It counts consecutive right answers and drops to
+   nought on a miss, so it rewards accuracy — a decision — and never luck; but
+   it is never passed to onTick/onEnd/onSolve, so it cannot change a wage, a
+   score, a star or a rank. What pays is what was already paid: right answers. */
+
+let current = null;
+let musicOff = false;           // the ♪ button in the play bar: this session only
+export const active = () => current;
+/* For the headless walk only (as main.js's window.__bzm): it reads the bubbles
+   in the air and can end a long game early. Never read by the app. */
+if (typeof window !== 'undefined') window.__bzmGames = { active };
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
+
+function frame(title, sub, onClose, art) {
   const el = document.createElement('div');
-  el.className = 'play';
+  el.className = 'play' + (art ? ' has-art g-' + art : '');
+  // inline, so the plate resolves against the page like every other plate (a url in a
+  // custom property would resolve against the hashed stylesheet in assets/)
+  if (art) el.style.backgroundImage = `linear-gradient(var(--veil), var(--veil)), url(art/g-${art}.webp)`;
+  el.dataset.juice = '0';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', title);
   el.innerHTML = `
     <div class="play-bar">
       <button class="play-x" data-g="close" aria-label="Close the game (Escape)">✕</button>
       <div class="play-t"><b>${esc(title)}</b><span>${esc(sub)}</span></div>
+      <div class="gcombo" aria-hidden="true"></div>
       <div class="play-hud" aria-live="polite"></div>
+      <button class="play-m" data-g="music" aria-label="Music (M)" aria-pressed="${musicOff ? 'false' : 'true'}">♪</button>
     </div>
     <div class="play-body"></div>`;
   document.body.appendChild(el);
   document.documentElement.classList.add('playing');
   el.querySelector('[data-g=close]').addEventListener('click', () => onClose());
-  return { el, body: el.querySelector('.play-body'), hud: el.querySelector('.play-hud') };
+  el.querySelector('[data-g=music]').addEventListener('click', () => toggleMusic());
+  return { el, body: el.querySelector('.play-body'), hud: el.querySelector('.play-hud'), combo: el.querySelector('.gcombo') };
+}
+
+function toggleMusic() {
+  musicOff = !musicOff;
+  if (!current) return;
+  current.f.el.querySelector('[data-g=music]').setAttribute('aria-pressed', musicOff ? 'false' : 'true');
+  if (musicOff) music.stop(); else if (current.tune && current.begun && !current.ended) music.start(current.tune);
 }
 
 function end(g) {
   if (!g) return;
   try { g.stop && g.stop(); } catch (e) {}
+  clearTimeout(g.introT);
+  music.stop();
   g.f.el.remove();
   document.documentElement.classList.remove('playing');
   if (current === g) current = null;
@@ -50,23 +83,155 @@ function end(g) {
 export function closeGame() { if (current) current.quit(); }
 
 /* Global keys route here while a game is up (main.js checks active()). */
-export function gameKey(ev) { if (current && current.key) return current.key(ev); return false; }
+export function gameKey(ev) {
+  if (!current) return false;
+  if (current.intro) return current.intro(ev);
+  if ((ev.key === 'm' || ev.key === 'M') && !current.ended) { toggleMusic(); return true; }
+  if (current.key) return current.key(ev);
+  return false;
+}
 
-function resultCard(f, { title, lines, stars, again, done }) {
+/* ---------------------------------------------------------------- juice */
+
+/* How many motion events a game has made: at least one per answer. The
+   headless walk reads it to prove that every answer moves something. */
+function juice(g) { g.f.el.dataset.juice = String(+g.f.el.dataset.juice + 1); }
+
+/* Pop particles at (x, y) inside `host` (which must be position:relative).
+   Under reduced motion it is one soft ring that fades where it stands. */
+const POPH = [45, 200, 330, 150, 265, 20];
+function pop(g, host, x, y, label = '') {
+  juice(g);
+  const el = document.createElement('div');
+  const still = calm();
+  el.className = 'gpop' + (still ? ' calm' : '');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
+  el.innerHTML = (still ? '' : Array.from({ length: 12 }, (_, i) =>
+    `<i style="--a:${i * 30 + int(-10, 10)}deg;--d:${int(44, 86)}px;--h:${POPH[i % POPH.length]};--s:${int(6, 11)}px"></i>`).join('')) +
+    `<span class="gpop-ring"></span>${label ? `<b>${esc(label)}</b>` : ''}`;
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+  return el;
+}
+/* A wrong answer wobbles the thing that was wrong. Never the screen. */
+function wobble(g, el) {
+  juice(g);
+  if (!el) return;
+  el.classList.remove('gwob'); void el.offsetWidth; el.classList.add('gwob');
+  setTimeout(() => el.classList.remove('gwob'), 520);
+}
+/* the centre of `el` in `host`'s coordinates */
+function centre(el, host) {
+  const a = el.getBoundingClientRect(), b = host.getBoundingClientRect();
+  return [a.left - b.left + a.width / 2, a.top - b.top + a.height / 2];
+}
+
+/* The combo: consecutive right answers. Pure, so a test can hold it to its
+   one rule — it moves only with right answers and a miss returns it to nought. */
+export const comboNext = (n, right) => (right ? n + 1 : 0);
+function comboMeter(g) {
+  const c = { n: 0, best: 0 };
+  const show = (cls) => {
+    const el = g.f.combo, lit = c.n && c.n % 5 === 0 ? 5 : c.n % 5;
+    el.className = 'gcombo' + (c.n ? ' on' : '') + (c.n >= 5 ? ' hot' : '') + (cls ? ' ' + cls : '');
+    el.innerHTML = c.n ? `<span class="gc-pips">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= lit ? 'lit' : ''}"></i>`).join('')}</span><b>${c.n}</b><span class="gc-l">in a row</span>` : '';
+    el.dataset.n = String(c.n);
+  };
+  c.hit = () => { c.n = comboNext(c.n, true); c.best = Math.max(c.best, c.n); if (c.n > 1) sfx.combo(c.n); show('bump'); };
+  c.miss = () => { const had = c.n; c.n = comboNext(c.n, false); show(had ? 'drop' : ''); };
+  show();
+  return c;
+}
+
+/* ------------------------------------------------------- the title card */
+
+/* The title card and a three-second how-to. It starts by itself when the bar
+   has filled; any key, or a tap anywhere on the card, starts it now; Escape
+   leaves. `practises` says what the game practises in a child's words, and the
+   same idea heads the finish screen. */
+export const HOWTO = {
+  rush: { practises: 'your own facts, at speed', steps: [['○', 'Sums drift down from the sky.'], ['⌨', 'Type the answer on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
+  target: { practises: 'joining numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'The two join into one new number.'], ['◎', 'Use every number to make the target.']] },
+  line: { practises: 'estimating where a number sits', steps: [['?', 'A number appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
+  sudoku: { practises: 'logic: every row, column and box once', steps: [['▢', 'Pick an empty square.'], ['✎', 'Fill it in, by tap or by key.'], ['✓', 'No row, column or box may repeat one.']] },
+};
+export const INTRO_MS = 3000;
+function intro(g, title, id, begin) {
+  const h = HOWTO[id];
+  g.f.el.classList.add('intro-on');
+  g.f.body.innerHTML = `<div class="g-intro" role="group" aria-label="How to play ${esc(title)}">
+      <div class="g-card">
+        <p class="kicker">Practises ${esc(h.practises)}</p>
+        <h2>${esc(title)}</h2>
+        <ol class="g-how">${h.steps.map(([ic, t], i) => `<li style="--i:${i}"><span class="g-ico" aria-hidden="true">${ic}</span><span>${esc(t)}</span></li>`).join('')}</ol>
+        <div class="g-bar" aria-hidden="true"><i style="animation-duration:${INTRO_MS}ms"></i></div>
+        <button class="btn primary big" data-g="go">Play <kbd>Enter</kbd></button>
+        <p class="g-skip">Starts by itself · tap or press any key to start now</p>
+      </div></div>`;
+  let gone = false;
+  const go = () => {
+    if (gone || current !== g) return; gone = true;
+    clearTimeout(g.introT); g.intro = null; g.begun = true;
+    g.f.el.classList.remove('intro-on');
+    sfx.pop();
+    if (!musicOff && g.tune) music.start(g.tune);
+    begin();
+  };
+  g.f.body.querySelector('.g-intro').addEventListener('click', go);
+  g.intro = (e) => { if (e.key === 'Escape') { g.quit(); return true; } if (/^(Tab|Shift|Control|Alt|Meta)$/.test(e.key)) return false; go(); return true; };
+  g.introT = setTimeout(go, INTRO_MS);
+  g.f.body.querySelector('button[data-g=go]').focus({ preventScroll: true });
+}
+
+/* --------------------------------------------------------- the finish */
+
+/* The finish screen names what was practised — the facts, the sums, the
+   numbers placed — so a child (and a grown-up looking over a shoulder) can see
+   the learning, not just a number. `practised.items` are what went well,
+   `practised.again` what to come back to. Enter plays again, Escape leaves. */
+function resultCard(g, { title, lines, stars, again, done, practised, best }) {
+  const f = g.f;
+  g.ended = true;
+  music.stop();
   const s = [1, 2, 3].map((i) => `<span class="${i <= stars ? 'on' : ''}">★</span>`).join('');
+  const P = practised || {};
+  const list = (xs, cls) => (xs && xs.length ? `<ul class="g-facts ${cls}">${xs.map((x) => `<li class="mono">${esc(x)}</li>`).join('')}</ul>` : '');
+  f.combo.innerHTML = ''; f.combo.className = 'gcombo';
   f.body.innerHTML = `<div class="play-end">
       <div class="stars big" aria-label="${stars} of 3 stars">${s}</div>
       <h2>${esc(title)}</h2>
+      <div class="g-practised">
+        <p class="kicker">You practised</p>
+        <p class="g-skill">${esc(P.skill || '')}</p>
+        ${list(P.items, 'ok')}
+        ${P.again && P.again.length ? `<p class="kicker">Worth another go</p>${list(P.again, 'again')}` : ''}
+      </div>
+      ${best > 1 ? `<p class="muted">Longest run: <b>${best}</b> right in a row.</p>` : ''}
       ${lines.map((l) => `<p>${l}</p>`).join('')}
-      <div class="row gap">
-        <button class="btn primary" data-g="again">Play again</button>
-        <button class="btn" data-g="done">Back to the Arcade</button>
+      <div class="row gap center">
+        <button class="btn primary" data-g="again">Play again <kbd>Enter</kbd></button>
+        <button class="btn" data-g="done">Back <kbd>Esc</kbd></button>
       </div></div>`;
   f.body.querySelector('[data-g=again]').onclick = again;
   f.body.querySelector('[data-g=done]').onclick = done;
-  f.body.querySelector('[data-g=again]').focus();
+  f.body.querySelector('[data-g=again]').focus({ preventScroll: true });
+  g.key = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { again(); return true; }
+    if (e.key === 'Escape' || e.key === 'Backspace') { done(); return true; }
+    return false;
+  };
+  sfx.fanfare();
   if (stars >= 2) confetti(30);
 }
+
+/* What a game practised, in words — the skill line on the finish screen. */
+const OPNAME = { '×': 'times tables', '÷': 'division facts', '+': 'adding facts', '-': 'taking-away facts' };
+export function rushSkill(ops) {
+  const n = ops.map((o) => OPNAME[o]).filter(Boolean);
+  return n.length ? n.slice(0, -1).join(', ') + (n.length > 1 ? ' and ' : '') + n[n.length - 1] + ', at speed' : 'facts, at speed';
+}
+const uniq = (xs) => [...new Set(xs)];
 
 /* The on-screen keypad every game and drill shares. */
 /* `keys` adds the extra keys a question needs: '.', '−', '/'. */
@@ -92,27 +257,42 @@ export function numberRush(kid, { onTick, onEnd }) {
     const edge = r.filter((f) => !met.includes(f)).slice(0, 12);
     pool.push(...(met.length > 8 ? met : r.slice(0, 30)), ...edge);
   }
-  const f = frame('Number Rush', 'Type the answer to pop a bubble', () => g.quit());
-  const g = { f };
-  let raf = 0, bubbles = [], input = '', score = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = 0.05, over = false, streak = 0;
-
-  f.body.innerHTML = `<div class="rush">
-      <canvas class="rush-c" aria-hidden="true"></canvas>
-      <div class="rush-in" aria-live="assertive"><span class="rush-typed"></span><span class="rush-caret"></span></div>
-      ${keypad()}
-    </div>`;
-  const cv = f.body.querySelector('canvas'), ctx = cv.getContext('2d');
-  const typed = f.body.querySelector('.rush-typed');
+  const f = frame('Number Rush', 'Type the answer to pop a bubble', () => g.quit(), 'rush');
+  const g = { f, tune: 'bright' };
+  let raf = 0, bubbles = [], input = '', score = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = 0.05, over = false;
+  const popped = [], landed = [];
+  let cv, ctx, typed, stage, inp, W = 0, H = 0, combo;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  let W = 0, H = 0;
   function size() {
+    if (!cv) return;
     const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
     cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  size(); addEventListener('resize', size);
-
   const hud = () => { f.hud.innerHTML = `<span class="chip">Score <b>${score}</b></span><span class="chip lives">${'♥'.repeat(lives)}${'<i>♥</i>'.repeat(3 - lives)}</span>`; };
-  hud();
+
+  function begin() {
+    f.body.innerHTML = `<div class="rush">
+        <div class="rush-stage"><canvas class="rush-c" aria-hidden="true"></canvas></div>
+        <div class="rush-in" aria-live="assertive"><span class="rush-typed"></span><span class="rush-caret"></span></div>
+        ${keypad()}
+      </div>`;
+    cv = f.body.querySelector('canvas'); ctx = cv.getContext('2d');
+    typed = f.body.querySelector('.rush-typed'); stage = f.body.querySelector('.rush-stage'); inp = f.body.querySelector('.rush-in');
+    combo = comboMeter(g);
+    size(); addEventListener('resize', size);
+    hud();
+    f.body.querySelector('.pad').addEventListener('pointerdown', (e) => {
+      const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); press(b.dataset.k);
+    });
+    g.key = (e) => {
+      if (e.key === 'Escape') { g.quit(); return true; }
+      if (/^\d$/.test(e.key)) { press(e.key); return true; }
+      if (e.key === 'Backspace') { press('⌫'); return true; }
+      if (e.key === 'Enter') { press('✓'); return true; }
+      return false;
+    };
+    raf = requestAnimationFrame(loop);
+  }
 
   function spawn(now) {
     const fact = pick(pool);
@@ -122,44 +302,34 @@ export function numberRush(kid, { onTick, onEnd }) {
     const lane = int(0, lanes - 1);
     bubbles.push({ fact, text: ftext(g), ans: answer(g), x: (lane + 0.5) * (W / lanes), y: -r, r, hue: pick([218, 150, 32, 268, 190]), born: now });
   }
-  function pop(b) {
+  function popIt(b) {
     bubbles = bubbles.filter((x) => x !== b);
-    score++; streak++; sfx.good();
+    score++; combo.hit(); sfx.pop(); sfx.good();
     if (score % 5 === 0) speed *= 1.12;
-    burst.push({ x: b.x, y: b.y, t: 0, hue: b.hue });
+    popped.push(b.text);
+    pop(g, stage, b.x, b.y, '+1');
     onTick(true, b.fact);
     hud();
   }
-  const burst = [];
 
-  function draw(now) {
+  function draw() {
     ctx.clearRect(0, 0, W, H);
-    // graph paper
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--line-soft') || '#E9ECF5';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 28) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 28) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
-    // the floor
+    // the floor: a soft glow where the meadow is, so a landing has somewhere to land
     const fl = ctx.createLinearGradient(0, H - 26, 0, H);
-    fl.addColorStop(0, 'rgba(196,69,60,0)'); fl.addColorStop(1, 'rgba(196,69,60,.28)');
+    fl.addColorStop(0, 'rgba(196,69,60,0)'); fl.addColorStop(1, 'rgba(196,69,60,.16)');
     ctx.fillStyle = fl; ctx.fillRect(0, H - 26, W, 26);
     const face = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'ui-monospace, monospace'; // the theme's digits
     for (const b of bubbles) {
       const gr = ctx.createRadialGradient(b.x - b.r * .35, b.y - b.r * .4, b.r * .1, b.x, b.y, b.r);
-      gr.addColorStop(0, `hsl(${b.hue} 90% 92%)`); gr.addColorStop(.55, `hsl(${b.hue} 75% 70%)`); gr.addColorStop(1, `hsl(${b.hue} 65% 48%)`);
+      gr.addColorStop(0, `hsl(${b.hue} 90% 94%)`); gr.addColorStop(.6, `hsl(${b.hue} 80% 80%)`); gr.addColorStop(1, `hsl(${b.hue} 65% 58%)`);
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(b.x - b.r * .38, b.y - b.r * .45, b.r * .22, b.r * .12, -0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(b.x - b.r * .38, b.y - b.r * .45, b.r * .22, b.r * .12, -0.6, 0, Math.PI * 2); ctx.fill();
       // size the sum to fit INSIDE its bubble: a monospace glyph is ~0.6em wide
       const fs = Math.min(b.r * 0.5, (b.r * 1.7) / (b.text.length * 0.6));
       ctx.fillStyle = '#10162c'; ctx.font = `700 ${Math.round(fs)}px ${face}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.text, b.x, b.y + 1);
     }
-    for (const p of burst) {
-      p.t += 0.04; const rr = 20 + p.t * 60;
-      ctx.strokeStyle = `hsla(${p.hue} 80% 55% / ${1 - p.t})`; ctx.lineWidth = 4 * (1 - p.t);
-      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
-    }
-    for (let i = burst.length - 1; i >= 0; i--) if (burst[i].t >= 1) burst.splice(i, 1);
   }
 
   function loop(now) {
@@ -171,48 +341,44 @@ export function numberRush(kid, { onTick, onEnd }) {
     for (const b of bubbles.slice()) {
       if (b.y - b.r > H - 20) {
         bubbles = bubbles.filter((x) => x !== b);
-        lives--; streak = 0; sfx.bad(); onTick(false, b.fact); hud();
+        lives--; combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
+        pop(g, stage, b.x, H - 14);
+        wobble(g, f.hud.querySelector('.lives'));
         if (lives <= 0) return finish();
       }
     }
-    draw(now);
+    draw();
     raf = requestAnimationFrame(loop);
   }
   function setInput(v) {
     input = v.slice(0, 4); typed.textContent = input;
     const hit = bubbles.filter((b) => String(b.ans) === input).sort((a, b) => b.y - a.y)[0];
-    if (hit) { pop(hit); input = ''; typed.textContent = ''; }
+    if (hit) { popIt(hit); input = ''; typed.textContent = ''; }
   }
   function press(k) {
     if (over) return;
     if (k === '⌫') setInput(input.slice(0, -1));
-    else if (k === '✓') { if (input) { sfx.click(); setInput(''); } }
-    else if (/^\d$/.test(k)) setInput(input + k);
+    // Enter on an answer that popped nothing: it was wrong for every bubble up
+    else if (k === '✓') { if (input) { sfx.bad(); combo.miss(); wobble(g, inp); setInput(''); } }
+    else if (/^\d$/.test(k)) { sfx.click(); setInput(input + k); }
   }
-  f.body.querySelector('.pad').addEventListener('pointerdown', (e) => {
-    const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); press(b.dataset.k);
-  });
-  g.key = (e) => {
-    if (e.key === 'Escape') { g.quit(); return true; }
-    if (/^\d$/.test(e.key)) { press(e.key); return true; }
-    if (e.key === 'Backspace') { press('⌫'); return true; }
-    if (e.key === 'Enter') { press('✓'); return true; }
-    return false;
-  };
   function finish() {
     over = true; cancelAnimationFrame(raf);
     const stars = score >= 30 ? 3 : score >= 15 ? 2 : score >= 5 ? 1 : 0;
     onEnd(score, stars);
-    resultCard(f, {
+    resultCard(g, {
       title: score ? `${score} popped` : 'The bubbles won that one',
+      practised: { skill: rushSkill(ops), items: uniq(popped).slice(0, 12), again: uniq(landed).slice(0, 6) },
+      best: combo.best,
       lines: [score >= 15 ? 'That is real speed.' : 'The ones you know best go fastest. Keep playing and more of them will be.'],
       stars, again: () => { g.quit(); numberRush(kid, { onTick, onEnd }); }, done: () => g.quit(),
     });
   }
   g.stop = () => { over = true; cancelAnimationFrame(raf); removeEventListener('resize', size); };
   g.quit = () => end(g);
+  g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), finish: () => !over && finish() };
   current = g;
-  raf = requestAnimationFrame(loop);
+  intro(g, 'Number Rush', 'rush', begin);
   return g;
 }
 
@@ -273,23 +439,25 @@ export function makePuzzle(band, r = Math.random) {
 
 export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
   const title = daily ? "Today's puzzle" : 'Make the Target';
-  const f = frame(title, daily ? 'The same puzzle in every house today' : 'Use every number to hit the target', () => g.quit());
-  const g = { f };
-  let round = 0, solved = 0, puzzle, cards, pickA = null, op = null, history = [], shown = false;
+  const f = frame(title, daily ? 'The same puzzle in every house today' : 'Use every number to hit the target', () => g.quit(), 'target');
+  const g = { f, tune: 'calm' };
+  let round = 0, solved = 0, puzzle, cards, pickA = null, op = null, history = [], shown = false, born = null, combo;
+  const made = [], showed = [];
   const ROUNDS = daily ? 1 : 5;
+  const strip = (s) => s.replace(/^\((.*)\)$/, '$1');
 
   function next() {
     round++; shown = false;
     puzzle = daily ? makePuzzle(kid.band, seeded('daily:' + dayKey())) : makePuzzle(kid.band);
     cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) }));
-    pickA = null; op = null; history = [];
+    pickA = null; op = null; history = []; born = null;
     draw();
   }
   function draw(msg = '') {
     f.hud.innerHTML = daily ? '' : `<span class="chip">Puzzle <b>${round}</b> of ${ROUNDS}</span><span class="chip">Solved <b>${solved}</b></span>`;
     f.body.innerHTML = `<div class="mt">
       <div class="mt-target" aria-label="Target ${puzzle.target}"><span>Target</span><b>${puzzle.target}</b></div>
-      <div class="mt-cards">${cards.map((c, i) => `<button class="mt-card${pickA === c.id ? ' on' : ''}" data-c="${c.id}" aria-label="Number ${c.v}, key ${i + 1}"><b>${c.v}</b><i>${i + 1}</i></button>`).join('')}</div>
+      <div class="mt-cards">${cards.map((c, i) => `<button class="mt-card${pickA === c.id ? ' on' : ''}${born === c.id ? ' born' : ''}" data-c="${c.id}" aria-label="Number ${c.v}, key ${i + 1}"><b>${c.v}</b><i>${i + 1}</i></button>`).join('')}</div>
       <div class="mt-ops">${Object.keys(OPS).map((o) => `<button class="mt-op${op === o ? ' on' : ''}" data-o="${o}" aria-label="${o}">${o}</button>`).join('')}</div>
       <div class="mt-msg" aria-live="polite">${msg || (pickA == null ? 'Pick a number.' : op == null ? 'Now pick + − × or ÷.' : 'Now pick another number.')}</div>
       <div class="mt-tools">
@@ -305,58 +473,79 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
   }
   function pickCard(id) {
     if (shown) return;
-    if (pickA == null || op == null) { pickA = pickA === id ? null : id; sfx.click(); return draw(); }
+    if (pickA == null || op == null) { pickA = pickA === id ? null : id; sfx.click(); born = null; return draw(); }
     if (id === pickA) return;
     const a = cards.find((c) => c.id === pickA), b = cards.find((c) => c.id === id);
     const v = OPS[op](a.v, b.v);
-    if (v == null) { const was = op; sfx.bad(); pickA = null; op = null; return draw(was === '÷' ? 'That does not share out evenly — try another way.' : 'That would go below zero — try the other way round.'); }
+    if (v == null) {
+      const was = op; sfx.bad(); pickA = null; op = null; born = null;
+      draw(was === '÷' ? 'That does not share out evenly — try another way.' : 'That would go below zero — try the other way round.');
+      return wobble(g, f.body.querySelector('.mt-cards'));
+    }
     history.push(cards.map((c) => ({ ...c })));
     const nc = { id: Math.max(...cards.map((c) => c.id)) + 1, v, s: `(${a.s} ${op} ${b.s})` };
     cards = cards.filter((c) => c !== a && c !== b); cards.splice(0, 0, nc);
-    pickA = cards.length > 1 ? nc.id : null; op = null; sfx.click();
+    pickA = cards.length > 1 ? nc.id : null; op = null; born = nc.id; sfx.pop();
+    juice(g);                       // the new card is born with a pop (CSS .born)
     if (cards.length === 1) {
-      if (v === puzzle.target) return win();
-      sfx.bad(); return draw(`That makes ${v}, not ${puzzle.target}. Undo, or start again.`);
+      if (v === puzzle.target) return win(nc);
+      sfx.bad(); combo.miss();
+      draw(`That makes ${v}, not ${puzzle.target}. Undo, or start again.`);
+      return wobble(g, f.body.querySelector('.mt-card'));
     }
     draw();
   }
-  function pickOp(o) { if (shown || pickA == null) return; op = op === o ? null : o; sfx.click(); draw(); }
+  function pickOp(o) { if (shown || pickA == null) return; op = op === o ? null : o; sfx.click(); born = null; draw(); }
   function tool(t) {
-    if (t === 'undo' && history.length) { cards = history.pop(); pickA = null; op = null; draw(); }
-    if (t === 'reset') { cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) })); history = []; pickA = null; op = null; draw(); }
-    if (t === 'show') {
-      shown = true;
+    if (t === 'undo' && history.length) { cards = history.pop(); pickA = null; op = null; born = null; sfx.click(); draw(); }
+    if (t === 'reset') { cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) })); history = []; pickA = null; op = null; born = null; sfx.click(); draw(); }
+    if (t === 'show' && !shown) {
+      shown = true; combo.miss(); showed.push(`${puzzle.sol} = ${puzzle.target}`);
       f.body.querySelector('.mt-msg').innerHTML = `One way: <b class="mono">${esc(puzzle.sol)} = ${puzzle.target}</b>`;
-      setTimeout(() => (round < ROUNDS ? next() : finish()), daily ? 99999999 : 3200);
-      if (daily) { onEnd(false); f.body.querySelector('.mt-tools').innerHTML = '<button class="btn primary" data-t="done">Done</button>'; f.body.querySelector('[data-t=done]').onclick = () => g.quit(); }
+      wobble(g, f.body.querySelector('.mt-target'));
+      setTimeout(() => (current === g && !daily ? (round < ROUNDS ? next() : finish()) : 0), 3200);
+      if (daily) { onEnd(false); f.body.querySelector('.mt-tools').innerHTML = '<button class="btn primary" data-t="done">Done</button>'; f.body.querySelector('[data-t=done]').onclick = () => resultCard(g, { title: "Today's puzzle", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: [], again: showed }, lines: ['Tomorrow brings a new one. Everybody in your house gets the same puzzle.'], stars: 0, again: () => g.quit(), done: () => g.quit() }); }
     }
   }
-  function win() {
-    solved++; sfx.level(); onSolve();
-    f.body.querySelector('.mt-msg').innerHTML = `<b>You made ${puzzle.target}!</b>`;
-    f.body.querySelector('.mt-target').classList.add('won');
-    if (daily) { onEnd(true); confetti(40); setTimeout(() => resultCard(f, { title: "Today's puzzle — solved", lines: ['Come back tomorrow for the next one. Everybody in your house gets the same puzzle.'], stars: 3, again: () => g.quit(), done: () => g.quit() }), 1100); return; }
-    setTimeout(() => (round < ROUNDS ? next() : finish()), 1100);
+  function win(nc) {
+    solved++; combo.hit(); sfx.level(); onSolve();
+    made.push(`${strip(nc.s)} = ${puzzle.target}`);
+    draw(`<b>You made ${puzzle.target}!</b>`);
+    const tg = f.body.querySelector('.mt-target'); tg.classList.add('won');
+    const [x, y] = centre(tg, f.body.querySelector('.mt'));
+    pop(g, f.body.querySelector('.mt'), x, y);
+    if (daily) {
+      onEnd(true);
+      setTimeout(() => current === g && resultCard(g, { title: "Today's puzzle — solved", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made }, lines: ['Come back tomorrow for the next one. Everybody in your house gets the same puzzle.'], stars: 3, again: () => g.quit(), done: () => g.quit() }), 1100);
+      return;
+    }
+    setTimeout(() => current === g && (round < ROUNDS ? next() : finish()), 1100);
   }
   function finish() {
     const stars = solved >= 5 ? 3 : solved >= 3 ? 2 : solved >= 1 ? 1 : 0;
     onEnd(solved, stars);
-    resultCard(f, { title: `${solved} of ${ROUNDS} made`, lines: ['There is usually more than one way. The one "Show me" gives is just one of them.'], stars,
+    resultCard(g, { title: `${solved} of ${ROUNDS} made`, practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made, again: showed }, best: combo.best,
+      lines: ['There is usually more than one way. The one "Show me" gives is just one of them.'], stars,
       again: () => { g.quit(); makeTarget(kid, { onSolve, onEnd }); }, done: () => g.quit() });
   }
-  g.key = (e) => {
-    if (e.key === 'Escape') { g.quit(); return true; }
-    const i = +e.key; if (i >= 1 && i <= cards.length) { pickCard(cards[i - 1].id); return true; }
-    const map = { '+': '+', '-': '−', '*': '×', 'x': '×', 'X': '×', '/': '÷' };
-    if (map[e.key]) { pickOp(map[e.key]); return true; }
-    if (e.key === 'Backspace') { tool('undo'); return true; }
-    if (e.key === 'r' || e.key === 'R') { tool('reset'); return true; }
-    if (e.key === 's' || e.key === 'S') { tool('show'); return true; }
-    return false;
-  };
+  function begin() {
+    combo = comboMeter(g);
+    g.key = (e) => {
+      if (e.key === 'Escape') { g.quit(); return true; }
+      const i = +e.key; if (i >= 1 && i <= cards.length) { pickCard(cards[i - 1].id); return true; }
+      const map = { '+': '+', '-': '−', '*': '×', 'x': '×', 'X': '×', '/': '÷' };
+      if (map[e.key]) { pickOp(map[e.key]); return true; }
+      if (e.key === 'Backspace') { tool('undo'); return true; }
+      if (e.key === 'r' || e.key === 'R') { tool('reset'); return true; }
+      if (e.key === 's' || e.key === 'S') { tool('show'); return true; }
+      return false;
+    };
+    next();
+  }
   g.quit = () => end(g);
+  g.probe = { finish: () => !g.ended && finish() };
   current = g;
-  next();
+  intro(g, title, 'target', begin);
   return g;
 }
 
@@ -367,10 +556,11 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
    how close, never on speed. */
 export function numberLine(kid, { onTick, onEnd }) {
   const max = kid.band === '6-7' ? 20 : kid.band === '8-10' ? 100 : 1000;
-  const f = frame('Number Line', `Place the number between 0 and ${max}`, () => g.quit());
-  const g = { f };
+  const f = frame('Number Line', `Place the number between 0 and ${max}`, () => g.quit(), 'line');
+  const g = { f, tune: 'sea' };
   const ROUNDS = 8;
-  let round = 0, total = 0, target = 0, pos = max / 2, placed = false;
+  let round = 0, total = 0, target = 0, pos = max / 2, placed = false, combo;
+  const close = [], far = [];
 
   function next() {
     round++; placed = false; pos = max / 2;
@@ -412,27 +602,42 @@ export function numberLine(kid, { onTick, onEnd }) {
     const pts = err <= 0.02 ? 10 : err <= 0.05 ? 7 : err <= 0.1 ? 4 : err <= 0.2 ? 1 : 0;
     total += pts;
     onTick(pts >= 4);
-    pts >= 7 ? sfx.good() : pts ? sfx.click() : sfx.bad();
+    const off = Math.abs(pos - target), offs = `${target} — ${off === 0 ? 'bang on' : `${+off.toFixed(1)} away`}`;
+    (pts >= 4 ? close : far).push(offs);
     draw(pts === 10 ? 'Bang on.' : pts >= 7 ? 'Very close.' : pts >= 4 ? 'Close.' : `It was here — ${Math.round(err * 100)} hundredths of the line away.`);
+    sfx.place();
+    const tr = f.body.querySelector('.nl-track');
+    if (pts >= 4) {
+      combo.hit(); pts >= 7 ? sfx.good() : sfx.click();
+      pop(g, tr, (pct(target) / 100) * tr.clientWidth, 70, `+${pts}`);
+    } else {
+      combo.miss(); pts ? sfx.click() : sfx.bad();
+      wobble(g, f.body.querySelector('.nl-mark'));
+    }
   }
-  function advance() { round < ROUNDS ? next() : finish(); }
+  function advance() { sfx.click(); round < ROUNDS ? next() : finish(); }
   function finish() {
     const stars = total >= 60 ? 3 : total >= 40 ? 2 : total >= 20 ? 1 : 0;
     onEnd(total, stars);
-    resultCard(f, { title: `${total} points`, lines: ['Halfway, then quarters: find those first and the rest falls between them.'], stars,
+    resultCard(g, { title: `${total} points`, practised: { skill: `Estimating where a number sits between 0 and ${max}`, items: close, again: far }, best: combo.best,
+      lines: ['Halfway, then quarters: find those first and the rest falls between them.'], stars,
       again: () => { g.quit(); numberLine(kid, { onTick, onEnd }); }, done: () => g.quit() });
   }
-  g.key = (e) => {
-    if (e.key === 'Escape') { g.quit(); return true; }
-    const step = e.shiftKey ? max / 10 : max <= 20 ? 0.5 : max / 100;
-    if (!placed && e.key === 'ArrowLeft') { move(Math.max(0, pos - step)); return true; }
-    if (!placed && e.key === 'ArrowRight') { move(Math.min(max, pos + step)); return true; }
-    if (e.key === 'Enter' || e.key === ' ') { placed ? advance() : place(); return true; }
-    return false;
-  };
+  function begin() {
+    combo = comboMeter(g);
+    g.key = (e) => {
+      if (e.key === 'Escape') { g.quit(); return true; }
+      const step = e.shiftKey ? max / 10 : max <= 20 ? 0.5 : max / 100;
+      if (!placed && e.key === 'ArrowLeft') { move(Math.max(0, pos - step)); return true; }
+      if (!placed && e.key === 'ArrowRight') { move(Math.min(max, pos + step)); return true; }
+      if (e.key === 'Enter' || e.key === ' ') { placed ? advance() : place(); return true; }
+      return false;
+    };
+    next();
+  }
   g.quit = () => end(g);
   current = g;
-  next();
+  intro(g, 'Number Line', 'line', begin);
   return g;
 }
 
@@ -447,11 +652,11 @@ export function numberLine(kid, { onTick, onEnd }) {
 
 export function sudoku(kid, n, lv, { onEnd }) {
   const f = frame('Sudoku', `${n}×${n} — each row, column and box holds 1 to ${n} once`, () => g.quit());
-  const g = { f };
+  const g = { f, tune: 'calm' };
   const p = makeSudoku(n, lv);
   const given = p.grid.map(Boolean);
   const cur = p.grid.slice();
-  let sel = cur.findIndex((v) => !v), hints = 0, done = false;
+  let sel = cur.findIndex((v) => !v), hints = 0, done = false, born = -1;
   const { br, bc } = SUDOKU[n];
 
   function draw() {
@@ -464,48 +669,56 @@ export function sudoku(kid, n, lv, { onEnd }) {
         const edge = `${c % bc === bc - 1 && c < n - 1 ? ' er' : ''}${r % br === br - 1 && r < n - 1 ? ' eb' : ''}`;
         const same = selV && v === selV && i !== sel ? ' same' : '';
         const peer = sel >= 0 && (Math.floor(sel / n) === r || sel % n === c) ? ' peer' : '';
-        return `<button class="sc${given[i] ? ' given' : ''}${i === sel ? ' sel' : ''}${bad.has(i) ? ' bad' : ''}${edge}${same}${peer}" data-i="${i}" aria-label="Row ${r + 1}, column ${c + 1}${v ? ', ' + v : ', empty'}">${v || ''}</button>`;
+        return `<button class="sc${given[i] ? ' given' : ''}${i === sel ? ' sel' : ''}${bad.has(i) ? ' bad' : ''}${i === born && v ? ' born' : ''}${edge}${same}${peer}" data-i="${i}" aria-label="Row ${r + 1}, column ${c + 1}${v ? ', ' + v : ', empty'}">${v || ''}</button>`;
       }).join('')}</div>
       <div class="sdk-nums">${Array.from({ length: n }, (_, i) => `<button class="pk" data-v="${i + 1}">${i + 1}</button>`).join('')}<button class="pk del" data-v="0" aria-label="Clear">⌫</button></div>
       <div class="row gap center"><button class="btn ghost" data-t="hint">Hint <kbd>H</kbd></button></div>
       <p class="mt-keys">Keys: arrows move · <kbd>1</kbd>–<kbd>${n}</kbd> fill · <kbd>⌫</kbd> clear · <kbd>H</kbd> hint</p>
     </div>`;
-    f.body.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sel = +b.dataset.i; draw(); });
+    f.body.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sel = +b.dataset.i; born = -1; draw(); });
     f.body.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => put(+b.dataset.v));
     f.body.querySelector('[data-t=hint]').onclick = hint;
   }
   function put(v) {
     if (done || sel < 0 || given[sel] || v > n) return;
-    cur[sel] = v; sfx.click();
+    cur[sel] = v; born = sel;
     if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
     draw();
+    juice(g);                       // the number lands with a pop (CSS .born)
+    if (v && conflicts(cur, n).has(sel)) { sfx.bad(); wobble(g, f.body.querySelector('.sc.sel')); } else sfx.place();
   }
   function hint() {
     if (done) return;
     let i = sel >= 0 && !given[sel] && cur[sel] !== p.solution[sel] ? sel : cur.findIndex((v, j) => v !== p.solution[j]);
     if (i < 0) return;
-    cur[i] = p.solution[i]; given[i] = true; hints++; sel = i; sfx.coin();
+    cur[i] = p.solution[i]; given[i] = true; hints++; sel = i; born = i; sfx.coin(); juice(g);
     if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
     draw();
   }
   function win() {
-    done = true; draw(); sfx.level();
+    done = true; born = -1; draw(); sfx.level();
+    const grid = f.body.querySelector('.sdk'), wrap = f.body.querySelector('.sdk-wrap');
+    const [x, y] = centre(grid, wrap); pop(g, wrap, x, y);
     const stars = hints === 0 ? 3 : hints <= 2 ? 2 : 1;
     onEnd(true, stars, hints);
-    setTimeout(() => resultCard(f, { title: 'Solved!', lines: [hints ? `With ${hints} hint${hints > 1 ? 's' : ''}. Try the next one with none.` : 'No hints at all — pure logic.'], stars,
+    setTimeout(() => current === g && resultCard(g, { title: 'Solved!', practised: { skill: `Logic: a ${n}×${n} grid where every row, column and box holds 1 to ${n} once`, items: [] },
+      lines: [hints ? `With ${hints} hint${hints > 1 ? 's' : ''}. Try the next one with none.` : 'No hints at all — pure logic.'], stars,
       again: () => { g.quit(); sudoku(kid, n, lv, { onEnd }); }, done: () => g.quit() }), 700);
   }
-  g.key = (e) => {
-    if (e.key === 'Escape') { g.quit(); return true; }
-    const mv = { ArrowUp: -n, ArrowDown: n, ArrowLeft: -1, ArrowRight: 1 }[e.key];
-    if (mv) { const j = sel + mv; if (j >= 0 && j < n * n && !(mv === -1 && sel % n === 0) && !(mv === 1 && sel % n === n - 1)) { sel = j; draw(); } return true; }
-    if (/^[1-9]$/.test(e.key)) { put(+e.key); return true; }
-    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { put(0); return true; }
-    if (e.key === 'h' || e.key === 'H') { hint(); return true; }
-    return false;
-  };
+  function begin() {
+    g.key = (e) => {
+      if (e.key === 'Escape') { g.quit(); return true; }
+      const mv = { ArrowUp: -n, ArrowDown: n, ArrowLeft: -1, ArrowRight: 1 }[e.key];
+      if (mv) { const j = sel + mv; if (j >= 0 && j < n * n && !(mv === -1 && sel % n === 0) && !(mv === 1 && sel % n === n - 1)) { sel = j; born = -1; draw(); } return true; }
+      if (/^[1-9]$/.test(e.key)) { put(+e.key); return true; }
+      if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { put(0); return true; }
+      if (e.key === 'h' || e.key === 'H') { hint(); return true; }
+      return false;
+    };
+    draw();
+  }
   g.quit = () => { if (!done) onEnd(false, 0); end(g); };
   current = g;
-  draw();
+  intro(g, 'Sudoku', 'sudoku', begin);
   return g;
 }

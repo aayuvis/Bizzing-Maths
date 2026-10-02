@@ -597,7 +597,7 @@ export function viewArcade() {
   const k = kid(R.h), g = (id) => k.games[id] || {};
   const puzzleDone = k.daily[dayKey()] && k.daily[dayKey()].puzzle;
   const tile = (id, title, blurb, art, keys) => `<button class="gtile" data-act="play" data-arg="${id}">
-      <span class="gart ${art}" aria-hidden="true"></span>
+      <span class="gart ${art}" style="background-image:url(art/g-${id}.webp)" aria-hidden="true"></span>
       <span class="gtxt"><b>${title}</b><span>${blurb}</span><span class="gmeta">${g(id).best != null ? `Best ${g(id).best} · ` : ''}${keys}</span></span></button>`;
   return `<section>
     ${pageHead('The Arcade')}

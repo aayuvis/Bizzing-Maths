@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """process.py — size the raw plates for the app. Art is sized to how it is drawn
 (the Bee's art-slim rule): world boards and the atlas 1920 wide, story plates
-1280 wide, WebP q78. Writes app/public/art/<name>.webp.
+and game backdrops 1280 wide, WebP q78. Writes app/public/art/<name>.webp.
 
     python3 tools/art/process.py             # the plates
     python3 tools/art/process.py --avatars   # raw/av-<id>.png -> app/public/avatars/<id>.webp
@@ -81,8 +81,9 @@ for f in sorted(os.listdir(RAW)):
     if not f.endswith('.png') or f.startswith(('av-', 'medal-')) or f[:-4] in ROADART: continue
     if only and f[:-4] not in only: continue
     n = f[:-4]; im = Image.open(os.path.join(RAW, f)).convert('RGB')
-    w = 1280 if n.startswith('s-') else 640 if n.startswith('lib-') else 1920
+    w = 1280 if n.startswith(('s-', 'g-')) else 640 if n.startswith('lib-') else 1920
     im = im.resize((w, round(w * im.height / im.width)), Image.LANCZOS)
-    p = os.path.join(OUT, n + '.webp'); im.save(p, 'WEBP', quality=78, method=6)
+    # game backdrops sit behind play and under a veil, so they take a lower quality to stay near 100 KB
+    p = os.path.join(OUT, n + '.webp'); im.save(p, 'WEBP', quality=66 if n.startswith('g-') else 78, method=6)
     total += os.path.getsize(p); print(f'{n}: {im.width}x{im.height} {os.path.getsize(p)//1024} KB')
 print(f'total {total//1024} KB')
