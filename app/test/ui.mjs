@@ -15,7 +15,7 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 const SITE = resolve(HERE, '.site');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true }); mkdirSync(SHOTS, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 8000 + Math.floor(Math.random() * 900);
+const port = 5201;   // this agent's range is 5200–5219
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 
@@ -331,7 +331,7 @@ async function run(vp, tag) {
   // games: Family Standard §10 — a title card and a 3-second how-to, motion on
   // every answer, sound (the music loop), a finish screen naming what was
   // practised; keyboard AND touch.
-  await nav('arcade'); await page.waitForSelector('.gtiles');
+  await nav('play'); await page.waitForSelector('.gtiles');
   await shot('16-arcade');
   ok(await page.evaluate(() => [...document.querySelectorAll('.gtile .gart')].every((e) => /g-(rush|target|line)\.webp/.test(e.style.backgroundImage))), 'every Arcade tile is painted, not a CSS circle');
   const G = (fn) => page.evaluate(fn);

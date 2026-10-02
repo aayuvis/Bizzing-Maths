@@ -69,9 +69,9 @@ export const TABS = [
   { k: 'atlas', n: 'Atlas', icon: 'map' },
   { k: 'library', n: 'Library', icon: 'book' },
   { k: 'puzzles', n: 'Puzzles', icon: 'puzzle' },
-  { k: 'arcade', n: 'Arcade', icon: 'play' },
+  { k: 'play', n: 'Play', icon: 'gamepad' },
 ];
-const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', journey: 'atlas', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
+const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', journey: 'atlas', goals: 'home', grownups: null, game: 'play', contest: 'play' };
 
 export function icon(k) {
   const p = {
@@ -100,11 +100,14 @@ export function shell(body) {
   const h = R.h, k = kid(h);
   const nav = NAV_OF[R.ui.nav] !== undefined ? NAV_OF[R.ui.nav] : R.ui.nav;
   const running = R.ui.nav === 'run' && R.run && !R.run.over;
+  /* ⬡ stays in the bar during runs; it hides only inside a TIMED drill — a contest
+     question on the clock — where leaving should be a decision (FIX-MATHS §1). */
+  const timed = R.ui.nav === 'contest' && R.contest && (R.contest.phase === 'ask' || R.contest.phase === 'champ');
   const tabs = (cl) => TABS.map((t) => `<button class="${cl}${nav === t.k ? ' on' : ''}" data-act="nav" data-arg="${t.k}" ${nav === t.k ? 'aria-current="page"' : ''}>${icon(t.icon)}<span>${t.n}</span></button>`).join('');
   return `
   <a class="skip" href="#main">Skip to the content</a>
   <header class="top">
-    ${running ? '' : `<a class="hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="The Bizzing Hive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 20.2 7.2v9.6L12 21.5 3.8 16.8V7.2z"/></svg></a>`}
+    ${timed ? '' : `<a class="hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="The Bizzing Hive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 20.2 7.2v9.6L12 21.5 3.8 16.8V7.2z"/></svg></a>`}
     <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Maths — home">
       <svg viewBox="0 0 40 40" class="brand-mark" aria-hidden="true"><rect width="40" height="40" rx="11" class="bm-bg"/><path d="M20 9v22M9 20h22" class="bm-plus"/><path d="M13 13l14 14M27 13 13 27" class="bm-x"/></svg>
       <span class="brand-t">Bizzing <em>Maths</em></span>
@@ -605,7 +608,7 @@ export function viewArcade() {
       <span class="gart ${art}" style="background-image:url(art/g-${id}.webp)" aria-hidden="true"></span>
       <span class="gtxt"><b>${title}</b><span>${blurb}</span><span class="gmeta">${g(id).best != null ? `Best ${g(id).best} · ` : ''}${keys}</span></span></button>`;
   return `<section>
-    ${pageHead('The Arcade')}
+    ${pageHead('Play')}
     <div class="hero-tiles">
       <button class="card hero-t contest-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
       <button class="card hero-t daily-t" data-act="daily"><span class="kicker">Today's puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span>The same puzzle in every house today. Compare notes at breakfast.</span></button>

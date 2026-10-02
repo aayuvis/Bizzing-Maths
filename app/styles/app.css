@@ -746,7 +746,9 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .g-met .g-lab{color:var(--mastered)}
 .rep-goals{background:var(--surface2);border-radius:var(--r-md);padding:12px 16px;margin:12px 0}
 .rg{margin:4px 0;font-size:var(--fs-label)}
-.rg span{white-space:nowrap}.rg-met{color:var(--mastered);font-weight:700}
+.rg{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.rg > b{flex-basis:100%}
+/* goal lines WRAP: on a 390px phone a nowrap line ran the page to 670px (FIX-MATHS §1, P1) */
+.rg span{white-space:normal;overflow-wrap:anywhere;min-width:0}.rg-met{color:var(--mastered);font-weight:700}
 @media (max-width:880px){.home-r3{grid-template-columns:1fr}.strands{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.amb,.map-amb{display:none}}
 @media print{.top,.tabbar,.foot{display:none}}

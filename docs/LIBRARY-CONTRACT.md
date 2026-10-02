@@ -28,6 +28,7 @@ export const CARDS = [ … ];                                   // formula book 
 | `ctx.data` | the child's saved record for this tool (an object you own; call `ctx.save()` after changing it) |
 | `ctx.kid` | the child (read `band`: `'6-7'`, `'8-10'`, `'11-14'`; `facts`; `tricks` for Atlas stars) — read only, except via the helpers |
 | `ctx.band` | the child's age band |
+| `ctx.tester` | true in the grown-ups' tester mode: open every stone, size and stop, and draw no lock on them. Never write the record because of it. |
 | `ctx.save()` | persist `ctx.data` |
 | `ctx.render()` | re-render now (after an async step) — normally the host re-renders after `act`/`key` |
 | `ctx.toast(msg)`, `ctx.sfx.good()`/`.bad()`/`.click()`/`.level()`, `ctx.confetti(n)`, `ctx.say(text)` | feedback |

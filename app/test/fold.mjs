@@ -15,7 +15,7 @@ const { chromium } = require(process.env.PW || '/opt/node22/lib/node_modules/pla
 const HERE = resolve(import.meta.dirname, '..'), SITE = resolve(HERE, '.site-fold');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 9000 + Math.floor(Math.random() * 900);
+const port = 5203;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
@@ -40,7 +40,7 @@ const SCREENS = [
   ['tool · vedic', (b) => b.fire('openTool', 'vedic'), '.t-vedic .board-scroll', '.t-vedic .bpin.cur'],
   ['tool · chinese', (b) => b.fire('openTool', 'chinese'), '.t-chinese .board-scroll', '.t-chinese .bpin.cur'],
   ['puzzles', (b) => b.go('puzzles'), '.tower-board'],
-  ['arcade', (b) => b.go('arcade'), '.hero-tiles'],
+  ['play', (b) => b.go('play'), '.hero-tiles'],
   ['goals', (b) => b.go('goals'), '.strands'],
   ['story shelf', (b) => b.go('stories'), '.shelf'],
   // the games: the title card, then the play itself (the how-to skipped by its own button)

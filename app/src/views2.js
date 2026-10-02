@@ -23,6 +23,7 @@ import { av, starRow, pageHead, sayBtn } from './views.js';
 import { bot } from './contest.js';
 import * as J from './journey.js';
 import { CONCEPTS, CONCEPT_OF } from './levels.js';
+import { icon, glyph } from './icons.js';
 
 const back = (act, label = 'Back', arg = '') =>
   `<button class="back" data-act="${act}"${arg ? ` data-arg="${esc(arg)}"` : ''}><span aria-hidden="true">←</span> ${esc(label)}</button>`;
@@ -53,10 +54,11 @@ const ISLANDS = [
    later one. Every place a stop is drawn in the Atlas carries one. */
 function lvBadge(k, id) {
   const f = firstLevel(id); if (!f) return '';
+  const tester = R.h.parent.tester;   // tester mode opens gates: no lock is drawn on anything it opened
   if (!onJourney(k)) return `<b class="lvb">L${f}</b>`;
   const L = k.journey.level, r = J.onRoad(k, id);
   if (r) return `<b class="lvb road${r.done ? ' ok' : ''}" title="Station ${r.n} on your Level ${L} road">L${L} · ${r.done ? '✓' : r.n}</b>`;
-  return f < L ? `<b class="lvb past" title="From Level ${f}">L${f}</b>` : `<b class="lvb later" title="Opens on the Level ${f} road">🔒 L${f}</b>`;
+  return f < L || tester ? `<b class="lvb past" title="From Level ${f}">L${f}</b>` : `<b class="lvb later" title="Opens on the Level ${f} road">${icon('lock', 12, 'ico lk')} L${f}</b>`;
 }
 /* The Atlas has two views for a child on a journey: their road, and the islands. */
 export const atlasSeg = (k, on) => onJourney(k) ? `<div class="seg atlas-seg" role="tablist" aria-label="Atlas view">
@@ -275,7 +277,7 @@ export function viewGoals() {
 export function goalsReport(c) {
   const gs = goalsFor(c), sm = summary(c);
   return `<div class="rep-goals"><p class="kicker">Goals — ${sm.met} of ${sm.total} reached</p>
-    ${gs.map((s) => `<p class="rg"><b>${s.glyph} ${esc(s.name)}</b> ${s.goals.filter((g) => !g.later).map((g) => `<span class="rg-${g.status}" title="${esc(g.can)}">${g.status === 'met' ? '✓' : Math.round(g.pct * 100) + '%'} ${esc(g.can.replace(/^I can |^I know |^I have /, '').replace(/\.$/, ''))}</span>`).join(' · ')}</p>`).join('')}</div>`;
+    ${gs.map((s) => `<p class="rg"><b>${glyph(s.glyph, 16)} ${esc(s.name)}</b> ${s.goals.filter((g) => !g.later).map((g) => `<span class="rg-${g.status}" title="${esc(g.can)}">${g.status === 'met' ? icon('check', 14) : Math.round(g.pct * 100) + '%'} ${esc(g.can.replace(/^I can |^I know |^I have /, '').replace(/\.$/, ''))}</span>`).join('')}</p>`).join('')}</div>`;
 }
 
 /* ------------------------------------------------------------- the library */
@@ -336,12 +338,14 @@ function levelBoard(k, show, mine, nodes) {
   let wpath = ''; for (let x = 0; x <= walkTo; x += 2) wpath += `${x ? 'L' : 'M'}${x},${bandY(x).toFixed(2)} `;
   const sel = R.ui.rpick != null && placed[R.ui.rpick] ? R.ui.rpick : Math.max(0, firstOpen);
   const pct = (px) => (100 * px) / W;
+  let sn = 0;
   const pins = placed.map((p, i) => {
     const x = p.x, open = x.open || tester, cur = mine && i === firstOpen, left = pct(p.px), top = bandY(p.px);
     if (x.kind === 'stop') {
+      sn++;
       const t = byId[x.stop], st = (k.tricks[t.id] || {}).stars || 0;
       return `<button class="bpin${cls(x.done && ' done', cur && ' cur', !open && ' shut', sel === i && ' sel', x.recap && ' recap')}" style="left:${left}%;top:${top}%" data-act="roadPick" data-arg="${i}" aria-label="${esc(t.title)}${open ? '' : ', not reached yet'}">
-        <span>${x.done ? '✓' : open ? '' : '🔒'}</span><i class="rn-lv lv${x.lv}"></i>${st ? `<em>${'★'.repeat(st)}</em>` : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
+        <span>${x.done ? icon('check', 16) : open ? `<b class="sn">${sn}</b>` : icon('lock', 16)}</span><i class="rn-lv lv${x.lv}"></i>${st ? `<em>${'★'.repeat(st)}</em>` : ''}${cur ? `<i class="me">${av(k.avatar, 34, '')}</i>` : ''}</button>`;
     }
     const lvl = x.kind === 'leveltest';
     return `<button class="bgate${cls(lvl && ' summit', x.done && ' done', cur && ' cur', !open && ' shut', sel === i && ' sel')}" style="left:${left}%;top:${top - 9}%" data-act="roadPick" data-arg="${i}" aria-label="${lvl ? `Level ${show} test` : `${esc(x.land.name)} test`}${open ? '' : ', not reached yet'}">

@@ -201,7 +201,7 @@ function data(ctx) {
 }
 const facts = (ctx) => ctx.kid.facts || (ctx.kid.facts = {});
 const nextLevel = (n) => LEVELS[LEVELS.indexOf(n) + 1] || null;
-const showSize = (ctx) => { const d = data(ctx); const s = +ctx.ui.size; return LEVELS.includes(s) && s <= d.level ? s : d.level; };
+const showSize = (ctx) => { const d = data(ctx); const s = +ctx.ui.size; return LEVELS.includes(s) && (s <= d.level || ctx.tester) ? s : d.level; };
 
 /* Open the next table if — and only if — this one is mastered. One step. */
 export function grow(ctx) {
@@ -237,8 +237,9 @@ function levelChip(ctx) {
 function ladder(ctx) {
   const d = data(ctx), L = d.level, t = tallyLevel(facts(ctx), L), nx = nextLevel(L);
   const steps = LEVELS.map((n) => {
-    const cls = n < L ? 'done' : n === L ? 'now' : 'locked';
-    return `<li class="t-tables-step ${cls}"><b class="mono">${n} × ${n}</b><span>${cls === 'done' ? 'Mastered' : cls === 'now' ? 'Now' : 'Locked'}</span></li>`;
+    // tester mode opens every size (and draws no lock); it never changes the child's level
+    const cls = n < L ? 'done' : n === L ? 'now' : ctx.tester ? 'open' : 'locked';
+    return `<li class="t-tables-step ${cls}"><b class="mono">${n} × ${n}</b><span>${cls === 'done' ? 'Mastered' : cls === 'now' ? 'Now' : cls === 'open' ? 'Open' : 'Locked'}</span></li>`;
   }).join('<li class="t-tables-arrow" aria-hidden="true">→</li>');
   const young = ctx.band === '11-14' && L === 5 && !t.mastered;
   return `<div class="card t-tables-head">
@@ -419,8 +420,8 @@ function roadStops(ctx) {
   const d = data(ctx), L = d.level, f = facts(ctx), out = [];
   for (const n of LEVELS) {
     const t = tallyLevel(f, n), sq = tallySquares(f, n);
-    out.push({ kind: 'table', n, t, label: `The ${n} × ${n} table`, done: n < L || (n === L && t.mastered && !nextLevel(n)), open: n <= L });
-    out.push({ kind: 'squares', n, t: sq, label: `Squares to ${n}²`, done: meets(sq.good, sq.total), open: n <= L });
+    out.push({ kind: 'table', n, t, label: `The ${n} × ${n} table`, done: n < L || (n === L && t.mastered && !nextLevel(n)), open: n <= L || !!ctx.tester });
+    out.push({ kind: 'squares', n, t: sq, label: `Squares to ${n}²`, done: meets(sq.good, sq.total), open: n <= L || !!ctx.tester });
   }
   return out;
 }
@@ -474,8 +475,8 @@ export function act(name, arg, ctx) {
       }
       ui.rsel = i; ctx.sfx.click(); return;
     }
-    case 'rexplore': { const n = +arg; if (LEVELS.includes(n) && n <= L) { ui.size = n; ui.tab = 'explore'; } return; }
-    case 'size': { const s = +arg; if (LEVELS.includes(s) && s <= L) { ui.size = s; ui.cur = ui.cur && ui.cur.a <= s && ui.cur.b <= s ? ui.cur : null; } return; }
+    case 'rexplore': { const n = +arg; if (LEVELS.includes(n) && (n <= L || ctx.tester)) { ui.size = n; ui.tab = 'explore'; } return; }
+    case 'size': { const s = +arg; if (LEVELS.includes(s) && (s <= L || ctx.tester)) { ui.size = s; ui.cur = ui.cur && ui.cur.a <= s && ui.cur.b <= s ? ui.cur : null; } return; }
     case 'lens': ui.lens = ui.lens === arg ? null : arg; return;
     case 'mult': ui.mult = Math.min(showSize(ctx), Math.max(2, +arg || 3)); return;
     case 'cell': { const [a, b] = arg.split('|').map(Number); if (a >= 1 && b >= 1) ui.cur = { a, b }; ctx.sfx.click(); return; }

@@ -90,6 +90,7 @@ function libCtx(id) {
   const data = k.lib[id] || (k.lib[id] = {});
   return {
     id, kid: k, band: k.band, ui, data, save, render, toast, sfx, confetti, say,
+    tester: !!R.h.parent.tester,   // tester mode opens every stone and road stop; it never writes the record
     keypad: G.keypad, F,
     tick: (right, xp = 1) => { tick(k, right, xp); save(); },
     record: (fact, right, ms) => { F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, ms, k.band); save(); },
@@ -117,12 +118,19 @@ function writeHash() {
 }
 function readHash() {
   const m = /^#\/([a-z]+)(?:\/(.+))?$/.exec(location.hash || '');
-  if (!m) return;
+  if (!m) return go('home', null, true);
   go(m[1], m[2] ? decodeURIComponent(m[2]) : null, true);
 }
 addEventListener('hashchange', () => { if (selfHash) { selfHash = false; return; } readHash(); });
 
 const TRANSIENT = ['run'];     // screens that cannot be deep-linked back into
+/* Every screen a hash may name. Anything else — a typo, an old link, #/nonsense —
+   lands on Home, never on the welcome hero (FIX-MATHS §1). A screen that needs an
+   argument and is given a bad one (#/stop/bad, #/world/bad, #/lib/bad) lands on Home too. */
+export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
+  'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
+  'settings', 'help', 'mistakes', 'search', 'wallet'];
+const NEEDS_ARG = { stop: (a) => !!byId[a], world: (a) => !!worldOf(a), lib: (a) => isTool(a) || !!toolById[a], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
 
 function go(nav, arg = null, fromHash = false) {
   // #/continue — the Hive's deep link — goes wherever Home's Continue would
@@ -134,8 +142,9 @@ function go(nav, arg = null, fromHash = false) {
     return fire(c.act, c.arg || undefined);
   }
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
-  R.ui.sheet = false;
-  if (nav === 'stop' && !byId[arg]) nav = 'atlas';
+  if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
+  if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
+  R.ui.sheet = false; R.ui.drawer = false;
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
   if (nav === 'grownups' && R.ui.nav !== 'grownups') { R.ui.gate = false; R.ui.gateIn = ''; }
@@ -172,7 +181,7 @@ function screen() {
     case 'intro': return worldOf(R.ui.arg) && worldOf(R.ui.arg).intro ? V.viewWorldIntro(R.ui.arg) : V.viewAtlas();
     case 'stop': return V.viewStop(R.ui.arg);
     case 'facts': return V.viewFacts();
-    case 'arcade': return V.viewArcade();
+    case 'play': return V.viewArcade();
     case 'contest': return V.viewContest();
     case 'me': return V.viewMe();
     case 'who': return V.viewWho();

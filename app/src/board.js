@@ -7,6 +7,7 @@
    this look — a journey anywhere in the app should read as the same kind of
    place. Pure: it returns a string and touches nothing. */
 import { esc } from './ui.js';
+import { icon } from './icons.js';
 
 export const bandY = (x, b = 80, a = 5, f = 1.2) => b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6);
 
@@ -29,7 +30,7 @@ export function paintedRoad({ img, stops, here = -1, sel = -1, me = '', minWidth
       </svg>
       ${stops.map((s, j) => `<button class="bpin${s.state === 'done' ? ' done' : ''}${s.state === 'locked' ? ' shut' : ''}${j === here ? ' cur' : ''}${j === sel ? ' sel' : ''}" style="left:${xs[j]}%;top:${y(xs[j])}%"
           data-act="${s.act}" data-arg="${esc(s.arg)}" aria-label="${esc(s.label)}${s.state === 'locked' ? ', not reached yet' : s.state === 'done' ? ', passed' : ''}">
-          <span>${s.state === 'done' ? '✓' : s.state === 'locked' ? '🔒' : j + 1}</span>${s.badge || ''}${j === here && me ? `<i class="me">${me}</i>` : ''}</button>`).join('')}
+          <span>${s.state === 'done' ? icon('check', 16) : s.state === 'locked' ? icon('lock', 16) : j + 1}</span>${s.badge || ''}${j === here && me ? `<i class="me">${me}</i>` : ''}</button>`).join('')}
     </div>
   </div>`;
 }
