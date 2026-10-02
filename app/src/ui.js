@@ -163,7 +163,7 @@ export function nWord(n) { return WORDS[n] !== undefined ? WORDS[n] : String(n);
 /* ── read to me ───────────────────────────────────────────────────────────
    Questions can be read aloud for a child who reads slower than they
    calculate — a six-year-old should not lose a fact to the word "sixty".
-   voice.js plays the family narrator's recordings where every piece of the line
-   was recorded, and the device's own voice where it was not. The signatures are
-   the ones every caller already uses: say(text, onend) and hush(). */
+   voice.js reads it in the device's own voice, with the maths said as words
+   ("three quarters", not "three slash four"). The signatures are the ones every
+   caller already uses: say(text, onend) and hush(). */
 export { speak as say, hush, canSay, setSayRate } from './voice.js';

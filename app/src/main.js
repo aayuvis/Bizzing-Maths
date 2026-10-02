@@ -183,7 +183,7 @@ function screen() {
 let celShown = null;
 function render() {
   const focusId = document.activeElement && document.activeElement.id;
-  if (R.ui.cels.length && celShown !== R.ui.cels[0]) { celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); }
+  if (R.ui.cels.length && celShown !== R.ui.cels[0]) { const c = celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); if (readOn(kid(R.h))) setTimeout(() => say(`${c.title}. ${c.say}`), 700); }
   applyTheme(themeOf(kid(R.h)));   // the active child's theme; switching child switches it
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }

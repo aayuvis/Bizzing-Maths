@@ -1,12 +1,10 @@
 /* lines.js — the fixed sentences the app says to a child, in one place.
 
-   They live here rather than inline in a view because each one is also a
-   recording (tools/voice/clips.mjs reads this file to know what to record, and
-   test/voice.mjs fails if a recording outlives its sentence). Change a line and
-   its clip is re-recorded on the next tools/voice/tts.py run; nothing else to do.
+   They live here rather than inline in a view because each one is also read
+   aloud, and test/voice.mjs checks every one turns into words a voice can say.
 
    A line that would carry the child's name is split around it: the screen shows
-   the name, the narrator does not pretend to know it. */
+   the name, the voice does not pretend to know it. */
 
 export const GUIDE = {
   nameFirst: 'Hello! I am Nova. I will walk the first road with you. What shall I call you?',

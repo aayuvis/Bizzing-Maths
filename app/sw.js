@@ -7,16 +7,8 @@
    it asked for hashed assets a deploy had already deleted. Bump CACHE whenever
    the caching strategy changes. */
 
-const CACHE = 'bizzing-maths-v2';
+const CACHE = 'bizzing-maths-v3';
 
-/* The narrator's clips (public/voice/, voice.js) are cached ON USE, never
-   precached: a child who only ever does times tables should not download every
-   story beat. They get their own cache, so a new build's CACHE bump does not
-   throw away what a child has already heard. A clip is named by the text it
-   says, so it is served from the cache at once and refreshed behind it — a
-   re-recording arrives on the next play. */
-const VOICE_CACHE = 'bizzing-maths-voice-v1';
-const voiceClip = (url) => /\/voice\/[a-z0-9]+\.mp3$/.test(url.pathname);
 const ENTRY = ['./', './index.html'];
 
 /* Vite writes assets/<name>-<hash>.<ext>. The hash is what makes cache-first
@@ -35,7 +27,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE && k !== VOICE_CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
 
     /* Tempting to also client.navigate() every open window, so a visitor stuck
@@ -59,16 +51,6 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;   // anything third-party: let the network decide
-
-  if (voiceClip(url)) {
-    e.respondWith(caches.open(VOICE_CACHE).then(async (c) => {
-      const hit = await c.match(req);
-      const fresh = fetch(req).then((res) => { if (res && res.ok && res.type === 'basic') c.put(req, res.clone()); return res; });
-      if (hit) { fresh.catch(() => {}); return hit; }
-      return fresh;
-    }));
-    return;
-  }
 
   /* Immutable by name — the cache can never be wrong about it. */
   if (immutable(url)) {
