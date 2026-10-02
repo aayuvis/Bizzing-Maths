@@ -132,6 +132,21 @@ export function home(h) {
 </div>`;
 }
 
+/* Every screen below Home opens with one of Bee's two heads (measured from Bee's #/atlas and
+   #/library): a TAB ROOT gets the title on the left and its actions as chips on the right; a
+   page DEEPER than a tab gets a back pill to its parent and a centred title with a subtitle.
+   `tabs` (optional) is a sub-nav of 2–6 chips under the head; `strip` an optional progress card. */
+export function pageHead(p) {
+  const chips = (p.actions || []).map((a) => `<a class="bz-chip" href="${esc(a.href)}">${a.icon ? icon(a.icon) : ''}${esc(a.label)}</a>`).join('');
+  const head = p.back
+    ? `<div class="bz-phead bz-phead-back" data-bz="phead"><a class="bz-backpill" data-bz="back" href="${esc(p.back.href)}">${icon('back')}${esc(p.back.label || 'Home')}</a>
+        <h1><span>${esc(p.title)}</span>${p.sub ? `<small>${esc(p.sub)}</small>` : ''}</h1>${chips ? `<span class="bz-pactions">${chips}</span>` : '<span></span>'}</div>`
+    : `<div class="bz-phead bz-phead-root" data-bz="phead"><h1><span>${esc(p.title)}</span>${p.sub ? `<small>${esc(p.sub)}</small>` : ''}</h1>${chips ? `<span class="bz-pactions">${chips}</span>` : ''}</div>`;
+  const sub = (p.tabs || []).length ? `<nav class="bz-subnav" data-bz="subnav" aria-label="${esc(p.title)} sections">${p.tabs.slice(0, 6).map((t) => `<a class="bz-chip" href="${esc(t.href)}"${t.id === p.active ? ' aria-current="page"' : ''}>${t.icon ? icon(t.icon) : ''}${esc(t.label)}</a>`).join('')}</nav>` : '';
+  const strip = p.strip ? `<div class="bz-strip" data-bz="strip">${p.strip.chip ? `<span class="bz-stripchip">${esc(p.strip.chip)}</span>` : ''}<span class="bz-prog"><i><b style="width:${Math.max(0, Math.min(100, p.strip.pct || 0))}%"></b></i></span>${p.strip.label ? `<small>${esc(p.strip.label)}</small>` : ''}</div>` : '';
+  return head + sub + strip;
+}
+
 /* Wire the chrome once. Delegated, so it survives every re-render. */
 let bound = null;
 export function bindShell(on = {}) {
