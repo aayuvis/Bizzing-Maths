@@ -56,17 +56,17 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   // Home anatomy: one filled primary, and it is Continue; ≤ 6 ways in; Continue above the fold
   const prim = await p.$$eval('main .btn.primary', (bs) => bs.filter((b) => b.offsetParent).map((b) => b.closest('#continue') ? 'continue' : b.textContent.trim()));
   ok(prim.length === 1 && prim[0] === 'continue', `${tag}: Home has ONE primary button and it is Continue (got ${JSON.stringify(prim)})`);
-  const tiles = await p.locator('.h-r3 > *').count();
-  ok(tiles >= 1 && tiles <= 6, `${tag}: at most six ways in (got ${tiles})`);
+  // v2 §6: no grid of "ways in" under Continue — the tabs and ☰ are the ways in
+  ok(await p.locator('.h-r3, .tile2').count() === 0, `${tag}: no extra tiles of ways in on Home`);
   ok(await p.locator('.h-three > *').count() === 3, `${tag}: Today's three is three`);
   const cb = await p.$eval('#continue .btn.primary', (b) => b.getBoundingClientRect().bottom);
   ok(cb <= vp.height, `${tag}: Continue is above the fold (bottom ${Math.round(cb)} of ${vp.height})`);
-  ok(await p.$eval('.home2', (h) => !h.querySelector('.nod2') || h.querySelector('.nod2').getBoundingClientRect().top >= document.querySelector('#continue').getBoundingClientRect().bottom), `${tag}: the number of the day sits below Continue`);
+  ok(await p.$eval('.home2', (h) => h.querySelector('.nod2[data-card=hour]') && h.querySelector('.nod2').compareDocumentPosition(document.querySelector('#continue')) & Node.DOCUMENT_POSITION_FOLLOWING), `${tag}: the number of the hour comes before Continue, as §6 orders it`);
   ok(await p.$eval('.hcard', (c) => getComputedStyle(c, '::before').content) === 'none', `${tag}: no decorative "+" badges on the cards`);
 
-  // the family top bar: ⬡ · name · … · theme · 🔒 · avatar ▾, 56px
-  const order = await p.$$eval('header.top > *, header.top .tools > *', (els) => els.filter((e) => e.offsetParent && !e.classList.contains('tools') && !e.classList.contains('tabs')).map((e) => e.classList.contains('hive') ? 'hive' : e.classList.contains('brand') ? 'name' : e.dataset.act === 'themes' ? 'theme' : e.dataset.arg === 'grownups' ? 'grownups' : e.classList.contains('who') ? 'avatar' : e.className));
-  ok(order.join() === 'hive,name,theme,grownups,avatar', `${tag}: top bar in the family order (got ${order})`);
+  // the family top bar (v2 §3): ⬡ ☰ logo … search · coins · theme · 🔒 · avatar ▾ — on a phone ⬡ ☰ logo … coins · avatar
+  const order = await p.$$eval('header.top > *', (els) => els.filter((e) => e.offsetParent && !e.classList.contains('grow')).map((e) => e.classList.contains('hive') ? 'hive' : e.classList.contains('menu-btn') ? 'menu' : e.classList.contains('brand') ? 'name' : e.classList.contains('search-pill') ? 'search' : e.classList.contains('coin-chip') ? 'coins' : e.classList.contains('mode-btn') ? 'theme' : e.dataset.arg === 'grownups' ? 'grownups' : e.classList.contains('who') ? 'avatar' : e.className));
+  ok(order.join() === (vp.width < 900 ? 'hive,menu,name,coins,avatar' : 'hive,menu,name,search,coins,theme,grownups,avatar'), `${tag}: top bar in the family order (got ${order})`);
   ok(Math.round(await p.$eval('header.top', (h) => h.getBoundingClientRect().height)) === 56, `${tag}: top bar is 56px`);
   ok(await p.$eval('header .hive', (a) => a.href) === 'https://aayuvis.github.io/Bizzing_Schedule/', `${tag}: ⬡ goes back to the Hive`);
 
@@ -193,5 +193,5 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 ok(!foreign.length, 'no third-party requests: ' + foreign.slice(0, 3).join(' | '));
 ok(!errors.length, 'no page errors: ' + errors.slice(0, 5).join(' | '));
 await browser.close(); srv.kill(); rmSync(SITE, { recursive: true, force: true });
-console.log(`${fails ? 'FAIL' : 'ok'} family-ui — top bar, Home anatomy, switcher, back, PIN, Hive feed, coins, medals, demo`);
+console.log(`${fails ? 'FAIL' : 'ok'} family-ui — top bar v2, Home anatomy, switcher, back, PIN, Hive feed, coins, medals, demo`);
 if (fails) process.exit(1);

@@ -133,3 +133,14 @@
 /* the won target pops (g-born) but does not stay enlarged: at 1.08 its 20px rings reached the cards */
 .mt-target.won{transform:none}
 .mt-target{margin-bottom:40px}
+/* G6: the answer flies to the score; the screen's edge glows on a combo; the backdrop stays calm
+   behind the play so the painted bubbles never compete with the real ones (FIX-MATHS N12) */
+.gfly{position:absolute;z-index:6;transform:translate(-50%,-50%);font:800 28px var(--mono);color:var(--action);text-shadow:0 2px 0 var(--surface);pointer-events:none;animation:gfly .75s cubic-bezier(.5,0,.3,1) forwards}
+@keyframes gfly{60%{opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.5);opacity:0}}
+.play.edge{box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--treasure) 70%,transparent),inset 0 0 60px color-mix(in srgb,var(--treasure) 35%,transparent);transition:box-shadow .25s}
+.play.edge-hot{animation:gedge 1.4s ease-in-out infinite}
+@keyframes gedge{50%{box-shadow:inset 0 0 0 6px var(--treasure),inset 0 0 90px color-mix(in srgb,var(--treasure) 55%,transparent)}}
+@media (prefers-reduced-motion:reduce){.play.edge-hot{animation:none}.gfly{display:none}}
+.g-rush .rush-stage{background:color-mix(in srgb,var(--surface) 62%,transparent);backdrop-filter:blur(7px) saturate(.55);border-radius:20px}
+.play-x{display:flex;align-items:center;gap:4px;min-height:44px;padding:0 12px 0 6px;width:auto}
+.play-m{min-width:44px;min-height:44px}

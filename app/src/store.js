@@ -16,10 +16,11 @@
 
 import { trackActivity, trackMilestone } from './integration/bizzing-activity.js';
 import * as W from './integration/bizzing-wallet.js';
+import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 6;
+export const SCHEMA = 7;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -48,6 +49,24 @@ const STEPS = {
   // to convert: the coins themselves live in the family wallet, not here.
   // weeks: one snapshot of what the child can do per week, for the report's trend.
   5: (h) => { h.v = 6; for (const k of h.kids) { k.medals = k.medals || {}; k.shop = k.shop || { owned: [], worn: {} }; k.weeks = k.weeks || {}; } return h; },
+  // v7: the family's 96 avatars and six worlds (standard v2 §7–§8). Nothing a child had is
+  // taken away: the face they wear is theirs whatever its tier now is, and the world they
+  // were dressed in stays open to them. The mistakes deck and the coin notes start empty;
+  // the daily ring keeps its old goals as the grown-up's targets.
+  6: (h) => {
+    h.v = 7; h.parent = h.parent || {}; if (!h.parent.plan) h.parent.plan = 'free';
+    const ORDER = ['graph', 'chalk', 'blueprint', 'orbit', 'rangoli', 'arcade'];
+    for (const k of h.kids) {
+      const shop = k.shop || (k.shop = { owned: [], worn: {} });
+      shop.owned = shop.owned || []; shop.worn = shop.worn || {};
+      shop.avatars = shop.avatars || []; if (k.avatar && !shop.avatars.includes(k.avatar)) shop.avatars.push(k.avatar);
+      shop.worlds = shop.worlds || [];
+      const n = ORDER.indexOf((k.prefs || {}).theme) + 1; if (n > 2 && !shop.worlds.includes(n)) shop.worlds.push(n);
+      k.mistakes = k.mistakes || {}; k.coinNotes = k.coinNotes || {};
+      k.prefs = k.prefs || {}; k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 };
+    }
+    return h;
+  },
 };
 
 export function migrate(h) {
@@ -115,8 +134,11 @@ export const APP_ID = 'maths';
 export const Family = {
   track(getName) { return DEMO ? () => {} : trackActivity(APP_ID, getName); },
   milestone(who, ev, label) { if (!DEMO && who) trackMilestone(APP_ID, who, ev, label); },
-  earn(who, event) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event); },
-  spend(who, price, why) { return DEMO || !who ? false : W.spend(APP_ID, who, price, why); },
+  earn(who, event, now = Date.now()) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event, now); },
+  spend(who, price, why, now = Date.now()) { return DEMO || !who ? false : W.spend(APP_ID, who, price, why, now); },
+  /* avatars and worlds are bought only through the family engine, which pays through the wallet */
+  buyAvatar(who, av, ctx) { return DEMO || !who ? false : A.buy(APP_ID, who, av, ctx); },
+  buyWorld(who, n, ctx) { return DEMO || !who ? false : A.buyWorld(APP_ID, who, n, ctx); },
   balance(who) { return DEMO || !who ? 0 : W.balance(who); },
   ledger(who) { return DEMO || !who ? [] : W.ledger(who); },
   /* READ the activity feed (for the report card's minutes). This app writes it

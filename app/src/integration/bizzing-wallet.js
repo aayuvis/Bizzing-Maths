@@ -74,4 +74,20 @@ export function migrateFrom(app, who, amount, now = Date.now()) {
   return amount;
 }
 
+/* Give back what a child paid for something the family has withdrawn (a sacred figure or a
+   real person retired from a shop). Once per item, for exactly what the ledger shows was paid. */
+export function refund(app, who, item, now = Date.now()) {
+  if (!APPS.test(app)) return 0;
+  const o = load(), k = kid(o, who);
+  if (!k) return 0;
+  const why = String(item).slice(0, 52);
+  if (k.ledger.some((x) => x.a === app && x.why === `refund:${why}`)) return 0;
+  const paid = k.ledger.filter((x) => x.a === app && x.n < 0 && x.why === why).reduce((a, x) => a - x.n, 0);
+  if (!paid) return 0;
+  k.coins += paid;
+  k.ledger.push({ a: app, t: now, n: paid, why: `refund:${why}` });
+  save(o);
+  return paid;
+}
+
 export function ledger(who) { const k = load().kids[kidKey(who)]; return k ? k.ledger.slice() : []; }

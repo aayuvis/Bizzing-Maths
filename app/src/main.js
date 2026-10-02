@@ -23,7 +23,15 @@ import * as V2 from './views2.js';
 import { toolById, SHELF, isTool, loadTool } from './library/index.js';
 import { STORIES } from './stories.js';
 import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel } from './puzzles.js';
-import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor } from './themes.js';
+import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor, byTheme, worldIsOpen } from './themes.js';
+import * as V3 from './views3.js';
+import * as MD from './mistakes.js';
+import { search as searchCore, searchMore } from './search.js';
+import * as AU from './audio.js';
+import { music } from './ui.js';
+import { setSayRate } from './voice.js';
+import { byAvatar, avatarCtx, ownsAvatar } from './avatars.js';
+import { makeCert } from './cert.js';
 
 const root = document.getElementById('app');
 
@@ -35,7 +43,19 @@ const TRY = DEMO && /[?&]demo=try\b/.test(location.search);
 R.h = DEMO ? (TRY ? tasterHousehold() : sampleHousehold()) : Store.loadHousehold() || newHousehold();
 R.fromHive = /[?&]from=hive\b/.test(location.search);   // the Hive sent us: offer the way back
 R.ui.cels = [];
-R.sound = Store.loadDevice('sound', true); setSound(R.sound);
+R.sound = Store.loadDevice('sound', true);
+/* the device's settings (standard §5): sound is the one-tap mute in ☰; the rest are Settings' */
+R.dev = { sfx: Store.loadDevice('sfx', true), music: Store.loadDevice('music', true), volume: Store.loadDevice('volume', 0.4),
+  calm: Store.loadDevice('calm', false), motion: Store.loadDevice('motion', false), text: Store.loadDevice('text', 'M'),
+  mode: Store.loadDevice('mode', null), rate: Store.loadDevice('rate', 1) };
+function applyDev() {
+  AU.configure({ sound: R.sound, sfx: R.dev.sfx, music: R.dev.music, volume: R.dev.volume, calm: R.dev.calm });
+  const el = document.documentElement;
+  if (R.dev.motion) el.setAttribute('data-motion', 'reduced'); else el.removeAttribute('data-motion');
+  el.setAttribute('data-text', R.dev.text || 'M');
+  setSayRate(R.dev.rate || 1); music.refresh();
+}
+setSound(R.sound); applyDev();
 /* Light/dark is the device's. data-mode is ALWAYS set, so themes.css never has
    to guess the system scheme: a saved choice wins, otherwise the system's,
    followed live until the child picks one with the moon button. */
@@ -53,13 +73,18 @@ function save() { Store.saveHousehold(R.h); }
    Coins come only from the standard events at the standard amounts (the
    family wallet enforces both, and the daily cap); they never touch xp, so
    they can never move a rank. */
-const earn = (k, ev) => Family.earn(k.name, ev);
+/* `note` says in words what the coins were for; the wallet history shows it (standard §1.1) */
+const earn = (k, ev, note) => {
+  const now = Date.now(), n = Family.earn(k.name, ev, now);
+  if (n && note) { const cn = k.coinNotes || (k.coinNotes = {}); cn[now] = String(note).slice(0, 60); const ks = Object.keys(cn); if (ks.length > 120) ks.sort().slice(0, ks.length - 120).forEach((x) => delete cn[x]); }
+  return n;
+};
 const mile = (k, ev, label) => Family.milestone(k.name, ev, label);
 function celebrate(c) { R.ui.cels.push(c); }
 /* Award what the evidence now supports; each new medal gets its ceremony. */
 function medals(k) {
   for (const m of award(k)) {
-    celebrate({ kind: 'medal', id: m.id, title: m.name, say: `${m.desc.replace(/\.$/, '')} — you did that. It is on your shelf now.` });
+    celebrate({ kind: 'medal', id: m.id, title: m.name, say: `${m.did || m.desc} It is on your shelf now.` });
     mile(k, 'mastery', `Medal: ${m.name}`);
   }
 }
@@ -70,7 +95,7 @@ function medals(k) {
 function unseen(k) {
   for (const [id, m] of Object.entries((k && k.medals) || {})) if (!m.seen && medalById[id] && !R.ui.cels.some((c) => c.id === id)) {
     const md = medalById[id];
-    celebrate({ kind: 'medal', id, title: md.name, say: `${md.desc.replace(/\.$/, '')} — you did that. It is on your shelf now.` });
+    celebrate({ kind: 'medal', id, title: md.name, say: `${md.did || md.desc} It is on your shelf now.` });
   }
 }
 function backfill() {
@@ -144,7 +169,9 @@ function go(nav, arg = null, fromHash = false) {
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
   if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
-  R.ui.sheet = false; R.ui.drawer = false;
+  if (nav !== R.ui.nav && !fromHash) R.ui.prev = R.ui.nav;
+  R.ui.sheet = false; R.ui.drawer = false; R.ui.wallet = false;
+  if (nav === 'search' && R.ui.nav !== 'search') { R.ui.q = R.ui.q || ''; R.ui.more = []; }
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
   if (nav === 'grownups' && R.ui.nav !== 'grownups') { R.ui.gate = false; R.ui.gateIn = ''; }
@@ -162,6 +189,7 @@ function screen() {
   const k = kid(R.h);
   const n = R.ui.nav;
   if (n === 'privacy') return V.viewPrivacy();
+  if (n === 'help') return V3.viewHelp();
   if (n === 'grownups') return V.viewGrownups();
   if (!k || n === 'welcome') return V.viewWelcome();
   if (n === 'start') return V.viewStart();
@@ -184,6 +212,13 @@ function screen() {
     case 'play': return V.viewArcade();
     case 'contest': return V.viewContest();
     case 'me': return V.viewMe();
+    case 'shop': return V3.viewShop();
+    case 'collection': return V3.viewCollection();
+    case 'medals': return V3.viewMedals();
+    case 'settings': return V3.viewSettings();
+    case 'help': return V3.viewHelp();
+    case 'mistakes': return V3.viewMistakes();
+    case 'search': return V3.viewSearch(searchCore(R.ui.q || ''), R.ui.more);
     case 'who': return V.viewWho();
     default: return V.viewHome();
   }
@@ -193,10 +228,13 @@ let celShown = null;
 function render() {
   const focusId = document.activeElement && document.activeElement.id;
   if (R.ui.cels.length && celShown !== R.ui.cels[0]) { const c = celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); if (readOn(kid(R.h))) setTimeout(() => say(`${c.title}. ${c.say}`), 700); }
-  applyTheme(themeOf(kid(R.h)));   // the active child's theme; switching child switches it
+  applyTheme(themeOf(kid(R.h), R.h));   // the active child's world; switching child switches it
+  document.documentElement.toggleAttribute('data-bz-dark', document.documentElement.getAttribute('data-mode') === 'dark');   // the avatar glow (§8)
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
+  syncMusic();
+  if (R.ui.drawer && !root.querySelector('.drawer').contains(document.activeElement)) { const b = root.querySelector('.drawer .dr-x'); if (b) b.focus(); }
   if (R.ui.cels.length) { const b = root.querySelector('.cel .btn'); if (b && document.activeElement !== b) b.focus(); }
   // a world board opens scrolled to the stop you are standing on (phones pan it)
   const sc = root.querySelector('.board-scroll[data-autoscroll]');
@@ -207,6 +245,22 @@ function render() {
   }
 }
 R.render = render;
+
+/* Music follows the screen (standard §11): Home has its own loop, every other screen its
+   world's, a game its own (games.js starts that). It starts only after the child's first tap
+   or key — a browser would not let it sound before, and so the composer is never part of the
+   first load. */
+let gestured = false;
+function syncMusic() {
+  if (!gestured || G.active() || !kid(R.h)) return;
+  const want = R.ui.nav === 'home' ? 'home' : byTheme[themeOf(kid(R.h), R.h)].tune;
+  if (music.wanted() !== want) music.start(want);
+}
+const firstGesture = () => { if (gestured) return; gestured = true; setTimeout(syncMusic, 0); };
+addEventListener('pointerdown', firstGesture, { capture: true });
+addEventListener('keydown', firstGesture, { capture: true });
+/* the world's ambient life pauses whenever the page is hidden (standard §7) */
+document.addEventListener('visibilitychange', () => document.documentElement.toggleAttribute('data-hidden', document.hidden));
 
 /* ------------------------------------------------------------- the runner */
 
@@ -259,6 +313,9 @@ function submit(given) {
   run.fb = { right, given, fast, ms };
   run.results.push({ right, ms });
   if (!right) run.missed.push(q);
+  // the mistakes deck: a miss goes in (never placement, never a bonus question); its own review moves it on
+  if (run.kind === 'mistakes') { const r = MD.answer(k, q.mkey, right); run.mk = run.mk || {}; if (r) run.mk[r] = (run.mk[r] || 0) + 1; }
+  else if (!right && !q.bonus && !MD.NOT_A_MISTAKE.includes(run.kind)) MD.add(k, q, Date.now(), run.title);
   // record what this question is evidence of
   if (q.fact) F.record(k.facts[F.key(q.fact)] || (k.facts[F.key(q.fact)] = F.blank()), right, ms, k.band);
   if (run.kind !== 'place' && run.kind !== 'leveltest') tick(k, right, run.kind === 'facts' ? 1 : 2);
@@ -277,7 +334,7 @@ function submit(given) {
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
 
-const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret'];
+const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes'];
 
 function nextQ() {
   const run = R.run; if (!run) return;
@@ -312,15 +369,15 @@ function finishRun() {
       if (nx) s.buttons.push(nx.kind === 'stop' ? `<button class="btn primary" data-act="openStop" data-arg="${nx.id}">Next stop: ${escapeHtml(byId[nx.id].title)}</button>` : `<button class="btn primary" data-act="openCheck" data-arg="${nx.world}">Take the checkpoint</button>`);
       if (res.stars < 3) s.lines.push(res.pct >= 0.9 ? 'Nine or more right — do it a little quicker for the third star.' : 'Nine right at a good pace is the third star.');
       if (res.gained) { confetti(res.stars === 3 ? 60 : 36); sfx.level(); }
-      if (res.gained && res.stars - res.gained < 2) { earn(k, 'stop'); mile(k, 'stop', t.title); }   // first pass of this stop
+      if (res.gained && res.stars - res.gained < 2) { earn(k, 'stop', t.title); mile(k, 'stop', t.title); }   // first pass of this stop
       k.last = { what: res.stars === 3 ? 'stars' : 'stop', title: t.title, at: Date.now() };
       const jr = J.passed(k, run.trick, run.lv || 1), jp = J.progress(k);
       if (jp) {
         // on a road, the road decides what is next — not the world's own order
         s.buttons = s.buttons.filter((b) => !/Next stop:|openCheck/.test(b));
-        if (jr.ticked) s.lines.push(`<b>Station ${jp.done} of ${jp.total} on your Level ${jp.level} road.</b>`);
+        if (jr.ticked) s.lines.push(`<b>Stop ${jp.done} of ${jp.total} on your Level ${jp.level} road.</b>`);
         if (jp.nextTest) s.buttons.unshift(jp.nextTest.kind === 'landtest' ? `<button class="btn primary" data-act="startLandTest" data-arg="${jp.nextTest.land.id}">Take the ${escapeHtml(jp.nextTest.land.name)} test</button>` : `<button class="btn primary" data-act="startLevelExam">Take the Level ${jp.level} test</button>`);
-        else if (jp.next) s.buttons.unshift(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next station: ${escapeHtml(jp.next.t.title)}</button>`);
+        else if (jp.next) s.buttons.unshift(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next stop: ${escapeHtml(jp.next.t.title)}</button>`);
       }
     } else {
       s.lines.push('Seven right passes this stop. Look at the ones below, then have another go — or go back to “Your turn”.');
@@ -353,7 +410,7 @@ function finishRun() {
       if (right >= FLOOR_PASS) {
         const first = !q.passed; q.passed = true;
         s.lines.unshift(first ? `<b>Floor ${run.floor} cleared — the stairs to floor ${run.floor + 1} are open.</b>` : 'Cleared again.');
-        if (first) { sfx.level(); confetti(60); earn(k, 'stop'); k.last = { what: 'floor', title: `floor ${run.floor}`, at: Date.now() }; }
+        if (first) { sfx.level(); confetti(60); earn(k, 'stop', `floor ${run.floor} of the Puzzle Tower`); k.last = { what: 'floor', title: `floor ${run.floor}`, at: Date.now() }; }
         if (run.floor < 12) s.buttons.push(`<button class="btn primary" data-act="climb" data-arg="${run.floor + 1}">Up to floor ${run.floor + 1}</button>`);
       } else {
         s.lines.unshift(`${FLOOR_PASS} of 6 opens the stairs. Every puzzle showed you its reason — try the floor again.`);
@@ -391,7 +448,7 @@ function finishRun() {
         s.lines.push(`<span class="big-age">${escapeHtml(J.ageOf(sc.to))}</span>`);
         s.lines.push(`<b>Level ${sc.from} passed!</b> You are working at ${escapeHtml(J.ageOf(sc.to))} now. The Level ${sc.to} road — ${escapeHtml(J.levelOf(sc.to).name)} — is open.`);
         s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">See my new road</button>'); confetti(140); sfx.level();
-        const coins = earn(k, 'mastery'); mile(k, 'band', `Level ${sc.from} passed`);
+        const coins = earn(k, 'mastery', `the Level ${sc.from} test`); mile(k, 'band', `Level ${sc.from} passed`);
         k.last = { what: 'level', title: `Level ${sc.to} — ${J.levelOf(sc.to).name}`, at: Date.now() };
         celebrate({ kind: 'level', n: sc.to, coins, title: `Level ${sc.from} passed`, say: `${sc.core} of ${sc.N} on the Level ${sc.from} test. You are working at ${J.ageOf(sc.to)} now, and the ${J.levelOf(sc.to).name} road is yours.` });
       } else if (lvl) {
@@ -400,20 +457,27 @@ function finishRun() {
       } else {
         s.lines.push(`<b>${escapeHtml(run.title)} passed${sc.first ? ' — the next part of your road is open' : ''}.</b>`);
         const jp = J.progress(k);
-        if (jp && jp.next) s.buttons.push(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next station: ${escapeHtml(jp.next.t.title)}</button>`);
+        if (jp && jp.next) s.buttons.push(`<button class="btn primary" data-act="openStep" data-arg="${jp.next.stop}|${jp.next.lv}">Next stop: ${escapeHtml(jp.next.t.title)}</button>`);
         else if (jp && jp.nextTest && jp.nextTest.kind === 'leveltest') s.buttons.push(`<button class="btn primary" data-act="startLevelExam">Take the Level ${jp.level} test</button>`);
         confetti(sc.first ? 70 : 30); if (sc.first) sfx.level();
         if (sc.first) {
-          const coins = earn(k, 'mastery'); mile(k, 'world', run.title);
+          const coins = earn(k, 'mastery', `the ${run.title}`); mile(k, 'world', run.title);
           k.last = { what: 'land', title: run.title.replace(/ test$/, ''), at: Date.now() };
           celebrate({ kind: 'land', coins, title: run.title.replace(/ test$/, '') + ' — crossed', say: `${sc.core} of ${sc.N} right${sc.bonus ? `, and ${sc.bonus} bonus question${sc.bonus > 1 ? 's' : ''} that belong to the next level` : ''}. That land is yours.` });
         }
       }
     } else {
-      s.lines.push(`${sc.PASS} of the ${sc.N} main questions pass. Look at the ones below — each one is a station you can go back to — then try again.`);
+      s.lines.push(`${sc.PASS} of the ${sc.N} main questions pass. Look at the ones below — each one is a stop you can go back to — then try again.`);
       s.buttons.push(lvl ? '<button class="btn primary" data-act="startLevelExam">Try the level test again</button>' : `<button class="btn primary" data-act="startLandTest" data-arg="${run.land}">Try again</button>`);
     }
     s.buttons.push('<button class="btn" data-act="nav" data-arg="atlas">Back to my road</button>');
+  }
+  if (run.kind === 'mistakes') {
+    const m = run.mk || {};
+    if (m.learned) s.lines.push(`<b>${V.nWord(m.learned)[0].toUpperCase() + V.nWord(m.learned).slice(1)} learned for good</b> — right after every gap.`);
+    if (m.moved) s.lines.push(`${m.moved} moved on. ${m.moved > 1 ? 'They come' : 'It comes'} back once more, a little later.`);
+    if (m.again) s.lines.push(`${m.again} come${m.again > 1 ? '' : 's'} back tomorrow. That is how they stick.`);
+    s.buttons.push('<button class="btn primary" data-act="nav" data-arg="mistakes">Back to my mistakes</button>');
   }
   if (run.kind === 'leveltest') {
     const L = J.place(k, run.st.result), lv = J.levelOf(L);
@@ -532,6 +596,7 @@ function cAnswer(given) {
   clearTimeout(timerT);
   const right = given !== '' && correct(C.q, given);
   C.youRight = right; C.given = given;
+  if (!right) MD.add(k, C.q, Date.now(), 'Mock contest');
   tick(k, right, 2); save();
   right ? sfx.good() : sfx.bad();
   if (C.phase === 'champ') {
@@ -700,8 +765,8 @@ on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
 on('sayQ', () => { const run = R.run, q = run && run.items[run.i]; if (!q) return; if (!R.sound) return toast('Sound is off — turn it on at the top.'); if (run.fb && !run.fb.right) speakFeedback(q, run.fb); else say(q.say || V.spoken(q.text)); });
 on('sayIt', (t) => { if (!R.sound) return toast('Sound is off — turn it on at the top.'); say(t); });
 on('nextQ', () => nextQ());
-on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
-on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
 
 on('startContest', () => startContest());
 on('cChoose', (c) => cAnswer(c));
@@ -728,7 +793,68 @@ on('draftAv', (a) => { const d = draft(); const was = d.step || 0; d.avatar = a;
 function obSay() { const d = draft(); if (d.band === '6-7') say(guideSay(['name', 'band', 'face', 'world'][d.step || 0])); }
 on('obTheme', (t) => { const d = draft(); d.theme = t; fire('createKid'); });
 on('avEdit', () => { R.ui.avEdit = !R.ui.avEdit; render(); });
-on('setAv', (a) => { const k = kid(R.h); if (!k || !AVATARS.includes(a)) return; k.avatar = a; Store.saveNow(R.h); render(); });
+on('setAv', (a) => {
+  const k = kid(R.h); if (!k || !AVATARS.includes(a)) return;
+  if (!ownsAvatar(R.h, k, a)) return toast('Not yours yet — its card says how it is earned.');
+  k.avatar = a; Store.saveNow(R.h); sfx.click(); render();
+});
+/* The Shop (standard §1, §8): fixed prices through the family engine; nothing random. */
+on('buyAv', (id) => {
+  const k = kid(R.h), a = byAvatar[id]; if (!k || !a) return;
+  if (Family.buyAvatar(k.name, a, avatarCtx(R.h, k))) {
+    (k.shop.avatars || (k.shop.avatars = [])).push(id); k.avatar = id; Store.saveNow(R.h);
+    sfx.unlock(); sfx.coin(); toast(`${a.name} is yours — and you are wearing it.`);
+  } else toast('Not yet — the card says what it needs.');
+  render();
+});
+on('buyWorld', (n) => {
+  n = +n; const k = kid(R.h), t = THEMES[n - 1]; if (!k || !t) return;
+  if (Family.buyWorld(k.name, n, { plan: R.h.parent.plan, worlds: k.shop.worlds || [] })) {
+    (k.shop.worlds || (k.shop.worlds = [])).push(n); k.prefs.theme = t.id; Store.saveNow(R.h);
+    sfx.unlock(); toast(`${t.name} is open — and it is your world now.`);
+  } else toast('Not enough coins yet — learning earns them.');
+  render();
+});
+on('shopTab', (t) => { R.ui.shopTab = ['avatars', 'worlds', 'extras'].includes(t) ? t : 'avatars'; render(); });
+on('drawer', () => {
+  R.ui.drawer = !R.ui.drawer; R.ui.sheet = false; R.ui.wallet = false; render();
+  if (!R.ui.drawer) { const b = root.querySelector('.menu-btn'); if (b) b.focus(); }
+});
+on('wallet', () => {
+  R.ui.wallet = !R.ui.wallet; R.ui.drawer = false; R.ui.sheet = false; render();
+  const b = root.querySelector(R.ui.wallet ? '.wallet .tool' : '.coin-chip'); if (b) b.focus();
+});
+on('setDev', (key) => {
+  if (!['sfx', 'music', 'motion', 'calm'].includes(key)) return;
+  R.dev[key] = !R.dev[key]; Store.saveDevice(key, R.dev[key]); applyDev();
+  if (key === 'sfx' && R.dev.sfx) sfx.click(); render();
+});
+on('setRate', (v) => { R.dev.rate = v === 'slow' ? 0.85 : 1; Store.saveDevice('rate', R.dev.rate); applyDev(); render(); });
+on('setMode', (v) => {
+  R.dev.mode = v === 'light' || v === 'dark' ? v : null; Store.saveDevice('mode', R.dev.mode);
+  document.documentElement.setAttribute('data-mode', R.dev.mode || (sysDark.matches ? 'dark' : 'light')); syncThemeColor(); render();
+});
+on('setText', (v) => { R.dev.text = ['S', 'M', 'L'].includes(v) ? v : 'M'; Store.saveDevice('text', R.dev.text); applyDev(); render(); });
+on('back', () => go(R.ui.prev && R.ui.prev !== R.ui.nav ? R.ui.prev : 'home'));
+on('searchOpen', (a) => {
+  const [tool, x] = String(a).split('|'); R.ui.lib = R.ui.lib || {};
+  const ui = R.ui.lib[tool] || (R.ui.lib[tool] = {});
+  if (tool === 'dictionary') { ui.open = x; ui.q = x; } else if (tool === 'formulas') { ui.card = x; ui.tab = 'card'; }
+  go('lib', tool);
+});
+on('startMistakes', () => {
+  const k = kid(R.h), due = MD.due(k).slice(0, 10);
+  if (!due.length) return toast('Nothing is ready yet — they come back after a gap.');
+  startRun('mistakes', 'My mistakes', due.map((m) => ({ ...m.q, mkey: m.key })), { sub: 'They came back after a gap' });
+});
+on('cert', async (a) => {
+  const [cid, id] = String(a).split('|'), c = R.h.kids.find((x) => x.id === cid); if (!c || !R.ui.gate) return;
+  if (await makeCert(c, id)) toast('Saved as a picture on this device.');
+});
+on('setTarget', (a) => {
+  const k = kid(R.h), [key, n] = String(a).split('|'); if (!k || !R.ui.gate || !['answers', 'stops'].includes(key)) return;
+  k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 }; k.prefs.targets[key] = +n; save(); render();
+});
 on('createKid', () => {
   const d = R.ui.draft; if (!d || !d.name.trim() || !d.band) return;
   const k = newKid(d.name, d.band, d.avatar);
@@ -769,7 +895,7 @@ on('atlasView', (v) => { R.ui.atlasView = v; go('atlas'); });
 on('jlv', (n) => { R.ui.jlv = +n; render(); });
 on('startLandTest', (landId) => {
   const k = kid(R.h), p = J.progress(k), t = p && p.nodes.find((x) => x.kind === 'landtest' && x.land.id === landId);
-  if (!t || !t.open) return toast('Pass every station in this land first.');
+  if (!t || !t.open) return toast('Pass every stop in this land first.');
   const items = J.landTestItems(k, landId);
   startRun('landtest', `${t.land.name} test`, items, { land: landId, bonusFrom: J.LAND_N, sub: `${J.LAND_PASS} of ${J.LAND_N} to pass · then ${J.LAND_BONUS} bonus questions, double points` });
 });
@@ -786,7 +912,7 @@ on('startLevelTest', () => {
 });
 on('openStep', (a) => {
   const [id, lv] = a.split('|'), road = J.onRoad(kid(R.h), id);
-  if (road && !road.open && !R.h.parent.tester) return toast(`Station ${road.n} opens when the one before it is passed.`);
+  if (road && !road.open && !R.h.parent.tester) return toast(`Stop ${road.n} opens when the one before it is passed.`);
   fire('openStop', id); R.ui.level = +lv || 1; R.ui.jstep = { stop: id, lv: +lv || 1 }; render();
 });
 on('switchKid', (id) => {
@@ -810,23 +936,30 @@ on('buyFrame', (id) => {
   render();
 });
 on('wearFrame', (id) => { const k = kid(R.h); if (!k) return; k.shop.worn.frame = id || null; save(); render(); });
-on('addKid', () => { R.ui.draft = null; go('welcome'); });
+/* adding a child is a grown-up's job (standard §3): behind the PIN */
+on('addKid', () => { R.ui.draft = null; if (!R.ui.gate || R.ui.nav !== 'grownups') { R.ui.after = 'addKid'; return go('grownups'); } go('welcome'); });
 
-on('sound', () => { R.sound = !R.sound; setSound(R.sound); Store.saveDevice('sound', R.sound); if (R.sound) sfx.click(); render(); });
+on('sound', () => { R.sound = !R.sound; setSound(R.sound); Store.saveDevice('sound', R.sound); applyDev(); if (R.sound) sfx.click(); render(); });
 on('mode', () => {
   const cur = document.documentElement.getAttribute('data-mode') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const nx = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-mode', nx); Store.saveDevice('mode', nx); syncThemeColor();
+  if (R.longPressed) { R.longPressed = false; return; }
+  document.documentElement.setAttribute('data-mode', nx); Store.saveDevice('mode', nx); R.dev.mode = nx; syncThemeColor(); render();
 });
+/* hold the sun/moon for the world picker (standard §3) */
+let lpT = 0;
+root.addEventListener('pointerdown', (e) => { if (!e.target.closest || !e.target.closest('.mode-btn')) return; clearTimeout(lpT); lpT = setTimeout(() => { R.longPressed = true; go('settings'); const el = document.querySelector('.theme-card[aria-checked="true"]'); if (el) el.focus(); }, 550); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => root.addEventListener(ev, () => clearTimeout(lpT)));
 /* themes belong to the child: chosen on their page, applied at once */
 on('theme', (id) => {
   const k = kid(R.h); if (!k || !isTheme(id)) return;
+  if (!worldIsOpen(R.h, k, byTheme[id].n)) return go('shop');
   k.prefs.theme = id; save(); render();
   const el = document.getElementById('theme-' + id); if (el) el.focus();
 });
 on('themes', () => {
-  go('me');
-  const el = document.getElementById('themes'); if (el) el.scrollIntoView({ block: 'start' });
+  go('settings');
+  const el = document.querySelector('[data-sec=look]'); if (el) el.scrollIntoView({ block: 'start' });
   const on1 = document.querySelector('.theme-card[aria-checked="true"]'); if (on1) on1.focus({ preventScroll: true });
 });
 on('testerOff', () => { R.h.parent.tester = false; save(); render(); });
@@ -838,7 +971,7 @@ function gateKey(k) {
   else if (/^\d$/.test(k) && R.ui.gateIn.length < 4) R.ui.gateIn += k;
   if (R.ui.gateIn.length === 4) {
     if (!R.h.parent.pin) { R.h.parent.pin = R.ui.gateIn; R.ui.gate = true; Store.saveNow(R.h); toast('PIN set.'); }
-    else if (R.ui.gateIn === R.h.parent.pin) R.ui.gate = true;
+    else if (R.ui.gateIn === R.h.parent.pin) { R.ui.gate = true; if (R.ui.after === 'addKid') { R.ui.after = null; R.ui.gateIn = ''; R.ui.draft = null; return go('welcome'); } }
     else { toast('That is not the PIN.'); sfx.bad(); }
     R.ui.gateIn = '';
   }
@@ -848,6 +981,9 @@ on('lock', () => { R.ui.gate = false; go('home'); });
 on('toggle', (key) => {
   const k = kid(R.h);
   if (key === 'tester') R.h.parent.tester = !R.h.parent.tester;
+  if (key === 'plan' && R.ui.gate) R.h.parent.plan = R.h.parent.plan === 'family' ? 'free' : 'family';
+  if (key === 'puzzleTarget' && k && R.ui.gate) { k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 }; k.prefs.targets.puzzle = k.prefs.targets.puzzle === 0 ? 1 : 0; }
+  if (key === 'sound') return fire('sound');
   if (key === 'read' && k) k.prefs.read = !readOn(k);
   save(); render();
 });
@@ -904,6 +1040,13 @@ function avKey(e) {
 }
 addEventListener('keydown', (e) => {
   if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
+  // the ☰ drawer and the wallet are dialogs: Esc closes them, Tab stays inside the drawer (standard §3)
+  if (e.key === 'Escape' && (R.ui.drawer || R.ui.wallet)) { e.preventDefault(); return fire(R.ui.drawer ? 'drawer' : 'wallet'); }
+  if (e.key === 'Tab' && R.ui.drawer) {
+    const f = [...root.querySelectorAll('.drawer button, .drawer a')].filter((x) => x.offsetParent);
+    if (f.length) { const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f.at(-1).focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } else if (i < 0) { e.preventDefault(); f[0].focus(); } }
+    return;
+  }
   if (avKey(e)) return;
   if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
@@ -912,8 +1055,10 @@ addEventListener('keydown', (e) => {
   // the theme picker is a radio group: arrows move the choice and apply it (Enter/Space click it)
   if (t && t.classList && t.classList.contains('theme-card') && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
     e.preventDefault();
-    const i = THEMES.findIndex((x) => x.id === t.dataset.arg), d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
-    return fire('theme', THEMES[(i + d + THEMES.length) % THEMES.length].id);
+    const open = THEMES.filter((x) => worldIsOpen(R.h, kid(R.h), x.n));     // arrows move among the open worlds only
+    const i = open.findIndex((x) => x.id === (t.dataset.theme || t.dataset.arg)), d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+    const nx = open[(i + d + open.length) % open.length].id;
+    fire('theme', nx); const el = document.getElementById('theme-' + nx); if (el) el.focus(); return;
   }
   const nav = R.ui.nav;
   const run = R.run;
@@ -963,6 +1108,18 @@ root.addEventListener('input', (e) => {
   }
 });
 root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'kname') fire('obNext'); });
+/* search as you type: the app's own index at once, the Dictionary and Formula Book a moment later */
+let sT = null;
+root.addEventListener('input', (e) => {
+  if (!e.target.hasAttribute || !e.target.hasAttribute('data-search')) return;
+  const q = R.ui.q = e.target.value; R.ui.more = q.trim().length > 1 ? null : [];
+  render(); clearTimeout(sT);
+  if (q.trim().length > 1) sT = setTimeout(() => searchMore(q).then((m) => { if (R.ui.q === q && R.ui.nav === 'search') { R.ui.more = m; render(); } }).catch(() => { R.ui.more = []; render(); }), 160);
+});
+root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-search')) { const b = root.querySelector('.results button'); if (b) b.click(); } });
+/* the one volume slider: no re-render while it moves, a click to hear it when it stops */
+root.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.dev === 'volume') { R.dev.volume = Math.max(0, Math.min(1, +e.target.value / 100)); Store.saveDevice('volume', R.dev.volume); applyDev(); } });
+root.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.dev === 'volume') sfx.click(); });
 /* a tool's text inputs (Number Explorer, Show Me the Working, Graphs): the
    value goes into the tool's ui state and the screen re-renders; render()
    restores focus and caret by id, so typing is never interrupted */
@@ -993,4 +1150,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn };   // for the headless checks, never for the app

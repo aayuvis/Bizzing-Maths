@@ -5,3 +5,4 @@ build/
 dist/
 .site-fold/
 .site-fam
+.site-*/

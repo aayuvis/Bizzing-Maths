@@ -13,6 +13,7 @@
    `onend` fires when the line has been SAID, so the voice is the clock. */
 
 import { normalise } from './voice-text.js';
+import { duck } from './audio.js';
 
 let soundOn = true, sayRate = 1;
 export function setVoiceSound(v) { soundOn = !!v; if (!soundOn) hush(); }
@@ -40,7 +41,8 @@ export function speak(textOrParts, onend) {
     const u = new SpeechSynthesisUtterance(w.replace(/\s+/g, ' ').trim());
     const v = pickVoice(); if (v) u.voice = v;
     u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
-    if (onend) u.onend = onend;
+    duck(60000, 0.25);                                   // the music steps back while the voice speaks
+    u.onend = () => { duck(10); if (onend) onend(); };
     speechSynthesis.speak(u);
     return true;
   } catch (e) { return false; }

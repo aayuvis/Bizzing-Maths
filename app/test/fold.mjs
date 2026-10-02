@@ -22,7 +22,9 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 
 // [name, how to get there, core selector]
 const SCREENS = [
-  ['home', (b) => b.go('home'), '#continue'],
+  // Home follows the family template (standard v2 §6): greeting, ring and number of the hour come
+  // FIRST, by the owner's decision, so Home's rule is CLAUDE.md 17's — Continue wholly above the fold
+  ['home', (b) => b.go('home'), '#continue', '#continue .btn.primary', { start: 0.62 }],
   ['atlas road', (b) => b.go('atlas'), '.board-scroll', '.lboard .bpin.cur'],
   ['atlas islands', (b) => b.fire('atlasView', 'islands'), '.map-board'],
   ['world board', (b) => b.fire('openWorld', 'market'), '.board-scroll'],
@@ -62,12 +64,14 @@ for (const [vp, tag] of [[{ width: 1000, height: 560 }, 'laptop'], [{ width: 390
   await page.click('[data-act=draftAv][data-arg="hexbee"]'); await page.click('[data-act=obTheme][data-arg="graph"]');
   await page.waitForSelector('[data-act=startLevel1]'); await page.click('[data-act=startLevel1]');
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; });
-  for (const [name, go, sel, see] of SCREENS) {
+  for (const [name, go, sel, see, rule = {}] of SCREENS) {
     await page.evaluate(`(${go.toString()})(window.__bzm)`); await page.waitForTimeout(250);
     await page.evaluate(() => window.scrollTo(0, 0));
     const m = await page.evaluate((sel) => {
       const el = document.querySelector(sel); if (!el) return null;
-      const top = document.querySelector('.topbar, header.top, .bar') ; const bar = top ? top.getBoundingClientRect().bottom : 0;
+      // the chrome is the top bar AND, on a wide window, the family's tab row directly under it (standard v2 §4)
+      const top = document.querySelector('.topbar, header.top, .bar'), tabs = document.querySelector('nav.tabs');
+      const bar = Math.max(top ? top.getBoundingClientRect().bottom : 0, tabs && getComputedStyle(tabs).display !== 'none' ? tabs.getBoundingClientRect().bottom : 0);
       const nav = document.querySelector('.tabbar, nav.bottom, .botnav'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight;
       const r = el.getBoundingClientRect(), view = bottom - bar;
       return { start: (r.top - bar) / view, shown: Math.max(0, Math.min(r.bottom, bottom) - Math.max(r.top, bar)) / Math.min(view, r.height), view };
@@ -75,7 +79,7 @@ for (const [vp, tag] of [[{ width: 1000, height: 560 }, 'laptop'], [{ width: 390
     // and anything named in `see` must be wholly in view, and the page must not scroll sideways
     const vis = see ? await page.evaluate((see) => { const el = document.querySelector(see); if (!el) return false; const r = el.getBoundingClientRect(), nav = document.querySelector('.tabbar'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight; return r.top >= 0 && r.bottom <= bottom && r.left >= 0 && r.right <= innerWidth; }, see) : true;
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
-    const ok = m && m.start <= START && m.shown >= SHOW && vis && !wide;
+    const ok = m && m.start <= (rule.start || START) && m.shown >= SHOW && vis && !wide;
     if (!ok) fails++;
     rows.push(`${ok ? 'ok' : '✗ '} ${tag.padEnd(7)} ${name.padEnd(18)} ${m ? `starts ${Math.round(m.start * 100)}% down, ${Math.round(m.shown * 100)}% of it visible${see && !vis ? ` · ${see} not fully in view` : ''}${wide ? ' · the page scrolls sideways' : ''}` : 'core element not found: ' + sel}`);
     if (!ok) await page.screenshot({ path: `${SHOTS}/fold-${tag}-${name.replace(/[^a-z]+/g, '-')}.png` });

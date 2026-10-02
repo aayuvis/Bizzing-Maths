@@ -1,0 +1,334 @@
+/* shell.css — the family layer, standard v2: the top bar and ☰ (§3), the tabs (§4), Settings
+   (§5), the Shop, the wallet and the Collection (§1, §8), the six worlds' ambient life and
+   their painted nights (§7), Octo (§2), and Home in Bee's template (§6). Loaded last, so it
+   wins over the older rules it replaces. Colours are tokens; nothing here is a literal white. */
+
+:root{ --chrome:"Fraunces",Georgia,serif; --plum:#3A2A5C; --tb-h:64px }
+:root[data-mode="dark"]{ --plum:#D9C8F7 }
+body{font-family:var(--ui)}
+/* chrome headings are the family's Fraunces in every world; a world's display face is for its hero */
+:is(.phead h1,.settings-sheet h1,.set-sec h2,.shop-page h2,.wal-card h2,.sheet h2,.drawer,.tab,.tb,.pack-h h3,.rc h2,.certs .kicker){font-family:var(--chrome)}
+.phead h1{font-weight:750;letter-spacing:-.01em}
+.hname,.showcase h1,.nod-n{font-family:var(--display)}
+
+/* ------------------------------------------------------------------ the top bar */
+.top{position:sticky;top:0;z-index:30;height:56px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 16px;
+  background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft)}
+.top .grow{flex:1}
+.hive{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;color:var(--treasure-deep);flex:none}
+.hive .ico{color:var(--treasure-deep)} .hive .ico path:first-child{fill:var(--treasure);opacity:1}
+.hive:hover{background:var(--treasure-tint)}
+.tool{width:40px;height:40px;min-width:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--muted);flex:none}
+.tool:hover{color:var(--ink);border-color:var(--action)}
+.brand{display:flex;align-items:center;gap:8px;background:none;border:0;cursor:pointer;padding:4px 6px;border-radius:12px;min-height:44px}
+.brand-octo{width:28px;height:28px;object-fit:contain}
+.brand-t{font:800 20px/1 var(--chrome);letter-spacing:-.01em;white-space:nowrap;color:var(--plum)}
+.brand-t b{font-weight:800}
+.brand-t em{font-style:normal;color:var(--action)}
+.search-pill{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:500 14px var(--ui);cursor:pointer;min-width:220px}
+.search-pill:hover{border-color:var(--action);color:var(--ink)}
+.coin-chip{display:flex;align-items:center;gap:6px;height:40px;padding:0 12px 0 8px;border-radius:999px;border:1px solid color-mix(in srgb,var(--treasure) 55%,var(--line));background:var(--treasure-tint);color:var(--ink);cursor:pointer;font:700 15px var(--mono)}
+.coin-chip .ico{color:var(--treasure-deep)} .coin-chip .ico path:first-child,.coin-chip .ico circle:first-child{fill:var(--treasure);opacity:1}
+.coin-chip.big{height:46px;font-size:18px}
+.who{display:flex;align-items:center;gap:2px;border:0;background:none;cursor:pointer;border-radius:999px;padding:2px 6px 2px 2px;min-height:44px}
+.who:hover,.who[aria-expanded=true]{background:var(--action-tint)}
+.who .av{border-radius:50%;background:var(--surface2)}
+.caret-d{color:var(--muted);display:grid}
+@media (max-width:1100px){.search-pill{min-width:0}.search-pill span{display:none}.search-pill{width:40px;padding:0;justify-content:center}}
+/* phone: ⬡ ☰ logo … coin · avatar — search, theme and 🔒 move into ☰ (standard §3) */
+@media (max-width:899px){
+  .top{padding:0 10px;gap:4px}
+  .search-pill,.mode-btn,.lock-btn{display:none}
+  .brand-t{font-size:17px}
+  .hive{width:36px;height:36px}
+}
+@media (max-width:360px){.brand-t{font-size:15px}.coin-chip{padding:0 8px 0 6px}}
+
+/* ------------------------------------------------------------------ tabs (§4) */
+.tabs{position:sticky;top:56px;z-index:25;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:1120px;margin:0 auto;padding:8px 20px;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px)}
+.tab{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border-radius:999px;border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-soft);cursor:pointer;font-weight:700;font-size:16px;color:var(--ink)}
+.tab:hover{background:var(--action-tint)}
+.tab.on{background:var(--action);color:var(--action-ink);box-shadow:none}
+.tabbar{display:none}
+@media (max-width:899px){
+  .tabs{display:none}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--tb-h) + env(safe-area-inset-bottom));box-sizing:border-box;padding:4px 4px env(safe-area-inset-bottom);
+    background:color-mix(in srgb,var(--paper) 95%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .tb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;border:0;background:none;font:700 12px var(--chrome);color:var(--muted);cursor:pointer;padding:0}
+  .tb .ico{padding:3px 14px;border-radius:999px;box-sizing:content-box}
+  .tb.on{color:var(--action)}
+  .tb.on .ico{background:var(--action);color:var(--action-ink)}
+  .tb.on .ico path[opacity]{opacity:.35}
+  .content{padding-bottom:calc(var(--tb-h) + 24px)}
+  .foot{padding-bottom:calc(var(--tb-h) + 30px)}
+}
+
+/* ------------------------------------------------------------------ the ☰ drawer */
+.drawer-back{position:fixed;inset:0;z-index:60;background:rgb(10 15 30 / .38);animation:fadeIn .18s ease-out}
+.drawer{position:fixed;z-index:61;top:0;bottom:0;left:0;width:min(300px,86vw);background:var(--surface);color:var(--ink);box-shadow:var(--sh-overlay);display:flex;flex-direction:column;overflow-y:auto;animation:drawIn .2s ease-out}
+.dr-head{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;height:56px;box-sizing:border-box;border-bottom:1px solid var(--line-soft)}
+.dr-head b{font:800 19px var(--chrome);color:var(--plum)} .dr-head em{font-style:normal;color:var(--action)}
+.dr-x{margin-left:auto}
+.dr-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px}
+.dr-q{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px;justify-content:center;border:1px solid var(--line);border-radius:14px;background:var(--surface2);color:var(--ink);font:600 12px var(--ui);cursor:pointer}
+.dr-list{list-style:none;margin:0;padding:4px 8px 16px}
+.dr-list button,.dr-list a{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 12px;border:0;border-radius:12px;background:none;color:var(--ink);font:600 16px var(--ui);text-decoration:none;cursor:pointer;text-align:left}
+.dr-list button:hover,.dr-list a:hover,.dr-list [aria-current]{background:var(--action-tint)}
+.dr-list .ico{color:var(--action)}
+.dr-n{margin-left:auto;min-width:24px;height:24px;border-radius:12px;background:var(--fix);color:#fff;font:700 13px/24px var(--mono);text-align:center}
+.dr-sep{height:1px;background:var(--line-soft);margin:6px 12px}
+@keyframes drawIn{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes fadeIn{from{opacity:0}}
+
+/* ------------------------------------------------------------------ sheets: the household, the wallet */
+.sheet{position:fixed;z-index:61;top:62px;right:max(12px,calc(50vw - 560px));width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 80px);overflow:auto;background:var(--surface);color:var(--ink);border-radius:20px;padding:16px;box-shadow:var(--sh-overlay)}
+.sheet-back{position:fixed;inset:0;z-index:60;background:rgb(10 15 30 / .3)}
+.sheet.wallet{width:min(420px,calc(100vw - 24px))}
+.sh-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sh-head h2{margin:0;display:flex;align-items:center;gap:8px;font-size:20px}
+.wal-bal{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:40px}
+.wal-bal .ico path:first-child,.wal-bal .ico circle:first-child{fill:var(--treasure);opacity:1}
+.wal-list{list-style:none;margin:8px 0;padding:0;max-height:46vh;overflow:auto}
+.wal-list li{display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line-soft);font-size:14px}
+.wal-list li b{color:var(--mastered)} .wal-list li.out b{color:var(--fix)}
+.wal-app{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px}
+.wal-card{margin-top:18px}.wal-card h2{display:flex;align-items:center;gap:8px}
+.sheet-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* ------------------------------------------------------------------ Settings (§5) */
+.settings-sheet{max-width:720px;margin:0 auto}
+.sh-head.big{margin:4px 0 14px}
+.sh-head.big h1{margin:0;display:flex;align-items:center;gap:8px;font-size:26px}
+.set-sec h2{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:8px}
+.set{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line-soft);min-height:44px}
+.set > span:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.set-l{margin:12px 0 8px;display:flex;flex-direction:column}
+.inp.short{width:min(220px,46vw)}
+.slider{width:min(240px,46vw);accent-color:var(--action);height:44px}
+.world-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.world-pick .theme-card{display:flex;flex-direction:column;gap:2px;text-align:left;padding:0 0 10px;border:2px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);color:var(--ink);cursor:pointer;min-height:44px}
+.world-pick .theme-card b{padding:0 10px;font:700 15px var(--display)} .world-pick .theme-card .small{padding:0 10px}
+.world-pick .theme-card[aria-checked=true]{border-color:var(--action);box-shadow:0 0 0 3px color-mix(in srgb,var(--action) 30%,transparent)}
+.world-pick .theme-card.shut .tc-art{filter:grayscale(.6) brightness(.85)}
+.tc-art{display:block;aspect-ratio:21/9;background-size:cover;background-position:center}
+.set-foot{text-align:center;margin:16px 0}
+@media (max-width:620px){.world-pick{grid-template-columns:1fr 1fr}.set{flex-wrap:wrap}}
+
+/* ------------------------------------------------------------------ the Collection and the Shop */
+.tier-key{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 14px;font-size:13px;color:var(--muted)}
+.tk i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:3px solid #7B8794}
+.tk-rare i{border-color:#3D7DF0}.tk-epic i{border-color:#B14FC4}.tk-legendary i{border-color:#F0B429}
+.pack{margin:0 0 22px}
+.pack-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 10px}
+.pack-h h3{margin:0;font-size:20px}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:12px}
+.bz-av{color:var(--ink)}
+.bz-av figcaption{display:flex;flex-direction:column;gap:2px}
+.bz-av .av-say{font:500 12px/1.3 var(--ui);color:var(--muted)}
+.bz-av .btn{width:100%;justify-content:center}
+.bz-av.wearing{outline:3px solid var(--action);outline-offset:2px}
+.shop-tabs{margin:0 0 16px}
+.worlds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.world-card{display:grid;grid-template-rows:auto 1fr auto;background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--sh-raised);padding-bottom:12px}
+.world-card .wc-art{aspect-ratio:21/9;background-size:cover;background-position:center}
+.world-card.shut .wc-art{filter:grayscale(.55) brightness(.85)}
+.world-card.on{outline:3px solid var(--action)}
+.wc-t{display:flex;flex-direction:column;gap:3px;padding:10px 14px}
+.wc-t b{font-size:20px}
+.wc-say{font:600 13px var(--ui);color:var(--treasure-deep)}
+.world-card .btn{margin:0 14px;justify-content:center}
+
+/* ------------------------------------------------------------------ Octo (§2) */
+.octo{object-fit:contain;display:block;filter:drop-shadow(0 6px 10px rgb(20 30 60 / .16))}
+.octo-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 18px}
+.octo-state p{margin:0;max-width:44ch;font-size:16px}
+.end-octo{margin:-6px auto 4px}
+.help{display:flex;flex-direction:column;gap:6px}.help-octo{float:right;margin:0 0 6px 10px}
+.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}.gloss dt{font-weight:700}.gloss dd{margin:0;color:var(--muted)}
+@media (max-width:520px){.gloss{grid-template-columns:1fr}.gloss dd{margin-bottom:6px}}
+
+/* ------------------------------------------------------------------ the world stage (§7) */
+.wstage{position:absolute;left:50%;top:-22px;width:100vw;height:340px;transform:translateX(-50%);overflow:hidden;z-index:0;pointer-events:none;background:var(--tint)}
+.wstage > *{position:absolute;inset:0}
+.ws-plate{inset:-3% -4%;background:var(--pd) center 42%/cover no-repeat;animation:wsDrift 70s ease-in-out infinite alternate;will-change:transform}
+:root[data-mode="dark"] .ws-plate{background-image:var(--pn)}
+@media (max-width:700px){.ws-plate{background-image:var(--pds)} :root[data-mode="dark"] .ws-plate{background-image:var(--pns)}}
+.wstage::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,color-mix(in srgb,var(--tint) 85%,transparent) 88%,var(--tint))}
+@keyframes wsDrift{from{transform:translate3d(-1.5%,0,0) scale(1.03)}to{transform:translate3d(1.5%,-1%,0) scale(1.07)}}
+/* the nearer plane: the place's own foreground, moving faster than the plate (parallax) */
+.ws-near{top:auto;height:46%;background-repeat:repeat-x;background-position:0 100%;animation:wsNear 40s linear infinite;opacity:.9;will-change:background-position}
+@keyframes wsNear{to{background-position:-600px 100%}}
+.ws-graph .ws-near{background-image:radial-gradient(60px 34px at 30px 100%,#5E9E4A 98%,transparent),radial-gradient(44px 28px at 92px 100%,#4F8E3E 98%,transparent),radial-gradient(70px 30px at 160px 100%,#6BAA52 98%,transparent);background-size:200px 70px}
+.ws-chalk .ws-near{background-image:radial-gradient(70px 26px at 50px 100%,#3E7B57 98%,transparent),radial-gradient(52px 20px at 150px 100%,#356D4C 98%,transparent);background-size:220px 60px}
+.ws-blueprint .ws-near{background-image:linear-gradient(to top,#20406E 0 10px,transparent 10px),repeating-linear-gradient(90deg,transparent 0 58px,#2A5490 58px 62px);background-size:240px 70px;opacity:.55}
+.ws-orbit .ws-near{background-image:radial-gradient(80px 30px at 60px 100%,#6F6790 98%,transparent),radial-gradient(40px 18px at 170px 100%,#7C74A0 98%,transparent);background-size:260px 60px}
+.ws-rangoli .ws-near{top:0;bottom:auto;height:60px;background-image:radial-gradient(9px 9px at 15px 22px,#F5A524 96%,transparent),radial-gradient(9px 9px at 45px 30px,#E86A1A 96%,transparent),radial-gradient(8px 8px at 30px 34px,#FFD25A 96%,transparent);background-size:60px 60px;animation-duration:60s}
+.ws-arcade .ws-near{top:0;bottom:auto;height:50px;background-image:radial-gradient(7px 7px at 20px 30px,#FFE48A 96%,transparent),radial-gradient(7px 7px at 60px 26px,#FF9EC4 96%,transparent),radial-gradient(7px 7px at 100px 30px,#9EE6FF 96%,transparent);background-size:120px 50px;animation-duration:30s}
+:root[data-mode="dark"] .ws-near{filter:brightness(.55) saturate(.9)}
+:root[data-mode="dark"] :is(.ws-rangoli,.ws-arcade) .ws-near{filter:none;mix-blend-mode:screen}
+/* particles of the place */
+.ws-parts i{position:absolute;display:block;width:8px;height:8px;border-radius:50%;left:calc(var(--i) * 8.3%);top:100%;opacity:0;animation:wsRise calc(9s + var(--i) * .7s) linear calc(var(--i) * -1.3s) infinite}
+@keyframes wsRise{0%{transform:translate3d(0,0,0);opacity:0}15%{opacity:.85}100%{transform:translate3d(40px,-340px,0) rotate(220deg);opacity:0}}
+@keyframes wsFall{0%{transform:translate3d(0,-20px,0);opacity:0}15%{opacity:.8}100%{transform:translate3d(-60px,360px,0) rotate(-200deg);opacity:0}}
+@keyframes wsTwinkle{0%,100%{opacity:.1;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+.ws-graph .ws-parts i,.ws-rangoli .ws-parts i{top:-10px;border-radius:60% 0;width:9px;height:7px;background:#F7A8C4;animation-name:wsFall}
+.ws-rangoli .ws-parts i:nth-child(odd){background:#F5A524}
+.ws-chalk .ws-parts i{background:rgb(255 255 255 / .75);width:5px;height:5px}
+.ws-blueprint .ws-parts i{background:#FFD36B;width:4px;height:4px;box-shadow:0 0 6px #FFC54A}
+.ws-orbit .ws-parts i{top:calc(8% + var(--i) * 3.5%);left:calc(5% + var(--i) * 7.6%);width:4px;height:4px;background:#fff;box-shadow:0 0 6px #fff;animation:wsTwinkle calc(2.4s + var(--i) * .3s) ease-in-out calc(var(--i) * -.4s) infinite}
+.ws-arcade .ws-parts i{top:calc(14% + (var(--i) * 37 % 60) * 1%);left:calc(4% + var(--i) * 8%);width:6px;height:6px;background:#FFE48A;box-shadow:0 0 8px #FFD24A;animation:wsTwinkle calc(1.2s + var(--i) * .15s) ease-in-out calc(var(--i) * -.2s) infinite}
+:root[data-mode="dark"] .ws-graph .ws-parts i{background:#E9FF8A;box-shadow:0 0 8px #E9FF8A;border-radius:50%;width:5px;height:5px;animation-name:wsTwinkle;top:calc(30% + var(--i) * 4%)}
+/* one idle traveller */
+.ws-idle{inset:auto;top:16%;left:0;width:64px;height:64px;animation:wsCross 34s linear infinite}
+.ws-idle > *{width:100%;height:100%;animation:wsBob 3.2s ease-in-out infinite}
+.ws-idle-plane{top:24%;width:76px;animation-duration:26s}
+.ws-idle-gear{top:auto;bottom:26%;left:76%;width:56px;height:56px;animation:none}
+.ws-idle-gear > *{animation:wsSpin 12s linear infinite}
+.ws-idle-comet{top:10%;width:110px;height:40px;animation:wsComet 16s ease-in infinite}
+.ws-idle-car{top:auto;bottom:20%;width:56px;height:56px;animation-duration:22s}
+.ws-idle-car > *{animation-duration:.6s}
+@keyframes wsCross{from{transform:translateX(-12vw)}to{transform:translateX(112vw)}}
+@keyframes wsComet{0%{transform:translate(-20vw,0);opacity:0}10%{opacity:1}60%{transform:translate(120vw,90px);opacity:1}61%,100%{opacity:0;transform:translate(120vw,90px)}}
+@keyframes wsBob{50%{transform:translateY(-8px) rotate(-3deg)}}
+@keyframes wsSpin{to{transform:rotate(360deg)}}
+/* paused when the page is hidden; frozen to the still under reduced motion */
+:root[data-hidden] .wstage *,:root[data-hidden] .wstage{animation-play-state:paused!important}
+:root[data-motion="reduced"] .wstage *,:root[data-motion="reduced"] .octo{animation:none!important}
+@media (prefers-reduced-motion:reduce){.wstage *,.octo{animation:none!important}}
+
+/* daylight plates on a dark page are the designed night (India's treatment) when no painted night exists */
+:root[data-mode="dark"] :is(.cc-art,.board > img,.lboard .panel,.wl img,.lib-art,.map-board > img,.bk-art,.st-bg,.tower-board > img,.gart,.pick-art){filter:brightness(.66) saturate(.85) contrast(1.02)}
+:root[data-mode="dark"] :is(.board,.map-board,.tower-board){box-shadow:inset 0 0 120px rgb(255 190 90 / .08)}
+
+/* ------------------------------------------------------------------ Home in Bee's template (§6) */
+.home2{position:relative}
+.home2 .sky{display:none}
+.h-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;margin-top:150px}
+.greet{grid-column:span 5;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 16px 12px 8px}
+.greet-octo{width:104px;height:104px;animation:bob 3.4s ease-in-out infinite}
+.h-grid{align-items:start}
+.greet-t{min-width:0}
+.greet .hi{font-size:15px;color:var(--muted)} .greet .hname{display:inline;font-size:26px;color:var(--ink)}
+.greet .bubble2{margin-top:8px}
+.greet .buddy{animation:none;background:none}
+.greet .buddy .av{width:64px;height:64px}
+.h-grid > .today{grid-column:span 4;grid-template-columns:96px 1fr;padding:14px;align-items:center}
+.h-grid > .today .ct{font-size:19px}.h-grid > .today .legend2 li{font-size:13px}
+.h-grid > .today .ring{width:96px;height:96px}
+.h-grid > .nod2{grid-column:span 3;padding:14px 16px}
+.nod2 .nod-ico{width:40px;height:40px;padding:8px;box-sizing:border-box;border-radius:12px;background:var(--treasure);color:#5a3d00}
+.h-cont{grid-column:span 12;display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);gap:16px}
+.jcard2{display:flex;flex-direction:column;gap:6px;padding:16px 18px;justify-content:center}
+.jcard2 b{font:750 20px/1.2 var(--display)} .jcard2 .btn{align-self:flex-start;margin-top:4px}
+.jcard2 .kick{display:flex;align-items:center;gap:6px}
+.h-grid > .h-three{grid-column:span 12}
+.t3 .ti{display:grid;place-items:center;color:var(--c)}
+@media (max-width:1050px){.greet{grid-column:span 12}.h-grid > .today,.h-grid > .nod2{grid-column:span 6}}
+@media (max-width:700px){
+  .wstage{height:220px}
+  .h-grid{margin-top:76px;gap:10px}
+  .greet{grid-template-columns:auto 1fr;padding:8px 12px 8px 4px;gap:8px}
+  .greet .buddy{display:none}
+  .greet-octo{width:76px;height:76px}
+  .greet .hname{font-size:21px}
+  .greet .bubble2{font-size:13px;padding:7px 10px;margin-top:5px}
+  .h-grid > .today{grid-template-columns:62px 1fr;padding:10px;gap:8px}
+  .h-grid > .today .ring{width:62px;height:62px}
+  .h-grid > .today .ct{font-size:15px}.h-grid > .today .muted{display:none}.legend2{font-size:11px}
+  .h-grid > .nod2{padding:10px 12px}.nod2 .nod-n{font-size:30px}.nod2 ul{display:none}.nod2 .nod-ico{width:30px;height:30px;padding:5px}
+  .h-cont{grid-template-columns:1fr;gap:10px}
+}
+
+/* ------------------------------------------------------------------ My page: the showcase (J7) */
+.showcase{--tier:#7B8794;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;padding:20px;border-radius:24px;background:var(--surface);border:4px solid var(--tier);box-shadow:var(--sh-raised);margin-bottom:16px}
+.showcase[data-tier="rare"]{--tier:#3D7DF0}.showcase[data-tier="epic"]{--tier:#B14FC4}.showcase[data-tier="legendary"]{--tier:#F0B429}
+:root[data-bz-dark] .showcase:not([data-tier="common"]){box-shadow:0 0 0 1px var(--tier),0 0 26px 4px color-mix(in srgb,var(--tier) 50%,transparent)}
+.showcase h1{margin:0;font-size:40px;line-height:1.05}
+.sc-face{display:grid;place-items:center;width:180px;height:180px;border-radius:24px;background:radial-gradient(circle,var(--treasure-tint),transparent 70%)}
+.sc-rank{margin:6px 0}
+.sc-medals{display:flex;gap:6px;margin:8px 0 12px;min-height:56px;align-items:center}
+.trick-day{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:start;margin:16px 0}.trick-day .kick{grid-column:1/-1}
+@media (max-width:620px){.showcase{grid-template-columns:1fr;text-align:center;justify-items:center}.sc-medals{justify-content:center}.showcase .row{justify-content:center}}
+
+/* ------------------------------------------------------------------ search, mistakes */
+.search-box{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:0 16px;margin:4px 0 16px}
+.search-box:focus-within{border-color:var(--action)}
+.search-box .inp{border:0;background:none;box-shadow:none;flex:1;min-height:48px;font-size:17px;outline:none}
+.results{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.results button{display:grid;grid-template-columns:86px 1fr;grid-template-rows:auto auto;gap:0 12px;width:100%;text-align:left;padding:10px 14px;border:0;border-radius:16px;background:var(--surface);box-shadow:var(--sh);color:var(--ink);cursor:pointer;min-height:44px}
+.results button:hover{box-shadow:var(--sh-raised)}
+.r-kind{grid-row:span 2;align-self:center;font:700 12px var(--ui);text-transform:uppercase;letter-spacing:.05em;color:var(--action)}
+.mk-go{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
+.mk-go h2{margin:0}
+.mk-list{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px}
+.mk{background:var(--surface);border-radius:16px;box-shadow:var(--sh);padding:4px 14px}
+.mk summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mk-when{font:700 12px var(--ui);color:var(--action);text-transform:uppercase}
+@media (max-width:620px){.mk-go{grid-template-columns:auto 1fr}.mk-go .btn{grid-column:1/-1}}
+
+/* ------------------------------------------------------------------ fixes: targets, overlaps, badges */
+.lib-tile::before{content:none}                                   /* no decorative "+" that looks tappable */
+.chip-btn,.seg button,.btn.small,.back,.say-btn,.linkish,.sk{min-height:44px}
+.say-btn{min-width:44px}
+@media (max-width:899px){
+  .fgrid{overflow-x:auto;grid-template-columns:repeat(13,44px);max-width:100%;justify-content:start;scrollbar-width:thin}
+  .fgrid.ten{grid-template-columns:repeat(11,44px)}
+  .fc{min-width:44px;min-height:44px}
+}
+.lvb .lk,.lvb .ico{width:12px;height:12px;vertical-align:-1px}
+.sn{font:700 14px var(--mono)}
+.rb-p .meter{background:var(--line)}
+.glyph{vertical-align:-4px}
+.cel-octo{position:absolute;right:-14px;bottom:-10px}
+.cel-coins{display:flex;align-items:center;justify-content:center;gap:4px}
+
+/* ------------------------------------------------------------------ text size (§5) */
+:root[data-text="S"] .content{zoom:.93}
+:root[data-text="L"] .content{zoom:1.1}
+/* Home's cards stay in the standard's order on every width (the older phone rules reordered them) */
+.h-grid > *,.h-cont > *{order:0!important}
+@media (max-width:700px){.h-grid > .today,.h-grid > .nod2{grid-column:span 6;margin:0}.h-cont .ccard{padding:10px}.h-cont .cc-art{min-height:72px}}
+.legend2 .lg-s{display:none}
+@media (max-width:700px){
+  .legend2 .lg-l{display:none}.legend2 .lg-s{display:inline}
+  .h-grid > .today{grid-template-columns:56px 1fr}.h-grid > .today .ring{width:56px;height:56px}
+  .h-grid > .today .ct{font-size:14px}.legend2{margin:2px 0 0;padding:0}.legend2 li{gap:5px;font-size:12px!important;line-height:1.5}
+}
+.lib-today{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:6px}
+.lib-today .card{margin:0}.nod-day .nod-n{display:block;font-size:40px;color:var(--action);margin:4px 0}.nod-day ul{margin:0;padding-left:18px;font-size:14px;color:var(--muted)}
+@media (max-width:760px){.lib-today{grid-template-columns:1fr}}
+.lib-today{margin-top:18px}
+/* stars are SVG (no emoji, no font glyph) */
+.stars{gap:2px}.stars svg{width:15px;height:15px;fill:var(--line);display:block}
+.stars .on svg{fill:var(--treasure);filter:drop-shadow(0 1px 0 rgb(138 91 0 / .35))}
+.stars.big svg{width:26px;height:26px}.stars.mini svg{width:11px;height:11px}
+/* every switch, pin and bar button is a 44px target on a phone (P3) */
+.tog{width:52px;height:32px;margin:6px 0;box-sizing:content-box;border:6px solid transparent;background-clip:padding-box}
+.tog i{top:4px;left:4px}.tog.on i{left:24px}
+@media (max-width:899px){.top .hive,.top .tool,.top .coin-chip{min-width:44px;height:44px;width:auto}.top .hive{width:44px}.top .tool{width:44px}}
+.fpin{left:calc(50% + (var(--x) - 50) * var(--k, 1) * 1%);top:calc(var(--y) * 1%);width:44px;height:44px}
+@media (max-width:700px){.tower-board{--k:2.627;aspect-ratio:3/4.4;overflow:hidden}.tower-board > img{width:100%;height:100%;object-fit:cover}}
+.seg button{min-width:44px}.sh-head .tool,.dr-x{width:44px;height:44px}
+/* the family avatar card reads var(--card): give it this app's surface, in every world and mode */
+:root{--card:var(--surface)}
+@media (max-width:899px){.top .coin-chip{width:auto;padding:0 10px 0 8px}}
+.tabs{padding:6px 20px}
+/* a short laptop window (1000×560): the chrome and the page heads give the thing itself the room (CLAUDE.md 15) */
+@media (min-width:900px) and (max-height:680px){
+  .tabs{padding:3px 20px}.tab{min-height:44px;font-size:15px}
+  .content{padding-top:6px}
+  .tester{padding:2px 10px;font-size:12px}
+  .phead{margin-bottom:6px}.phead h1{font-size:24px;margin:0}.phead-t p{margin:2px 0 0;font-size:13px}
+  .seg{margin-bottom:8px}
+  .wstage{height:230px}.h-grid{margin-top:58px;gap:12px}
+  .greet{padding:8px 12px 8px 4px}.greet-octo{width:76px;height:76px}.greet .bubble2{font-size:13px;padding:7px 10px;margin-top:4px}
+  .h-grid > .today{padding:10px;grid-template-columns:70px 1fr}.h-grid > .today .ring{width:70px;height:70px}.h-grid > .today .muted{display:none}
+  .h-grid > .nod2{padding:10px 14px}.nod2 ul{display:none}.nod2 .nod-n{font-size:34px}
+}
+@media (min-width:900px) and (max-height:680px){
+  .greet{grid-column:span 6}.h-grid > .today,.h-grid > .nod2{grid-column:span 3}
+  .h-grid > .today .lg-l{display:none}.h-grid > .today .lg-s{display:inline}.h-grid > .today .ct{font-size:15px}
+  .greet .buddy{display:none}.greet{grid-template-columns:auto 1fr}
+  .content{padding-top:2px}
+}
+.coin-chip,.who,.brand{flex:none}.brand{min-width:0}@media (max-width:400px){.brand-t{font-size:15px}.brand{gap:5px;padding:4px 2px}}

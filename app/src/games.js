@@ -14,6 +14,7 @@
 import { ramp, key as fkey, answer, text as ftext, state as fstate } from './facts.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
 import { esc, sfx, confetti, music } from './ui.js';
+import { icon } from './icons.js';
 import { makeSudoku, conflicts, SUDOKU } from './puzzles.js';
 
 /* ------------------------------------------------------------ the frame */
@@ -49,11 +50,11 @@ function frame(title, sub, onClose, art) {
   el.setAttribute('aria-label', title);
   el.innerHTML = `
     <div class="play-bar">
-      <button class="play-x" data-g="close" aria-label="Close the game (Escape)">✕</button>
+      <button class="play-x" data-g="close" aria-label="Back — close the game (Escape)">${icon('back', 20)}<span>Back</span></button>
       <div class="play-t"><b>${esc(title)}</b><span>${esc(sub)}</span></div>
       <div class="gcombo" aria-hidden="true"></div>
       <div class="play-hud" aria-live="polite"></div>
-      <button class="play-m" data-g="music" aria-label="Music (M)" aria-pressed="${musicOff ? 'false' : 'true'}">♪</button>
+      <button class="play-m" data-g="music" aria-label="Music (M)" aria-pressed="${musicOff ? 'false' : 'true'}">${icon('music', 20)}</button>
     </div>
     <div class="play-body"></div>`;
   document.body.appendChild(el);
@@ -114,6 +115,17 @@ function pop(g, host, x, y, label = '') {
   setTimeout(() => el.remove(), 900);
   return el;
 }
+/* The answer flies up to the score: the number the child typed goes where it counts (G6). */
+function fly(g, host, x, y, text) {
+  if (calm()) return;
+  const to = g.f.hud.getBoundingClientRect(), from = host.getBoundingClientRect();
+  const el = document.createElement('b');
+  el.className = 'gfly'; el.setAttribute('aria-hidden', 'true'); el.textContent = text;
+  el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
+  el.style.setProperty('--dx', Math.round(to.left + to.width / 2 - from.left - x) + 'px');
+  el.style.setProperty('--dy', Math.round(to.top + to.height / 2 - from.top - y) + 'px');
+  host.appendChild(el); setTimeout(() => el.remove(), 800);
+}
 /* A wrong answer wobbles the thing that was wrong. Never the screen. */
 function wobble(g, el) {
   juice(g);
@@ -137,6 +149,8 @@ function comboMeter(g) {
     el.className = 'gcombo' + (c.n ? ' on' : '') + (c.n >= 5 ? ' hot' : '') + (cls ? ' ' + cls : '');
     el.innerHTML = c.n ? `<span class="gc-pips">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= lit ? 'lit' : ''}"></i>`).join('')}</span><b>${c.n}</b><span class="gc-l">in a row</span>` : '';
     el.dataset.n = String(c.n);
+    // the screen's edge glows on a run of three, and warms on five (G6) — a glow, never a shake
+    g.f.el.classList.toggle('edge', c.n >= 3); g.f.el.classList.toggle('edge-hot', c.n >= 5);
   };
   c.hit = () => { c.n = comboNext(c.n, true); c.best = Math.max(c.best, c.n); if (c.n > 1) sfx.combo(c.n); show('bump'); };
   c.miss = () => { const had = c.n; c.n = comboNext(c.n, false); show(had ? 'drop' : ''); };
@@ -308,6 +322,7 @@ export function numberRush(kid, { onTick, onEnd }) {
     if (score % 5 === 0) speed *= 1.12;
     popped.push(b.text);
     pop(g, stage, b.x, b.y, '+1');
+    fly(g, stage, b.x, b.y, String(b.ans));
     onTick(true, b.fact);
     hud();
   }

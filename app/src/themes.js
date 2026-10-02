@@ -1,38 +1,59 @@
-/* themes.js — the six looks, and which one is on.
+/* themes.js — the six WORLDS (FAMILY-STANDARD §7): a complete dress for the app.
 
-   A theme belongs to the child (k.prefs.theme), so two children on one
-   tablet each keep their own; light/dark stays a device setting. The
-   colours, faces and moving motif live in styles/themes.css, keyed by
-   data-theme on <html>. This file is the list the picker shows and the one
-   place that decides what an unknown or missing value means: Graph Paper. */
+   A world is a painted place with its own palette, one display face for its hero and
+   headings, three layers of ambient life (the plate drifting behind a nearer plane,
+   particles of the place, and one idle traveller), a separately painted NIGHT, a music
+   loop and two avatar packs (packs 2n−1 and 2n belong to world n). The chrome around it is
+   the family's: Hanken Grotesk, Fraunces and Sono, in every world.
+
+   A world belongs to the CHILD (k.prefs.theme), so two children on one tablet keep their
+   own; light/dark is the device's. Worlds 1–2 are open to everyone. Worlds 3–6 open with the
+   family plan, or one at a time for 240 Bizzing coins (the family engine decides; this file
+   only asks it). The ids are the old theme ids, so every saved child keeps their world.
+
+   The colours and motif live in styles/themes.css, keyed by data-theme on <html>. This file
+   is the list, and the one place that decides what an unknown or missing value means. */
+
+import { worldOpen as engineWorldOpen, WORLD_PRICE } from './integration/bizzing-avatars.js';
 
 export const THEMES = [
-  { id: 'graph', name: 'Graph Paper', blurb: 'A fresh squared page. A curve plots itself.',
-    display: 'Baloo 2', ui: 'Nunito', mono: 'Sono' },
-  { id: 'chalk', name: 'Chalkboard', blurb: 'Chalk on green. Last lesson’s shapes drift by.',
-    display: 'Kalam', ui: 'Atkinson Hyperlegible Next', mono: 'Atkinson Hyperlegible Mono' },
-  { id: 'blueprint', name: 'Blueprint', blurb: 'An engineer’s sheet. A compass sweeps round.',
-    display: 'Space Grotesk', ui: 'Archivo', mono: 'JetBrains Mono' },
-  { id: 'orbit', name: 'Orbit', blurb: 'Deep space. Planets keep their ellipses.',
-    display: 'Orbitron', ui: 'Exo 2', mono: 'Azeret Mono' },
-  { id: 'rangoli', name: 'Rangoli', blurb: 'Marigold and magenta. Eight-fold symmetry turns.',
-    display: 'Yatra One', ui: 'Mukta', mono: 'Red Hat Mono' },
-  { id: 'arcade', name: 'Arcade', blurb: 'Pixels and neon. Blocks fall into place.',
-    display: 'Pixelify Sans', ui: 'Lexend', mono: 'Kode Mono' },
+  { id: 'graph', n: 1, name: 'Patchwork Hills', blurb: 'Fields squared like graph paper; kites over a river that curves like a plotted line.',
+    display: 'Baloo 2', idle: 'kite', particles: 'petal', tune: 'hills' },
+  { id: 'chalk', n: 2, name: 'Chalk Cliffs', blurb: 'A schoolhouse on a green cliff; chalk dust on the sea wind.',
+    display: 'Kalam', idle: 'plane', particles: 'dust', tune: 'cliffs' },
+  { id: 'blueprint', n: 3, name: 'Inventor’s Harbour', blurb: 'An airship half-built in its frame; gears, pulleys and plans.',
+    display: 'Space Grotesk', idle: 'gear', particles: 'spark', tune: 'harbour' },
+  { id: 'orbit', n: 4, name: 'Moon Garden', blurb: 'Glass domes on a little planet; a ringed giant in the sky.',
+    display: 'Orbitron', idle: 'comet', particles: 'star', tune: 'moon' },
+  { id: 'rangoli', n: 5, name: 'Rangoli Courtyard', blurb: 'A courtyard of carved balconies; rangoli in eight-fold symmetry.',
+    display: 'Yatra One', idle: 'kite', particles: 'petal', tune: 'courtyard' },
+  { id: 'arcade', n: 6, name: 'Funfair Pier', blurb: 'A ferris wheel and a roller coaster on a seaside pier.',
+    display: 'Pixelify Sans', idle: 'car', particles: 'bulb', tune: 'pier' },
 ];
-
+export const byTheme = Object.fromEntries(THEMES.map((t) => [t.id, t]));
 export const DEFAULT_THEME = 'graph';
+export { WORLD_PRICE };
 const IDS = new Set(THEMES.map((t) => t.id));
 
-/* A child from before themes existed has no prefs.theme: they get the default. */
-export function themeOf(k) {
+/* the plates: day and a painted night, each at 1920 for wide screens and 960 for phones */
+export const plate = (id, night = false, small = false) => `art/world-${id}-${night ? 'night' : 'day'}${small ? '-s' : ''}.webp`;
+
+/* Is world n open to this child? (the family engine's rule: 1–2 free; plan or bought) */
+export function worldIsOpen(h, k, n) {
+  return engineWorldOpen(n, { plan: (h && h.parent && h.parent.plan) || 'free', worlds: ((k && k.shop) || {}).worlds || [] });
+}
+
+/* A child from before worlds existed has no prefs.theme: they get the default. A world
+   that is no longer open to them (a grown-up turned the plan off) falls back to it too. */
+export function themeOf(k, h = null) {
   const t = k && k.prefs && k.prefs.theme;
-  return IDS.has(t) ? t : DEFAULT_THEME;
+  if (!IDS.has(t)) return DEFAULT_THEME;
+  if (h && !worldIsOpen(h, k, byTheme[t].n)) return DEFAULT_THEME;
+  return t;
 }
 export const isTheme = (id) => IDS.has(id);
 
-/* Put a theme on the page. Cheap to call on every render: it only touches the
-   DOM when the theme actually changes. */
+/* Put a world on the page. Cheap to call on every render. */
 export function applyTheme(id) {
   const el = document.documentElement;
   if (el.getAttribute('data-theme') === id) return;
@@ -46,23 +67,4 @@ export function syncThemeColor() {
   if (!m) return;
   const c = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
   if (c) m.setAttribute('content', c);
-}
-
-/* The picker on the child's page: one card per theme, each wearing its own
-   theme (data-theme on the card scopes that theme's colours and faces to it),
-   so a child sees the real fonts and colours before choosing. A radio group:
-   the chosen card is the one tab stop, arrows move the choice (main.js). */
-export function themePicker(k) {
-  const cur = themeOf(k);
-  return `<div class="card" id="themes">
-    <p class="kicker">Your theme</p>
-    <p class="muted small">Colours, letters and a moving maths picture behind everything. Yours alone — nobody else on this device gets it.</p>
-    <div class="themes" role="radiogroup" aria-label="Theme">${THEMES.map((t) => {
-      const on = t.id === cur;
-      return `<button class="theme-card" id="theme-${t.id}" data-theme="${t.id}" data-act="theme" data-arg="${t.id}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}">
-        <span class="tc-sw" aria-hidden="true"><i style="--c:var(--action)"></i><i style="--c:var(--sw2)"></i><i style="--c:var(--treasure)"></i><span class="tc-aa">Aa</span>${on ? '<span class="tc-on">On</span>' : ''}</span>
-        <span class="tc-t"><b>${t.name}</b><span class="tc-n" aria-hidden="true">1234567890</span><span>${t.blurb}</span><span>${t.display} · ${t.ui} · ${t.mono}</span></span>
-      </button>`;
-    }).join('')}</div>
-  </div>`;
 }

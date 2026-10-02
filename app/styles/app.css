@@ -36,9 +36,7 @@ kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:5px;bor
 .tab{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r-pill);border:0;background:none;cursor:pointer;font-weight:650;color:var(--muted)}
 .tab:hover{background:var(--action-tint);color:var(--ink)}
 .tab.on{background:var(--action);color:var(--action-ink)}
-.ico{width:20px;height:20px;fill:currentColor;stroke:none}
-.ico .i2{opacity:.55}
-.ico path[class=i2],.ico path.i2{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;opacity:.8}
+.ico{flex:none;vertical-align:middle}   /* the family set (src/icons.js) sizes and strokes itself */
 .tools{display:flex;align-items:center;gap:6px}
 .tool{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--muted)}
 .tool:hover{color:var(--ink);border-color:var(--action)}

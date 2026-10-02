@@ -62,6 +62,7 @@ const PAIRS = [
 ];
 
 const table = [];
+const row0 = {};
 const COLOUR = NEED.filter((n) => n !== '--dot'); // --dot is an rgba wash, not a readable colour
 for (const t of THEMES) {
   const v = themeVars(t.id); if (!v) continue;
@@ -81,12 +82,12 @@ for (const t of THEMES) {
     }
     table.push(row);
   }
-  // the face the picker names is the face the page uses
+  // the family's chrome faces in every world (standard §9); one display face of the world's own
   const first = (s) => (s || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
-  if (first(v.light['--ui']) !== t.ui) fail(`${t.id}: --ui is ${first(v.light['--ui'])}, the picker says ${t.ui}`);
-  if (first(v.light['--display']) !== t.display) fail(`${t.id}: --display is ${first(v.light['--display'])}, the picker says ${t.display}`);
-  if (first(v.light['--mono']) !== t.mono) fail(`${t.id}: --mono is ${first(v.light['--mono'])}, the picker says ${t.mono}`);
-  for (const face of [t.display, t.ui, t.mono]) {
+  if (first(v.light['--ui']) !== 'Hanken Grotesk') fail(`${t.id}: --ui is ${first(v.light['--ui'])}, the family's is Hanken Grotesk`);
+  if (first(v.light['--mono']) !== 'Sono') fail(`${t.id}: --mono is ${first(v.light['--mono'])}, the family's is Sono`);
+  if (first(v.light['--display']) !== t.display) fail(`${t.id}: --display is ${first(v.light['--display'])}, the world says ${t.display}`);
+  for (const face of [t.display, 'Hanken Grotesk', 'Sono', 'Fraunces']) {
     const faces = [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]).filter((b) => new RegExp(`font-family:\\s*'${face}'`).test(b));
     if (!faces.length) fail(`${t.id}: no self-hosted @font-face for ${face}`);
     for (const b of faces) {
@@ -94,14 +95,23 @@ for (const t of THEMES) {
       const u = /url\(([^)]+)\)/.exec(b); if (!u || !existsSync(resolve(HERE, 'styles', u[1]))) fail(`${face}: file ${u && u[1]} is missing`);
     }
   }
+  // first paint in this world: the three chrome faces and its display face, latin only — ≤ 250 KB
+  const latin = (face) => [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]).filter((b) => new RegExp(`font-family:\\s*'${face}'`).test(b) && /U\+0000-00FF/.test(b))
+    .reduce((a2, b2) => a2 + statSync(resolve(HERE, 'styles', /url\(([^)]+)\)/.exec(b2)[1])).size, 0);
+  const fp = ['Hanken Grotesk', 'Fraunces', 'Sono', t.display].reduce((a2, f) => a2 + latin(f), 0);
+  row0[t.id] = Math.round(fp / 1024);
+  if (fp > 250 * 1024) fail(`${t.id}: ${Math.round(fp / 1024)} KB of fonts before first paint; the budget is 250 KB`);
+  // the world is painted, by day and by night, wide and small
+  for (const f of ['day', 'night', 'day-s', 'night-s']) if (!existsSync(resolve(HERE, `public/art/world-${t.id}-${f}.webp`))) fail(`${t.id}: no ${f} plate`);
   // the motif exists for this theme
   if (!new RegExp(`:root\\[data-theme="${t.id}"\\] \\.motif`).test(css)) fail(`${t.id}: has no motif`);
 }
 if (THEMES.length !== 6) fail(`there are ${THEMES.length} themes; the owner asked for six`);
-if (new Set(THEMES.map((t) => t.ui)).size !== THEMES.length) fail('two themes share a UI face — each should read differently');
+if (new Set(THEMES.map((t) => t.display)).size !== THEMES.length) fail('two worlds share a display face — each should read differently');
+if (THEMES.some((t, i) => t.n !== i + 1 || !t.name || !t.tune || !t.idle)) fail('every world is numbered 1–6 and has a name, a tune and an idle traveller');
 
 /* ---- the Claude-ish serif is not the default any more, and nothing loads from Google */
-if (/Fraunces/.test(tokens)) fail('tokens.css still defaults to Fraunces');
+if (/--ui:"Fraunces/.test(tokens)) fail('tokens.css sets body text in Fraunces; the body face is Hanken Grotesk');
 for (const f of ['styles/fonts.css', 'styles/themes.css', 'styles/tokens.css', 'styles/app.css', 'index.html'])
   if (/fonts\.(googleapis|gstatic)\.com/.test(strip(readFileSync(resolve(HERE, f), 'utf8')).replace(/<!--[\s\S]*?-->/g, ''))) fail(`${f} loads from Google at runtime`);
 for (const b of [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)]) if (!/font-display:\s*swap/.test(b[1])) fail('an @font-face without font-display: swap');
@@ -109,7 +119,7 @@ for (const b of [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)]) if (!/font-dis
 /* ---- font weight: the whole shelf, all six themes */
 const dir = resolve(HERE, 'styles/fonts');
 const bytes = readdirSync(dir).filter((f) => f.endsWith('.woff2')).reduce((a, f) => a + statSync(resolve(dir, f)).size, 0);
-if (bytes > 950_000) fail(`fonts are ${Math.round(bytes / 1024)} KB; the budget is ~900 KB`);
+if (bytes > 600_000) fail(`fonts are ${Math.round(bytes / 1024)} KB on the shelf; the budget is 600 KB`);
 
 /* ---- motion: ≤ 60s loops, no drawn text, and a still picture for reduced motion */
 for (const m of css.matchAll(/(?:animation(?:-duration)?|--t)\s*:[^;]*?(\d+(?:\.\d+)?)s\b/g)) if (+m[1] > 60) fail(`a motif loop of ${m[1]}s is longer than 60s`);
@@ -124,5 +134,5 @@ if (themeOf(null) !== 'graph') fail('no child must mean Graph Paper');
 if (themeOf({ prefs: { theme: 'orbit' } }) !== 'orbit') fail('a chosen theme must stick');
 
 console.table(table);
-console.log(`themes: ${THEMES.length} themes × 2 modes, ${table.length * PAIRS.length} contrast pairs, fonts ${Math.round(bytes / 1024)} KB — ${fails ? fails + ' FAILED' : 'all pass'}`);
+console.log(`themes: ${THEMES.length} worlds × 2 modes, ${table.length * PAIRS.length} contrast pairs, fonts ${Math.round(bytes / 1024)} KB on the shelf, first paint ${JSON.stringify(row0)} KB — ${fails ? fails + " FAILED" : "all pass"}`);
 process.exit(fails ? 1 : 0);

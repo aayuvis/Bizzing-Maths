@@ -1,50 +1,51 @@
-// avatars.mjs — the picker is five packs of six, every face has a file, and no
-// real person or deity is ever in it (the Bee's rule, which this app keeps).
-import { existsSync, statSync } from 'node:fs';
-import { AVATAR_PACKS, AVATARS, AVATAR_NAME, AVATAR_KEPT, avatarFile, newKid } from '../src/model.js';
+// avatars.mjs — the family's 96 (FAMILY-STANDARD §8): validate() from the shared engine returns [],
+// every face has a file, packs pair two to each world, every Legendary names a LEARNING milestone,
+// nobody real or sacred is in the collection, and buying goes only through the engine at fixed prices.
+import { existsSync, statSync, readFileSync } from 'node:fs';
+import { CATALOGUE, PACKS, COMMONS, milestonesOf, avatarCtx } from '../src/avatars.js';
+import { validate, stateOf, sacredSafe, worldOf, TIERS } from '../src/integration/bizzing-avatars.js';
+import { AVATAR_KEPT, avatarFile, newKid } from '../src/model.js';
 import { RIVALS } from '../src/contest.js';
+import { TRICKS, tricksIn } from '../src/tricks.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; console.error('FAIL', m); } };
 const file = (id) => new URL(`../public/avatars/${id}.webp`, import.meta.url);
 
-// Bizzing Bee's people and gods (avatars.js: World Changers, Spelling
-// Champions, European Gods, Indian Gods and the retired Gods pack). None of
-// them may ever be offered in this picker.
-const DENY = [
-  'newton', 'mlk', 'gutenberg', 'nightingale', 'qinshihuang', 'curie', 'gandhi', 'aryabhatta', 'buddha', 'einstein',
-  'neuhauser', 'pbell', 'lucas', 'brobinson', 'stover', 'bolden',
-  'thor', 'poseidon', 'ra', 'athena', 'hades', 'anubis', 'freya', 'loki', 'apollo', 'isis', 'hanuman', 'lakshmi',
-  'amaterasu', 'zeus', 'rama', 'odin', 'krishna', 'shiva', 'ganesha', 'durga', 'saraswati',
-];
-
-ok(AVATAR_PACKS.length === 5, `exactly 5 packs (got ${AVATAR_PACKS.length})`);
-for (const p of AVATAR_PACKS) {
-  ok(p.avatars.length === 6, `${p.id}: 6 avatars (got ${p.avatars.length})`);
-  ok(p.id && p.name && p.blurb, `${p.id}: has id, name and blurb`);
-  ok(!('price' in p) && !('rarity' in p) && !('locked' in p), `${p.id}: no price, rarity or lock — all free`);
+const err = validate(CATALOGUE);
+ok(err.length === 0, `validate(catalogue) returns [] (got ${err.slice(0, 4).join('; ')})`);
+ok(validate(CATALOGUE.map((a, i) => (i ? a : { ...a, tier: 'rare' }))).length > 0 && validate(CATALOGUE.slice(1)).length > 0, 'validate() is watched failing: a re-tiered face or a missing one is caught');
+ok(sacredSafe(CATALOGUE, []).length === 0 && !CATALOGUE.some((a) => a.real || a.sacred), 'no real person or sacred figure in the collection');
+// the engine is the family's, byte for byte
+for (const f of ['bizzing-avatars.js', 'bizzing-wallet.js', 'bizzing-activity.js']) {
+  const theirs = '/home/user/Bizzing_Schedule/integration/' + f;
+  if (existsSync(theirs)) ok(readFileSync(theirs, 'utf8') === readFileSync(new URL(`../src/integration/${f}`, import.meta.url), 'utf8'), `${f} is the family's copy, unedited`);
 }
-ok(new Set(AVATAR_PACKS.map((p) => p.id)).size === 5, 'pack ids unique');
-ok(AVATARS.length === 30 && new Set(AVATARS).size === 30, `30 unique avatar ids (got ${new Set(AVATARS).size} of ${AVATARS.length})`);
-ok(JSON.stringify(AVATARS) === JSON.stringify(AVATAR_PACKS.flatMap((p) => p.avatars)), 'AVATARS is the packs, in order');
-
-for (const id of AVATARS) {
-  ok(existsSync(file(id)) && statSync(file(id)).size > 2000, `${id}: has a file in public/avatars/`);
-  ok(AVATAR_NAME[id], `${id}: has a name`);
-  ok(!DENY.includes(id), `${id}: is a real person or a deity`);
+ok(PACKS.length === 12 && new Set(PACKS.map((p) => p.id)).size === 12, 'twelve packs');
+for (let w = 1; w <= 6; w++) ok(CATALOGUE.filter((a) => worldOf(a) === w).length === 16, `world ${w} holds two packs`);
+const DENY = ['newton', 'mlk', 'gutenberg', 'nightingale', 'curie', 'gandhi', 'aryabhatta', 'buddha', 'einstein', 'thor', 'zeus', 'odin', 'krishna', 'shiva', 'ganesha', 'durga', 'saraswati', 'hanuman', 'lakshmi', 'rama'];
+for (const a of CATALOGUE) {
+  ok(existsSync(file(a.id)) && statSync(file(a.id)).size > 2000, `${a.id}: has a file`);
+  ok(!DENY.includes(a.id), `${a.id}: a real person or a deity`);
+  if (a.tier === 'legendary') ok(/^(world:[a-z]+|medal:[a-z0-9-]+)$/.test(a.milestone.id) && /^(finish |clear |get |earn )/.test(a.milestone.label), `${a.id}: a learning milestone in words (${a.milestone.label})`);
 }
-// the rivals and story cast, and the kept faces, still draw
+// a Legendary's milestone is read from the record: finishing the Deep Mine opens the Sunflower Lion's
+const k = newKid('Asha', '8-10');
+ok(!milestonesOf(k).has('world:mine'), 'nobody has finished the Deep Mine on day one');
+for (const t of tricksIn('mine')) k.tricks[t.id] = { stars: 1 };
+ok(milestonesOf(k).has('world:mine'), 'every Deep Mine stop passed is the milestone');
+const lion = CATALOGUE.find((a) => a.id === 'sunlion');
+ok(lion.milestone.label === 'finish the Deep Mine', 'the Sunflower Lion asks to finish the Deep Mine');
+const h = { parent: { plan: 'free' } }, k2 = newKid('Ravi', '8-10');
+ok(stateOf(lion, avatarCtx(h, k2)).say === 'Opens with its world', 'a shut world says so');
+ok(stateOf(lion, avatarCtx({ parent: { plan: 'family' } }, k2)).say === 'First: finish the Deep Mine', 'then it names the learning first');
+ok(stateOf(lion, avatarCtx({ parent: { plan: 'family' } }, k)).state === 'buy' && TIERS.legendary.price === 500, 'then 500 coins');
+// commons are free to every child; a new child starts on one
+ok(COMMONS.length === 24 && COMMONS.every((id) => stateOf(CATALOGUE.find((a) => a.id === id), avatarCtx(h, k2)).state === 'owned'), 'the 24 Commons are free to everyone');
+ok(COMMONS.includes(newKid('A', '8-10').avatar) && newKid('A', '8-10', 'supernova').avatar === COMMONS[0], 'a new child starts on a Common, never a bought face');
+// rivals, cast and old faces still draw
 for (const id of [...RIVALS.map((b) => b.id), ...AVATAR_KEPT]) ok(existsSync(file(id)), `${id}: kept file present`);
-ok(RIVALS.length === 10, 'ten contest rivals');
-
-// fallback: an id from nowhere draws as the first face; a kept one draws as itself
-ok(avatarFile('panda') === 'panda', 'an old picker face still draws as itself');
-ok(avatarFile('zeus') === AVATARS[0] && avatarFile(undefined) === AVATARS[0], 'an unknown id falls back to the first face');
-
-// newKid defaults to a valid face, and never takes one from outside the picker
-ok(AVATARS.includes(newKid('A', '8-10').avatar), 'newKid defaults to a picker face');
-ok(newKid('A', '8-10', 'hexbee').avatar === 'hexbee', 'newKid keeps a chosen face');
-ok(newKid('A', '8-10', 'shiva').avatar === AVATARS[0], 'newKid refuses a face outside the picker');
-
+ok(avatarFile('zeus') === COMMONS[0], 'an unknown id falls back to the first Common');
+void TRICKS;
 if (fails) { console.error(`avatars: ${fails} failure(s)`); process.exit(1); }
-console.log(`avatars: ok — ${AVATAR_PACKS.length} packs × 6, ${AVATARS.length} faces, all with files, none on the denylist`);
+console.log(`avatars: ok — validate() = [], 96 in 12 packs of 8, two packs a world, every Legendary a learning milestone`);

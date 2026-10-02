@@ -83,19 +83,35 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 
 ### The family layer ([FAMILY-STANDARD](https://github.com/aayuvis/Bizzing_Schedule/blob/claude/amazing-knuth-4aemgz/docs/family/FAMILY-STANDARD.md))
 
-16. **The top bar is the family's**: ⬡ Hive · name · tabs · theme · 🔒 · avatar ▾ (the household
-    sheet: switch child, sound, light/dark), 56px. `test/family-ui.mjs` checks the order.
-17. **Home has ONE filled button — Continue** (`continueTarget`, shared with the Hive's `#/continue`),
-    above the fold at 390×844; Today's three; at most six ways in; number/trick of the day below.
-18. **Bizzing coins only through `Family.earn`/`Family.spend`** (store.js wraps the family's own
-    `src/integration/bizzing-wallet.js` — copy it from Bizzing_Schedule, never edit it here). Standard
-    events only: a right PRACTICE answer, a stop's first pass or a tower floor, a land or level
-    passed, a contest finished. Coins never touch xp. The shop (`shop.js`) sells frames at printed prices.
+16. **The top bar is the family's (standard v2 §3)**: `⬡ Hive · ☰ · Octo + Bizzing Maths … search · coin chip · sun/moon · 🔒 · avatar ▾`,
+    56px; on a phone `⬡ ☰ logo … coins · avatar` and the rest move into ☰. The tab row (Home · Atlas · Library ·
+    Puzzles · Play) sits directly under it on a wide screen and is a 64px bottom bar on a phone. ☰ is the left
+    drawer in the family order. ⬡ hides only inside a timed contest question. `test/standard.mjs` checks it all.
+17. **Home is Bee's template (§6)**: Octo's greeting, the daily ring, the number of the hour, ONE Continue
+    (`continueTarget`, shared with the Hive's `#/continue`) — the only filled button — then Today's three.
+    Continue is wholly above the fold at 390×844. The trick and number of the day live in the Library.
+18. **Bizzing coins only through `Family.earn`/`Family.spend`, avatars and worlds only through
+    `Family.buyAvatar`/`Family.buyWorld`** (store.js wraps the family's own `src/integration/` files — copy them
+    from Bizzing_Schedule, never edit them here; `test/avatars.mjs` compares them byte for byte). Standard events
+    only; coins never touch xp. The 96 avatars are `avatars.js` (12 packs × 8, 2/3/2/1, `validate()` = []), every
+    Legendary asks for a learning milestone first. Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
+    Frames are the Extras. The wallet history says every line in words (`k.coinNotes`).
 19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
 20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
 21. **The Hive's feed is written by the drop-in only** (`Family.track`, `Family.milestone`); the
     report card (`report.js`) reads it for TIME and never counts minutes as learning.
+
+22. **Six worlds (§7)** — `themes.js` + `.wstage` in `styles/shell.css`: a painted day plate AND a separately
+    painted night (`art/world-<id>-{day,night}[-s].webp`), three ambient layers, paused when hidden, frozen under
+    reduced motion. One display face per world; the chrome is Hanken Grotesk, Fraunces and Sono everywhere,
+    ≤ 250 KB of fonts before first paint (`test/themes.mjs`).
+23. **No emoji in a control** (§9): every UI icon is SVG from `icons.js` (Bee's duotone set, extended);
+    `glyph()` draws a data file's emoji as its icon. `test/standard.mjs` counts emoji in controls on every screen.
+24. **Music is composed in code** (`music.js`, `music/CREDITS.md`): a loop per world, Home and the games,
+    lazy-loaded on the first tap, ducked under effects and read-aloud, off in Calm mode. No new narration.
+25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, greeting, finishes, empty and error
+    states. Aryabhata stays the ceremony elder.
 
 ### Art
 

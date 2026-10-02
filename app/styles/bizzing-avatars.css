@@ -1,0 +1,28 @@
+/* bizzing-avatars.css — the family avatar card and its night glow (FAMILY-STANDARD §8).
+
+   Markup:  <figure class="bz-av" data-tier="rare|epic|legendary|common" data-state="owned|buy|milestone|world">
+              <img src="…" alt="Name"> <figcaption>Name <b>Rare</b></figcaption></figure>
+   Night:   set data-bz-dark on <html> whenever the app is dark (any theme). The glow is
+            the tier colour, so a Legendary reads as gold in all five apps. */
+
+.bz-av { --tier: #7B8794; position: relative; display: grid; place-items: center; gap: 6px;
+  margin: 0; padding: 10px 8px 8px; border-radius: 20px; background: var(--card, #fff);
+  border: 3px solid var(--tier); text-align: center; }
+.bz-av[data-tier="rare"]      { --tier: #3D7DF0; }
+.bz-av[data-tier="epic"]      { --tier: #B14FC4; }
+.bz-av[data-tier="legendary"] { --tier: #F0B429; }
+.bz-av img { width: 72%; aspect-ratio: 1; object-fit: contain; }
+.bz-av figcaption { font: 600 13px/1.2 'Hanken Grotesk', system-ui, sans-serif; }
+.bz-av figcaption b { display: block; font-size: 11px; color: var(--tier); text-transform: uppercase; letter-spacing: .04em; }
+.bz-av[data-state="world"] img, .bz-av[data-state="milestone"] img { filter: grayscale(.85) brightness(.9); opacity: .7; }
+
+/* Night: the tier glows. Common does not glow, so rarity is visible at a glance. */
+html[data-bz-dark] .bz-av[data-tier="rare"],
+html[data-bz-dark] .bz-av[data-tier="epic"],
+html[data-bz-dark] .bz-av[data-tier="legendary"] {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier) 60%, transparent),
+              0 0 18px 2px color-mix(in srgb, var(--tier) 55%, transparent); }
+html[data-bz-dark] .bz-av[data-tier="legendary"] { animation: bz-shimmer 3.2s ease-in-out infinite; }
+html[data-bz-dark] .bz-av[data-state="world"], html[data-bz-dark] .bz-av[data-state="milestone"] { box-shadow: none; animation: none; }
+@keyframes bz-shimmer { 50% { box-shadow: 0 0 0 1px #F0B429, 0 0 28px 6px color-mix(in srgb, #F0B429 70%, transparent); } }
+@media (prefers-reduced-motion: reduce) { html[data-bz-dark] .bz-av { animation: none !important; } }

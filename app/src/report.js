@@ -69,7 +69,7 @@ export function reportCard(k, feed = [], now = Date.now()) {
   return {
     v: 1, app: 'maths', who: k.name, band: k.band, at: now,
     time: { week: now7.minutes, days: new Set(mine.filter((x) => x.d >= thisWk).map((x) => x.d)).size, when },
-    progress: { level: m.level, stations: m.stations, total: p ? p.total : 0, lands: m.lands, levels: m.levels, label: p ? `Level ${p.level} · ${p.L.name} · station ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'Not on a road yet' },
+    progress: { level: m.level, stations: m.stations, total: p ? p.total : 0, lands: m.lands, levels: m.levels, label: p ? `Level ${p.level} · ${p.L.name} · stop ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'Not on a road yet' },
     mastery: { fluent: m.fluent, mastered: m.mastered, goals: m.goals, goalsTotal: summary(k).total, strands, traps: facts.filter((r) => fstate(r) === 'trap').length, lapsed: facts.filter((r) => r.lapsed).length },
     weeks,
   };

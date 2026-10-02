@@ -35,33 +35,38 @@ export function bindRoot(root) {
   });
 }
 
-/* ---- sound: tiny WebAudio blips, no assets ------------------------------ */
-let AC = null, soundOn = true;
-export function setSound(v) { soundOn = !!v; setVoiceSound(soundOn); if (!soundOn) music.stop(false); else if (musicWanted) music.start(musicWanted); }
-function ac() {
-  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = false; } }
-  if (AC && AC.state === 'suspended') AC.resume();
-  return AC;
-}
+/* ---- sound: small WebAudio effects, no assets --------------------------- */
+/* Every effect goes through audio.js's EFFECTS bus (one volume slider, Calm mode softer)
+   and ducks the music for a moment, so a chime is never fighting the tune. The family's
+   six (standard §11): right · wrong · finish · medal · coin · unlock — plus the games'
+   small action sounds. All soft and short. */
+import * as AU from './audio.js';
+let soundOn = true;
+export function setSound(v) { soundOn = !!v; AU.configure({ sound: soundOn }); setVoiceSound(soundOn); music.refresh(); }
 function tone(freq, dur, type, vol, delay) {
-  const c = ac(); if (!c || !soundOn) return;
+  if (!soundOn || !AU.effectsOn()) return;
+  const c = AU.ctx(); if (!c) return;
   const t = c.currentTime + (delay || 0);
   const o = c.createOscillator(), g = c.createGain();
   o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol == null ? 0.14 : vol, t + 0.012);
+  g.gain.linearRampToValueAtTime((vol == null ? 0.14 : vol) * 2.2, t + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(c.destination);
+  o.connect(g); g.connect(AU.buses().sfx);
   o.start(t); o.stop(t + dur + 0.02);
+  AU.duck(Math.max(500, (dur + (delay || 0)) * 1000 + 250));
 }
 export const sfx = {
   click() { tone(520, 0.07, 'triangle', 0.06); },
   coin() { tone(880, 0.09, 'triangle', 0.11); tone(1320, 0.13, 'triangle', 0.09, 0.06); },
   good() { tone(660, 0.1, 'sine', 0.12); tone(990, 0.16, 'sine', 0.1, 0.08); },
-  bad() { tone(220, 0.16, 'sawtooth', 0.07); tone(170, 0.2, 'sawtooth', 0.06, 0.08); },
+  bad() { tone(247, 0.14, 'triangle', 0.08); tone(196, 0.2, 'triangle', 0.07, 0.08); },   // "not this time": low and soft, never a buzzer
   level() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.24, 'triangle', 0.11, i * 0.09)); },
+  finish() { [587, 740, 880].forEach((f, i) => tone(f, 0.2, 'sine', 0.1, i * 0.08)); tone(1175, 0.5, 'sine', 0.08, 0.26); },
+  medal() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.5, 'sine', 0.08, i * 0.11)); tone(392, 0.9, 'triangle', 0.06); },
+  unlock() { tone(440, 0.08, 'triangle', 0.08); tone(660, 0.08, 'triangle', 0.08, 0.07); tone(880, 0.35, 'sine', 0.1, 0.14); },
   bell() { [784, 1175].forEach((f, i) => tone(f, 0.8, 'sine', 0.1, i * 0.14)); },
-  /* the Arcade's vocabulary: one small sound per action (the Duolingo rule) */
+  /* the games' vocabulary: one small sound per action (the Duolingo rule) */
   pop() { tone(740, 0.06, 'sine', 0.1); tone(1480, 0.08, 'triangle', 0.05, 0.03); },
   // each consecutive right answer climbs a pentatonic step, capped so it never shrieks
   combo(n) { const st = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21][Math.min(9, Math.max(0, n - 1))]; tone(523 * Math.pow(2, st / 12), 0.12, 'triangle', 0.08, 0.05); },
@@ -70,59 +75,19 @@ export const sfx = {
   fanfare() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i === 5 ? 0.5 : 0.16, 'triangle', 0.1, i * 0.11)); },
 };
 
-/* ---- a music loop: synthesised, no assets ------------------------------- */
-/* A soft pentatonic loop for the games — a bass note and a four-note figure on
-   a gentle sine, scheduled a beat ahead. It follows the sound toggle, it stops
-   when the game closes, and it stops whenever the page is hidden: a phone in a
-   pocket must not keep playing. `music.start(style)` names one of the loops;
-   document.documentElement[data-music] says whether it is playing, for the
-   headless checks and nothing else. */
-const LOOPS = {
-  bright: { bpm: 104, bass: [131, 131, 175, 196], notes: [523, 659, 784, 659, 587, 784, 880, 784] },
-  calm:   { bpm: 84,  bass: [147, 165, 131, 147], notes: [587, 698, 880, 698, 659, 784, 988, 784] },
-  sea:    { bpm: 90,  bass: [110, 131, 147, 131], notes: [440, 523, 659, 784, 659, 523, 587, 523] },
-};
-let musicWanted = null, musicTimer = 0, musicStep = 0, musicNext = 0, musicBus = null;
-function musicMark(on) { try { document.documentElement.dataset.music = on ? 'on' : 'off'; } catch (e) {} }
+/* ---- music: composed in code (music.js), loaded on first use ------------ */
+/* `music.start(name)` names a loop: a world's, 'home', or a game's ('bright', 'calm',
+   'sea'). The composer is imported the first time it is wanted — never in the first
+   load — and the browser lets it sound only after the child's first tap anyway. */
+let M = null, want = null, loading = null;
+function load() { return M ? Promise.resolve(M) : (loading || (loading = import('./music.js').then((m) => (M = m)))); }
 export const music = {
-  start(style = 'bright') {
-    musicWanted = LOOPS[style] ? style : 'bright';
-    if (!soundOn || musicTimer || (typeof document !== 'undefined' && document.hidden)) return;
-    const c = ac(); if (!c) return;
-    musicBus = c.createGain(); musicBus.gain.value = 0.0001; musicBus.connect(c.destination);
-    musicBus.gain.exponentialRampToValueAtTime(1, c.currentTime + 1.2);   // fade in, never a jolt
-    musicStep = 0; musicNext = c.currentTime + 0.1;
-    const L = LOOPS[musicWanted], beat = 60 / L.bpm / 2;
-    const voice = (f, t, d, v, type) => {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = type; o.frequency.setValueAtTime(f, t);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + d + 0.05);
-    };
-    const tick = () => {
-      while (musicNext < c.currentTime + 0.4) {
-        const i = musicStep % L.notes.length;
-        voice(L.notes[i], musicNext, beat * 1.6, 0.022, 'sine');
-        if (i % 4 === 0) voice(L.bass[(musicStep / 4 | 0) % L.bass.length], musicNext, beat * 3.6, 0.03, 'triangle');
-        musicNext += beat; musicStep++;
-      }
-    };
-    tick(); musicTimer = setInterval(tick, 120);
-    musicMark(true);
-  },
-  /* `forget` false keeps the wish, so a hidden page resumes when it comes back */
-  stop(forget = true) {
-    if (forget) musicWanted = null;
-    clearInterval(musicTimer); musicTimer = 0;
-    if (musicBus) { const b = musicBus; musicBus = null; try { b.gain.cancelScheduledValues(0); b.gain.setValueAtTime(0.0001, AC.currentTime); setTimeout(() => b.disconnect(), 200); } catch (e) {} }
-    musicMark(false);
-  },
-  playing() { return !!musicTimer; },
+  start(name) { want = name; load().then((m) => { if (want === name) m.start(name); }); },
+  stop() { want = null; if (M) M.stop(); },
+  refresh() { if (M) M.refresh(); else if (want && AU.musicOn()) music.start(want); },
+  playing() { return M ? !!M.playing() : false; },
+  wanted: () => want,
 };
-if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
-  if (document.hidden) music.stop(false);
-  else if (musicWanted) music.start(musicWanted);
-});
 
 /* ---- transient chrome --------------------------------------------------- */
 let toastT = null;
@@ -136,7 +101,8 @@ export function toast(msg) {
 }
 const CONF = ['#F0B429', '#2D5BD8', '#178A4C', '#E0673A', '#8A5BD6', '#2E7FA8'];
 export function confetti(n) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced') return;
+  // no confetti under reduced motion or in Calm mode (standard §5)
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced' || document.documentElement.hasAttribute('data-calm')) return;
   const wrap = document.createElement('div');
   wrap.className = 'conf'; wrap.setAttribute('aria-hidden', 'true');
   let html = '';

@@ -36,39 +36,24 @@ export const BANDS = [
 ];
 export const bandRank = (b) => BANDS.findIndex((x) => x.id === b);
 
-/* Five packs of six, all free, all at once: no unlocking, no drops, no price —
-   the family's no-loot rule. Packs 1–2 are Bizzing Bee's own painted set (one
-   collection across the house, the strategy deck's mechanism for products
-   feeding each other); packs 3–5 were painted for this app in the Bee's style
-   (tools/art/gen.py AVATAR), each body built from a maths object and none
-   carrying a numeral. Deities and real people are never in the picker
-   (test/avatars.mjs holds a denylist of the Bee's). */
-export const AVATAR_PACKS = [
-  { id: 'lab', name: 'Lab Friends', blurb: 'Borrowed from Bizzing Bee’s lab.', avatars: ['beaker', 'atom', 'robo', 'magnet', 'scopey', 'brainiac'] },
-  { id: 'stars', name: 'Star Crew', blurb: 'Borrowed from Bizzing Bee’s cosmos.', avatars: ['rocket', 'astro', 'comet', 'saturn', 'luna', 'supernova'] },
-  { id: 'shapes', name: 'Shape Pals', blurb: 'Bodies built from solids.', avatars: ['cubebot', 'orbowl', 'pyrafox', 'cylicat', 'dodecadrake', 'conicorn'] },
-  { id: 'tools', name: 'Tool Kit', blurb: 'Made from the geometry box.', avatars: ['protortle', 'compacrab', 'abacuhog', 'rulraffe', 'setsquin', 'pencilbird'] },
-  { id: 'patterns', name: 'Pattern Pets', blurb: 'Spirals, hexagons and symmetry from nature.', avatars: ['nautilus', 'hexbee', 'tessgecko', 'flakefox', 'peacock', 'sunlion'] },
-];
-/* A new child picks from five, one from each pack; the other twenty-five wait on
-   their own page under "Change avatar" — thirty faces is a menu, not a welcome. */
-export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'rocket', 'beaker'];
-export const AVATARS = AVATAR_PACKS.flatMap((p) => p.avatars);
-/* Names for the picker's labels (Bee's own names for the borrowed ones). */
-export const AVATAR_NAME = {
-  beaker: 'Bubbly Beaker', atom: 'Atom', robo: 'Robo Helper', magnet: 'Magneto Max', scopey: 'Scopey', brainiac: 'Brainiac',
-  rocket: 'Rocket Rae', astro: 'Astro', comet: 'Comet', saturn: 'Saturn', luna: 'Luna', supernova: 'Supernova',
-  cubebot: 'Cube Bot', orbowl: 'Orb Owl', pyrafox: 'Pyramid Fox', cylicat: 'Cylinder Cat', dodecadrake: 'Dodeca Dragon', conicorn: 'Cone-icorn',
-  protortle: 'Protractor Turtle', compacrab: 'Compass Crab', abacuhog: 'Abacus Hedgehog', rulraffe: 'Ruler Giraffe', setsquin: 'Set-square Penguin', pencilbird: 'Pencil Bird',
-  nautilus: 'Spiral Snail', hexbee: 'Honeycomb Bee', tessgecko: 'Tiling Gecko', flakefox: 'Snowflake Fox', peacock: 'Spiral Peacock', sunlion: 'Sunflower Lion',
-};
-/* Files kept outside the picker: the contest rivals and story cast, Aryabhata on
-   the welcome screen, and the first picker's animals, so a child who chose one
-   before the packs still sees themself. av() draws anything else as AVATARS[0]. */
+/* The avatars are the family's 96 (avatars.js, through integration/bizzing-avatars.js):
+   twelve packs of eight, Common · Rare · Epic · Legendary. Commons are free to every child
+   from the first day; the rest are bought with Bizzing coins at the family's fixed prices
+   once their world is open, and a Legendary first asks for its learning milestone. No
+   draws, no chance. A new child picks a Common (onboarding shows six). */
+import { CATALOGUE, PACKS, AVATAR_IDS, COMMONS, byAvatar } from './avatars.js';
+export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'rocket', 'beaker', 'ladybird'];
+export const AVATARS = AVATAR_IDS;
+export const AVATAR_PACKS = PACKS.map((p) => ({ ...p, avatars: CATALOGUE.filter((a) => a.pack === p.n).map((a) => a.id) }));
+export const AVATAR_NAME = Object.fromEntries(CATALOGUE.map((a) => [a.id, a.name]));
+/* Files kept outside the collection: the contest rivals and story cast, Aryabhata (the
+   ceremony elder), and the first picker's animals, so a child who chose one long ago still
+   sees themself. av() draws anything else as the first Common. */
 export const AVATAR_KEPT = ['pixel', 'koi', 'panda', 'melody', 'samurai', 'goldlegend', 'aryabhatta',
   'redpanda', 'neko', 'pengu', 'froggy', 'capy', 'ottie', 'snowfox', 'bizzy'];
 const AVATAR_FILES = new Set([...AVATARS, ...AVATAR_KEPT]);
-export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : AVATARS[0]);
+export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : COMMONS[0]);
+export { byAvatar };
 
 /* ---------------------------------------------------------------- ranks */
 
@@ -94,7 +79,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 6, kids: [], active: null, parent: { pin: null, tester: false } }; }
+export function newHousehold() { return { v: 7, kids: [], active: null, parent: { pin: null, tester: false, plan: 'free' } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -105,7 +90,7 @@ export function newKid(name, band, avatar) {
   return {
     id: 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
     name: String(name || '').trim().slice(0, 20) || 'Friend',
-    band, avatar: AVATARS.includes(avatar) ? avatar : AVATARS[0],
+    band, avatar: COMMONS.includes(avatar) ? avatar : COMMONS[0],   // a new child starts with a Common
     xp: 0,
     facts: {},            // fact key → fluency record (facts.js)
     tricks: {},           // trick id → { stars, best, learned, runs }
@@ -119,12 +104,14 @@ export function newKid(name, band, avatar) {
     journey: { level: null, done: {}, finished: [], tested: null },   // journey.js: the ten levels
     medals: {},           // medal id → { at, seen } — earned from evidence, celebrated once
     weeks: {},            // week (Monday's day key) → what the child could do that week — report.js
-    shop: { owned: [], worn: {} },   // cosmetics bought with Bizzing coins (the coins live in the family wallet)
+    shop: { owned: [], worn: {}, avatars: [], worlds: [] },   // bought with Bizzing coins: frames (Extras), avatars, worlds 3–6 — the coins live in the family wallet
+    mistakes: {},         // the mistakes deck: missed questions that come back after a gap (mistakes.js)
+    coinNotes: {},        // ledger time → what this app paid it for, so the wallet history can say it in words
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week
     created: Date.now(),
-    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: null },   // read: null follows the band (readOn)
+    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: null, targets: { answers: 20, stops: 1, puzzle: 1 } },   // read: null follows the band (readOn); targets: the grown-up's daily ring
   };
 }
 
