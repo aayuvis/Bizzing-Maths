@@ -1,18 +1,15 @@
 {
   "name": "Bizzing Maths",
-  "short_name": "Maths",
+  "short_name": "Bizzing Maths",
   "description": "Fast and fearless with numbers — and knowing why the trick works. Fact fluency, mental maths and Vedic techniques for kids 6–14.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#FFFCF5",
-  "theme_color": "#1F42B8",
+  "theme_color": "#2D5BD8",
   "categories": ["education", "kids"],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
