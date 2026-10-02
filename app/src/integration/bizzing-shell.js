@@ -17,7 +17,7 @@
 
 const HIVE = 'https://aayuvis.github.io/Bizzing_Schedule/';
 /* Bee gives every tab icon its own colour (white on the active pill). An app may pass t.color. */
-const TAB_INK = ['#6C4FE0', '#6C4FE0', '#E0457B', '#16956B', '#3D7DF0'];
+const TAB_INK = ['#6C4FE0', '#6C4FE0', '#E0457B', '#16956B', '#3D7DF0', '#E8842C'];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* The family line icons: 24 grid, 2px round stroke, currentColor. */
@@ -55,6 +55,7 @@ const P = {
   quote: '<path d="M10 7H6.5A1.5 1.5 0 0 0 5 8.5V12h5v5H5M19 7h-3.5A1.5 1.5 0 0 0 14 8.5V12h5v5h-5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   path: '<path d="M4 19c3 0 3-4 6-4s3 4 6 4M8 9c3 0 3-4 6-4s3 4 6 4"/><circle cx="4" cy="19" r="1.4"/><circle cx="20" cy="9" r="1.4"/>',
+  feed: '<rect x="4" y="3" width="16" height="8" rx="2.5"/><rect x="4" y="13" width="16" height="8" rx="2.5"/><path d="M7.5 6.5h6M7.5 16.5h9"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/>',
 };
 export const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || P.star}</svg>`;
@@ -84,8 +85,8 @@ function drawerHTML(o) {
 
 /* The whole chrome around a screen. `content` is the screen's own HTML. */
 export function shell(o) {
-  const tabs = (o.tabs || []).slice(0, 5);
-  if (tabs.length < 4) throw new Error('bizzing-shell: an app has 4 or 5 tabs (FAMILY-STANDARD §4)');
+  const tabs = (o.tabs || []);
+  if (tabs.length < 4 || tabs.length > 6) throw new Error('bizzing-shell: an app has 4 to 6 tabs (FAMILY-STANDARD §4)');
   if (tabs[0].id !== 'home') throw new Error('bizzing-shell: Home is always the first tab');
   const cur = (t) => (t.id === o.active ? ' aria-current="page"' : '');
   const inRun = !!o.inRun;   // inside a timed drill: ⬡ hides, nothing else moves

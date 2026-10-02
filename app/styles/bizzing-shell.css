@@ -57,7 +57,7 @@ html[data-bz-dark] {
 .bz-kid span { font-size: 10px; padding-left: 2px; }
 
 .bz-tabs { display: flex; gap: 7px; height: 54px; padding-bottom: 10px; }
-.bz-tab { box-sizing: border-box; flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 9px; height: 45px; padding: 11px 13px;
+.bz-tab { box-sizing: border-box; flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 9px; height: 45px; padding: 11px 13px;
   border: 0; border-radius: 999px; background: transparent; color: var(--bz-muted); cursor: pointer; text-decoration: none;
   font: 800 16.4px/1 var(--bz-display); letter-spacing: .16px; white-space: nowrap; }
 .bz-tab svg { width: 23px; height: 23px; flex: 0 0 23px; color: var(--tab-ink, currentColor); }
@@ -190,6 +190,8 @@ html[data-bz-dark] .bz-plate { filter: brightness(.8) saturate(.9); }
   .bz-tabbar a, .bz-tabbar button { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 53px;
     justify-content: center; border: 0; background: none; color: var(--bz-muted); text-decoration: none; font: 700 12px var(--bz-body); border-radius: 14px; }
   .bz-tabbar svg { width: 25px; height: 25px; }
+  .bz-tabbar a:nth-child(6) ~ a, .bz-tabbar:has(> :nth-child(6)) { gap: 0; }
+  .bz-tabbar:has(> :nth-child(6)) a span { font-size: 11px; letter-spacing: -.1px; }   /* six tabs: 62px each at 390 */
   .bz-tabbar [aria-current="page"] { color: var(--bz-accent); background: color-mix(in srgb, var(--bz-accent) 12%, transparent); }
   .bz-r1, .bz-r2, .bz-r3 { display: contents; }
   .bz-home { grid-template-columns: 1fr; }

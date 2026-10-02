@@ -75,7 +75,7 @@ export async function checkShell(page, { phone = false, bee = false } = {}) {
     if (!m.kid || !near(m.kid[0] + m.kid[2], D.kidRight, 4) || !near(m.kid[3], D.kidH, 3)) fails.push(`child switcher at ${JSON.stringify(m.kid)}, Bee's ends at ${D.kidRight}px, ${D.kidH}px tall`);
     cmp(fails, 'tab row', m.tabs, D.tabs, 4);
     const T = m.tabsAll;
-    if (T.length < 4 || T.length > 5) fails.push(`${T.length} tabs (4–5)`);
+    if (T.length < 4 || T.length > 6) fails.push(`${T.length} tabs (4–6)`);
     else {
       if (!near(T[0][0], D.tabSpan[0], 4) || !near(T.at(-1)[0] + T.at(-1)[2], D.tabSpan[1], 4)) fails.push(`tabs span ${T[0][0]}–${T.at(-1)[0] + T.at(-1)[2]}px, Bee's ${D.tabSpan[0]}–${D.tabSpan[1]}px`);
       if (T.some((t) => !near(t[2], T[0][2], 2))) fails.push('tabs are not equal width');
