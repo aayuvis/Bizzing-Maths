@@ -31,7 +31,7 @@ const SCREENS = [
   ['a drill question', (b) => b.fire('startDrill', 'kinds-of-triangle'), '.qcard'],
   ['library', (b) => { b.R.run = null; b.go('library'); }, '.lib-grid'],
   ['contest hall', (b) => b.go('hall'), '.hall .board-scroll', '.hall .bpin'],
-  ['a paper question', (b) => b.fire('paperStart', 'g34|1'), '.pq-choices'],
+  ['a paper question', (b) => b.fire('paperStart', 'g34|1'), '.paper-q', '.pq-text'],
   ['back from the paper', (b) => b.fire('paperQuit'), '.hall .board-scroll'],
   ['tool · explorer', (b) => b.fire('openTool', 'explorer'), '#t-explorer-n'],
   ['tool · working', (b) => b.fire('openTool', 'working'), '#t-working-q'],

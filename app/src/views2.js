@@ -121,7 +121,7 @@ export function viewWorld(wid) {
   const sel = R.ui.pick && nodes.find((x) => x.n.id === R.ui.pick) ? R.ui.pick : (nodes.find((x) => x.i === f) || nodes.find((x) => !nodeDone(k, x.n)) || nodes[0]).n.id;
   const selNode = nodes.find((x) => x.n.id === sel);
   return `<section class="world-page" style="--wt:${w.tint};--wi:${w.ink}">
-    ${pageHead(`${w.glyph} ${esc(w.name)}`, esc(w.blurb), back('nav', 'Map', 'atlas'), w.intro ? `<button class="btn small" data-act="worldIntro" data-arg="${w.id}">${esc(w.intro.title)}</button>` : '')}
+    ${pageHead(`${w.glyph} ${esc(w.name)}`, esc(w.blurb), (w.track === 'contest' ? back('nav', 'Contest Hall', 'hall') : back('nav', 'Map', 'atlas')), w.intro ? `<button class="btn small" data-act="worldIntro" data-arg="${w.id}">${esc(w.intro.title)}</button>` : '')}
     <div class="board-scroll" data-autoscroll="${xs[nodes.indexOf(selNode)]}">
       <div class="board w-${w.id}">
         <img src="art/w-${w.id}.webp" alt="" width="1920" height="815">
