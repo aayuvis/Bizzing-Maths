@@ -152,6 +152,36 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await ctx.close();
 }
 
+/* the Contest Hall: sit a paper by keyboard, leave mid-way, carry on, hand it in, read the review */
+{
+  const { p, ctx, shot } = await page({ width: 1280, height: 800 }, 'hall');
+  await p.goto(BASE + '#/hall'); await p.waitForSelector('.hall .board-scroll');
+  ok(await p.locator('.paper-grid .pg').count() === 60, 'the hall offers sixty fixed papers in a band');
+  ok(await p.locator('[data-act=pband][aria-selected=true]').textContent() === 'Grades 1–2', 'a Level 1 child starts in the Grades 1–2 papers');
+  await p.click('[data-act=pband][data-arg=g34]');
+  await p.click('[data-act=paperStart][data-arg="g34|2"]'); await p.waitForSelector('.pq-choices');
+  ok(await p.locator('.pq-choices .pc').count() === 5 && await p.locator('.paper-nav .pn').count() === 24, 'a grades 3–4 paper: 24 questions, five choices each');
+  const first = await p.evaluate(() => window.__bzm.R.paper.p.items[0]);
+  await p.keyboard.press(String.fromCharCode(97 + first.choices.indexOf(first.ans))); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => window.__bzm.R.paper.i) === 1, 'choosing an answer moves to the next question');
+  await p.keyboard.press('b'); await p.waitForTimeout(100); await p.keyboard.press('Backspace'); await p.waitForTimeout(100);
+  ok(await p.evaluate(() => window.__bzm.R.paper.answers[1] == null), 'Backspace leaves a question blank');
+  // leave, come back: the answers are kept and the clock kept running
+  await p.click('[data-act=paperQuit]'); await p.waitForSelector('.paper-resume');
+  const kept = await p.evaluate(() => { const k = window.__bzm.R.h.kids.find((x) => x.id === window.__bzm.R.h.active); return k.paperDraft; });
+  ok(kept && kept.no === 2 && kept.answers[0] === first.ans, 'leaving keeps the paper part-way through');
+  await p.click('[data-act=paperResume]'); await p.waitForSelector('.pq-choices');
+  ok(await p.evaluate(() => window.__bzm.R.paper.answers[0]) === first.ans, 'carrying on finds the answers where they were');
+  await p.click('[data-act=paperFinish]'); await p.click('[data-act=paperFinish]'); await p.waitForSelector('.pe-score');
+  await shot('paper-end');
+  const sc = await p.evaluate(() => window.__bzm.R.paper.sc);
+  ok(sc.right === 1 && sc.blank === 23 && sc.points === 24 + first.pts, `one right, 23 blank scores 24 + ${first.pts} (got ${sc.points})`);
+  ok(await p.locator('.pe-item').count() === 23 && await p.locator('.pe-item [data-act=openStop]').count() >= 1, 'every miss is reviewed, with the way in to practise');
+  const rec = await p.evaluate(() => { const k = window.__bzm.R.h.kids.find((x) => x.id === window.__bzm.R.h.active); return { best: k.papers.best['g34:2'], draft: k.paperDraft }; });
+  ok(rec.best === sc.points && rec.draft === null, 'the best score is kept and the draft is cleared');
+  await ctx.close();
+}
+
 /* #/continue and ?from=hive */
 {
   const { p, ctx } = await page({ width: 1280, height: 800 }, 'hive');

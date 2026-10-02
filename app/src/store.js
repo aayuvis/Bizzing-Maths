@@ -19,7 +19,7 @@ import * as W from './integration/bizzing-wallet.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 6;
+export const SCHEMA = 7;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -47,6 +47,8 @@ const STEPS = {
   // with Bizzing coins. Maths had no currency of its own, so there is nothing
   // to convert: the coins themselves live in the family wallet, not here.
   // weeks: one snapshot of what the child can do per week, for the report's trend.
+  // v7: the Contest Hall — papers sat (best per fixed paper, the last fifty) and one paper in progress.
+  6: (h) => { h.v = 7; for (const k of h.kids) { k.papers = k.papers || { best: {}, log: [] }; k.paperDraft = k.paperDraft || null; } return h; },
   5: (h) => { h.v = 6; for (const k of h.kids) { k.medals = k.medals || {}; k.shop = k.shop || { owned: [], worn: {} }; k.weeks = k.weeks || {}; } return h; },
 };
 

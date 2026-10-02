@@ -71,7 +71,7 @@ export const TABS = [
   { k: 'puzzles', n: 'Puzzles', icon: 'puzzle' },
   { k: 'arcade', n: 'Arcade', icon: 'play' },
 ];
-const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', journey: 'atlas', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade' };
+const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: 'home', journey: 'atlas', goals: 'home', grownups: null, game: 'arcade', contest: 'arcade', hall: 'arcade', paper: null };
 
 export function icon(k) {
   const p = {
@@ -267,6 +267,7 @@ function lastLine(k) {
     facts: `Last time: twenty facts, <b>${what}</b> right. Some more today, ${n}?`,
     floor: `You cleared <b>${what}</b> of the Puzzle Tower last time, ${n}.`,
     tried: `Last time you had a go at <b>${what}</b>, ${n}. It gets easier every try.`,
+    paper: `You sat <b>${what}</b> last time, ${n}. The review shows which way in to practise.`,
   }[L.what] || LINES[0](n);
 }
 
@@ -356,7 +357,7 @@ export function viewHome() {
     <div class="h-r3" role="group" aria-label="Ways in">
       <button class="tile2" data-act="atlasView" data-arg="islands"><span class="ti" style="--c:#2E7FA8">🗺️</span><span><span class="kick">The Atlas</span><b>Explore</b><span class="muted small">${WORLDS.length} painted places</span></span></button>
       <button class="tile2" data-act="nav" data-arg="puzzles"><span class="ti" style="--c:#8A5BD6">🧩</span><span><span class="kick">Puzzle Tower</span><b>Floor ${Math.min(12, floors + 1)} of 12</b><span class="muted small">${floors} cleared</span></span></button>
-      <button class="tile2" data-act="nav" data-arg="contest"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Mock contest</span><b>${k.contest.best ? `Best: ${ordinal(k.contest.best)}` : 'Ten rivals'}</b><span class="muted small">One question each round</span></span></button>
+      <button class="tile2" data-act="nav" data-arg="hall"><span class="ti" style="--c:#6C4FE0">🏆</span><span><span class="kick">Contest Hall</span><b>${(k.papers || {}).log && k.papers.log.length ? `${k.papers.log.length} paper${k.papers.log.length > 1 ? 's' : ''} sat` : 'Papers and strategies'}</b><span class="muted small">Contest-style practice</span></span></button>
       <button class="tile2" data-act="nav" data-arg="me"><span class="ti" style="--c:#C98A00">🏅</span><span><span class="kick">Medals</span><b>${earnedCount(k)} of ${MEDALS.length}</b><span class="muted small">Each from something you did</span></span></button>
     </div>
 
@@ -607,7 +608,8 @@ export function viewArcade() {
   return `<section>
     ${pageHead('The Arcade')}
     <div class="hero-tiles">
-      <button class="card hero-t contest-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
+      <button class="card hero-t contest-t" data-act="nav" data-arg="hall"><span class="kicker">Contest prep</span><b>The Contest Hall</b><span>Thirty ways into hard problems, and contest-style papers against the clock.</span></button>
+      <button class="card hero-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
       <button class="card hero-t daily-t" data-act="daily"><span class="kicker">Today's puzzle</span><b>${puzzleDone ? 'Solved ✓' : 'Make the target'}</b><span>The same puzzle in every house today. Compare notes at breakfast.</span></button>
     </div>
     <div class="gtiles">

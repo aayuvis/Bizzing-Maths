@@ -16,7 +16,7 @@
    nothing when the child's record changes. */
 
 import { BANK, key, state } from './facts.js';
-import { TRICKS, tricksIn } from './tricks.js';
+import { TRICKS, tricksIn, WORLDS } from './tricks.js';
 
 const fluentShare = (k, pred) => {
   const fs = Object.values(BANK).flat().filter(pred);
@@ -154,8 +154,15 @@ export const STRANDS = [
         measure: (k) => m(k.contest.best ? (k.contest.best <= 3 ? 1 : (11 - k.contest.best) / 8) : 0, '', 'contest') },
       { id: 'win', can: 'I can win a mock contest.', bar: 'one win',
         measure: (k) => m(k.contest.wins ? 1 : 0, '', 'contest') },
+      { id: 'ways-in', can: 'I can use ten different ways into a hard problem.', bar: 'ten Contest Hall strategies passed', band: '8-10',
+        measure: (k) => m(contestStops().filter((t) => ((k.tricks[t.id] || {}).stars || 0) >= 2).length / 10, '', 'hall') },
+      { id: 'paper-half', can: 'I can score half the points on a contest-style paper.', bar: 'half the points on one paper', band: '8-10',
+        measure: (k) => m(Math.max(0, ...((k.papers || {}).log || []).map((x) => x.points / x.max)) * 2, '', 'hall') },
     ] },
 ];
+
+/* The Contest Hall's strategy stops: every stop in a world on the contest track. */
+const contestStops = () => TRICKS.filter((t) => (WORLDS.find((w) => w.id === t.world) || {}).track === 'contest');
 
 const RANK = { '6-7': 0, '8-10': 1, '11-14': 2 };
 

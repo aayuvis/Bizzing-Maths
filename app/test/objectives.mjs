@@ -14,6 +14,7 @@ for (const t of TRICKS) { const r = trickRec(a, t.id); r.learned = true; r.stars
 a.games.line = { best: 70 }; a.puzzles = { patterns: { right: 25 }, space: { right: 20 }, balance: { right: 20 }, sudoku: { solved: { 9: 6 } } };
 a.quest = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, { passed: true, stars: 3 }]));
 a.contest = { best: 1, wins: 1, runs: 1 };
+a.papers = { best: {}, log: [{ band: 'g56', no: 1, points: 80, max: 150 }] };
 a.lib = { tables: { level: 20 } };
 const after = goalsFor(a).flatMap((s) => s.goals);
 for (const g of after) ok(g.met, `${g.id} is met once the evidence is there (pct ${g.pct})`);

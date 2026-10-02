@@ -7,6 +7,8 @@ import { sampleHousehold, tasterHousehold, tasterStop } from './demo.js';
 import { award, medalById } from './medals.js';
 import { buy } from './shop.js';
 import { snapshot } from './report.js';
+import * as H from './hall.js';
+import * as P from './papers/engine.js';
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
 import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
@@ -122,7 +124,7 @@ function readHash() {
 }
 addEventListener('hashchange', () => { if (selfHash) { selfHash = false; return; } readHash(); });
 
-const TRANSIENT = ['run'];     // screens that cannot be deep-linked back into
+const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked back into
 
 function go(nav, arg = null, fromHash = false) {
   // #/continue — the Hive's deep link — goes wherever Home's Continue would
@@ -136,6 +138,7 @@ function go(nav, arg = null, fromHash = false) {
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
   R.ui.sheet = false;
   if (nav === 'stop' && !byId[arg]) nav = 'atlas';
+  if (nav !== 'paper' && R.paper) { keepDraft(); stopClock(); R.paper = null; }   // the draft is kept; the clock is a deadline
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
   if (nav === 'grownups' && R.ui.nav !== 'grownups') { R.ui.gate = false; R.ui.gateIn = ''; }
@@ -174,6 +177,8 @@ function screen() {
     case 'facts': return V.viewFacts();
     case 'arcade': return V.viewArcade();
     case 'contest': return V.viewContest();
+    case 'hall': return H.viewHall();
+    case 'paper': return R.paper ? H.viewPaper() : H.viewHall();
     case 'me': return V.viewMe();
     case 'who': return V.viewWho();
     default: return V.viewHome();
@@ -549,6 +554,72 @@ function cNext() {
   cAsk();
 }
 
+/* ------------------------------------------------------------- the Contest Hall */
+
+/* A paper in progress lives on the child as a tiny draft — the band, the
+   paper's number and the answers — because a fixed or fresh paper is rebuilt
+   exactly from its seed. Closing the tab mid-paper loses nothing but time:
+   the clock is a deadline, not a stopwatch, so it keeps running. */
+let clockT = null;
+function stopClock() { clearInterval(clockT); clockT = null; }
+function startClock() {
+  stopClock();
+  clockT = setInterval(() => {
+    const Pp = R.paper; if (!Pp || Pp.over) return stopClock();
+    const left = Pp.endsAt - Date.now(), el = document.getElementById('ptime');
+    if (el) { el.textContent = H.mmss(left); el.classList.toggle('low', left < 5 * 60e3); }
+    if (left <= 0) { Pp.timeUp = true; finishPaper(); }
+  }, 1000);
+}
+function sitPaper(band, no, draft = null) {
+  const k = kid(R.h), p = P.paper(band, no);
+  R.paper = { p, i: draft ? draft.i : 0, answers: draft ? draft.answers.slice() : [], endsAt: draft ? draft.endsAt : Date.now() + p.mins * 60e3, over: false };
+  k.paperDraft = { band, no, i: R.paper.i, answers: R.paper.answers, endsAt: R.paper.endsAt }; save();
+  go('paper'); startClock();
+  if (R.paper.endsAt <= Date.now()) { R.paper.timeUp = true; finishPaper(); }
+}
+function keepDraft() { const k = kid(R.h), Pp = R.paper; if (k && Pp && !Pp.over) { k.paperDraft = { band: Pp.p.band, no: Pp.p.no, i: Pp.i, answers: Pp.answers, endsAt: Pp.endsAt }; save(); } }
+function finishPaper() {
+  const Pp = R.paper, k = kid(R.h); if (!Pp || Pp.over) return;
+  stopClock(); Pp.over = true; Pp.sc = P.score(Pp.p, Pp.answers);
+  P.record(k, Pp.p, Pp.sc); k.paperDraft = null;
+  earn(k, 'contest'); medals(k); snapshot(k); save();
+  k.last = { what: 'paper', title: typeof Pp.p.no === 'number' ? `Paper ${Pp.p.no}` : 'a fresh paper', at: Date.now() };
+  sfx.level(); if (Pp.sc.pct >= 60) confetti(50);
+  render(); scrollTo(0, 0);
+}
+on('hallPick', (i) => { const n = +i; if (R.ui.hsel === n) { const el = root.querySelector('.card.pick .btn.primary'); if (el) el.click(); return; } R.ui.hsel = n; sfx.click(); render(); });
+on('hallPapers', () => { const el = document.getElementById('papers'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+on('pband', (b) => { if (P.BANDS[b]) { R.ui.pband = b; render(); } });
+on('paperStart', (a) => { const [band, n] = String(a).split('|'); const no = n === 'fresh' ? 'fresh-' + Date.now().toString(36) : +n; if (!P.BANDS[band]) return; sitPaper(band, no); });
+on('paperResume', () => { const d = kid(R.h).paperDraft; if (d) sitPaper(d.band, d.no, d); });
+on('paperGo', (j) => { const Pp = R.paper; if (!Pp || Pp.over) return; const n = +j; if (n < 0 || n >= Pp.p.items.length) return; Pp.i = n; keepDraft(); render(); });
+on('paperPick', (c) => {
+  const Pp = R.paper; if (!Pp || Pp.over) return;
+  Pp.answers[Pp.i] = c; sfx.click(); keepDraft(); render();
+  // move on, as a paper is sat — the navigator goes back to anything
+  const at = Pp.i; setTimeout(() => { if (R.paper === Pp && Pp.i === at && at < Pp.p.items.length - 1) { Pp.i++; keepDraft(); render(); } }, 380);
+});
+on('paperClear', () => { const Pp = R.paper; if (!Pp) return; Pp.answers[Pp.i] = undefined; keepDraft(); render(); });
+on('paperFinish', () => {
+  const Pp = R.paper; if (!Pp || Pp.over) return;
+  const blank = Pp.p.items.length - Pp.answers.filter((a) => a != null).length;
+  if (blank && R.ui.confirm !== 'paper') { R.ui.confirm = 'paper'; toast(`${blank} left blank — tap Finish again to hand it in.`); return; }
+  R.ui.confirm = null; finishPaper();
+});
+on('paperQuit', () => { keepDraft(); stopClock(); R.paper = null; go('hall'); toast('Kept — the clock is still running. Carry on from the Contest Hall.'); });
+function paperKey(e) {
+  const Pp = R.paper; if (!Pp || Pp.over || R.ui.nav !== 'paper') return false;
+  const L = { a: 0, b: 1, c: 2, d: 3, e: 4, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 }[e.key.toLowerCase()];
+  const q = Pp.p.items[Pp.i];
+  if (L != null && q.choices[L] != null) { fire('paperPick', q.choices[L]); return true; }
+  if (e.key === 'ArrowRight') { fire('paperGo', String(Pp.i + 1)); return true; }
+  if (e.key === 'ArrowLeft') { fire('paperGo', String(Pp.i - 1)); return true; }
+  if (e.key === 'Backspace' || e.key === 'Delete') { fire('paperClear'); return true; }
+  if (e.key === 'Enter') { fire('paperGo', String(Pp.i + 1)); return true; }
+  return false;
+}
+
 /* ------------------------------------------------------------- games */
 
 function play(id) {
@@ -896,6 +967,7 @@ function avKey(e) {
 addEventListener('keydown', (e) => {
   if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
   if (avKey(e)) return;
+  if (!(e.metaKey || e.ctrlKey || e.altKey) && paperKey(e)) { e.preventDefault(); return; }
   if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;

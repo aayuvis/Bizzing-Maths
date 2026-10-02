@@ -94,7 +94,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 6, kids: [], active: null, parent: { pin: null, tester: false } }; }
+export function newHousehold() { return { v: 7, kids: [], active: null, parent: { pin: null, tester: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -118,6 +118,8 @@ export function newKid(name, band, avatar) {
     lib: {},              // library tool id → that tool's own record
     journey: { level: null, done: {}, finished: [], tested: null },   // journey.js: the ten levels
     medals: {},           // medal id → { at, seen } — earned from evidence, celebrated once
+    papers: { best: {}, log: [] },   // papers/engine.js: contest-style papers sat
+    paperDraft: null,     // the paper in progress: { band, no, i, answers, endsAt }
     weeks: {},            // week (Monday's day key) → what the child could do that week — report.js
     shop: { owned: [], worn: {} },   // cosmetics bought with Bizzing coins (the coins live in the family wallet)
     placed: null,         // index into the stop order the child may start from
@@ -177,9 +179,15 @@ export const NEEDS = {
 };
 const firstIndex = (wid) => ROUTE.findIndex((n) => n.world === wid);
 
+/* The Contest Hall's worlds (track: 'contest') are open to every child: they
+   are a track of their own, beside the journey, not a stage of it. Inside
+   one, stops still open in order. */
+export const contestWorld = (wid) => (WORLDS.find((x) => x.id === wid) || {}).track === 'contest';
+
 export function worldOpen(h, k, wid) {
   if (h.parent.tester) return true;
   const w = WORLDS.find((x) => x.id === wid); if (!w) return false;
+  if (w.track === 'contest') return true;
   if (firstIndex(wid) === 0 || bandRank(w.band) <= bandRank(k.band)) return true;
   if (k.placed != null && firstIndex(wid) <= k.placed) return true;
   if (onJourney(k)) return ROUTE.some((n) => n.world === wid && (nodeDone(k, n) || (n.kind === 'stop' && levelOpen(k, n.id))));
@@ -191,7 +199,7 @@ export function worldOpen(h, k, wid) {
    that is neither passed nor optional for this child. */
 export function frontier(k, h = null) {
   const hh = h || { parent: {} };
-  const i = ROUTE.findIndex((n, j) => !nodeDone(k, n) && !optional(k, n, j) && worldOpen(hh, k, n.world));
+  const i = ROUTE.findIndex((n, j) => !contestWorld(n.world) && !nodeDone(k, n) && !optional(k, n, j) && worldOpen(hh, k, n.world));
   return i < 0 ? ROUTE.length : i;
 }
 
@@ -202,6 +210,7 @@ export function isOpen(h, k, i) {
   if (h.parent.tester) return true;
   const node = ROUTE[i]; if (!node) return false;
   if (nodeDone(k, node)) return true;
+  if (contestWorld(node.world)) return ROUTE.findIndex((n) => n.world === node.world && !nodeDone(k, n)) === i;
   // a child on a journey walks the road: the Atlas opens exactly what the road has reached
   if (onJourney(k)) return node.kind === 'stop' ? levelOpen(k, node.id) : ROUTE.every((n) => n.world !== node.world || n.kind !== 'stop' || nodeDone(k, n));
   if (!worldOpen(h, k, node.world)) return false;

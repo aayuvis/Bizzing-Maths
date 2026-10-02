@@ -31,6 +31,8 @@ export const MEDALS = [
   { id: 'puzzler', name: 'Puzzler', desc: 'Solve 30 puzzles.', need: 30, have: puzzlesRight },
   { id: 'stories', name: 'Story keeper', desc: 'Read ten stories to the end.', need: 10, have: (k) => Object.keys(k.stories || {}).length },
   { id: 'explorer', name: 'Explorer', desc: 'Find three secrets along your road.', need: 3, have: finds },
+  { id: 'paper', name: 'Paper sat', desc: 'Finish a contest-style paper.', need: 1, have: (k) => ((k.papers || {}).log || []).length },
+  { id: 'paper-half', name: 'Half marks', desc: 'Score half the points on a contest-style paper.', need: 1, have: (k) => (((k.papers || {}).log || []).some((x) => x.points * 2 >= x.max) ? 1 : 0) },
   { id: 'contest', name: 'Contender', desc: 'Finish a mock contest.', need: 1, have: (k) => (k.contest || {}).done || 0 },
 ];
 export const medalById = Object.fromEntries(MEDALS.map((m) => [m.id, m]));

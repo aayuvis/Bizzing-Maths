@@ -1,0 +1,54 @@
+/* hall.css — the Contest Hall and the paper simulator. */
+.hero-tiles{grid-template-columns:1.3fr 1fr 1fr}
+@media (max-width:760px){.hero-tiles{grid-template-columns:1fr}}
+
+.hall{display:flex;flex-direction:column;gap:14px}
+.hall-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hall-t{font:800 26px/1.1 var(--display);margin:0}
+.bpin .hall-g{position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-style:normal;font-size:22px;filter:drop-shadow(0 2px 3px rgb(0 0 0 / .35))}
+.papers-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.paper-resume{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--treasure-tint);border-radius:12px;padding:8px 12px;margin:8px 0}
+.paper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;margin:10px 0 12px}
+.pg{display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 2px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font:inherit}
+.pg b{font:700 15px var(--mono)} .pg i{font-style:normal;font-size:11px;color:var(--mastered,#178A4C);font-weight:700}
+.pg.sat{background:color-mix(in srgb,var(--mastered,#178A4C) 10%,var(--surface));border-color:color-mix(in srgb,var(--mastered,#178A4C) 45%,var(--line))}
+.pg:hover{border-color:var(--action)}
+.hall-index .hi-w{margin:10px 0}
+.hi-s{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.hi-stop{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-pill);padding:5px 11px;font:600 13px var(--ui);cursor:pointer}
+.hi-stop.done{border-color:var(--mastered,#178A4C);color:var(--mastered,#178A4C)}
+.hi-stop i{font-style:normal;color:var(--muted)}
+
+/* sitting a paper */
+.paper{display:flex;flex-direction:column;gap:10px;max-width:860px;margin:0 auto}
+.paper-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.paper-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paper-time{font:800 20px var(--mono);padding:4px 10px;border-radius:10px;background:var(--surface2)}
+.paper-time.low{background:#C4453C;color:#fff}
+.paper-nav{display:flex;flex-wrap:wrap;gap:4px}
+.pn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:700 12px var(--mono);cursor:pointer;padding:0}
+.pn.t4{border-bottom:3px solid #F0B429}.pn.t5{border-bottom:3px solid #C4453C}
+.pn.ans{background:color-mix(in srgb,var(--action) 16%,var(--surface));color:var(--ink)}
+.pn.on{outline:2px solid var(--action);outline-offset:1px;color:var(--ink)}
+.paper-q{padding:18px 20px}
+.pq-text{font:600 19px/1.5 var(--ui);margin:6px 0 10px}
+.pq-fig{display:flex;justify-content:center;margin:6px 0 12px}
+.pq-fig svg{max-width:min(100%,420px);height:auto}
+.pq-choices{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:8px 0 12px}
+.pc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;min-height:64px;justify-content:center}
+.pc b{font:800 13px var(--mono);color:var(--muted)} .pc span{font:700 18px var(--mono);word-break:break-word;text-align:center}
+.pc:hover{border-color:var(--action)}
+.pc.on{border-color:var(--action);background:color-mix(in srgb,var(--action) 14%,var(--surface))}
+.pq-go{display:flex;justify-content:space-between;align-items:center;gap:8px}
+@media (max-width:560px){.pq-choices{grid-template-columns:repeat(3,1fr)}.pq-text{font-size:17px}.paper-name{display:none}}
+@media (hover:none){.pq-keys{display:none}}
+
+/* the end of a paper */
+.paper-end{display:flex;flex-direction:column;gap:12px;max-width:860px;margin:0 auto}
+.pe-score{font:800 44px/1 var(--display);margin:6px 0}.pe-score small{font:600 16px var(--ui);color:var(--muted)}
+.pe-tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.pe-tiers div{background:var(--surface2);border-radius:12px;padding:10px;text-align:center;display:flex;flex-direction:column}
+.pe-tiers b{font:800 22px var(--mono)} .pe-tiers span{font-size:12px;color:var(--muted)}
+.pe-next{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pe-rh{font:800 20px var(--display);margin:8px 0 0}
+.pe-item .pq-text{font-size:17px}

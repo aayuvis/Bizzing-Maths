@@ -864,7 +864,8 @@ export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace,
 
 export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'coinstreet', 'shapecity', 'workshop', 'mine', 'forest',
   'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'lighthouse', 'carnival'];
-export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, quarry: 3, mine: 3, coinstreet: 3, lighthouse: 3 };   // everything else: island 2
+export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, quarry: 3, mine: 3, coinstreet: 3, lighthouse: 3,
+  strategy: 'hall', logic: 'hall', figures: 'hall' };   // everything else: island 2. 'hall': the Contest Hall's road, not an island
 
 const ALL_WORLDS = [...CORE_WORLDS, ...CHAPTERS.map((c) => c.WORLD)];
 export const WORLDS = ORDER.map((id, i) => ({ ...ALL_WORLDS.find((w) => w.id === id), n: i + 1, island: ISLAND[id] || 2 }));

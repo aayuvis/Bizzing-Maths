@@ -21,7 +21,14 @@ ok(new Set(cids).size === cids.length, 'duplicate concept id');
 for (const c of CONCEPTS) ok(c.id && c.name && c.glyph, `concept ${c.id} needs id, name and glyph`);
 
 /* ---- every stop has exactly one concept, and nothing else does */
-for (const t of TRICKS) ok(cids.includes(CONCEPT_OF[t.id]), `${t.id}: no concept (or unknown concept ${CONCEPT_OF[t.id]})`);
+/* the Contest Hall's stops (worlds with track: 'contest') are a track beside the
+   journeys, not a stage of them: they carry no concept and sit on no level — and
+   instead every one of them must be on the Contest Hall's road (hall.js). */
+const HALL = TRICKS.filter((t) => (WORLDS.find((w) => w.id === t.world) || {}).track === 'contest');
+const { HALL_WORLDS } = await import('../src/hall.js').catch(() => ({ HALL_WORLDS: ['strategy', 'logic', 'figures'] }));
+for (const t of HALL) ok(HALL_WORLDS.includes(t.world) && !CONCEPT_OF[t.id], `${t.id}: a contest-track stop must be on the Contest Hall road and nowhere on the journeys`);
+const JOURNEY = TRICKS.filter((t) => !HALL.includes(t));
+for (const t of JOURNEY) ok(cids.includes(CONCEPT_OF[t.id]), `${t.id}: no concept (or unknown concept ${CONCEPT_OF[t.id]})`);
 for (const id of Object.keys(CONCEPT_OF)) ok(byId[id], `CONCEPT_OF names ${id}, which is not a stop`);
 for (const c of cids) ok(TRICKS.some((t) => CONCEPT_OF[t.id] === c), `concept ${c} has no stops`);
 
@@ -92,7 +99,7 @@ for (const l of LEVELS) {
     lastInWorld[t.world] = s.stop;
   } }
 }
-const missing = TRICKS.filter((t) => first[t.id] === undefined).map((t) => t.id);
+const missing = JOURNEY.filter((t) => first[t.id] === undefined).map((t) => t.id);
 ok(!missing.length, `stops on no journey: ${missing.join(', ')}`);
 ok(steps === LEVELS.reduce((a, l) => a + l.steps.length, 0), 'a step sits in no land');
 

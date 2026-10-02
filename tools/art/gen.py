@@ -307,9 +307,20 @@ MEDAL = {
     'medal-puzzler':    "a chunky jigsaw piece slotting into place beside a small cube. Coral pink and cream.",
     'medal-stories':    "an open storybook with a paper boat sailing off its pages. Warm red and cream.",
     'medal-explorer':   "a small open treasure chest with a curl of golden light, a rolled map beside it. Forest green and gold.",
+    'medal-paper':      "a neat stack of blank paper sheets with a pencil lying across them and a small hourglass beside. Teal and gold.",
+    'medal-paper-half': "a round sand hourglass with the top half and bottom half of sand perfectly equal, a laurel sprig beside it. Plum purple and gold.",
     'medal-contest':    "a plain golden trophy cup with two handles and laurel leaves. Navy and gold.",
 }
 for k, v in MEDAL.items(): JOBS[k] = (MEDAL_STYLE + v, '1:1')
+
+# The Contest Hall: three strategy worlds and the hall's own road.
+CONTEST = {
+    'w-strategy': "A wide panorama of a cosy old school of thinking on a green hill: a stone schoolhouse with tall arched windows, a bell tower, a courtyard with chalk-blank slates on easels, a great wooden staircase leading UP to a door at the top and a matching staircase leading back DOWN, a long garden path that forks and rejoins, a set of balance scales on a bench, a weather vane, children's satchels on hooks but no people. Warm brick red, chalk white, meadow green, sky blue.",
+    'w-logic': "A wide panorama of a sunny hedge maze seen from slightly above, with tall clipped green hedges forming clear corridors, little stone pedestals at junctions, a fountain at the centre, rows of identical round stepping stones in two colours, pairs of matching gloves and socks pegged on a washing line by a gardener's hut, a big wall calendar carved as blank stone squares, owls on the hedge tops. Deep hedge green, lavender, warm stone, golden light.",
+    'w-figures': "A wide panorama of a cheerful fairground of shapes: a striped tent whose canvas is cut into triangles, a big painted grid of square tiles on the ground, a stall stacked with wooden cubes and giant dice with blank faces, bunting made of triangles, a staircase-shaped wooden stage, a ferris wheel with spokes, a rope net of squares, colourful kites of different polygons in the sky. Candy red, sunflower yellow, teal, cream.",
+    'j-contest': "A wide panorama of a grand but friendly hall of contests at the top of a long road: a road of flat stones climbing past three little pavilions (a schoolhouse, a hedge maze, a fairground tent) to a great domed hall with tall windows and banners with no writing, rows of small wooden desks visible through an open door, a tower topped by a plain round stained-glass window of coloured glass and no clock, laurel trees, morning light. Royal blue, gold, warm stone, green. Absolutely no writing, letters, digits or symbols anywhere.",
+}
+for k, v in CONTEST.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 
 
 def call(model, prompt, ratio):
