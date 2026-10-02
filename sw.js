@@ -7,7 +7,7 @@
    it asked for hashed assets a deploy had already deleted. Bump CACHE whenever
    the caching strategy changes. */
 
-const CACHE = 'bizzing-maths-v3';
+const CACHE = 'bizzing-maths-v4';
 
 const ENTRY = ['./', './index.html'];
 
