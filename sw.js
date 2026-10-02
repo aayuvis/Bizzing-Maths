@@ -7,7 +7,8 @@
    it asked for hashed assets a deploy had already deleted. Bump CACHE whenever
    the caching strategy changes. */
 
-const CACHE = 'bizzing-maths-v1';
+const CACHE = 'bizzing-maths-v3';
+
 const ENTRY = ['./', './index.html'];
 
 /* Vite writes assets/<name>-<hash>.<ext>. The hash is what makes cache-first
