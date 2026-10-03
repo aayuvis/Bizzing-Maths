@@ -1,5 +1,5 @@
 /* test/model.mjs — the household, the atlas frontier, band gating, placement, the Store seam. */
-import { worldOpen, newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
+import { raiseLevel, worldOpen, newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
 import { TRICKS, byId } from '../src/tricks.js';
 import { migrate } from '../src/store.js';
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 20) console.error('  ✗ ' + m); } };
@@ -55,4 +55,10 @@ console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement
 // v7 keeps what a child had: the face they wear is theirs, the world they were dressed in stays open
 { const h = migrate({ v: 6, kids: [{ id: 'a', avatar: 'supernova', prefs: { theme: 'orbit' }, shop: { owned: ['gold'], worn: {} } }], parent: { pin: null } });
   ok(h.kids[0].shop.avatars.includes('supernova') && h.kids[0].shop.worlds.includes(4) && h.kids[0].shop.owned.includes('gold'), 'v6 → v7 keeps the worn face, the world and the frames'); }
+// E7: three stars raise the starting level one step, never past Champion, never down, never twice for one level
+{ const k = { tricks: {} };
+  ok(raiseLevel(k, 'x', 1, 1, true) === 2 && k.tricks.x.lvNext === 2, 'three stars at Warm-up: next time starts at Stretch');
+  ok(raiseLevel(k, 'x', 1, 1, true) === 0 && k.tricks.x.lvNext === 2, 'a second Warm-up run does not move it again');
+  ok(raiseLevel(k, 'x', 2, 0.8, true) === 0 && raiseLevel(k, 'x', 2, 1, false) === 0, 'eight right, or too slow, is not three stars');
+  ok(raiseLevel(k, 'x', 2, 0.9, true) === 3 && raiseLevel(k, 'x', 3, 1, true) === 0 && k.tricks.x.lvNext === 3, 'it stops at Champion'); }
 if (fails) process.exit(1);

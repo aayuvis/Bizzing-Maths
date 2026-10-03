@@ -57,6 +57,19 @@ ok(s.sample && s.name === 'Asha' && Object.keys(s.days).length >= 6, 'the sample
 ok(F.tally(s.facts, '×').fluent > 0 && s.journey.level === 3 && Object.keys(s.journey.done).length > 0, 'the sample has fluent facts and a road walked');
 ok(Object.keys(s.medals).length > 0 && Object.values(s.medals).every((m) => m.seen), 'the sample has medals, already celebrated');
 ok(Object.keys(mem).sort().join() === keysBefore, 'building the sample wrote nothing to storage');
+/* the sample's wallet and today's ring (audit A5): earned from its own evidence, at standard amounts, under the cap */
+{ const { EARN, DAILY_CAP } = await import('../src/integration/bizzing-wallet.js'), { dayKey } = await import('../src/rand.js');
+  const walletOk = (k) => { const L = k.sampleWallet || [], per = {};
+    for (const x of L) per[new Date(x.t).toDateString()] = (per[new Date(x.t).toDateString()] || 0) + x.n;
+    const ans = L.filter((x) => x.why === 'answer').reduce((a, x) => a + x.n, 0), right = Object.values(k.days).reduce((a, d) => a + d.ok, 0);
+    return L.length > 0 && L.every((x) => x.why in EARN && x.n > 0 && (x.why !== 'stop' || x.n === EARN.stop))
+      && Object.values(per).every((n) => n <= DAILY_CAP) && ans <= right * EARN.answer
+      && L.filter((x) => x.why === 'stop').length === Object.keys(k.journey.done).length; };
+  ok(walletOk(s), 'the sample wallet is earned from its own answers and stops, at standard amounts, under the daily cap');
+  ok(!walletOk({ ...s, sampleWallet: [...s.sampleWallet, { a: 'maths', t: Date.now(), n: 50, why: 'gift' }] }), 'BROKEN: a gifted line is caught');
+  const td = dayKey();
+  ok(s.days[td] && s.days[td].ok > 0 && s.dayStops[td] >= 1 && s.daily[td] && s.daily[td].puzzle === false, 'today\'s ring is part-way round in the sample');
+}
 
 /* the guide is Octo, the mascot — never one of the ten rival children (owner, 3 Oct 2026) */
 const { GUIDE } = await import('../src/lines.js');

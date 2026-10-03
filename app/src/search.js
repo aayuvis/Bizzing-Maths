@@ -13,6 +13,7 @@ import { TRICKS, WORLDS, worldOf } from './tricks.js';
 import { STORIES } from './stories.js';
 import { SHELF } from './library/shelf.js';
 import { bot } from './contest.js';
+import { FAMILIES } from './puzzles.js';
 
 export const norm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, '').replace(/[^a-z0-9×÷+%\-]+/g, ' ').trim();
 
@@ -24,6 +25,10 @@ const GAMES = [
   { title: 'The Puzzle Tower', sub: 'Puzzles · twelve floors', act: 'nav', arg: 'puzzles', words: 'puzzle tower sudoku nets balance logic' },
   { title: 'Twenty facts', sub: 'Practice · facts picked for you', act: 'nav', arg: 'facts', words: 'facts times tables practice fluency' },
   { title: 'My mistakes', sub: 'Practice · questions worth another look', act: 'nav', arg: 'mistakes', words: 'mistakes wrong review again' },
+  { title: 'Today’s mix', sub: 'Practice · five minutes: facts, a stop, a puzzle', act: 'dailyMix', arg: '', words: 'daily mix five minutes session practice today' },
+  { title: 'Today’s puzzle', sub: 'Puzzles · one a day', act: 'daily', arg: '', words: 'daily puzzle today one' },
+  { title: 'The Contest Hall', sub: 'Contest · strategies and contest-style papers', act: 'nav', arg: 'hall', words: 'contest hall papers olympiad competition strategy exam mock paper' },
+  { title: 'Sudoku', sub: 'Puzzles · a grid with exactly one answer', act: 'sudokuPlay', arg: '1', words: 'sudoku logic grid magic square' },
 ];
 
 let INDEX = null;
@@ -39,6 +44,7 @@ function index() {
   for (const w of WORLDS) out.push({ kind: 'Place', title: w.name, sub: `A place on the Atlas · ${w.short}`, act: 'openWorld', arg: w.id, words: w.blurb || '' });
   for (const t of SHELF) out.push({ kind: 'Library', title: t.name, sub: 'A Library tool', act: 'openTool', arg: t.id, words: t.blurb || '' });
   for (const g of GAMES) out.push({ kind: 'Play', ...g });
+  for (const f of FAMILIES) out.push({ kind: 'Puzzle', title: f.name, sub: 'Puzzles · six to practise', act: 'practise', arg: `${f.id}:2`, words: `puzzle ${f.blurb || ''}` });
   for (const e of out) { e.nt = norm(e.title); e.nw = norm(e.words); }
   return (INDEX = out);
 }

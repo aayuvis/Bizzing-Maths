@@ -16,6 +16,7 @@ import { award } from './medals.js';
 import { snapshot } from './report.js';
 import { LEVELS } from './levels.js';
 import { dayKey, seeded } from './rand.js';
+import { EARN, DAILY_CAP } from './integration/bizzing-wallet.js';
 
 const DAY = 864e5;
 
@@ -72,6 +73,24 @@ export function sampleHousehold(now = Date.now()) {
 
   // medals the evidence supports, dated a few days back and already celebrated
   for (const m of award(k, now - 3 * DAY)) k.medals[m.id].seen = true;
+
+  // today, part-way round the ring (audit A5): a short sitting this morning, one stop passed
+  const td = dayKey(new Date(now));
+  k.days[td] = { q: 14, ok: 12 }; k.xp += 12;
+  k.dayStops = { ...(k.dayStops || {}), [td]: 1 };
+  k.daily = { ...(k.daily || {}), [td]: { ...((k.daily || {})[td] || {}), puzzle: false } };
+
+  // the wallet, earned from the same evidence at the family's standard amounts and daily cap:
+  // a coin a right answer, five a passed stop. Held on the sample (memory only), never stored.
+  const passed = Object.keys(k.journey.done || {}).length, sat = Object.keys(k.days).sort();
+  k.sampleWallet = [];
+  sat.forEach((d, i) => {
+    const t = new Date(d + 'T16:00:00').getTime() || now - (sat.length - i) * DAY;
+    const stops = Math.floor(passed / sat.length) + (i < passed % sat.length ? 1 : 0);
+    const ans = Math.min(EARN.answer * k.days[d].ok, DAILY_CAP - EARN.stop * stops);
+    if (ans > 0) k.sampleWallet.push({ a: 'maths', t, n: ans, why: 'answer' });
+    for (let x = 0; x < stops; x++) k.sampleWallet.push({ a: 'maths', t: t + 60e3 * (x + 1), n: EARN.stop, why: 'stop' });
+  });
   snapshot(k, now);
   return h;
 }

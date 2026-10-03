@@ -311,7 +311,7 @@ export function viewHome() {
       greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(lastLine(k)) },
       ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
         foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: p ? `#/journey/${p.level}` : '#/me' } },
-      hour: { kicker: 'Number of the hour', title: String(nh.n), sub: plain(nh.facts[0] || ''), icon: 'clock', href: `#/lib/explorer|${nh.n}` },
+      hour: { kicker: 'Five minutes', title: 'Today’s mix', sub: mk.due ? `Facts, a stop, a puzzle — and ${mk.due} mistake${mk.due > 1 ? 's' : ''} due.` : 'Facts picked for you, your next stop and a puzzle.', icon: 'bolt', href: '#/mix' },
       next: { plate: c.world ? `art/w-${c.world}.webp` : 'art/atlas.webp', icon: 'path', chip: p ? `stop ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'ten levels',
         kicker: p ? `Next on your journey · Level ${p.level} · ${p.age}` : 'Ten levels · maths age 6 to 15+', title: c.title, sub: p ? p.L.name : 'A few questions find where your road starts.',
         href: '#/continue', cta: c.label, progress: p ? { pct: Math.round(100 * p.done / p.total), label: `${p.done} of ${p.total} stops on this road` } : null },
@@ -483,14 +483,27 @@ export function viewRun() {
       ${q.choices
         ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
         : `<p class="answer mono" id="ans" aria-live="polite">${fb ? esc(fb.given) : esc(run.input) || '<span class="caret"></span>'}</p>`}
-      ${fb ? feedback(q, fb) : q.choices ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
+      ${fb ? feedback(q, fb, run) : hintFor(run, q)}${fb || q.choices ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
     </div>
     ${!fb && !q.choices ? keypad(q.keys) : ''}
     ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
 }
 
-function feedback(q, fb) {
+/* A hint for the youngest (audit E6): before a 6–7-year-old gets one wrong, they may ask for
+   the trick's first step — its words, never its number, which the step tests prove leak-free. */
+function hintFor(run, q) {
+  const k = kid(R.h), t = q.trick && byId[q.trick];
+  if (!t || !k || k.band !== '6-7' || !['drill', 'warmup', 'mix'].includes(run.kind)) return '';
+  const first = (t.work(q)[0] || {}).t, num = new RegExp(`(^|[^0-9])${String(q.ans).replace(/[^0-9.]/g, '')}([^0-9]|$)`);
+  if (!first || (num.test(first) && !num.test(q.text || ''))) return '';      // a hint never says what the question has not
+  return run.hinted === run.i ? `<p class="hint-chip">${octo('think', 36, '', '')}<span><b>Hint:</b> ${esc(first)}</span></p>`
+    : `<p class="row center"><button class="btn small" data-act="runHint">${icon('bulb', 16)} Need a hint?</button></p>`;
+}
+
+function feedback(q, fb, run = {}) {
+  // the very first question of a first-ever warm-up gets Octo's cheer (audit A8)
+  if (fb.right && run.kind === 'warmup' && run.i === 0) return `<p class="fb good cheer">${octo('cheer', 72, '', 'Octo cheering')}<span>Right! That is your first one — and you did it.</span></p>`;
   if (fb.right) return `<p class="fb good">${fb.fast ? 'Right — and quick.' : 'Right.'}</p>${q.explain ? `<p class="explain">${esc(q.explain)}</p>` : ''}`;
   let work = q.explain ? `<p class="explain">${esc(q.explain)}</p>` : '';
   if (q.trick) {

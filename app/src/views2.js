@@ -129,6 +129,7 @@ export function viewWorld(wid) {
       <div class="board w-${w.id}">
         <img src="art/w-${w.id}.webp" alt="" width="1920" height="815">
         <div class="amb amb-${w.id}" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
+        <div class="octo-gate${walked ? '' : ' first'}" style="top:${Math.min(78, roadY(wid, 2) + 4)}%">${octo(walked === nodes.length ? 'cheer' : 'wave', 64, '', '')}${walked ? '' : `<p class="og-say">Welcome to ${esc(w.name)}! Tap the first pin.</p>`}</div>
         <svg class="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
         </svg>

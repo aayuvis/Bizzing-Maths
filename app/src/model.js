@@ -141,6 +141,16 @@ export const ROUTE = WORLDS.flatMap((w) => [
 ]);
 
 export const trickRec = (k, id) => k.tricks[id] || (k.tricks[id] = { stars: 0, best: 0, learned: false, runs: 0 });
+/* Three stars at a difficulty (nine right, inside the time) and the stop starts one step harder next
+   time (audit E7). Only ever up, only to Champion (3), and only from a run at the level it starts at.
+   Returns the new starting level, or 0 when nothing moved. */
+export function raiseLevel(k, id, lv, pct, fast) {
+  lv = lv || 1;
+  if (!(pct >= 0.9 && fast && lv < 3)) return 0;
+  const r = trickRec(k, id);
+  if ((r.lvNext || 1) > lv) return 0;
+  return (r.lvNext = lv + 1);
+}
 
 export function nodeDone(k, node) {
   if (node.kind === 'check') return !!(k.checks[node.world] && k.checks[node.world].passed);

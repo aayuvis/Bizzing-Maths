@@ -954,3 +954,21 @@ div.jcard{cursor:default}
 @media (max-width:520px){.ob-faces{grid-template-columns:repeat(3,1fr)}.ob-stats{grid-template-columns:repeat(2,1fr)}.ob-worlds{grid-template-columns:1fr}}
 .ob-top > .btn{justify-self:start;width:auto}
 .ob-face .av{aspect-ratio:1}
+/* the 6–7 hint before a first wrong answer (audit E6), and Octo's first-answer cheer (A8) */
+.hint-chip{display:flex;align-items:center;gap:10px;justify-content:center;margin:12px auto 0;max-width:34em;padding:8px 14px;border-radius:14px;background:var(--surface-2,rgba(0,0,0,.04));font-size:var(--fs-body)}
+.hint-chip img{flex:none}
+.fb.cheer{display:flex;align-items:center;gap:12px;justify-content:center}
+.fb.cheer img{flex:none}
+/* type-ahead under the top bar's search (audit C4) */
+.ta-list{position:fixed;z-index:60;display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--ink);border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;box-shadow:0 12px 32px rgb(0 0 0 / .18);padding:6px;max-height:min(70vh,420px);overflow:auto}
+.ta-list[hidden]{display:none}
+.ta-list button{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;padding:9px 12px;border-radius:10px;cursor:pointer;min-height:44px;justify-content:center}
+.ta-list button:hover,.ta-list button:focus-visible{background:var(--tint,rgba(0,0,0,.05));outline:2px solid var(--action);outline-offset:-2px}
+.ta-list button span{font-size:var(--fs-small,.85rem);color:var(--muted)}
+.ta-list .ta-all{color:var(--action);font-weight:650;border-top:1px solid var(--line,rgba(0,0,0,.08));border-radius:0 0 10px 10px}
+/* Octo meets the child at every world's entrance (audit I4); a welcome line only on the first visit */
+.octo-gate{position:absolute;left:.4%;transform:translateY(-100%);z-index:2;display:flex;flex-direction:column-reverse;align-items:flex-start;gap:4px;pointer-events:none}
+.octo-gate .octo{filter:drop-shadow(0 4px 8px rgb(0 0 0 / .3))}
+.og-say{margin:0;max-width:13em;padding:7px 11px;border-radius:12px 12px 12px 3px;background:var(--surface,#fff);color:var(--ink);font-size:var(--fs-small,.88rem);font-weight:600;box-shadow:0 4px 14px rgb(0 0 0 / .2)}
+@media (prefers-reduced-motion:no-preference){.octo-gate.first .octo{animation:og-hop .9s ease-out 1}}
+@keyframes og-hop{0%{transform:translateY(12px);opacity:0}60%{transform:translateY(-4px);opacity:1}100%{transform:none}}

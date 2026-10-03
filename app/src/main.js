@@ -15,14 +15,14 @@ function loadHall() {
   return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
 }
 const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
-import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
+import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
 import * as J from './journey.js';
-import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
+import { TRICKS, byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
-import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
+import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, raiseLevel, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
@@ -56,6 +56,7 @@ const root = document.getElementById('app');
    only (store.js DEMO) and are thrown away when the tab closes. */
 const TRY = DEMO && /[?&]demo=try\b/.test(location.search);
 R.h = DEMO ? (TRY ? tasterHousehold() : sampleHousehold()) : Store.loadHousehold() || newHousehold();
+if (DEMO) Family.showDemo((kid(R.h) || {}).sampleWallet);
 R.fromHive = /[?&]from=hive\b/.test(location.search);   // the Hive sent us: offer the way back
 R.ui.cels = [];
 R.sound = Store.loadDevice('sound', true);
@@ -201,6 +202,12 @@ function go(nav, arg = null, fromHash = false) {
     if (c.act === 'nav') return go(c.arg);
     history.replaceState(null, '', '#/home'); R.ui.nav = 'home';
     return fire(c.act, c.arg || undefined);
+  }
+  // #/mix — Home's five-minute card — starts today's mix; the address settles on Home
+  if (nav === 'mix') {
+    if (!kid(R.h)) return go('welcome');
+    history.replaceState(null, '', '#/home'); R.ui.nav = 'home';
+    return fire('dailyMix');
   }
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
@@ -367,7 +374,7 @@ function submit(given) {
   run.results.push({ right, ms });
   if (!right) run.missed.push(q);
   // the mistakes deck: a miss goes in (never placement, never a bonus question); its own review moves it on
-  if (run.kind === 'mistakes') { const r = MD.answer(k, q.mkey, right); run.mk = run.mk || {}; if (r) run.mk[r] = (run.mk[r] || 0) + 1; }
+  if (run.kind === 'mistakes' || (run.kind === 'mix' && q.mkey)) { const r = MD.answer(k, q.mkey, right); run.mk = run.mk || {}; if (r) run.mk[r] = (run.mk[r] || 0) + 1; }
   else if (!right && !q.bonus && !MD.NOT_A_MISTAKE.includes(run.kind)) MD.add(k, q, Date.now(), run.title);
   // record what this question is evidence of
   if (q.fact) F.record(k.facts[F.key(q.fact)] || (k.facts[F.key(q.fact)] = F.blank()), right, ms, k.band);
@@ -387,7 +394,7 @@ function submit(given) {
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
 
-const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes'];
+const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes', 'warmup', 'mix'];
 
 function nextQ() {
   const run = R.run; if (!run) return;
@@ -422,6 +429,9 @@ function finishRun() {
       if (nx) s.buttons.push(nx.kind === 'stop' ? `<button class="btn primary" data-act="openStop" data-arg="${nx.id}">Next stop: ${escapeHtml(byId[nx.id].title)}</button>` : `<button class="btn primary" data-act="openCheck" data-arg="${nx.world}">Take the checkpoint</button>`);
       if (res.stars < 3) s.lines.push(res.pct >= 0.9 ? 'Nine or more right — do it a little quicker for the third star.' : 'Nine right at a good pace is the third star.');
       if (res.gained) { confetti(res.stars === 3 ? 60 : 36); sfx.level(); }
+      // three stars at this difficulty: next time the stop starts one step harder (audit E7)
+      const up = raiseLevel(k, run.trick, run.lv, res.pct, avg <= budget);
+      if (up) s.lines.push(`<b>Three stars — next time this stop starts at ${['', 'Warm-up', 'Stretch', 'Champion'][up]}.</b>`);
       if (res.gained && res.stars - res.gained < 2) { earn(k, 'stop', t.title); mile(k, 'stop', t.title); }   // first pass of this stop
       k.last = { what: res.stars === 3 ? 'stars' : 'stop', title: t.title, at: Date.now() };
       const jr = J.passed(k, run.trick, run.lv || 1), jp = J.progress(k);
@@ -438,6 +448,19 @@ function finishRun() {
       s.buttons.push(`<button class="btn primary" data-act="startDrill" data-arg="${run.trick}">Try again</button>`);
     }
     s.buttons.push(`<button class="btn" data-act="openStop" data-arg="${run.trick}">Back to the stop</button>`);
+  }
+  if (run.kind === 'warmup') {
+    const t = byId[run.trick];
+    s.head = right === n ? 'Three out of three!' : `${right} out of ${n} — a start`;
+    s.lines.push(right ? `<b>You can already do these.</b> Now see why the trick works — and how far it goes.` : 'Every one showed its working. Now see the trick — it makes these easy.');
+    s.buttons.push(`<button class="btn primary" data-act="openStepLearn" data-arg="${run.trick}">Learn why: ${escapeHtml(t.title)}</button>`);
+    if (right) confetti(40);
+  }
+  if (run.kind === 'mix') {
+    s.head = `${right} of ${n} right`;
+    s.lines.push(right === n ? '<b>Every one — that is today done.</b>' : 'Facts that slipped come back after a gap; nothing is lost for a miss.');
+    s.buttons.push('<button class="btn primary" data-act="nav" data-arg="home">Home</button>');
+    if (right >= n - 1) confetti(40);
   }
   if (run.kind === 'check') {
     const pct = n ? right / n : 0;
@@ -770,7 +793,7 @@ on('openStop', (id) => {
   const k = kid(R.h);
   // a stop opens on its story until the story has been read once
   R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
-  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; R.ui.beat = 0; R.ui.jstep = null; storyVoice(k); go('stop', id); speakBeat();
+  R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = ((k.tricks[id] || {}).lvNext) || 1; R.ui.beat = 0; R.ui.jstep = null; storyVoice(k); go('stop', id); speakBeat();
 });
 on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; storyVoice(kid(R.h)); go('stop', id); speakBeat(); });
 /* 'Read it to me' starts on for a child whose questions are read aloud; once
@@ -958,6 +981,19 @@ on('searchOpen', (a) => {
   if (tool === 'dictionary') { ui.open = x; ui.q = x; } else if (tool === 'formulas') { ui.card = x; ui.tab = 'card'; }
   go('lib', tool);
 });
+/* Today's five minutes (audit F1): a few facts picked for you, mistakes that are due, the
+   next stop on your road and one pattern puzzle — one short mixed session from Home. */
+on('dailyMix', () => {
+  const k = kid(R.h), items = [];
+  for (const f of F.session(k.facts, k.prefs.op, { band: k.band }).slice(0, 6)) items.push({ text: F.text(f), say: V.spoken(F.text(f)), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, fresh: f.fresh, why: F.why(f) });
+  for (const m of MD.due(k).slice(0, 2)) items.push({ ...m.q, mkey: m.key });
+  const p = J.progress(k), t = p && p.next ? byId[p.next.stop] : TRICKS.find((x) => (k.tricks[x.id] || {}).stars) || null;
+  if (t) items.push(...drill(t, 3, p && p.next ? Math.min(2, p.next.lv) : 1).map((q) => ({ ...q, trick: t.id })));
+  items.push(...familySet('patterns', bandLevel(k.band), 1));
+  startRun('mix', 'Today’s five minutes', items, { sub: 'Facts, a stop, a puzzle — about five minutes' });
+});
+on('openStepLearn', (id) => { fire('openStop', id); R.ui.tab = 'learn'; render(); });
+on('runHint', () => { if (R.run && !R.run.fb) { R.run.hinted = R.run.i; sfx.click(); render(); } });
 on('startMistakes', () => {
   const k = kid(R.h), due = MD.due(k).slice(0, 10);
   if (!due.length) return toast('Nothing is ready yet — they come back after a gap.');
@@ -1021,7 +1057,15 @@ on('startLevelExam', () => {
   startRun('levelexam', `Level ${p.level} test`, J.levelTestItems(k), { bonusFrom: J.LEVEL_N, sub: `${J.LEVEL_PASS} of ${J.LEVEL_N} to pass · then ${J.LEVEL_BONUS} bonus questions, double points` });
 });
 on('skipBonus', () => { if (R.run && !R.run.over) finishRun(); });
-on('startLevel1', () => { J.place(kid(R.h), 1); R.ui.jlv = null; save(); go('journey'); });
+/* "Start at Level 1" goes straight to a question (audit A3, §16: the first question in ≤ 5 taps):
+   three warm-up questions on the road's first stop, at its easiest — a first win before
+   anything is explained (A8) — then the stop itself, to learn why it works. */
+on('startLevel1', () => {
+  const k = kid(R.h); J.place(k, 1); R.ui.jlv = null; save();
+  const p = J.progress(k), t = p && p.next ? byId[p.next.stop] : null;
+  if (!t) return go('journey');
+  startRun('warmup', `${t.title} — a warm-up`, drill(t, 3, 1).map((q) => ({ ...q, trick: t.id })), { trick: t.id, lv: 1, sub: 'Three to start — you can do these' });
+});
 on('startLevelTest', () => {
   const k = kid(R.h), st = J.newTest(k.band);
   startRun('leveltest', 'Find my level', [J.question(st)], { st, sub: 'It moves up and down to find where you are' });
@@ -1231,6 +1275,41 @@ root.addEventListener('input', (e) => {
   if (q.trim().length > 1) sT = setTimeout(() => searchMore(q).then((m) => { if (R.ui.q === q && R.ui.nav === 'search') { R.ui.more = m; render(); } }).catch(() => { R.ui.more = []; render(); }), 160);
 });
 root.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-search')) { const b = root.querySelector('.results button'); if (b) b.click(); } });
+/* type-ahead under the top bar's search (audit C4): the first six of the app's own index as the
+   child types, without a re-render (so the box keeps its focus); Enter still opens the full page. */
+let ta = null;
+const taHide = () => { if (ta) ta.hidden = true; };
+function typeAhead(input) {
+  const q = input.value.trim(), res = q ? searchCore(q, 6) : [];
+  if (!ta) {
+    ta = document.createElement('div'); ta.className = 'ta-list'; ta.id = 'ta-list'; ta.setAttribute('role', 'listbox'); ta.setAttribute('aria-label', 'Suggestions');
+    document.body.appendChild(ta);
+    ta.addEventListener('mousedown', (e) => e.preventDefault());           // keep the box focused until the tap lands
+    ta.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; taHide(); const box = document.querySelector('[data-bz="search"] input'); if (box) box.blur(); fire(b.dataset.act, b.dataset.arg || undefined); });
+    ta.addEventListener('keydown', (e) => {
+      const bs = [...ta.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' && i < bs.length - 1) { e.preventDefault(); bs[i + 1].focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); if (i > 0) bs[i - 1].focus(); else { const box = document.querySelector('[data-bz="search"] input'); if (box) box.focus(); } }
+      if (e.key === 'Escape') { taHide(); const box = document.querySelector('[data-bz="search"] input'); if (box) box.focus(); }
+    });
+  }
+  if (!res.length) return taHide();
+  const r = input.getBoundingClientRect(), w = Math.min(Math.max(r.width, 300), innerWidth - 16);
+  ta.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px'; ta.style.top = (r.bottom + 6) + 'px'; ta.style.width = w + 'px';
+  ta.innerHTML = res.map((x) => `<button type="button" role="option" data-act="${escH(x.act)}" data-arg="${escH(x.arg)}"><b>${escH(x.title)}</b><span>${escH(x.sub)}</span></button>`).join('')
+    + `<button type="button" role="option" class="ta-all" data-act="taAll" data-arg="${escH(q)}">All results for “${escH(q)}”</button>`;
+  ta.hidden = false;
+}
+on('taAll', (q) => { R.ui.q = q; R.ui.more = null; go('search'); if (q.length > 1) searchMore(q).then((m) => { if (R.ui.q === q && R.ui.nav === 'search') { R.ui.more = m; render(); } }).catch(() => {}); });
+document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('[data-bz="search"]')) typeAhead(e.target); });
+document.addEventListener('keydown', (e) => {
+  if (!e.target.closest || !e.target.closest('[data-bz="search"]') || !ta || ta.hidden) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); const b = ta.querySelector('button'); if (b) b.focus(); }
+  if (e.key === 'Escape') taHide();
+});
+document.addEventListener('focusout', () => setTimeout(() => { if (ta && !ta.contains(document.activeElement) && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-bz="search"]'))) taHide(); }));
+document.addEventListener('submit', taHide);
+addEventListener('hashchange', taHide);
 /* the one volume slider: no re-render while it moves, a click to hear it when it stops */
 root.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.dev === 'volume') { R.dev.volume = Math.max(0, Math.min(1, +e.target.value / 100)); Store.saveDevice('volume', R.dev.volume); applyDev(); } });
 root.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.dev === 'volume') sfx.click(); });

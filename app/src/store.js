@@ -160,7 +160,11 @@ if (typeof window !== 'undefined') window.addEventListener('pagehide', () => Sto
    are the family's, not ours. They live behind this seam like everything else:
    no other module imports them, and in demo mode none of them run. */
 export const APP_ID = 'maths';
+/* ?demo shows the sample's wallet (audit A5): a ledger the sample built from its own evidence,
+   held here in memory. It only reads — earning and spending stay no-ops in demo mode. */
+let demoLedger = [];
 export const Family = {
+  showDemo(ledger) { if (DEMO) demoLedger = Array.isArray(ledger) ? ledger.slice() : []; },
   track(getName) { return DEMO ? () => {} : trackActivity(APP_ID, getName); },
   milestone(who, ev, label) { if (!DEMO && who) trackMilestone(APP_ID, who, ev, label); },
   earn(who, event, now = Date.now()) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event, now); },
@@ -168,8 +172,8 @@ export const Family = {
   /* avatars and worlds are bought only through the family engine, which pays through the wallet */
   buyAvatar(who, av, ctx) { return DEMO || !who ? false : A.buy(APP_ID, who, av, ctx); },
   buyWorld(who, n, ctx) { return DEMO || !who ? false : A.buyWorld(APP_ID, who, n, ctx); },
-  balance(who) { return DEMO || !who ? 0 : W.balance(who); },
-  ledger(who) { return DEMO || !who ? [] : W.ledger(who); },
+  balance(who) { return DEMO ? demoLedger.reduce((a, x) => a + x.n, 0) : !who ? 0 : W.balance(who); },
+  ledger(who) { return DEMO ? demoLedger.slice() : !who ? [] : W.ledger(who); },
   /* READ the activity feed (for the report card's minutes). This app writes it
      only through the drop-in; here it is parsed, never changed. */
   feed() { if (DEMO || !ls) return []; try { const o = JSON.parse(ls.getItem('bizzing.activity') || 'null'); return o && Array.isArray(o.s) ? o.s : []; } catch { return []; } },
