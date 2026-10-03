@@ -21,6 +21,9 @@ const YN = ['Yes', 'No'];
 const yn = (b) => (b ? 'Yes' : 'No');
 const dsum = (n) => String(n).split('').reduce((a, b) => a + Number(b), 0);
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+/* A step's x (its second route) for a digit sum, or the sum of every other digit from place `from`, as plain arithmetic on n. */
+const digitsX = (n, from = 0, by = 1) => { const out = []; for (let k = from; 10 ** k <= n; k += by) out.push(`Math.floor(${n}/${10 ** k})%10`); return out.length ? out.join('+') : '0+0'; };
+const rootX = (n) => `[...Array(${n}+1).keys()].filter((d)=>d*d<=${n}).length-1`;
 
 /* Prime factors, smallest first, by dividing out the smallest prime each time. */
 function primeFactors(n) {
@@ -103,8 +106,8 @@ export const TRICKS = [
       for (let d = 1; d <= root; d++) if (n % d === 0) pairs++;
       const sq = root * root === n;
       return [
-        { t: `Test 1, 2, 3… only up to the number whose square is at most ${n}. Which number is that?`, v: root },
-        { t: `How many of 1 to ${root} divide ${n} exactly? Each one starts a pair`, v: pairs },
+        { t: `Test 1, 2, 3… only up to the number whose square is at most ${n}. Which number is that?`, v: root, x: rootX(n) },
+        { t: `How many of 1 to ${root} divide ${n} exactly? Each one starts a pair`, v: pairs, x: `[...Array(${n}+1).keys()].filter((d)=>d>0&&d*d<=${n}&&${n}%d===0).length` },
         { t: sq ? `Two factors per pair — but ${root} × ${root} is one number twice, so count it once` : 'Two factors in every pair', v: sq ? 2 * pairs - 1 : 2 * pairs },
       ];
     },
@@ -138,8 +141,8 @@ export const TRICKS = [
     work({ k, s }) {
       const g = Math.floor(s / k);
       return [
-        { t: `${s} ÷ ${k} — how many whole ${k}s fit?`, v: g },
-        { t: 'Take one group more', v: g + 1 },
+        { t: `${s} ÷ ${k} — how many whole ${k}s fit?`, v: g, x: `(${s}-${s}%${k})/${k}` },
+        { t: 'Take one group more', v: g + 1, x: `(${s}-${s}%${k})/${k}+1` },
         { t: `${g + 1} × ${k}`, v: k * (g + 1) },
       ];
     },
@@ -178,7 +181,7 @@ export const TRICKS = [
     work({ a, b }) {
       const last = a % 10, rule = b === 2 ? 'even' : b === 5 ? '0 or 5' : '0';
       return [
-        { t: `The last digit of ${fmt(a)}`, v: last },
+        { t: `The last digit of ${fmt(a)}`, v: last, x: `${a}%10` },
         { t: `The test for ${b}: is the last digit ${rule}?`, v: this.q({ a, b }).ans, choices: YN },
       ];
     },
@@ -215,8 +218,8 @@ export const TRICKS = [
     work({ a, b }) {
       const tail = b === 4 ? a % 100 : a % 1000, ans = yn(tail % b === 0);
       return b === 4
-        ? [{ t: `The last two digits of ${fmt(a)}`, v: tail }, { t: `Is ${tail} in the 4 times table?`, v: ans, choices: YN }]
-        : [{ t: `The last three digits of ${fmt(a)}`, v: tail }, { t: `Is ${tail} in the 8 times table? (Can you halve it three times and stay whole?)`, v: ans, choices: YN }];
+        ? [{ t: `The last two digits of ${fmt(a)}`, v: tail, x: `${a}%100` }, { t: `Is ${tail} in the 4 times table?`, v: ans, choices: YN }]
+        : [{ t: `The last three digits of ${fmt(a)}`, v: tail, x: `${a}%1000` }, { t: `Is ${tail} in the 8 times table? (Can you halve it three times and stay whole?)`, v: ans, choices: YN }];
     },
   },
   {
@@ -250,15 +253,15 @@ export const TRICKS = [
     },
     work({ a, b }) {
       if (b === 6) return [
-        { t: `Is ${fmt(a)} even?`, v: yn(a % 2 === 0), choices: YN },
-        { t: `Add its digits`, v: dsum(a) },
+        { t: `Is ${fmt(a)} even?`, v: yn(a % 2 === 0), choices: YN, x: `${a}%2===0?'Yes':'No'` },
+        { t: `Add its digits`, v: dsum(a), x: digitsX(a) },
         { t: `Divisible by 6 needs both: even, and a digit sum in the 3 times table`, v: yn(a % 2 === 0 && dsum(a) % 3 === 0), choices: YN },
       ];
       const e = elevenSums(a);
       return [
-        { t: 'Starting with the last digit, add every other digit', v: e.odd },
-        { t: 'Add the digits you skipped', v: e.even },
-        { t: 'The difference between the two totals', v: e.diff },
+        { t: 'Starting with the last digit, add every other digit', v: e.odd, x: digitsX(a, 0, 2) },
+        { t: 'Add the digits you skipped', v: e.even, x: digitsX(a, 1, 2) },
+        { t: 'The difference between the two totals', v: e.diff, x: `Math.abs(${digitsX(a, 0, 2)}-(${digitsX(a, 1, 2)}))` },
         { t: `Is ${e.diff} 0 or in the 11 times table?`, v: yn(e.diff % 11 === 0), choices: YN },
       ];
     },
@@ -294,8 +297,8 @@ export const TRICKS = [
     work({ n }) {
       const root = Math.floor(Math.sqrt(n)), sp = smallestFactor(n);
       return [
-        { t: `Which whole number, times itself, is the last one at or below ${n}? Test only up to it`, v: root },
-        { t: `The smallest number bigger than 1 that divides ${n} exactly`, v: sp },
+        { t: `Which whole number, times itself, is the last one at or below ${n}? Test only up to it`, v: root, x: rootX(n) },
+        { t: `The smallest number bigger than 1 that divides ${n} exactly`, v: sp, x: `[...Array(${n}+1).keys()].find((d)=>d>1&&${n}%d===0)` },
         { t: sp === n ? 'Only itself — so is it prime?' : `${sp} divides it — so is it prime?`, v: sp === n ? 'Prime' : 'Not prime', choices: ['Prime', 'Not prime'] },
       ];
     },
@@ -334,7 +337,7 @@ export const TRICKS = [
     },
     work({ n, kind }) {
       const pf = primeFactors(n), s = []; let cur = n;
-      for (const p of pf.slice(0, -1)) { s.push({ t: `${cur} = ${p} × ?`, v: cur / p }); cur /= p; }
+      pf.slice(0, -1).forEach((p, i) => { s.push({ t: `${cur} = ${p} × ?`, v: cur / p, x: `${n}/(${pf.slice(0, i + 1).join('*')})` }); cur /= p; });
       s.push(kind === 'count' ? { t: 'Count the primes at the ends of the branches', v: pf.length } : { t: 'The largest prime at the ends of the branches', v: pf.at(-1) });
       return s;
     },
@@ -367,7 +370,8 @@ export const TRICKS = [
     work({ a, b }) {
       const L = ladder(a, b);
       return [
-        ...L.ps.map((s) => ({ t: `${s.x} and ${s.y}: the smallest prime that divides both`, v: s.p })),
+        // x: Euclid's HCF, then its primes smallest first — the i-th one the ladder takes out
+        ...L.ps.map((s, i) => ({ t: `${s.x} and ${s.y}: the smallest prime that divides both`, v: s.p, x: `((m)=>{const f=[];for(let p=2;m>1;p++)while(m%p===0){f.push(p);m/=p}return f})((function g(a,b){return b?g(b,a%b):a})(${a},${b}))[${i}]` })),
         { t: L.ps.length > 1 ? `No prime divides both ${L.x} and ${L.y}. Multiply the primes you took out: ${L.ps.map((s) => s.p).join(' × ')}` : `No prime divides both ${L.x} and ${L.y}, so the HCF is the one prime you took out`, v: L.h },
       ];
     },
@@ -412,7 +416,7 @@ export const TRICKS = [
     },
     work({ a, b }) {
       const h = gcd(a, b);
-      return [{ t: `HCF of ${a} and ${b}`, v: h }, { t: `${a} ÷ ${h}`, v: a / h }, { t: `${a / h} × ${b}`, v: (a / h) * b }];
+      return [{ t: `HCF of ${a} and ${b}`, v: h, x: `[...Array(${a}+1).keys()].filter((d)=>d>0&&${a}%d===0&&${b}%d===0).pop()` }, { t: `${a} ÷ ${h}`, v: a / h, x: `(function(a,b){let m=b;while(m%a)m+=b;return m})(${a},${b})/${b}` }, { t: `${a / h} × ${b}`, v: (a / h) * b }];
     },
   },
 ];

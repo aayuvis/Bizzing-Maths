@@ -346,16 +346,16 @@ export const TRICKS = [
       return { kind, n, d, u, text: `The suanpan shows ${n}. Add ${d} with the beads. What does it show now?`, expr: `(${abExpr(n)})+${d}`, ans: n + d };
     },
     work({ kind, n, d, u }) {
-      if (kind === 'which') return [{ t: `Is ${u} + ${d} ten or more?`, v: 'Yes', choices: ['Yes', 'No'] }, { t: `${d} and what make ten?`, v: 10 - d }];
-      const s = [{ t: 'Read the units rod', v: u }];
+      if (kind === 'which') return [{ t: `Is ${u} + ${d} ten or more?`, v: 'Yes', choices: ['Yes', 'No'], x: `${n}%10+${d}>=10?'Yes':'No'` }, { t: `${d} and what make ten?`, v: 10 - d }];
+      const s = [{ t: 'Read the units rod', v: u, x: `${n}%10` }];
       if (kind === 'five') {
-        s.push({ t: `Not enough lower beads for ${d}. Bring the five down: how many lower beads come away?`, v: 5 - d }, { t: 'The units rod now shows', v: u + d });
+        s.push({ t: `Not enough lower beads for ${d}. Bring the five down: how many lower beads come away?`, v: 5 - d, x: `5-${d}` }, { t: 'The units rod now shows', v: u + d, x: `(${n}+${d})%10` });
         if (n >= 10) s.push({ t: 'Read the whole suanpan', v: n + d });
         return s;
       }
-      s.push({ t: `${d} and what make ten?`, v: 10 - d }, { t: 'Take that many off the units rod: it shows', v: u + d - 10 });
-      if (kind === 'ten') s.push({ t: `Carry 1: the tens rod goes from ${digit(n, 1)} to`, v: digit(n, 1) + 1 });
-      else s.push({ t: 'The tens rod is full at 9: it clears, and the carry goes on. The hundreds rod shows', v: digit(n, 2) + 1 });
+      s.push({ t: `${d} and what make ten?`, v: 10 - d, x: `10-${d}` }, { t: 'Take that many off the units rod: it shows', v: u + d - 10, x: `(${n}+${d})%10` });
+      if (kind === 'ten') s.push({ t: `Carry 1: the tens rod goes from ${digit(n, 1)} to`, v: digit(n, 1) + 1, x: `Math.floor((${n}+${d})/10)%10` });
+      else s.push({ t: 'The tens rod is full at 9: it clears, and the carry goes on. The hundreds rod shows', v: digit(n, 2) + 1, x: `Math.floor((${n}+${d})/100)%10` });
       s.push({ t: 'Read the whole suanpan', v: n + d });
       return s;
     },
@@ -403,16 +403,16 @@ export const TRICKS = [
       return { kind, n, d, u, text: `The suanpan shows ${n}. Take away ${d} with the beads. What does it show now?`, expr: `(${abExpr(n)})-${d}`, ans: n - d };
     },
     work({ kind, n, d, u }) {
-      if (kind === 'which') return [{ t: `Is ${u} smaller than ${d}?`, v: 'Yes', choices: ['Yes', 'No'] }, { t: `${d} and what make ten?`, v: 10 - d }];
-      const s = [{ t: 'Read the units rod', v: u }];
+      if (kind === 'which') return [{ t: `Is ${u} smaller than ${d}?`, v: 'Yes', choices: ['Yes', 'No'], x: `${n}%10<${d}?'Yes':'No'` }, { t: `${d} and what make ten?`, v: 10 - d }];
+      const s = [{ t: 'Read the units rod', v: u, x: `${n}%10` }];
       if (kind === 'five') {
-        s.push({ t: `Not enough lower beads to take ${d}. Push up how many lower beads, then lift the five away?`, v: 5 - d }, { t: 'The units rod now shows', v: u - d });
+        s.push({ t: `Not enough lower beads to take ${d}. Push up how many lower beads, then lift the five away?`, v: 5 - d, x: `5-${d}` }, { t: 'The units rod now shows', v: u - d, x: `(${n}-${d})%10` });
         if (n >= 10) s.push({ t: 'Read the whole suanpan', v: n - d });
         return s;
       }
-      if (kind === 'ten') s.push({ t: `Borrow 1: the tens rod goes from ${digit(n, 1)} to`, v: digit(n, 1) - 1 });
-      else s.push({ t: `The tens rod is empty: borrow from the hundreds (${digit(n, 2)} becomes ${digit(n, 2) - 1}). The tens rod now shows`, v: 9 });
-      s.push({ t: `${d} and what make ten? Put that many on the units rod`, v: 10 - d }, { t: 'The units rod now shows', v: u + 10 - d }, { t: 'Read the whole suanpan', v: n - d });
+      if (kind === 'ten') s.push({ t: `Borrow 1: the tens rod goes from ${digit(n, 1)} to`, v: digit(n, 1) - 1, x: `Math.floor((${n}-${d})/10)%10` });
+      else s.push({ t: `The tens rod is empty: borrow from the hundreds (${digit(n, 2)} becomes ${digit(n, 2) - 1}). The tens rod now shows`, v: 9, x: `Math.floor((${n}-${d})/10)%10` });
+      s.push({ t: `${d} and what make ten? Put that many on the units rod`, v: 10 - d, x: `10-${d}` }, { t: 'The units rod now shows', v: u + 10 - d, x: `(${n}-${d})%10` }, { t: 'Read the whole suanpan', v: n - d });
       return s;
     },
     draw(q) { return abSvg(q.kind === 'which' ? q.u : q.n, ROD_COUNT - 1, q.kind === 'which' ? 'The units rod of a suanpan' : 'The number on the suanpan before you take away'); },
@@ -445,7 +445,7 @@ export const TRICKS = [
     },
     work({ a, b }) {
       const ds = String(a).split('').map(Number), L = ds.length, s = [];
-      ds.forEach((d, i) => { const p = L - 1 - i; if (d) s.push({ t: `${d} ${PLACE[p]}: ${d * 10 ** p} × ${b}, laid in the middle`, v: d * 10 ** p * b }); });
+      ds.forEach((d, i) => { const p = L - 1 - i; if (d) s.push({ t: `${d} ${PLACE[p]}: ${d * 10 ** p} × ${b}, laid in the middle`, v: d * 10 ** p * b, x: `Math.floor(${a}/${10 ** p})%10*${10 ** p}*${b}` }); });
       s.push({ t: 'Add up the middle row', v: a * b });
       return s;
     },
@@ -490,10 +490,10 @@ export const TRICKS = [
       return { kind, a, c, h, A, text: `A trapezium-shaped bed has an area of ${A} m². It is ${h} m high and one of its parallel sides is ${a} m. How long is the other parallel side, in m?`, expr: `[...Array(400).keys()].find((x)=>(${a}+x)*${h}===2*${A})`, ans: c };
     },
     work({ kind, a, b, c, h, A }) {
-      if (kind === 'parallelogram') return [{ t: 'Slide the end triangle across: the rectangle is as tall as the height', v: h }, { t: 'and as wide as the base. Area = width × height', v: b * h }];
-      if (kind === 'triangle') return [{ t: 'Cut across at half the height: the rectangle is this tall', v: h / 2 }, { t: 'The pieces fill the corners, so it is as wide as the base. Area', v: (b * h) / 2 }];
-      if (kind === 'trapezium') return [{ t: 'Turn the top half round beside the bottom: the two parallel sides end to end', v: a + c }, { t: 'It is now half as tall', v: h / 2 }, { t: 'Area = length × height', v: ((a + c) * h) / 2 }];
-      return [{ t: 'Double the area', v: 2 * A }, { t: `Divide by the height, ${h}: the two parallel sides together`, v: a + c }, { t: `Take away the side you know, ${a}`, v: c }];
+      if (kind === 'parallelogram') return [{ t: 'Slide the end triangle across: the rectangle is as tall as the height', v: h, x: `${b}*${h}/${b}` }, { t: 'and as wide as the base. Area = width × height', v: b * h }];
+      if (kind === 'triangle') return [{ t: 'Cut across at half the height: the rectangle is this tall', v: h / 2, x: `${h}/2` }, { t: 'The pieces fill the corners, so it is as wide as the base. Area', v: (b * h) / 2 }];
+      if (kind === 'trapezium') return [{ t: 'Turn the top half round beside the bottom: the two parallel sides end to end', v: a + c, x: `${a}+${c}` }, { t: 'It is now half as tall', v: h / 2, x: `${h}/2` }, { t: 'Area = length × height', v: ((a + c) * h) / 2 }];
+      return [{ t: 'Double the area', v: 2 * A, x: `${A}+${A}` }, { t: `Divide by the height, ${h}: the two parallel sides together`, v: a + c, x: `2*${A}/${h}` }, { t: `Take away the side you know, ${a}`, v: c }];
     },
     draw(q) { return outInSvg(q); },
   },
@@ -542,12 +542,14 @@ export const TRICKS = [
     work({ op, a, ca, b, cb, kind }) {
       const sa = ca === 'red' ? a : -a, sb = cb === 'red' ? b : -b, ans = op === 'add' ? sa + sb : sa - sb;
       const other = (c) => (c === 'red' ? 'black' : 'red');
-      const s = [{ t: 'Same colour or different?', v: ca === cb ? 'Same' : 'Different', choices: ['Same', 'Different'] }];
-      if (kind === 'add-same') s.push({ t: 'Same colours, adding: the piles join. How many rods?', v: a + b }, { t: `They stay ${ca}, so the answer is`, v: ans });
-      if (kind === 'add-diff') s.push({ t: 'Different colours, adding: red and black cancel. Take the smaller size from the bigger', v: Math.abs(a - b) }, { t: `The ${a > b ? ca : cb} pile was bigger, so the answer is`, v: ans });
-      if (kind === 'sub-same') s.push({ t: `Same colours, taking away: take ${b} rods off the ${a}`, v: a - b }, { t: `What is left is still ${ca}, so the answer is`, v: ans });
-      if (kind === 'sub-flip') s.push({ t: `Same colours, but ${b} is more than ${a}: how many short?`, v: b - a }, { t: `The shortfall shows in the other colour, ${other(ca)}, so the answer is`, v: ans });
-      if (kind === 'sub-diff') s.push({ t: `Different colours, taking away: taking ${cb} away is like being given ${other(cb)}. Add the sizes`, v: a + b }, { t: `The answer keeps the first colour, ${ca}`, v: ans });
+      // the size, the second route: the signed sum on a number line, without its sign
+      const size = `Math.abs((('${ca}'==='red'?1:-1)*${a})${op === 'add' ? '+' : '-'}(('${cb}'==='red'?1:-1)*${b}))`;
+      const s = [{ t: 'Same colour or different?', v: ca === cb ? 'Same' : 'Different', choices: ['Same', 'Different'], x: `'${ca}'==='${cb}'?'Same':'Different'` }];
+      if (kind === 'add-same') s.push({ t: 'Same colours, adding: the piles join. How many rods?', v: a + b, x: size }, { t: `They stay ${ca}, so the answer is`, v: ans });
+      if (kind === 'add-diff') s.push({ t: 'Different colours, adding: red and black cancel. Take the smaller size from the bigger', v: Math.abs(a - b), x: size }, { t: `The ${a > b ? ca : cb} pile was bigger, so the answer is`, v: ans });
+      if (kind === 'sub-same') s.push({ t: `Same colours, taking away: take ${b} rods off the ${a}`, v: a - b, x: size }, { t: `What is left is still ${ca}, so the answer is`, v: ans });
+      if (kind === 'sub-flip') s.push({ t: `Same colours, but ${b} is more than ${a}: how many short?`, v: b - a, x: size }, { t: `The shortfall shows in the other colour, ${other(ca)}, so the answer is`, v: ans });
+      if (kind === 'sub-diff') s.push({ t: `Different colours, taking away: taking ${cb} away is like being given ${other(cb)}. Add the sizes`, v: a + b, x: size }, { t: `The answer keeps the first colour, ${ca}`, v: ans });
       return s;
     },
     draw(q) { return rbSvg(q.a, q.ca, q.op, q.b, q.cb); },
@@ -599,9 +601,9 @@ export const TRICKS = [
     },
     work({ kind, n, p, x, y, a, b, form }) {
       const s = kind === 'same'
-        ? [{ t: `${form === 'excess' ? 'Over' : 'Short'} both times: the two collections differ by ${Math.max(a, b)} − ${Math.min(a, b)}`, v: Math.abs(a - b) }]
-        : [{ t: 'Too many plus too few: how far apart are the two collections?', v: a + b }];
-      s.push({ t: `Each friend pays ${x} − ${y} more the first way`, v: x - y }, { t: 'Divide: the number of friends', v: n });
+        ? [{ t: `${form === 'excess' ? 'Over' : 'Short'} both times: the two collections differ by ${Math.max(a, b)} − ${Math.min(a, b)}`, v: Math.abs(a - b), x: `(${x}-${y})*${n}` }]
+        : [{ t: 'Too many plus too few: how far apart are the two collections?', v: a + b, x: `(${x}-${y})*${n}` }];
+      s.push({ t: `Each friend pays ${x} − ${y} more the first way`, v: x - y, x: `(${x}*${n}-${y}*${n})/${n}` }, { t: 'Divide: the number of friends', v: n, x: `${kind === 'same' ? `Math.abs(${a}-${b})` : `(${a}+${b})`}/(${x}-${y})` });
       if (kind === 'price') s.push({ t: `Everyone pays ${x}; give back the ${a} too many`, v: p });
       return s;
     },
@@ -663,19 +665,21 @@ export const TRICKS = [
     work({ cols, ask }) {
       if (cols.length === 2) {
         const k = clear2(cols, ask), pl = ask === 'low' ? 'top' : 'low', keep = ask === 'low' ? 'lentils' : 'rice';
+        const [[a1, b1, c1], [a2, b2, c2]] = cols, [m, j, mk, jk] = ask === 'low' ? [a1, a2, b2, b1] : [b1, b2, a2, a1];
         return [
-          { t: `Multiply the whole left column by ${k.m}, the right column's ${pl} number. Its kg become`, v: k.tot1 },
-          { t: `Take the right column away ${times(k.k)}: the ${pl} place empties. How many bags of ${keep} are left?`, v: k.coef },
-          { t: '…and how many kg?', v: k.rest },
+          { t: `Multiply the whole left column by ${k.m}, the right column's ${pl} number. Its kg become`, v: k.tot1, x: `${c2}*${m}` },
+          { t: `Take the right column away ${times(k.k)}: the ${pl} place empties. How many bags of ${keep} are left?`, v: k.coef, x: `${mk}*${m}-${jk}*${j}` },
+          { t: '…and how many kg?', v: k.rest, x: `${c2}*${m}-${c1}*${j}` },
           { t: `Divide: one bag of ${keep}`, v: k.rest / k.coef },
         ];
       }
-      const k = clear3(cols), [[a1], [a2], [a3]] = cols;
+      const k = clear3(cols), [[a1, b1, c1, d1], [a2, b2, c2, d2], [a3, b3, c3, d3]] = cols;
+      const B2 = `(${b2}*${a1}-${b1}*${a2})`, B3 = `(${b3}*${a1}-${b1}*${a3})`, C2 = `(${c2}*${a1}-${c1}*${a2})`, C3 = `(${c3}*${a1}-${c1}*${a3})`, D2 = `(${d2}*${a1}-${d1}*${a2})`, D3 = `(${d3}*${a1}-${d1}*${a3})`;
       return [
-        { t: `Middle column × ${a1}, take the right column away ${times(a2)}: the top place empties. Its lentils number is now`, v: k.B2 },
-        { t: `Left column × ${a1}, take the right column away ${times(a3)}. Its lentils number is now`, v: k.B3 },
-        { t: 'Now clear the lentils from the left column using the middle column. Its flour number is now', v: k.C },
-        { t: '…and its kg', v: k.D },
+        { t: `Middle column × ${a1}, take the right column away ${times(a2)}: the top place empties. Its lentils number is now`, v: k.B2, x: B2 },
+        { t: `Left column × ${a1}, take the right column away ${times(a3)}. Its lentils number is now`, v: k.B3, x: B3 },
+        { t: 'Now clear the lentils from the left column using the middle column. Its flour number is now', v: k.C, x: `${C3}*${B2}-${C2}*${B3}` },
+        { t: '…and its kg', v: k.D, x: `${D3}*${B2}-${D2}*${B3}` },
         { t: 'Divide: one bag of flour', v: k.D / k.C },
       ];
     },
@@ -715,10 +719,12 @@ export const TRICKS = [
     },
     work({ m, n, a, b }) {
       const k = sunzi(m, n, a, b);
+      // the second route: search the multiples one by one
+      const M1 = `[...Array(${m}).keys()].map((i)=>(i+1)*${n}).find((v)=>v%${m}===1)`, M2 = `[...Array(${n}).keys()].map((i)=>(i+1)*${m}).find((v)=>v%${n}===1)`;
       return [
-        { t: `The smallest multiple of ${n} that leaves 1 when divided by ${m}`, v: k.M1 },
-        { t: `The smallest multiple of ${m} that leaves 1 when divided by ${n}`, v: k.M2 },
-        { t: `${lots(a)} of the first, plus ${lots(b)} of the second`, v: k.S },
+        { t: `The smallest multiple of ${n} that leaves 1 when divided by ${m}`, v: k.M1, x: M1 },
+        { t: `The smallest multiple of ${m} that leaves 1 when divided by ${n}`, v: k.M2, x: M2 },
+        { t: `${lots(a)} of the first, plus ${lots(b)} of the second`, v: k.S, x: `${a}*${M1}+${b}*${M2}` },
         { t: `Take away ${m * n} as many times as you can`, v: k.x },
       ];
     },
@@ -761,8 +767,8 @@ export const TRICKS = [
     },
     work({ kind, h, d, s1, s2 }) {
       const g = s2 - s1, k = d / g;
-      const s = [{ t: 'How much further back did you lie the second time?', v: g }, { t: `How many times does that fit into the ${d} m between the poles?`, v: k }];
-      if (kind === 'height') s.push({ t: 'Times the pole height: the peak above the pole tops', v: h * k }, { t: 'Add the pole itself', v: h + h * k });
+      const s = [{ t: 'How much further back did you lie the second time?', v: g, x: `${s2}-${s1}` }, { t: `How many times does that fit into the ${d} m between the poles?`, v: k, x: `${d}/(${s2}-${s1})` }];
+      if (kind === 'height') s.push({ t: 'Times the pole height: the peak above the pole tops', v: h * k, x: `${h}*(${d}+${s2}-${s1})/(${s2}-${s1})-${h}` }, { t: 'Add the pole itself', v: h + h * k });
       else s.push({ t: `Times the first back-step, ${s1} m`, v: s1 * k });
       return s;
     },
@@ -813,14 +819,15 @@ export const TRICKS = [
       return { kind, A, B, order, choices, text: `Which is closer to π: ${A} or ${B}?`, expr: `Math.abs((${A})-Math.PI)<Math.abs((${B})-Math.PI)?'${A}':'${B}'`, ans: Math.abs(val(A) - PI4) < Math.abs(val(B) - PI4) ? A : B };
     },
     work(q) {
-      if (q.kind === 'hexagon') return [{ t: 'The angle at the centre of each of the six triangles, 360° ÷ 6', v: 60 }, { t: 'Each triangle is equilateral, so one side of the hexagon is', v: q.r }, { t: 'Six sides', v: 6 * q.r }];
+      if (q.kind === 'hexagon') return [{ t: 'The angle at the centre of each of the six triangles, 360° ÷ 6', v: 60, x: '360/6' }, { t: 'Each triangle is equilateral, so one side of the hexagon is', v: q.r, x: `2*${q.r}*Math.sin(Math.PI/6)` }, { t: 'Six sides', v: 6 * q.r }];
       if (q.kind === 'double') {
         const w = doubleWork(q.r);
-        return [{ t: 'Half a side of the hexagon', v: w.half }, { t: 'Centre to the middle of that side: √(r² − half²), to 2 places', v: w.ap }, { t: 'The gap from there out to the circle: r minus that', v: w.gap }, { t: 'New side: √(half² + gap²), to 2 places', v: w.side }];
+        const ap = `Math.round(${q.r}*Math.sqrt(3)/2*100)/100`;   // the apothem of a hexagon is r√3/2
+        return [{ t: 'Half a side of the hexagon', v: w.half, x: `${q.r}/2` }, { t: 'Centre to the middle of that side: √(r² − half²), to 2 places', v: w.ap, x: ap }, { t: 'The gap from there out to the circle: r minus that', v: w.gap, x: `${q.r}-${ap}` }, { t: 'New side: √(half² + gap²), to 2 places', v: w.side }];
       }
-      if (q.kind === 'estimate') return [{ t: `Perimeter: ${q.n} × ${q.s}`, v: r4(q.n * q.s) }, { t: `Divide by the diameter, ${2 * q.r}, and round to 2 places`, v: estOf(q.n, q.r) }];
+      if (q.kind === 'estimate') return [{ t: `Perimeter: ${q.n} × ${q.s}`, v: r4(q.n * q.s), x: `${q.n}*${q.s}` }, { t: `Divide by the diameter, ${2 * q.r}, and round to 2 places`, v: estOf(q.n, q.r) }];
       const val = (f) => APPROX.find((x) => x[0] === f)[1];
-      return [{ t: `${q.A} as a decimal, to 4 places`, v: r4(val(q.A)) }, { t: `${q.B} as a decimal, to 4 places`, v: r4(val(q.B)) }, { t: 'π is 3.1416 to 4 places. Which is closer?', v: q.ans, choices: q.choices }];
+      return [{ t: `${q.A} as a decimal, to 4 places`, v: r4(val(q.A)), x: `Math.round((${q.A})*1e4)/1e4` }, { t: `${q.B} as a decimal, to 4 places`, v: r4(val(q.B)), x: `Math.round((${q.B})*1e4)/1e4` }, { t: 'π is 3.1416 to 4 places. Which is closer?', v: q.ans, choices: q.choices }];
     },
     draw(q) {
       if (q.kind === 'closer') return polySvg(96, 1, '');
@@ -865,14 +872,16 @@ export const TRICKS = [
         ans: pickd[idx] };
     },
     work({ p, q, k, N, want, ask, sol }) {
+      // the second route: try every rooster and hen count, as the stated rule picks
+      const bf = (i) => `(()=>{let b=null;for(let r=1;r<${N};r++)for(let h=1;r+h<${N};h++){const z=${N}-r-h;if(z%${k}===0&&${p}*r+${q}*h+z/${k}===${N}&&(b===null||r${want === 'most' ? '>' : '<'}b[0]))b=[r,h,z];}return b[${i}];})()`;
       const [R, H, Z] = sol, s = [
-        { t: `Multiply the coins by ${k} and take away the birds: ${k * p - 1} for each rooster and ${k * q - 1} for each hen make`, v: (k - 1) * N },
-        { t: `Roosters can only change in steps of ${k * q - 1} ÷ ${gcd(k * p - 1, k * q - 1)} to keep the hens whole. Step size`, v: (k * q - 1) / gcd(k * p - 1, k * q - 1) },
-        { t: `The ${want === 'most' ? 'most' : 'fewest'} roosters on that ladder that leave at least one hen and some chicks`, v: R },
+        { t: `Multiply the coins by ${k} and take away the birds: ${k * p - 1} for each rooster and ${k * q - 1} for each hen make`, v: (k - 1) * N, x: `${k}*${N}-${N}` },
+        { t: `Roosters can only change in steps of ${k * q - 1} ÷ ${gcd(k * p - 1, k * q - 1)} to keep the hens whole. Step size`, v: (k * q - 1) / gcd(k * p - 1, k * q - 1), x: `[...Array(${k}*${q}).keys()].map((i)=>i+1).find((t)=>(${k}*${p}-1)*t%(${k}*${q}-1)===0)` },
+        { t: `The ${want === 'most' ? 'most' : 'fewest'} roosters on that ladder that leave at least one hen and some chicks`, v: R, x: bf(0) },
       ];
       if (ask === 'roosters') return s;
-      s.push({ t: `Hens: what the roosters leave, ÷ ${k * q - 1}`, v: H });
-      if (ask === 'chicks') s.push({ t: `Chicks: ${N} birds, less the roosters and hens`, v: Z });
+      s.push({ t: `Hens: what the roosters leave, ÷ ${k * q - 1}`, v: H, x: bf(1) });
+      if (ask === 'chicks') s.push({ t: `Chicks: ${N} birds, less the roosters and hens`, v: Z, x: bf(2) });
       return s;
     },
     draw(q) { return tagsSvg(q.p, q.q, q.k); },

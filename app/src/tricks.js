@@ -30,6 +30,8 @@ import { int, pick } from './rand.js';
 
 const digits = (n) => String(n).split('').map(Number);
 const dsum = (n) => digits(n).reduce((a, b) => a + b, 0);
+// a step's x: the digit sum of an expression, as plain arithmetic on it (the second route)
+const dsumX = (e, n = 7) => Array.from({ length: n }, (_, k) => `Math.floor((${e})/${10 ** k})%10`).join('+');
 export const droot = (n) => { let x = n; while (x > 9) x = dsum(x); return x; };
 
 /* ------------------------------------------------------------------ worlds */
@@ -99,8 +101,8 @@ const CORE = [
     work({ a, b }) {
       const top = Math.ceil((a + 1) / 10) * 10, need = top - a;
       return [
-        { t: `How many does ${a} need to make ${top}?`, v: need },
-        { t: `Take that from ${b}. What is left?`, v: b - need },
+        { t: `How many does ${a} need to make ${top}?`, v: need, x: `10-${a}%10` },
+        { t: `Take that from ${b}. What is left?`, v: b - need, x: `${a}+${b}-(${a}-${a}%10+10)` },
         { t: `${top} + ${b - need}`, v: a + b },
       ];
     },
@@ -124,7 +126,7 @@ const CORE = [
     q({ a, b }) { return { a, b, text: `${a} + ${b}`, expr: `${a}+${b}`, ans: a + b }; },
     work({ a, b }) {
       return [
-        { t: `Double ${a}`, v: 2 * a },
+        { t: `Double ${a}`, v: 2 * a, x: `${a}+${a}` },
         { t: 'Add one more', v: a + b },
       ];
     },
@@ -158,7 +160,7 @@ const CORE = [
     work({ a, b }) {
       const up = b + 1;
       return [
-        { t: `Add ${up} instead`, v: a + up },
+        { t: `Add ${up} instead`, v: a + up, x: `${a}+${b}+1` },
         { t: 'Take one away', v: a + b },
       ];
     },
@@ -192,8 +194,8 @@ const CORE = [
     work({ a, b }) {
       const ten = Math.ceil((b + 1) / 10) * 10;
       return [
-        { t: `From ${b} up to ${ten}`, v: ten - b },
-        { t: `From ${ten} up to ${a}`, v: a - ten },
+        { t: `From ${b} up to ${ten}`, v: ten - b, x: `10-${b}%10` },
+        { t: `From ${ten} up to ${a}`, v: a - ten, x: `${a}-(${b}-${b}%10+10)` },
         { t: 'Add the two jumps', v: a - b },
       ];
     },
@@ -225,8 +227,8 @@ const CORE = [
     work({ a, b }) {
       const t = Math.floor(a / 10) * 10 + Math.floor(b / 10) * 10, o = (a % 10) + (b % 10);
       return [
-        { t: `${Math.floor(a / 10) * 10} + ${Math.floor(b / 10) * 10}`, v: t },
-        { t: `${a % 10} + ${b % 10}`, v: o },
+        { t: `${Math.floor(a / 10) * 10} + ${Math.floor(b / 10) * 10}`, v: t, x: `${a}-${a}%10+${b}-${b}%10` },
+        { t: `${a % 10} + ${b % 10}`, v: o, x: `${a}%10+${b}%10` },
         { t: `${t} + ${o}`, v: a + b },
       ];
     },
@@ -257,7 +259,7 @@ const CORE = [
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
     work({ a, b }) {
       const s = []; let v = a;
-      for (let i = 0; i < Math.log2(b); i++) { v *= 2; s.push({ t: i === 0 ? `Double ${a}` : 'Double again', v }); }
+      for (let i = 0; i < Math.log2(b); i++) { v *= 2; s.push({ t: i === 0 ? `Double ${a}` : 'Double again', v, x: `${a}*2**${i + 1}` }); }
       return s;
     },
   },
@@ -281,7 +283,7 @@ const CORE = [
     ],
     gen(r, lv = 1) { return this.q({ a: lv === 1 ? int(3, 12, r) * 2 : int(11, lv === 2 ? 49 : 199, r), b: 5 }); },
     q({ a, b }) { return { a, b, odd: a % 2 ? 'odd' : 'even', text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
-    work({ a }) { return [{ t: `${a} × 10`, v: a * 10 }, { t: 'Halve it', v: a * 5 }]; },
+    work({ a }) { return [{ t: `${a} × 10`, v: a * 10, x: `${a}*10` }, { t: 'Halve it', v: a * 5 }]; },
   },
   {
     id: 'times-nine', world: 'market', band: '6-7', title: 'Times nine',
@@ -296,7 +298,7 @@ const CORE = [
     oneIdea: true,
     gen(r, lv = 1) { return this.q({ a: lv === 1 ? int(2, 12, r) : int(12, lv === 2 ? 30 : 99, r), b: 9 }); },
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
-    work({ a }) { return [{ t: `${a} × 10`, v: a * 10 }, { t: `Take away one ${a}`, v: a * 9 }]; },
+    work({ a }) { return [{ t: `${a} × 10`, v: a * 10, x: `${a}*10` }, { t: `Take away one ${a}`, v: a * 9 }]; },
   },
   {
     id: 'times-twelve', world: 'market', band: '6-7', title: 'Split the hard one',
@@ -311,7 +313,7 @@ const CORE = [
     oneIdea: true,
     gen(r, lv = 1) { return this.q({ a: lv === 1 ? int(3, 12, r) : int(11, lv === 2 ? 25 : 60, r), b: 12 }); },
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
-    work({ a }) { return [{ t: `${a} × 10`, v: a * 10 }, { t: `${a} × 2`, v: a * 2 }, { t: 'Add them', v: a * 12 }]; },
+    work({ a }) { return [{ t: `${a} × 10`, v: a * 10, x: `${a}*10` }, { t: `${a} × 2`, v: a * 2, x: `${a}+${a}` }, { t: 'Add them', v: a * 12 }]; },
     fig: ({ a }) => ({ kind: 'area', h: a, parts: [10, 2] }),
   },
   {
@@ -345,9 +347,9 @@ const CORE = [
       return { a, b, way, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b };
     },
     work({ a }) {
-      if (a >= 100) return [{ t: `${a} × 10`, v: a * 10 }, { t: `Add ${a}`, v: a * 11 }];
+      if (a >= 100) return [{ t: `${a} × 10`, v: a * 10, x: `${a}*10` }, { t: `Add ${a}`, v: a * 11 }];
       const t = Math.floor(a / 10), o = a % 10;
-      return [{ t: `${t} + ${o} — the middle`, v: t + o }, { t: `${t} … ${t + o} … ${o}${t + o > 9 ? ' (carry the one)' : ''}`, v: a * 11 }];
+      return [{ t: `${t} + ${o} — the middle`, v: t + o, x: `Math.floor(${a}/10)+${a}%10` }, { t: `${t} … ${t + o} … ${o}${t + o > 9 ? ' (carry the one)' : ''}`, v: a * 11 }];
     },
   },
 
@@ -370,7 +372,7 @@ const CORE = [
     q({ a, b }) { return { a, b, text: `${a} + ${b}`, expr: `${a}+${b}`, ans: a + b }; },
     work({ a, b }) {
       const up = Math.ceil(b / 10) * 10;
-      return [{ t: `${a} + ${up}`, v: a + up }, { t: `Give back ${up - b}`, v: a + b }];
+      return [{ t: `${a} + ${up}`, v: a + up, x: `${a}+${b}+(10-${b}%10)` }, { t: `Give back ${up - b}`, v: a + b }];
     },
     fig: ({ a, b }) => { const up = Math.ceil(b / 10) * 10; return { kind: 'jumps', from: a, jumps: [up, b - up] }; },
   },
@@ -394,7 +396,7 @@ const CORE = [
     q({ a, b }) { return { a, b, text: `${a} − ${b}`, expr: `${a}-${b}`, ans: a - b }; },
     work({ a, b }) {
       const up = Math.ceil(b / 10) * 10;
-      return [{ t: `${a} − ${up}`, v: a - up }, { t: `Add back ${up - b}`, v: a - b }];
+      return [{ t: `${a} − ${up}`, v: a - up, x: `${a}-${b}-(10-${b}%10)` }, { t: `Add back ${up - b}`, v: a - b }];
     },
     fig: ({ a, b }) => { const up = Math.ceil(b / 10) * 10; return { kind: 'jumps', from: a, jumps: [-up, up - b] }; },
   },
@@ -416,7 +418,7 @@ const CORE = [
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
     work({ a, b }) {
       const big = b - (b % 10), u = b % 10;
-      return [{ t: `${a} × ${big}`, v: a * big }, { t: `${a} × ${u}`, v: a * u }, { t: 'Add them', v: a * b }];
+      return [{ t: `${a} × ${big}`, v: a * big, x: `${a}*(${b}-${b}%10)` }, { t: `${a} × ${u}`, v: a * u, x: `${a}*(${b}%10)` }, { t: 'Add them', v: a * b }];
     },
     fig: ({ a, b }) => ({ kind: 'area', h: a, parts: [b - (b % 10), b % 10] }),
   },
@@ -433,7 +435,7 @@ const CORE = [
     oneIdea: true,
     gen(r, lv = 1) { return this.q({ a: int(1, lv === 1 ? 12 : lv === 2 ? 25 : 99, r) * 4, b: 25 }); },
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
-    work({ a }) { return [{ t: `${a} ÷ 4`, v: a / 4 }, { t: '× 100', v: a * 25 }]; },
+    work({ a }) { return [{ t: `${a} ÷ 4`, v: a / 4, x: `${a}/4` }, { t: '× 100', v: a * 25 }]; },
   },
   {
     id: 'halve-double', world: 'workshop', band: '8-10', title: 'Halve one, double the other',
@@ -452,7 +454,7 @@ const CORE = [
     },
     q({ a, b }) { return { a, b, text: `${a} × ${b}`, expr: `${a}*${b}`, ans: a * b }; },
     work({ a, b }) {
-      return [{ t: `Halve ${a}`, v: a / 2 }, { t: `Double ${b}`, v: b * 2 }, { t: `${a / 2} × ${b * 2}`, v: a * b }];
+      return [{ t: `Halve ${a}`, v: a / 2, x: `${a}/2` }, { t: `Double ${b}`, v: b * 2, x: `${b}+${b}` }, { t: `${a / 2} × ${b * 2}`, v: a * b }];
     },
   },
 
@@ -473,7 +475,7 @@ const CORE = [
     q({ a }) { return { a, b: a, text: `${a}²`, say: `${a} squared`, expr: `${a}*${a}`, ans: a * a }; },
     work({ a }) {
       const n = Math.floor(a / 10);
-      return [{ t: `${n} × ${n + 1}`, v: n * (n + 1) }, { t: 'Write 25 on the end', v: a * a }];
+      return [{ t: `${n} × ${n + 1}`, v: n * (n + 1), x: `(${a}*${a}-25)/100` }, { t: 'Write 25 on the end', v: a * a }];
     },
     fig: ({ a }) => ({ kind: 'area', h: a, parts: [a - 5, 5], vparts: [a - 5, 5] }),
   },
@@ -501,10 +503,10 @@ const CORE = [
     work({ a, b }) {
       const x = 10 - a, y = 10 - b;
       return [
-        { t: `How far is ${a} below 10?`, v: x },
-        { t: `How far is ${b} below 10?`, v: y },
-        { t: `Cross: ${a} − ${y} (tens)`, v: a - y },
-        { t: `Multiply the gaps: ${x} × ${y}`, v: x * y },
+        { t: `How far is ${a} below 10?`, v: x, x: `10-${a}` },
+        { t: `How far is ${b} below 10?`, v: y, x: `10-${b}` },
+        { t: `Cross: ${a} − ${y} (tens)`, v: a - y, x: `${a}+${b}-10` },
+        { t: `Multiply the gaps: ${x} × ${y}`, v: x * y, x: `${a}*${b}-10*(${a}+${b}-10)` },
         { t: `${a - y} tens and ${x * y}`, v: a * b },
       ];
     },
@@ -534,10 +536,10 @@ const CORE = [
     work({ a, b }) {
       const x = 100 - a, y = 100 - b;
       return [
-        { t: `${a} is how far below 100?`, v: x },
-        { t: `${b} is how far below 100?`, v: y },
-        { t: `Cross: ${a} − ${y} (hundreds)`, v: a - y },
-        { t: `Gaps: ${x} × ${y} (last two digits)`, v: x * y },
+        { t: `${a} is how far below 100?`, v: x, x: `100-${a}` },
+        { t: `${b} is how far below 100?`, v: y, x: `100-${b}` },
+        { t: `Cross: ${a} − ${y} (hundreds)`, v: a - y, x: `${a}+${b}-100` },
+        { t: `Gaps: ${x} × ${y} (last two digits)`, v: x * y, x: `${a}*${b}-100*(${a}+${b}-100)` },
         { t: `${a - y} hundreds and ${x * y}`, v: a * b },
       ];
     },
@@ -568,10 +570,10 @@ const CORE = [
     work({ a, b }) {
       const x = a - 100, y = b - 100;
       return [
-        { t: `${a} is how far above 100?`, v: x },
-        { t: `${b} is how far above 100?`, v: y },
-        { t: `Cross: ${a} + ${y} (hundreds)`, v: a + y },
-        { t: `Surpluses: ${x} × ${y}`, v: x * y },
+        { t: `${a} is how far above 100?`, v: x, x: `${a}-100` },
+        { t: `${b} is how far above 100?`, v: y, x: `${b}-100` },
+        { t: `Cross: ${a} + ${y} (hundreds)`, v: a + y, x: `${a}+${b}-100` },
+        { t: `Surpluses: ${x} × ${y}`, v: x * y, x: `${a}*${b}-100*(${a}+${b}-100)` },
         { t: `${a + y} hundreds and ${x * y}`, v: a * b },
       ];
     },
@@ -606,8 +608,8 @@ const CORE = [
     q({ a, b }) { return { a, b, short: String(b).length < String(a).length - 1, text: `${a} − ${b}`, expr: `${a}-${b}`, ans: a - b }; },
     work({ a, b }) {
       const w = String(a).length - 1, d = String(b).padStart(w, '0').split('').map(Number);
-      const s = d.slice(0, -1).map((x, i) => ({ t: `9 − ${x}${i === 0 ? ' (first digit)' : ''}`, v: 9 - x }));
-      s.push({ t: `10 − ${d.at(-1)} (last digit)`, v: 10 - d.at(-1) });
+      const s = d.slice(0, -1).map((x, i) => ({ t: `9 − ${x}${i === 0 ? ' (first digit)' : ''}`, v: 9 - x, x: `9-Math.floor(${b}/${10 ** (w - 1 - i)})%10` }));
+      s.push({ t: `10 − ${d.at(-1)} (last digit)`, v: 10 - d.at(-1), x: `10-${b}%10` });
       s.push({ t: 'Read the digits', v: a - b });
       return s;
     },
@@ -644,9 +646,9 @@ const CORE = [
     work({ a, b }) {
       const [p, q] = [Math.floor(a / 10), a % 10], [s, t] = [Math.floor(b / 10), b % 10];
       return [
-        { t: `Units: ${q} × ${t}`, v: q * t },
-        { t: `Crosswise: ${p} × ${t} + ${q} × ${s}`, v: p * t + q * s },
-        { t: `Tens: ${p} × ${s}`, v: p * s },
+        { t: `Units: ${q} × ${t}`, v: q * t, x: `(${a}%10)*(${b}%10)` },
+        { t: `Crosswise: ${p} × ${t} + ${q} × ${s}`, v: p * t + q * s, x: `Math.floor(${a}/10)*(${b}%10)+(${a}%10)*Math.floor(${b}/10)` },
+        { t: `Tens: ${p} × ${s}`, v: p * s, x: `Math.floor(${a}/10)*Math.floor(${b}/10)` },
         { t: 'Carry and read', v: a * b },
       ];
     },
@@ -686,9 +688,9 @@ const CORE = [
     work({ a }) {
       const d = a - 100;
       return [
-        { t: `How far from 100?${d > 0 ? ' (over)' : ' (short)'}`, v: Math.abs(d) },
-        { t: d > 0 ? `Go up again: ${a} + ${d}` : `Go down again: ${a} − ${-d}`, v: a + d },
-        { t: `Square the gap: ${Math.abs(d)}²`, v: d * d },
+        { t: `How far from 100?${d > 0 ? ' (over)' : ' (short)'}`, v: Math.abs(d), x: `Math.abs(${a}-100)` },
+        { t: d > 0 ? `Go up again: ${a} + ${d}` : `Go down again: ${a} − ${-d}`, v: a + d, x: `2*${a}-100` },
+        { t: `Square the gap: ${Math.abs(d)}²`, v: d * d, x: `(${a}-100)**2` },
         { t: `${a + d} hundreds and ${d * d}`, v: a * a },
       ];
     },
@@ -716,8 +718,8 @@ const CORE = [
     gen(r, lv = 1) { return this.q({ a: int(lv === 1 ? 20 : 100, lv === 1 ? 99 : lv === 2 ? 9999 : 999999, r) }); },
     q({ a }) { return { a, rounds: dsum(a) > 9 ? 'again' : 'once', text: `Digit root of ${a}`, say: `the digit root of ${a}`, expr: `((${a}-1)%9)+1`, ans: droot(a) }; },
     work({ a }) {
-      const s = []; let x = a;
-      while (x > 9) { const y = dsum(x); s.push({ t: `Add the digits of ${x}`, v: y }); x = y; }
+      const s = []; let x = a, e = `${a}`;
+      while (x > 9) { const y = dsum(x); e = `(${dsumX(e)})`; s.push({ t: `Add the digits of ${x}`, v: y, x: e }); x = y; }
       if (!s.length) s.push({ t: 'Already one digit', v: a });
       return s;
     },
@@ -754,7 +756,7 @@ const CORE = [
       return { a, b, text: `Is ${a} divisible by ${b}?`, say: `is ${a} divisible by ${b}`, choices: ['Yes', 'No'], ans: yes ? 'Yes' : 'No', expr: `${a}%${b}===0?'Yes':'No'` };
     },
     work({ a, b }) {
-      return [{ t: `Add the digits of ${a}`, v: dsum(a) }, { t: `Is ${dsum(a)} in the ${b} times table?`, v: a % b === 0 ? 'Yes' : 'No', choices: ['Yes', 'No'] }];
+      return [{ t: `Add the digits of ${a}`, v: dsum(a), x: dsumX(a) }, { t: `Is ${dsum(a)} in the ${b} times table?`, v: a % b === 0 ? 'Yes' : 'No', choices: ['Yes', 'No'] }];
     },
   },
   {
@@ -810,10 +812,10 @@ const CORE = [
     work({ a, b }) {
       const m = (a + b) / 2, d = (b - a) / 2;
       return [
-        { t: 'The middle number', v: m },
-        { t: 'The distance to it', v: d },
-        { t: `${m}²`, v: m * m },
-        { t: `${d}²`, v: d * d },
+        { t: 'The middle number', v: m, x: `(${a}+${b})/2` },
+        { t: 'The distance to it', v: d, x: `(${b}-${a})/2` },
+        { t: `${m}²`, v: m * m, x: `((${a}+${b})/2)**2` },
+        { t: `${d}²`, v: d * d, x: `((${a}+${b})/2)**2-${a}*${b}` },
         { t: `${m * m} − ${d * d}`, v: a * b },
       ];
     },
@@ -833,7 +835,7 @@ const CORE = [
     q({ a }) { return { a, b: a, text: `${a}²`, say: `${a} squared`, expr: `${a}*${a}`, ans: a * a }; },
     work({ a }) {
       const n = a - 1;
-      return [{ t: `${n}²`, v: n * n }, { t: `${n} + ${a}`, v: n + a }, { t: 'Add them', v: a * a }];
+      return [{ t: `${n}²`, v: n * n, x: `(${a}-1)**2` }, { t: `${n} + ${a}`, v: n + a, x: `2*${a}-1` }, { t: 'Add them', v: a * a }];
     },
   },
 ];

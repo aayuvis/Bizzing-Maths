@@ -86,18 +86,19 @@ function pattern(b) {
 /* One move along the line, as steps: stop at zero when you cross it. */
 function move(s, m) {
   const end = s + m, dir = m > 0 ? 'up' : 'down', d = Math.abs(m);
-  if (s === 0 || end === 0) return [{ t: `${N(s)} ${m > 0 ? '+' : '−'} ${d}`, v: end }];
+  const E = `(${s})+(${m})`;   // x: the move as plain arithmetic on the start and the change
+  if (s === 0 || end === 0) return [{ t: `${N(s)} ${m > 0 ? '+' : '−'} ${d}`, v: end, x: E }];
   if (s * end < 0) return [
-    { t: `From ${N(s)} ${dir} to 0 is`, v: Math.abs(s) },
-    { t: `Still to go after 0: ${d} − ${Math.abs(s)}`, v: d - Math.abs(s) },
-    { t: `Past zero, so you land on`, v: end },
+    { t: `From ${N(s)} ${dir} to 0 is`, v: Math.abs(s), x: `Math.abs(${s})` },
+    { t: `Still to go after 0: ${d} − ${Math.abs(s)}`, v: d - Math.abs(s), x: `Math.abs(${E})` },
+    { t: `Past zero, so you land on`, v: end, x: E },
   ];
   if (s < 0) return [
-    { t: `How far below 0 is ${N(s)}?`, v: -s },
-    { t: m < 0 ? `Down ${d} takes you further from 0: ${-s} + ${d}` : `Up ${d} brings you closer to 0: ${-s} − ${d}`, v: -end },
-    { t: 'Still below zero, so you are at', v: end },
+    { t: `How far below 0 is ${N(s)}?`, v: -s, x: `0-(${s})` },
+    { t: m < 0 ? `Down ${d} takes you further from 0: ${-s} + ${d}` : `Up ${d} brings you closer to 0: ${-s} − ${d}`, v: -end, x: `Math.abs(${E})` },
+    { t: 'Still below zero, so you are at', v: end, x: E },
   ];
-  return [{ t: `${s} ${m > 0 ? '+' : '−'} ${d}`, v: end }];
+  return [{ t: `${s} ${m > 0 ? '+' : '−'} ${d}`, v: end, x: E }];
 }
 
 const C3 = ['<', '=', '>'];
@@ -142,7 +143,7 @@ export const TRICKS = [
         expr: `(${a})>(${b})?'>':(${a})<(${b})?'<':'='` };
     },
     work({ a, b, ans }) {
-      return [{ t: `Which is higher up the shaft: ${N(a)} or ${N(b)}?`, v: Math.max(a, b) }, { t: 'So the sign between them is', v: ans, choices: C3 }];
+      return [{ t: `Which is higher up the shaft: ${N(a)} or ${N(b)}?`, v: Math.max(a, b), x: `((${a})+(${b})+Math.abs((${a})-(${b})))/2` }, { t: 'So the sign between them is', v: ans, choices: C3 }];
     },
     draw: ({ a, b }) => shaft([a, b]),
   },
@@ -204,7 +205,7 @@ export const TRICKS = [
     work({ s, m }) {
       if (m.length === 1) return move(s, m[0]);
       const mid = s + m[0], d = (x) => `${x > 0 ? 'up' : 'down'} ${Math.abs(x)}`;
-      return [{ t: `From ${N(s)}, ${d(m[0])}. Where does the first trip end?`, v: mid }, { t: `From ${N(mid)}, ${d(m[1])}`, v: mid + m[1] }];
+      return [{ t: `From ${N(s)}, ${d(m[0])}. Where does the first trip end?`, v: mid, x: `(${s})+(${m[0]})` }, { t: `From ${N(mid)}, ${d(m[1])}`, v: mid + m[1] }];
     },
     draw: ({ s, m }) => shaft([s, s + m[0], s + m[0] + (m[1] || 0)], { [s]: 'lift' }),
   },
@@ -244,8 +245,8 @@ export const TRICKS = [
     },
     work({ a, b }) {
       const lo = Math.min(a, b), hi = Math.max(a, b);
-      if (hi > 0) return [{ t: `From ${N(lo)} up to 0`, v: -lo }, { t: `From 0 up to ${hi}`, v: hi }, { t: 'Zero is between them, so add', v: hi - lo }];
-      return [{ t: `How far below 0 is ${N(lo)}?`, v: -lo }, { t: `How far below 0 is ${N(hi)}?`, v: -hi }, { t: `Both below zero, so take away: ${-lo} − ${-hi}`, v: hi - lo }];
+      if (hi > 0) return [{ t: `From ${N(lo)} up to 0`, v: -lo, x: `Math.abs(Math.min(${a},${b}))` }, { t: `From 0 up to ${hi}`, v: hi, x: `Math.max(${a},${b})` }, { t: 'Zero is between them, so add', v: hi - lo }];
+      return [{ t: `How far below 0 is ${N(lo)}?`, v: -lo, x: `Math.abs(Math.min(${a},${b}))` }, { t: `How far below 0 is ${N(hi)}?`, v: -hi, x: `Math.abs(Math.max(${a},${b}))` }, { t: `Both below zero, so take away: ${-lo} − ${-hi}`, v: hi - lo }];
     },
     draw: ({ a, b }) => shaft([a, b], { [a]: 'A', [b]: 'B' }),
   },
@@ -277,7 +278,7 @@ export const TRICKS = [
       });
     },
     q({ a, b }) { return { a, b, path: a <= 0 ? 'below' : a >= b ? 'stay' : 'cross', text: `${N(a)} + (−${b})`, expr: `(${a})+(-${b})`, ans: a - b }; },
-    work({ a, b }) { return [{ t: `Adding −${b} is the same as going down by`, v: b }, ...move(a, -b)]; },
+    work({ a, b }) { return [{ t: `Adding −${b} is the same as going down by`, v: b, x: `Math.abs(-${b})` }, ...move(a, -b)]; },
     draw: ({ a, b }) => line([a, a - b], { [a]: 'start' }),
   },
   {
@@ -308,7 +309,7 @@ export const TRICKS = [
       });
     },
     q({ a, b }) { return { a, b, path: a > 0 ? 'above' : a + b > 0 ? 'cross' : 'below', text: `${N(a)} − (−${b})`, expr: `(${a})-(-${b})`, ans: a + b }; },
-    work({ a, b }) { return [{ t: `Taking away −${b} is the same as adding`, v: b }, ...move(a, b)]; },
+    work({ a, b }) { return [{ t: `Taking away −${b} is the same as adding`, v: b, x: `Math.abs(-${b})` }, ...move(a, b)]; },
     draw: ({ a, b }) => line([a, a + b], { [a]: 'start' }),
   },
   {
@@ -339,7 +340,9 @@ export const TRICKS = [
     },
     work({ t }) {
       const U = t.filter((x) => x > 0).reduce((a, b) => a + b, 0), D = t.filter((x) => x < 0).reduce((a, b) => a - b, 0);
-      return [{ t: `All the ups: ${t.filter((x) => x > 0).join(' + ')}`, v: U }, { t: `All the downs: ${t.filter((x) => x < 0).map((x) => -x).join(' + ')}`, v: D },
+      // x: the ups and downs from the plain total and the total of the sizes — (Σ + Σ|t|) ÷ 2 and (Σ|t| − Σ) ÷ 2
+      const sum = `[${t.join(',')}].reduce((a,b)=>a+b,0)`, abs = `[${t.join(',')}].reduce((a,b)=>a+Math.abs(b),0)`;
+      return [{ t: `All the ups: ${t.filter((x) => x > 0).join(' + ')}`, v: U, x: `(${sum}+${abs})/2` }, { t: `All the downs: ${t.filter((x) => x < 0).map((x) => -x).join(' + ')}`, v: D, x: `(${abs}-${sum})/2` },
         { t: `Up ${U} and down ${D}: where do you finish?`, v: U - D }];
     },
     draw: ({ t }) => { let p = 0; const path = [0, ...t.map((x) => (p += x))]; return shaft(path, { 0: 'start' }); },
@@ -379,7 +382,7 @@ export const TRICKS = [
     },
     work({ f }) {
       const neg = f.filter((x) => x < 0).length, size = f.reduce((a, b) => a * Math.abs(b), 1);
-      return [{ t: `Ignore the signs: ${f.map(Math.abs).join(' × ')}`, v: size }, { t: 'How many of the numbers are negative?', v: neg },
+      return [{ t: `Ignore the signs: ${f.map(Math.abs).join(' × ')}`, v: size, x: `Math.abs(${f.map((x) => `(${x})`).join('*')})` }, { t: 'How many of the numbers are negative?', v: neg, x: f.map((x) => `(${x}<0)`).join('+') },
         { t: 'Each pair of negatives makes a positive. So the answer is', v: (neg % 2 ? -1 : 1) * size }];
     },
     draw: ({ f }) => pattern(f.at(-1)),
@@ -419,7 +422,7 @@ export const TRICKS = [
     },
     work({ b, c }) {
       const a = b * c, same = sgn(a) === sgn(b);
-      return [{ t: `Ignore the signs: ${Math.abs(a)} ÷ ${Math.abs(b)}`, v: Math.abs(c) },
+      return [{ t: `Ignore the signs: ${Math.abs(a)} ÷ ${Math.abs(b)}`, v: Math.abs(c), x: `Math.abs((${a})/(${b}))` },
         { t: `The signs are ${same ? 'the same' : 'different'}. So the answer is`, v: (same ? 1 : -1) * Math.abs(c) }];
     },
     draw: ({ b, c }) => line([b * c], { [b * c]: 'start', 0: '0' }),
@@ -463,11 +466,11 @@ export const TRICKS = [
       return { ...base, text: `−${a}² + ${c} × ${b}`, expr: `-Math.pow(${a},2)+${c}*${b}`, ans: c * b - a * a };
     },
     work({ kind, a, b, c }) {
-      if (kind === 'sq') return [{ t: `(−${a})² is (−${a}) × (−${a}). The sizes: ${a} × ${a}`, v: a * a }, { t: 'Two negatives multiplied make a positive, so', v: a * a }];
-      if (kind === 'negsq') return [{ t: `No brackets, so the power goes first: ${a}²`, v: a * a }, { t: 'Then the minus in front', v: -(a * a) }];
-      if (kind === 'sqsub') return [{ t: `Powers first: (−${a})²`, v: a * a }, { t: `${a * a} − ${b}`, v: a * a - b }];
-      if (kind === 'mulneg') return [{ t: `Multiply first: ${c} × (−${a})`, v: -c * a }, { t: `${b} − (−${c * a}) is ${b} + ${c * a}`, v: b + c * a }];
-      return [{ t: `Powers first: −${a}² (square, then the minus)`, v: -(a * a) }, { t: `Then multiply: ${c} × ${b}`, v: c * b }, { t: `${N(-(a * a))} + ${c * b}`, v: c * b - a * a }];
+      if (kind === 'sq') return [{ t: `(−${a})² is (−${a}) × (−${a}). The sizes: ${a} × ${a}`, v: a * a, x: `${a}*${a}` }, { t: 'Two negatives multiplied make a positive, so', v: a * a }];
+      if (kind === 'negsq') return [{ t: `No brackets, so the power goes first: ${a}²`, v: a * a, x: `Math.pow(${a},2)` }, { t: 'Then the minus in front', v: -(a * a) }];
+      if (kind === 'sqsub') return [{ t: `Powers first: (−${a})²`, v: a * a, x: `(-${a})**2` }, { t: `${a * a} − ${b}`, v: a * a - b }];
+      if (kind === 'mulneg') return [{ t: `Multiply first: ${c} × (−${a})`, v: -c * a, x: `${c}*(-${a})` }, { t: `${b} − (−${c * a}) is ${b} + ${c * a}`, v: b + c * a }];
+      return [{ t: `Powers first: −${a}² (square, then the minus)`, v: -(a * a), x: `-(${a}**2)` }, { t: `Then multiply: ${c} × ${b}`, v: c * b, x: `${c}*${b}` }, { t: `${N(-(a * a))} + ${c * b}`, v: c * b - a * a }];
     },
     draw: ({ kind, a, b }) => (kind === 'mulneg' ? line([b, a], { [b]: 'start' }) : line([a], { [-a]: `−${a}`, [a]: String(a) })),
   },
