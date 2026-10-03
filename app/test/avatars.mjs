@@ -30,22 +30,8 @@ for (const a of CATALOGUE) {
   ok(!DENY.includes(a.id), `${a.id}: a real person or a deity`);
   if (a.tier === 'legendary') ok(/^(world:[a-z]+|medal:[a-z0-9-]+)$/.test(a.milestone.id) && /^(finish |clear |get |earn )/.test(a.milestone.label), `${a.id}: a learning milestone in words (${a.milestone.label})`);
 }
-// no face is in two apps' 96 (standard §8): read the siblings' catalogues where they are checked out
-const SIBS = { bee: '/home/user/Bizzing-Bee/spellbound-app/avatars.js', geography: '/home/user/bizzing_geography/app/src/avatars.js', finance: '/home/user/bizzingfinance/app/src/avatars.js' };
-for (const [app, f] of Object.entries(SIBS)) {
-  if (!existsSync(f)) continue;
-  const src = readFileSync(f, 'utf8');
-  let theirs;
-  if (app === 'bee') {   // Bee's faces are tuples [id, name, pack, tier]; the packs it handed over (ARCH) are no longer its
-    const gone = new Set(((/\[([^\]]+)\]\.forEach\(pk=>AV\.forEach/.exec(src) || [])[1] || '').match(/[a-z0-9]+/g) || []);
-    const mv = (/const MOVE = \{([\s\S]*?)\};/.exec(src) || [])[1] || '', move = Object.fromEntries([...mv.matchAll(/([a-z0-9_]+):'([a-z0-9]+)'/g)].map((m) => [m[1], m[2]]));
-    theirs = new Set([...src.matchAll(/\['([a-z0-9_-]+)','[^']+','([a-z0-9]+)','(?:free|rare|epic|legendary)'/g)].filter((m) => !gone.has(move[m[1]] || m[2])).map((m) => m[1]));
-  } else theirs = new Set([...src.matchAll(/\bid:\s*['"]([a-z0-9_-]+)['"]/g)].map((m) => m[1]));
-  const both = CATALOGUE.filter((a) => theirs.has(a.id)).map((a) => a.id);
-  // a WARNING, not a failure: this reads whatever copy of the sibling happens to be checked out on
-  // this machine, which this repo does not control and may be weeks stale (owner, 3 Oct 2026)
-  if (both.length) console.warn(`  ! ${app}'s checkout here shares ${both.length} faces with Maths: ${both.join(', ')} — check against ${app}'s live catalogue`);
-}
+// A face may also be in a sibling's 96 (owner, 3 Oct 2026: "keep shared avatars, no harm"), so
+// the old cross-app overlap check is gone. Each app's own 96 is still checked above.
 // a Legendary's milestone is read from the record: finishing the Deep Mine opens the Sunflower Lion's
 const k = newKid('Asha', '8-10');
 ok(!milestonesOf(k).has('world:mine'), 'nobody has finished the Deep Mine on day one');

@@ -96,7 +96,7 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     `Family.buyAvatar`/`Family.buyWorld`** (store.js wraps the family's own `src/integration/` files — copy them
     from Bizzing_Schedule, never edit them here; `test/avatars.mjs` compares them byte for byte). Standard events
     only; coins never touch xp. The 96 avatars are `avatars.js` (12 packs × 8, 2/3/2/1, `validate()` = []), every
-    Legendary asks for a learning milestone first. Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
+    Legendary asks for a learning milestone first. A face may also be in a sibling's 96 (owner, 3 Oct 2026: the faces shared with Bee stay). Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
     The Extras are frames, road skins and bonus game modes (`extras.js`; bought once, at the printed price, never
     random). **Bonus modes stay paid** (owner, 3 Oct 2026): each is a new way to play a skill the Atlas already
     teaches free — never sell the teaching itself. The wallet history says every line in words (`k.coinNotes`).
