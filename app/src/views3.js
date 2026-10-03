@@ -14,6 +14,8 @@ import { CATALOGUE, PACKS, byAvatar, avatarCtx, problems } from './avatars.js';
 import { stateOf, TIERS, WORLD_PRICE } from './integration/bizzing-avatars.js';
 import { THEMES, byTheme, themeOf, worldIsOpen, plate } from './themes.js';
 import { FRAMES, owns, worn } from './shop.js';
+import { shopSkins, shopModes } from './extras-view.js';
+import { ledgerWords } from './extras.js';
 import { medalStates } from './medals.js';
 import { worldOf } from './tricks.js';
 import * as MD from './mistakes.js';
@@ -121,6 +123,7 @@ function why(x, k) {
   if (w.startsWith('avatar:')) { const a = byAvatar[w.slice(7)]; return `bought ${a ? a.name : 'an avatar'}`; }
   if (w.startsWith('world:')) { const t = THEMES[+w.slice(6) - 1]; return `opened ${t ? t.name : 'a world'}`; }
   if (w.startsWith('frame:')) { const f = FRAMES.find((y) => y.id === w.slice(6)); return `bought the ${f ? f.name : ''} frame`; }
+  if (w.startsWith('skin:') || w.startsWith('mode:')) return ledgerWords(w);
   if (w.startsWith('refund:')) return 'a refund';
   return note || w;
 }
@@ -214,11 +217,12 @@ function shopWorlds(h, k, coins) {
 }
 function shopExtras(k, coins) {
   const on = worn(k);
-  return `<p class="muted">Frames for your face, on your page and in the top bar. They never change your rank or your road.</p>
+  return `<h2 class="ex-h">${icon('user', 20)} Frames</h2><p class="muted">Frames for your face, on your page and in the top bar. They never change your rank or your road.</p>
     <div class="frames">${FRAMES.map((f) => { const have = owns(k, f.id); return `<div class="fr-item${on === f.id ? ' on' : ''}">
       <span class="frame fr-${f.id}"><img class="av" src="avatars/${esc(k.avatar)}.webp" width="56" height="56" alt=""></span><b>${esc(f.name)}</b>
       ${have ? `<button class="btn small" data-act="wearFrame" data-arg="${on === f.id ? '' : f.id}">${on === f.id ? 'Take it off' : 'Wear'}</button>` : `<button class="btn small" data-act="buyFrame" data-arg="${f.id}" ${coins < f.price ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)} ${f.price}</button>`}
-    </div>`; }).join('')}</div>`;
+    </div>`; }).join('')}</div>
+    ${shopSkins(k, coins)}${shopModes(k, coins)}`;
 }
 
 /* ------------------------------------------------------------------ Settings (§5) */

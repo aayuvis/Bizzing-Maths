@@ -1,0 +1,68 @@
+/* extras.css — the Shop's road skins and game modes (src/extras.js).
+
+   A skin is worn on the root (extras-actions.js applySkin → :root[data-skin]) and
+   dresses every .board's road and pins: board.js paintedRoad, the world boards and
+   the level roads in views2.js, the Library's journeys. The Shop's preview uses the
+   same rules through .sk-prev[data-p]. A skin changes the path's paint and the pins'
+   shape and rim only — a pin's state colour (passed, here, not reached) is never
+   repainted, so a skin can never make a locked stop look open. */
+
+/* ---- stepping stones */
+:root[data-skin=stones] .board .rd-edge,.sk-prev[data-p=stones] .rd-edge{stroke:rgb(40 30 20 / .45);stroke-width:21px;stroke-dasharray:4 25}
+:root[data-skin=stones] .board .rd,.sk-prev[data-p=stones] .rd{stroke:#d8d1c1;stroke-width:17px;stroke-dasharray:4 25}
+:root[data-skin=stones] .board .bpin,.sk-prev[data-p=stones] .bpin{border-radius:46% 54% 42% 58% / 55% 45% 55% 45%;border-color:#a59b87}
+
+/* ---- chalk dots */
+:root[data-skin=chalk] .board .rd-edge,.sk-prev[data-p=chalk] .rd-edge{stroke:rgb(36 52 50 / .7);stroke-width:14px;stroke-dasharray:none}
+:root[data-skin=chalk] .board .rd,.sk-prev[data-p=chalk] .rd{stroke:#fff;stroke-width:5px;stroke-dasharray:1 10}
+:root[data-skin=chalk] .board .rd-walk,.sk-prev[data-p=chalk] .rd-walk{stroke:#fff;stroke-width:4px;stroke-dasharray:8 6}
+:root[data-skin=chalk] .board .bpin,.sk-prev[data-p=chalk] .bpin{border-style:dashed;border-color:#fff}
+:root[data-skin=chalk] .board .bpin:not(.done):not(.cur):not(.shut),.sk-prev[data-p=chalk] .bpin:not(.done):not(.cur){background:#2f4140;color:#fff}
+
+/* ---- rangoli dots: two colours of powder, alternating */
+:root[data-skin=rangoli] .board .rd-edge,.sk-prev[data-p=rangoli] .rd-edge{stroke:#ffb400;stroke-width:12px;stroke-dasharray:.1 14;stroke-dashoffset:7}
+:root[data-skin=rangoli] .board .rd,.sk-prev[data-p=rangoli] .rd{stroke:#e2366a;stroke-width:12px;stroke-dasharray:.1 14}
+:root[data-skin=rangoli] .board .rd-walk,.sk-prev[data-p=rangoli] .rd-walk{stroke:#14a3a0}
+:root[data-skin=rangoli] .board .bpin,.sk-prev[data-p=rangoli] .bpin{border-color:#e2366a;box-shadow:0 0 0 4px #ffb400,0 4px 10px rgb(0 0 0 / .3)}
+
+/* ---- railway: sleepers under one rail, station-sign pins */
+:root[data-skin=rails] .board .rd-edge,.sk-prev[data-p=rails] .rd-edge{stroke:#6b4a2b;stroke-width:20px;stroke-dasharray:4 7;stroke-linecap:butt}
+:root[data-skin=rails] .board .rd,.sk-prev[data-p=rails] .rd{stroke:#3d3d44;stroke-width:5px;stroke-dasharray:none}
+:root[data-skin=rails] .board .bpin,.sk-prev[data-p=rails] .bpin{border-radius:12px;border-color:#b8322a}
+
+/* ---- gold road */
+:root[data-skin=gold] .board .rd-edge,.sk-prev[data-p=gold] .rd-edge{stroke:#7a5a00;stroke-width:18px;stroke-dasharray:none}
+:root[data-skin=gold] .board .rd,.sk-prev[data-p=gold] .rd{stroke:#f3c33c;stroke-width:13px;stroke-dasharray:none}
+:root[data-skin=gold] .board .rd-walk,.sk-prev[data-p=gold] .rd-walk{stroke:#fff3bf}
+:root[data-skin=gold] .board .bpin,.sk-prev[data-p=gold] .bpin{border-color:#f3c33c;box-shadow:0 0 0 2px #7a5a00,0 4px 10px rgb(0 0 0 / .3)}
+
+/* ---- starlight */
+:root[data-skin=starlight] .board .rd-edge,.sk-prev[data-p=starlight] .rd-edge{stroke:rgb(18 20 60 / .55);stroke-width:14px;stroke-dasharray:none}
+:root[data-skin=starlight] .board .rd,.sk-prev[data-p=starlight] .rd{stroke:#fff6b8;stroke-width:8px;stroke-dasharray:.1 13;filter:drop-shadow(0 0 3px #fff3a0)}
+:root[data-skin=starlight] .board .rd-walk,.sk-prev[data-p=starlight] .rd-walk{stroke:#ffe27a;filter:drop-shadow(0 0 4px #ffd84d)}
+:root[data-skin=starlight] .board .bpin,.sk-prev[data-p=starlight] .bpin{border-color:#fff6b8;box-shadow:0 0 14px 3px rgb(255 240 160 / .75)}
+:root[data-skin=starlight] .board .bpin:not(.done):not(.cur):not(.shut),.sk-prev[data-p=starlight] .bpin:not(.done):not(.cur){background:#1d2050;color:#fff}
+
+/* ---- the Shop's cards */
+.ex-h{display:flex;align-items:center;gap:8px;font-size:18px;margin:22px 0 4px}
+.shop-body .ex-h:first-child{margin-top:4px}
+.skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0}
+.sk-item,.md-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:14px;border:1px solid var(--line-soft,var(--line));text-align:center;min-width:0}
+.sk-item.on{border-color:var(--action);box-shadow:0 0 0 2px var(--action) inset}
+.sk-item b,.md-item b{font-size:14px}
+.sk-prev{position:relative;display:block;width:100%;height:76px;border-radius:10px;overflow:hidden;background:linear-gradient(170deg,#bfe3b4,#7fb77a 70%,#5e9a5c)}
+.sk-prev .road{position:absolute;inset:0;width:100%;height:100%}
+.sk-prev .bpin{width:26px;height:26px;border-width:2px;font-size:11px;cursor:default;display:grid;place-items:center}
+.sk-prev .bpin:hover{transform:translate(-50%,-50%)}
+.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:10px 0}
+.md-item{flex-direction:row;text-align:left;align-items:center}
+.md-art{flex:none;width:56px;height:56px;border-radius:10px;background-size:cover;background-position:center}
+.md-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.md-t .kicker{font-size:11px}
+
+/* ---- the Play tab's bonus modes */
+.amodes{display:flex;flex-direction:column;gap:8px;margin:8px 0 20px}
+.am-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.am-row > b{min-width:130px}
+.am-shut{opacity:.85}
+@media (max-width:560px){.am-row > b{min-width:100%}}

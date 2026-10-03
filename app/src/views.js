@@ -19,6 +19,7 @@ import { certsFor } from './cert.js';
 import { Family } from './store.js';
 import { MEDALS, medalStates, earnedCount, medalById } from './medals.js';
 import { FRAMES, owns, worn } from './shop.js';
+import { arcadeModes } from './extras-view.js';
 import { reportCard } from './report.js';
 import { icon, glyph } from './icons.js';
 import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
@@ -580,6 +581,7 @@ export function viewArcade() {
     <div class="gtiles">
       ${GAMES.map((x) => tile(x.id, esc(x.title), esc(x.blurb), x.art, esc(x.keys))).join('')}
     </div>
+    ${arcadeModes(k)}
   </section>`;
 }
 

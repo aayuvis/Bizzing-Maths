@@ -6,6 +6,8 @@ import { Store, DEMO, Family } from './store.js';
 import { sampleHousehold, tasterHousehold, tasterStop } from './demo.js';
 import { award, medalById } from './medals.js';
 import { buy } from './shop.js';
+import { applySkin } from './extras-actions.js';
+import { ownsMode } from './extras.js';
 import { snapshot } from './report.js';
 /* The Contest Hall and its problem banks load on the hall's own route — 133 proved
    templates are not part of a first screen (the family budget, standard §11). */
@@ -152,9 +154,9 @@ function starToday(k, n) {
 /* ------------------------------------------------------------- routing */
 
 let selfHash = false;
+const hashNow = () => '#/' + R.ui.nav + (R.ui.arg ? '/' + encodeURIComponent(R.ui.arg) : '');
 function writeHash() {
-  const { nav, arg } = R.ui;
-  const h = '#/' + nav + (arg ? '/' + encodeURIComponent(arg) : '');
+  const h = hashNow();
   if (location.hash !== h) { selfHash = true; location.hash = h; }
 }
 function readHash() {
@@ -162,7 +164,8 @@ function readHash() {
   if (!m) return go('home', null, true);
   go(m[1], m[2] ? decodeURIComponent(m[2]) : null, true);
 }
-addEventListener('hashchange', () => { if (selfHash) { selfHash = false; return; } readHash(); });
+// a hash naming the screen already up is not a navigation: closing a game steps back onto it (games.js)
+addEventListener('hashchange', () => { if (selfHash) { selfHash = false; return; } if (location.hash === hashNow()) return; readHash(); });
 
 const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked back into
 /* Every screen a hash may name. Anything else — a typo, an old link, #/nonsense —
@@ -211,11 +214,14 @@ function go(nav, arg = null, fromHash = false) {
   }
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
+  // #/game/<id> is a game's own history entry (games.js): with a game up it is already handled;
+  // without one (Forward, a reload) it opens the game from the Play room, as #/play/<id> does
+  if (nav === 'game') { if (G.active()) return; nav = 'play'; }
   if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
   // a game or a puzzle family named in the link starts it — the address then settles on its room
   if ((nav === 'play' || nav === 'puzzles') && arg) {
     const what = arg; history.replaceState(null, '', `#/${nav}`); arg = null;
-    if (nav === 'play' && GAME_IDS.includes(what)) setTimeout(() => fire('play', what));
+    if (nav === 'play' && GAME_IDS.includes(what.split(':')[0])) setTimeout(() => fire('play', what));
     if (nav === 'puzzles' && famOf(what)) { const k = kid(R.h); setTimeout(() => fire('practise', `${what}:${bandLevel(k ? k.band : '8-10')}`)); }
   }
   arg = deepen(nav, arg);
@@ -290,6 +296,7 @@ function render() {
   const focusId = document.activeElement && document.activeElement.id;
   if (R.ui.cels.length && celShown !== R.ui.cels[0]) { const c = celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); if (readOn(kid(R.h))) setTimeout(() => say(`${c.title}. ${c.say}`), 700); }
   applyTheme(themeOf(kid(R.h), R.h));   // the active child's world; switching child switches it
+  applySkin(kid(R.h));                  // and the road skin they wear (extras.js)
   document.documentElement.toggleAttribute('data-bz-dark', document.documentElement.getAttribute('data-mode') === 'dark');   // the avatar glow (§8)
   root.innerHTML = V.shell(screen());
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
@@ -768,13 +775,16 @@ function paperKey(e) {
 
 /* ------------------------------------------------------------- games */
 
-function play(id) {
+function play(arg) {
   const k = kid(R.h); clearConfetti();
-  const rec = k.games[id] || (k.games[id] = { best: null, plays: 0 });
+  // a bonus mode (extras.js) is `<game>:<mode>`, locked until bought; it pays exactly what its game pays
+  const [id, mode = null] = String(arg).split(':');
+  if (mode && !ownsMode(k, arg)) return go('shop');
+  const rec = k.games[arg] || (k.games[arg] = { best: null, plays: 0 });
   const onEnd = (score) => { rec.plays++; if (typeof score === 'number' && (rec.best == null || score > rec.best)) rec.best = score; save(); render(); };
-  if (id === 'rush') G.numberRush(k, { onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); tick(k, right, 1); save(); }, onEnd });
-  if (id === 'target') G.makeTarget(k, { onSolve: () => { tick(k, true, 5); save(); }, onEnd });
-  if (id === 'line') G.numberLine(k, { onTick: (right) => { tick(k, right, 1); save(); }, onEnd });
+  if (id === 'rush') G.numberRush(k, { mode, onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); tick(k, right, 1); save(); }, onEnd });
+  if (id === 'target') G.makeTarget(k, { mode, onSolve: () => { tick(k, true, 5); save(); }, onEnd });
+  if (id === 'line') G.numberLine(k, { mode, onTick: (right) => { tick(k, right, 1); save(); }, onEnd });
 }
 
 /* A game's right answer counts for the rank, but a fact popped in Number
