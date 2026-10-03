@@ -809,7 +809,7 @@ export const CSS = `
 .${P}-hero-in{width:100%;padding:18px 20px;background:linear-gradient(to top,var(--surface) 55%,color-mix(in srgb,var(--surface) 0%,transparent))}
 .${P}-hero-in h2{font-family:var(--display);font-size:var(--fs-h1);margin:0 0 4px;color:var(--ink)}
 .${P}-hero-in p{margin:0 0 8px;color:var(--ink)}
-.${P}-bar{height:10px;border-radius:10px;background:var(--line);overflow:hidden}
+.${P}-bar{height:10px;border-radius:10px;background:color-mix(in srgb,var(--ink) 15%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent);overflow:hidden}
 .${P}-bar i{display:block;height:100%;background:var(--fix);border-radius:10px}
 .${P}-count{font-size:var(--fs-label);color:var(--muted)!important;margin:6px 0 0!important}
 .${P}-map{position:relative;margin:8px 0 18px;border-radius:var(--r-lg);background:radial-gradient(circle at 70% 15%,var(--fix-tint),transparent 55%),radial-gradient(circle at 20% 80%,var(--mastered-tint),transparent 55%),var(--surface2)}

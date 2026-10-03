@@ -114,6 +114,9 @@ export function confetti(n) {
   document.body.appendChild(wrap);
   setTimeout(() => wrap.remove(), 4200);
 }
+/* Confetti celebrates what just happened; it never falls over the next question. A run, a
+   contest or a game clears whatever is still in the air before its first question shows. */
+export function clearConfetti() { document.querySelectorAll('.conf').forEach((n) => n.remove()); }
 
 /* ---- number helpers used all over the UI -------------------------------- */
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }

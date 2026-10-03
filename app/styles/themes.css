@@ -190,7 +190,9 @@
 /* Orbitron is wide: fine for a name and the brand, too loud for a long title. */
 :root[data-theme="orbit"] :is(h1,h2,h3){letter-spacing:0;font-weight:700}
 :root[data-theme="orbit"] h1{font-size:calc(var(--fs-h1) * .82)}
-:root[data-theme="orbit"] :is(h2,h3){font-size:.86em}
+/* orbit sets its headings a size down through the tokens — an em here once shrank every h3 to body size,
+   the Continue card's title included */
+:root[data-theme="orbit"]{--fs-h2:20.6px;--fs-h3:17.2px}
 :root[data-theme="orbit"] :is(.brand-t,.hname){letter-spacing:.01em}
 :root[data-theme="orbit"] .hname{font-size:28px}
 /* single-weight or hand-drawn display faces: the negative tracking the

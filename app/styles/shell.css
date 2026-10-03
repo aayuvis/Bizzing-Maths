@@ -197,7 +197,13 @@ body{font-family:var(--ui)}
 @media (prefers-reduced-motion:reduce){.wstage *,.octo{animation:none!important}}
 
 /* daylight plates on a dark page are the designed night (India's treatment) when no painted night exists */
-:root[data-mode="dark"] :is(.cc-art,.board > img,.lboard .panel,.wl img,.lib-art,.map-board > img,.bk-art,.st-bg,.tower-board > img,.gart,.pick-art){filter:brightness(.66) saturate(.85) contrast(1.02)}
+/* (owner, 3 Oct 2026: still too bright at .66 — a daylight plate on a dark page read as a lit window. Now the
+   same dusk the night worlds are painted in: darker, less saturated, a touch cooler. My Feed's cards are plates
+   too. test/standard.mjs holds every visible place plate on a dark page to it.) */
+:root[data-mode="dark"] :is(.cc-art,.board > img,.lboard .panel,.wl img,.lib-art,.map-board > img,.bk-art,.st-bg,.tower-board > img,.gart,.pick-art,.bzf-art){filter:brightness(.54) saturate(.72) contrast(1.06) hue-rotate(-6deg)}
+/* Home's journey cards are the family's .bz-plate (brightness .8 in the drop-in, which is not edited here) — on
+   this app's dark pages they take the same dusk as every other daylight plate */
+html[data-bz-dark] .bz-plate,:root[data-mode="dark"] .bz-plate{filter:brightness(.54) saturate(.72) contrast(1.06) hue-rotate(-6deg)}
 :root[data-mode="dark"] :is(.board,.map-board,.tower-board){box-shadow:inset 0 0 120px rgb(255 190 90 / .08)}
 
 /* ------------------------------------------------------------------ Home in Bee's template (§6) */

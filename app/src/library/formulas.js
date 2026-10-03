@@ -9,6 +9,7 @@
 
    Every number here is proved in selftest(): each worked example is computed
    twice, each quiz generator hundreds of times, each notepad line evaluated. */
+import { icon } from '../icons.js';
 import * as kit from '../chapters/kit.js';
 import { TRICKS, parseNum, correct } from '../tricks.js';
 import { RIVALS } from '../contest.js';
@@ -40,10 +41,12 @@ const DASH = 'stroke-dasharray="6 5" fill="none"';
 const box = (x, y, t, cls) => R(x, y, 30, 30, cls, 'rx="4"') + T(x + 15, y + 20, t, 'dg-text');
 
 function gridL(cols, rows, shade, u, top, left) {
+  // the side label sits clear of the grid: "w = 4" once ran into the first column
+  const m = 26 + 8 * String(left).length;
   let s = '';
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) s += R(34 + c * u, 26 + r * u, u, u, shade(r, c) ? 'dg-fill1' : 'dg-blank');
-  s += T(34 + (cols * u) / 2, 18, top, 'dg-accent') + T(22, 30 + (rows * u) / 2, left, 'dg-accent');
-  return S(cols * u + 44, rows * u + 34, s, `A ${cols} by ${rows} grid of unit squares`);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) s += R(m + c * u, 26 + r * u, u, u, shade(r, c) ? 'dg-fill1' : 'dg-blank');
+  s += T(m + (cols * u) / 2, 18, top, 'dg-accent') + T(m - 6, 30 + (rows * u) / 2, left, 'dg-accent', 'end');
+  return S(cols * u + m + 10, rows * u + 34, s, `A ${cols} by ${rows} grid of unit squares`);
 }
 
 const PIC = {
@@ -953,7 +956,7 @@ function tile(c, have) {
     <span class="t-formulas-tpic" aria-hidden="true">${c.picture()}</span>
     <span class="t-formulas-tf mono">${have ? esc(c.formula) : esc(c.formula.replace(/[^\s]/g, '•'))}</span>
     <span class="t-formulas-tt">${esc(c.title)}</span>
-    <span class="t-formulas-tag">${have ? '★ Collected' : '🔒 Read its story'}</span>
+    <span class="t-formulas-tag">${have ? `${icon('star', 13)} Collected` : `${icon('lock', 13)} Read its story`}</span>
   </button>`;
 }
 
@@ -971,14 +974,14 @@ function cardView(c, ctx) {
     </div>
     <div class="seg" role="tablist" aria-label="This card">
       <button class="${tab === 'card' ? 'on' : ''}" role="tab" aria-selected="${tab === 'card'}" data-act="lib" data-arg="tab|card">The card</button>
-      <button class="${tab === 'story' ? 'on' : ''}" role="tab" aria-selected="${tab === 'story'}" data-act="lib" data-arg="tab|story">📖 The story${have ? ' ✓' : ''}</button>
+      <button class="${tab === 'story' ? 'on' : ''}" role="tab" aria-selected="${tab === 'story'}" data-act="lib" data-arg="tab|story">${icon('book', 16)} The story${have ? ` ${icon('check', 14)}` : ''}</button>
     </div>`;
   if (tab === 'story') return nav + stage(c, ctx);
   return `${nav}
     <article class="card t-formulas-card ${have ? 'got' : 'locked'}">
       <div class="t-formulas-chips">
         <span class="chip">${esc(c.topic)}</span><span class="chip">${esc(bandName[c.band])}</span>${c.note ? `<span class="chip gold">${esc(c.note)}</span>` : ''}
-        ${have ? '<span class="chip gold">★ Collected</span>' : '<span class="chip">🔒 Read the story to collect</span>'}
+        ${have ? `<span class="chip gold">${icon('star', 14)} Collected</span>` : `<span class="chip">${icon('lock', 14)} Read the story to collect</span>`}
         ${best != null ? `<span class="chip">Best quiz: ${best} of 5</span>` : ''}
       </div>
       <h2 class="t-formulas-title">${esc(c.title)}</h2>
@@ -993,11 +996,11 @@ function cardView(c, ctx) {
         <ol class="t-formulas-lines">${c.example.lines.map((l) => `<li class="mono">${esc(l)}</li>`).join('')}</ol>
       </div>
       <div class="t-formulas-stops"><p class="kicker">Learn it in the Atlas</p>
-        <div class="row gap">${c.stops.map((s) => `<button class="btn small" data-act="lib" data-arg="stop|${s}">📍 ${esc(stopTitle[s] || s)}</button>`).join('')}</div>
+        <div class="row gap">${c.stops.map((s) => `<button class="btn small" data-act="lib" data-arg="stop|${s}">${icon('pin', 16)} ${esc(stopTitle[s] || s)}</button>`).join('')}</div>
       </div>
       ${c.sources ? `<details class="t-formulas-src"><summary>Sources</summary><ul>${c.sources.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></details>` : ''}
       <div class="row gap t-formulas-act">
-        <button class="btn ${have ? '' : 'primary'}" data-act="lib" data-arg="tab|story">📖 ${have ? 'Read the story again' : 'Read the story to collect it'}</button>
+        <button class="btn ${have ? '' : 'primary'}" data-act="lib" data-arg="tab|story">${icon('book', 16)} ${have ? 'Read the story again' : 'Read the story to collect it'}</button>
         <button class="btn ${have ? 'primary' : ''}" data-act="lib" data-arg="quiz">Quiz me on this card</button>
       </div>
     </article>`;
@@ -1009,7 +1012,7 @@ function stage(c, ctx) {
   const side = b.who ? (s.cast.indexOf(b.who) === 0 ? 'l' : 'r') : 'n';
   return `<div class="story t-formulas-story" data-act="lib" data-arg="next" role="group" aria-label="A story: ${esc(s.title)}">
     <img class="st-bg" src="art/s-${esc(s.scene)}.webp" alt="" width="1280" height="720">
-    <div class="st-top"><span class="badge-story">📖 A story</span><b>${esc(s.title)}</b></div>
+    <div class="st-top"><span class="badge-story">${icon('book', 14)} A story</span><b>${esc(s.title)}</b></div>
     <div class="st-cast">${s.cast.map((id, ci) => `<figure class="actor ${ci ? 'r' : 'l'}${b.who === id ? ' talk' : ''}${b.who && b.who !== id ? ' quiet' : ''}">${av(id, 150)}<figcaption>${esc(rival[id].name)}</figcaption></figure>`).join('')}</div>
     <div class="bubble ${side}" aria-live="polite">${b.who ? `<b>${esc(rival[b.who].name)}</b>` : ''}${esc(b.say)}</div>
     ${lines.length ? `<div class="notepad" aria-label="Notepad">${lines.map((l, li) => `<p class="${li === lines.length - 1 && b.add ? 'new' : ''}"><span class="mono">${esc(l.t)}</span><b class="mono">= ${l.v !== undefined ? esc(l.v) : '?'}</b></p>`).join('')}</div>` : ''}
@@ -1019,7 +1022,7 @@ function stage(c, ctx) {
     <span class="st-dots">${s.beats.map((_, j) => `<i class="${j <= i ? 'on' : ''}"></i>`).join('')}</span>
     ${last ? `<span class="chip gold t-formulas-won">★ Card collected</span><button class="btn primary" data-act="lib" data-arg="tab|card">See the card →</button><button class="btn" data-act="lib" data-arg="quiz">Quiz me</button>`
       : '<button class="btn primary" data-act="lib" data-arg="next">Next <kbd>→</kbd></button>'}
-    <button class="tog-read${ctx.ui.read ? ' on' : ''}" data-act="lib" data-arg="read" aria-pressed="${!!ctx.ui.read}">🔊 Read it to me</button>
+    <button class="tog-read${ctx.ui.read ? ' on' : ''}" data-act="lib" data-arg="read" aria-pressed="${!!ctx.ui.read}">${icon('speaker', 16)} Read it to me</button>
   </div>`;
 }
 
@@ -1087,7 +1090,7 @@ export const CSS = `
 .t-formulas-got{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
 .t-formulas-got .t-formulas-count{font-size:.9rem;font-weight:700;color:var(--ink);white-space:nowrap}
 .t-formulas-count b{color:var(--treasure-deep)}
-.t-formulas-bar{display:block;width:90px;height:8px;border-radius:var(--r-pill);background:var(--surface2);overflow:hidden}
+.t-formulas-bar{display:block;width:90px;height:8px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--ink) 15%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent);overflow:hidden}
 .t-formulas-how{margin:0;text-align:center}
 .t-formulas-bar i{display:block;height:100%;background:var(--treasure);border-radius:inherit}
 .t-formulas-th{font-family:var(--display);font-size:1.15rem;line-height:1.3;margin:0 0 -2px;display:flex;align-items:baseline;gap:10px}
@@ -1099,7 +1102,25 @@ export const CSS = `
 .t-formulas-tile.got{border-color:var(--treasure);background:linear-gradient(180deg,var(--treasure-tint),var(--surface) 55%)}
 .t-formulas-tpic{height:104px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .t-formulas-tpic svg{max-height:100px;width:auto;max-width:100%;margin:0}
-.t-formulas-tile.locked .t-formulas-tpic svg{filter:grayscale(1) contrast(.3);opacity:.28}
+/* the pictures wear the world's own colours (owner, 3 Oct 2026: "monochrome"): every fill is mixed from the
+   theme's tokens over its surface, so a picture reads in light and dark and in all six worlds, and the three
+   fills stay three different colours — the maths in these pictures is "this part matches that part". */
+:is(.t-formulas-tpic,.t-formulas-pic) svg{--dg1:color-mix(in srgb,var(--action) 38%,var(--surface));--dg2:color-mix(in srgb,var(--treasure) 46%,var(--surface));--dg3:color-mix(in srgb,var(--mastered) 40%,var(--surface));--dgk:var(--sw2,var(--fix))}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-fill1{fill:var(--dg1)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-fill2{fill:var(--dg2)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-fill3{fill:var(--dg3)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-blank{fill:var(--surface)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) :is(.dg-accent,.dg-sym){fill:var(--dgk)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-arc{stroke:var(--dgk)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-hand2{stroke:var(--action)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-dot{fill:var(--action)}
+:root :is(.t-formulas-tpic,.t-formulas-pic) .dg-dot2{fill:var(--treasure)}
+/* a locked card is a silhouette in the world's colour — one tint, no labels to read — never grey on grey */
+.t-formulas-tile.locked .t-formulas-tpic svg{--dg1:color-mix(in srgb,var(--action) 22%,var(--surface));--dg2:var(--dg1);--dg3:var(--dg1);--dgk:transparent}
+:root .t-formulas-tile.locked .t-formulas-tpic :is(.dg-fill1,.dg-fill2,.dg-fill3,.dg-blank){fill:var(--dg1);stroke:color-mix(in srgb,var(--action) 55%,var(--surface))}
+:root .t-formulas-tile.locked .t-formulas-tpic :is(.dg-line,.dg-thin,.dg-hand2,.dg-arc){stroke:color-mix(in srgb,var(--action) 55%,var(--surface))}
+:root .t-formulas-tile.locked .t-formulas-tpic :is(.dg-dot,.dg-dot2){fill:color-mix(in srgb,var(--action) 45%,var(--surface))}
+.t-formulas-tile.locked .t-formulas-tpic text{display:none}
 .t-formulas-tf{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t-formulas-tile.locked .t-formulas-tf{color:var(--line);letter-spacing:-.05em}
 .t-formulas-tt{font-family:var(--display);font-size:17px;line-height:1.2}

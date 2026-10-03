@@ -17,6 +17,7 @@
    and Enter; sliders are native ranges (drag, or arrows when focused) and
    the arrows work on the page too. */
 
+import { icon } from '../icons.js';
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { seeded } from '../rand.js';
@@ -323,7 +324,7 @@ function viewTable(ctx) {
     : fn ? '<p>A line x = k is straight up and down — every point on it has the same x, so there is nothing to put in a table.</p>' : '<p class="t-graphs-hint">Type an equation like y = 2x + 1 or y = x² − 3.</p>';
   const side = `${eqInput('teq', ui, 'teq', 'Rule: ')}
     ${table}
-    <div class="row gap t-graphs-row"><button class="btn small" data-act="lib" data-arg="tx|-1" aria-label="Table starts one lower">◀ x</button><button class="btn small" data-act="lib" data-arg="tx|1" aria-label="Table starts one higher">x ▶</button>
+    <div class="row gap t-graphs-row"><button class="btn small" data-act="lib" data-arg="tx|-1" aria-label="Table starts one lower">${icon('back', 16)} x</button><button class="btn small" data-act="lib" data-arg="tx|1" aria-label="Table starts one higher">x ${icon('next', 16)}</button>
       <button class="btn small ${ui.tplot ? 'primary' : ''}" data-act="lib" data-arg="tplot">Plot these points</button><button class="btn small ${ui.tjoin ? 'primary' : ''}" data-act="lib" data-arg="tjoin">Join them</button></div>
     ${fn && isLine(fn) && ui.tplot ? `<p>The points go up by <b>${num(fn.m)}</b> each time x goes up by 1 — they sit on a straight line.</p>` : ''}
     ${fn && fn.a && ui.tplot ? '<p>The steps are not all the same any more — the points bend round a curve.</p>' : ''}
@@ -511,7 +512,7 @@ function viewReal(ctx) {
       ? `<p><b>Which part of the journey was fastest?</b> Choose a part (tap it, or ← →), then press “This one”.</p><button class="btn primary" data-act="lib" data-arg="jans">This one</button>`
       : `<p class="t-graphs-note ${J.answered === J.fast ? 'win' : ''}">${J.answered === J.fast ? '✓ Yes — ' : 'Not that one. '}The fastest part is part ${J.fast + 1}: the <b>steepest</b> line, ${num(Math.abs(segs[J.fast].v))} km/h. Steeper means more distance for each minute.</p><button class="btn primary" data-act="lib" data-arg="jnew">New journey</button>`;
     const side = `<p class="kicker">Part ${sel + 1} of ${segs.length} · from ${s0.t0} to ${s0.t1} minutes</p><p>${what}</p>
-      <div class="row gap t-graphs-row"><button class="btn small" data-act="lib" data-arg="jmove|-1" aria-label="Previous part">◀</button>${segs.map((_, i) => `<button class="btn small ${i === sel ? 'primary' : ''}" data-act="lib" data-arg="jsel|${i}">${i + 1}</button>`).join('')}<button class="btn small" data-act="lib" data-arg="jmove|1" aria-label="Next part">▶</button></div>
+      <div class="row gap t-graphs-row"><button class="btn small" data-act="lib" data-arg="jmove|-1" aria-label="Previous part">${icon('back', 16)}</button>${segs.map((_, i) => `<button class="btn small ${i === sel ? 'primary' : ''}" data-act="lib" data-arg="jsel|${i}">${i + 1}</button>`).join('')}<button class="btn small" data-act="lib" data-arg="jmove|1" aria-label="Next part">${icon('next', 16)}</button></div>
       <p class="muted">On a distance–time graph the <b>gradient is the speed</b>. Flat is stopped; steeper is faster; sloping down is heading home.</p>${q}`;
     return seg + `<div class="t-graphs-cols"><div class="card t-graphs-pic">${g.svg()}</div><div class="card">${side}</div></div>`;
   }

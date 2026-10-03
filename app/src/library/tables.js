@@ -576,7 +576,7 @@ export const CSS = `
 .t-tables-step.now{background:var(--action-tint);border-color:var(--action);box-shadow:0 0 0 2px var(--action-tint)}
 .t-tables-step.locked{opacity:.55}
 .t-tables-arrow{color:var(--muted)}
-.t-tables-bar{position:relative;display:block;height:10px;border-radius:7px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);overflow:visible}
+.t-tables-bar{position:relative;display:block;height:10px;border-radius:7px;background:color-mix(in srgb,var(--ink) 15%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent);overflow:visible}
 .t-tables-bar i{display:block;height:100%;border-radius:7px;background:var(--mastered);transition:width .4s}
 .t-tables-bar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 .t-tables-count{margin:0}
