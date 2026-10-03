@@ -1,0 +1,26 @@
+/* bizzing-feed.css — My Feed's cards, the same in every Bizzing app (from Bizzing India's).
+   Uses the shell's tokens; an app never restyles it. */
+.bzf-list { display: grid; gap: 16px; max-width: 560px; margin: 0 auto; padding-bottom: 24px; }
+.bzf-card.bz-card { padding: 0; overflow: hidden; min-height: 0; outline: none; display: block; }
+.bzf-card:focus-visible { box-shadow: 0 0 0 3px var(--bz-accent); }
+.bzf-art { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--bz-chip); }
+.bzf-in { padding: 16px 18px 18px; }
+.bzf-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bzf-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--bz-line);
+  font: 800 11.5px var(--bz-body); letter-spacing: .08em; text-transform: uppercase; color: var(--bz-ink); background: var(--bz-chip); }
+.bzf-why { font-size: 13px; color: var(--bz-muted); }
+.bzf-card h3 { margin: 10px 0 6px; font: 800 20px/1.25 var(--bz-display); color: var(--bz-ink); }
+.bzf-body { margin: 6px 0; color: var(--bz-ink); line-height: 1.55; font-size: 15.3px; }
+.bzf-script { margin: 8px 0 2px; font-size: 2em; line-height: 1.8; color: var(--bz-ink); overflow-wrap: anywhere; }
+.bzf-roman { margin: 0 0 6px; color: var(--bz-muted); font-style: italic; overflow-wrap: anywhere; }
+.bzf-src { margin: 8px 0 0; font-size: 12.5px; color: var(--bz-muted); }
+.bzf-q { margin: 8px 0; font-weight: 700; color: var(--bz-ink); }
+.bzf-opts { display: grid; gap: 8px; margin: 8px 0; }
+.bzf-opt { text-align: left; min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--bz-line); background: var(--bz-card);
+  color: var(--bz-ink); font: 600 15px var(--bz-body); cursor: pointer; }
+.bzf-opt:hover:not(:disabled) { background: var(--bz-chip); }
+.bzf-opt.ok { border-color: #16956B; background: color-mix(in srgb, #16956B 12%, var(--bz-card)); }
+.bzf-opt.no { border-color: #c2410c; background: color-mix(in srgb, #c2410c 10%, var(--bz-card)); }
+.bzf-after { margin: 8px 0; color: var(--bz-ink); } .bzf-after.ok { font-weight: 700; }
+.bzf-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.bzf-end { text-align: center; } .bzf-end .bzf-row { justify-content: center; }

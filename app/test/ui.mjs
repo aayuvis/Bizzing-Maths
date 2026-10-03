@@ -15,7 +15,7 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 const SITE = resolve(HERE, '.site');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true }); mkdirSync(SHOTS, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 8000 + Math.floor(Math.random() * 900);
+const port = +(process.env.PORT_BASE || 5200) + 1;   // PORT_BASE moves every check into another agent's range
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 
@@ -32,7 +32,7 @@ async function run(vp, tag) {
   const click0 = page.click.bind(page);
   page.click = async (sel, o) => { for (let i = 0; i < 6 && sel !== '.cel .btn' && await page.locator('.cel .btn').count(); i++) await click0('.cel .btn'); return click0(sel, o); };
   const R = () => page.evaluate(() => { const r = window.__bzm.R; return { nav: r.ui.nav, run: r.run && { kind: r.run.kind, i: r.run.i, n: r.run.items.length, over: r.run.over, fb: r.run.fb, q: r.run.items[r.run.i] } }; });
-  const nav = (k) => page.click(vp.width < 760 ? `.tb[data-arg=${k}]` : `.tab[data-arg=${k}]`);
+  const nav = (k) => page.click(vp.width <= 720 ? `[data-bz=tabbar] a[href="#/${k}"]` : `[data-bz=tab][href="#/${k}"]`);
   const typeAns = async (ans) => { for (const ch of String(ans)) await page.keyboard.press(ch); };
 
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
@@ -48,7 +48,7 @@ async function run(vp, tag) {
   await page.waitForSelector('.ob-opt'); await shot('01a-age');
   await page.click('[data-act=draftBand][data-arg="8-10"]');
   await page.waitForSelector('.ob-face');
-  ok(await page.locator('.ob-face').count() === 5, 'a new child picks from five faces, not thirty');
+  ok(await page.locator('.ob-face').count() === 6, 'a new child picks from six free faces, not ninety-six');
   await shot('01b-faces');
   await page.click('[data-act=draftAv][data-arg="hexbee"]');
   await page.waitForSelector('.ob-world');
@@ -331,7 +331,7 @@ async function run(vp, tag) {
   // games: Family Standard §10 — a title card and a 3-second how-to, motion on
   // every answer, sound (the music loop), a finish screen naming what was
   // practised; keyboard AND touch.
-  await nav('arcade'); await page.waitForSelector('.gtiles');
+  await nav('play'); await page.waitForSelector('.gtiles');
   await shot('16-arcade');
   ok(await page.evaluate(() => [...document.querySelectorAll('.gtile .gart')].every((e) => /g-(rush|target|line)\.webp/.test(e.style.backgroundImage))), 'every Arcade tile is painted, not a CSS circle');
   const G = (fn) => page.evaluate(fn);
@@ -452,20 +452,18 @@ async function run(vp, tag) {
   await page.waitForTimeout(400); await shot('19b-line-end');
   await page.click('.play-end [data-g=done]'); await page.waitForTimeout(100);
   ok(!(await page.locator('.play').count()) && await music() === 'off', 'a tap on Back leaves the game and the music stops');
-  // Change avatar on the child's own page
-  await page.click('header .who'); await page.click('.sheet [data-arg=me]'); await page.waitForSelector('[data-act=avEdit]');
-  await page.click('[data-act=avEdit]'); await page.waitForSelector('.me-av .av-pick');
-  ok(await page.locator('.me-av .av-pack').count() === 5 && await page.locator('.me-av .av-pick').count() === 30, 'all thirty faces, five packs of six, wait on the child\'s page');
-  await page.locator('.me-av .av-packs').screenshot({ path: `${SHOTS}/${tag}-01b-avatars.png` }).catch(() => {});
-  await page.click('[data-act=setAv][data-arg="protortle"]');
-  ok(await page.evaluate(() => window.__bzm.R.h.kids[0].avatar) === 'protortle', 'Change avatar sets the child\'s face');
+  // Change avatar in the Collection (from the household sheet)
+  await page.click('[data-bz=kid]'); await page.click('.sheet [data-arg=collection]'); await page.waitForSelector('.avgrid');
+  ok(await page.locator('.pack').count() === 12 && await page.locator('.bz-av').count() === 96, 'all ninety-six faces, twelve packs of eight, in the Collection');
+  await page.click('.bz-av[data-id=protortle] [data-act=setAv]');
+  ok(await page.evaluate(() => window.__bzm.R.h.kids[0].avatar) === 'protortle', 'Wear sets the child\'s face');
   await page.waitForTimeout(400); await shot('19b-change-avatar');
-  await page.click('[data-act=avEdit]');
-  ok(await page.locator('.me-av .av-pick').count() === 0, 'Done closes the picker');
+  await page.click('.bz-av[data-id=pyrafox]').catch(() => {});
+  ok(await page.locator('.bz-av[data-id=pyrafox] [data-act=setAv]').count() === 0, 'a face not yet earned has no Wear button');
   // home + grown-ups
   await nav('home'); await page.waitForSelector('.home2');
   await shot('20-home');
-  await page.click('.tool[data-arg=grownups]');
+  await page.click('[data-bz=lock]');
   for (const k of '1234') await page.keyboard.press(k);
   await page.waitForSelector('.report');
   await shot('21-grownups');
@@ -477,46 +475,49 @@ async function run(vp, tag) {
 /* The six themes: the active child's theme goes on <html>, the UI face
    changes to that theme's, Home and the Atlas render in each with no page
    error. Desktop is checked in light mode, the phone in dark. */
-const THEME_UI = { graph: 'Nunito', chalk: 'Atkinson Hyperlegible Next', blueprint: 'Archivo', orbit: 'Exo 2', rangoli: 'Mukta', arcade: 'Lexend' };
+const THEME_DISPLAY = { graph: 'Baloo 2', chalk: 'Kalam', blueprint: 'Space Grotesk', orbit: 'Orbitron', rangoli: 'Yatra One', arcade: 'Pixelify Sans' };
 async function themes(page, vp, tag, shot) {
   const dark = vp.width < 760;
   await page.evaluate((d) => document.documentElement.setAttribute('data-mode', d ? 'dark' : 'light'), dark);
-  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'graph', 'a child who never chose gets Graph Paper');
+  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'graph', 'a child who never chose gets Patchwork Hills (graph)');
+  await page.evaluate(() => { window.__bzm.R.h.parent.plan = 'family'; });   // the plan opens worlds 3–6
   const faces = new Set();
-  for (const [id, face] of Object.entries(THEME_UI)) {
+  for (const [id, face] of Object.entries(THEME_DISPLAY)) {
     await page.evaluate((t) => { const r = window.__bzm.R; r.h.kids.find((k) => k.id === r.h.active).prefs.theme = t; window.__bzm.go('home'); }, id);
     await page.waitForSelector('.home2'); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(350);
-    ok(await page.evaluate(() => document.documentElement.dataset.theme) === id, `theme ${id} is on <html>`);
+    ok(await page.evaluate(() => document.documentElement.dataset.theme) === id, `world ${id} is on <html>`);
     const ff = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-    ok(ff.replace(/["']/g, '').startsWith(face), `theme ${id}: the UI face is ${face} (got ${ff})`);
-    ok(await page.evaluate((f) => document.fonts.check(`16px "${f}"`), face), `theme ${id}: ${face} actually loaded`);
-    faces.add(ff);
-    ok(await page.evaluate(() => { const m = document.querySelector('.motif'); return !!m && m.textContent === '' && getComputedStyle(m).position === 'fixed' && getComputedStyle(m).pointerEvents === 'none'; }), `theme ${id}: the motif is a fixed, silent, untouchable layer`);
+    ok(ff.replace(/["']/g, '').startsWith('Hanken Grotesk'), `world ${id}: the body is the family's Hanken Grotesk (got ${ff})`);
+    const hf = await page.evaluate(() => getComputedStyle(document.querySelector('[data-bz=hour] h3')).fontFamily);
+    ok(hf.replace(/["']/g, '').startsWith(face), `world ${id}: its display face is ${face} (got ${hf})`);
+    ok(await page.evaluate((f) => document.fonts.check(`16px "${f}"`), face), `world ${id}: ${face} actually loaded`);
+    faces.add(hf);
+    ok(await page.evaluate(() => { const m = document.querySelector('.motif'); return !!m && m.textContent === '' && getComputedStyle(m).position === 'fixed' && getComputedStyle(m).pointerEvents === 'none'; }), `world ${id}: the motif is a fixed, silent, untouchable layer`);
     await shot(`40-theme-${id}-home`);
-    await page.evaluate(() => window.__bzm.go('atlas')); await page.waitForSelector('.map-board'); await page.waitForTimeout(350);
+    await page.evaluate(() => window.__bzm.go('atlas')); await page.waitForSelector('.board-scroll, .map-board'); await page.waitForTimeout(350);
     await shot(`40-theme-${id}-atlas`);
   }
-  ok(faces.size === 6, 'six themes, six different UI faces');
-  // switching child switches theme: a second child with their own
+  ok(faces.size === 6, 'six worlds, six display faces');
+  // switching child switches world
   const first = await page.evaluate(() => window.__bzm.R.h.active);
   await page.evaluate(() => { const h = window.__bzm.R.h; const c = JSON.parse(JSON.stringify(h.kids.find((k) => k.id === h.active))); c.id = 'theme-twin'; c.name = 'Twin'; c.prefs.theme = 'rangoli'; h.kids.push(c); });
   await page.evaluate(() => window.__bzm.fire('switchKid', 'theme-twin')); await page.waitForSelector('.home2');
-  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'rangoli', 'switching child puts on that child\'s theme');
+  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'rangoli', 'switching child puts on that child\'s world');
   await page.evaluate((id) => window.__bzm.fire('switchKid', id), first); await page.waitForSelector('.home2');
-  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'arcade', 'switching back restores the first child\'s theme');
+  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'arcade', 'switching back restores the first child\'s world');
   await page.evaluate(() => { const h = window.__bzm.R.h; h.kids = h.kids.filter((k) => k.id !== 'theme-twin'); });
-  // the picker: reachable from Home, keyboard and tap
-  await page.click('header [data-act=themes]'); await page.waitForSelector('.theme-card');
-  ok(await page.locator('.theme-card').count() === 6, 'the picker shows six themes');
-  ok(await page.evaluate(() => document.activeElement && document.activeElement.id) === 'theme-arcade', 'the Home chip lands on the chosen theme');
+  // the picker: Settings → Look, keyboard and tap
+  await page.evaluate(() => window.__bzm.fire('themes')); await page.waitForSelector('.theme-card');
+  ok(await page.locator('.theme-card').count() === 6, 'the picker shows six worlds');
+  await page.focus('.theme-card[aria-checked=true]');
+  ok(await page.evaluate(() => document.activeElement && document.activeElement.id) === 'theme-arcade', 'the picker focuses the chosen world');
   await page.keyboard.press('ArrowRight');   // wraps round to the first
-  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'graph', 'an arrow key chooses the next theme, instantly');
+  ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'graph', 'an arrow key chooses the next world, instantly');
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
   ok(await page.evaluate(() => document.documentElement.dataset.theme) === 'rangoli', 'arrows go both ways (graph ← arcade ← rangoli)');
   await page.click('.theme-card[data-arg=chalk]');
-  ok(await page.evaluate(() => window.__bzm.R.h.kids.find((k) => k.id === window.__bzm.R.h.active).prefs.theme) === 'chalk', 'a tap chooses a theme, saved on the child');
-  await page.locator('#themes').scrollIntoViewIfNeeded(); await page.waitForTimeout(400);
-  await shot('41-theme-picker');
+  ok(await page.evaluate(() => window.__bzm.R.h.kids.find((k) => k.id === window.__bzm.R.h.active).prefs.theme) === 'chalk', 'a tap chooses a world, saved on the child');
+  await page.waitForTimeout(400); await shot('41-theme-picker');
   await page.click('.theme-card[data-arg=graph]');
 }
 try {

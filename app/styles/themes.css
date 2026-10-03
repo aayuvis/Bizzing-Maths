@@ -1,4 +1,7 @@
-/* themes.css — the six looks a child can choose (src/themes.js lists them).
+/* themes.css — the six WORLDS' palettes and display faces (src/themes.js lists them).
+   v2: the chrome faces are the family's in every world (Hanken Grotesk body, Sono digits,
+   Fraunces chrome headings in styles/shell.css); each world keeps ONE display face. The
+   painted plates, ambient layers and nights are in shell.css (.wstage).
 
    A theme belongs to the CHILD (k.prefs.theme) and is applied as data-theme on
    <html>; light/dark stays a device setting (data-mode, always resolved by
@@ -29,8 +32,8 @@
 /* ================================================================ 1 · Graph Paper (default) */
 :root[data-theme="graph"],[data-theme="graph"]{
   --sw2:#E0457B;
-  --display:"Baloo 2","Nunito",system-ui,sans-serif;
-  --ui:"Nunito",system-ui,-apple-system,sans-serif;
+  --display:"Baloo 2","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
   --mono:"Sono",ui-monospace,monospace;
   --tint:#F3F7FD; --tint-deep:#E6EEF9; --paper:#FFFFFF; --surface:#FFFFFF; --surface2:#F1F5FB;
   --line:#D5DFEE; --line-soft:#E5ECF6;
@@ -56,9 +59,9 @@
 /* ================================================================ 2 · Chalkboard */
 :root[data-theme="chalk"],[data-theme="chalk"]{
   --sw2:#2F6B4F;
-  --display:"Kalam","Atkinson Hyperlegible Next",cursive;
-  --ui:"Atkinson Hyperlegible Next",system-ui,sans-serif;
-  --mono:"Atkinson Hyperlegible Mono",ui-monospace,monospace;
+  --display:"Kalam","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
   --tint:#DCE8DF; --tint-deep:#CEDFD2; --paper:#F7FAF6; --surface:#FFFFFF; --surface2:#EAF2EC;
   --line:#CADACF; --line-soft:#DDE8E0;
   --ink:#15291F; --muted:#4D6457;
@@ -85,9 +88,9 @@
 /* ================================================================ 3 · Blueprint */
 :root[data-theme="blueprint"],[data-theme="blueprint"]{
   --sw2:#D0452F;
-  --display:"Space Grotesk","Archivo",system-ui,sans-serif;
-  --ui:"Archivo",system-ui,-apple-system,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --display:"Space Grotesk","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
   --tint:#E7F0FA; --tint-deep:#D8E6F6; --paper:#F7FAFE; --surface:#FFFFFF; --surface2:#EDF3FB;
   --line:#C6D8EE; --line-soft:#DAE6F4;
   --ink:#0F2744; --muted:#48617F;
@@ -112,9 +115,9 @@
 /* ================================================================ 4 · Orbit */
 :root[data-theme="orbit"],[data-theme="orbit"]{
   --sw2:#E0457B;
-  --display:"Orbitron","Exo 2",system-ui,sans-serif;
-  --ui:"Exo 2",system-ui,-apple-system,sans-serif;
-  --mono:"Azeret Mono",ui-monospace,monospace;
+  --display:"Orbitron","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
   --tint:#ECEBFA; --tint-deep:#DFDDF4; --paper:#FAFAFF; --surface:#FFFFFF; --surface2:#F1F0FB;
   --line:#DAD8EF; --line-soft:#E7E5F6;
   --ink:#1A1838; --muted:#5A5782;
@@ -138,9 +141,9 @@
 /* ================================================================ 5 · Rangoli */
 :root[data-theme="rangoli"],[data-theme="rangoli"]{
   --sw2:#E8860C;
-  --display:"Yatra One","Mukta",system-ui,sans-serif;
-  --ui:"Mukta",system-ui,-apple-system,sans-serif;
-  --mono:"Red Hat Mono",ui-monospace,monospace;
+  --display:"Yatra One","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
   --tint:#FFF0DE; --tint-deep:#FBE2C6; --paper:#FFF9F1; --surface:#FFFFFF; --surface2:#FFF1E3;
   --line:#EFD6BA; --line-soft:#F6E5D0;
   --ink:#2D1A10; --muted:#78583F;
@@ -162,9 +165,9 @@
 /* ================================================================ 6 · Arcade */
 :root[data-theme="arcade"],[data-theme="arcade"]{
   --sw2:#0EA5C6;
-  --display:"Pixelify Sans","Lexend",system-ui,sans-serif;
-  --ui:"Lexend",system-ui,-apple-system,sans-serif;
-  --mono:"Kode Mono",ui-monospace,monospace;
+  --display:"Pixelify Sans","Hanken Grotesk",system-ui,sans-serif;
+  --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --mono:"Sono",ui-monospace,monospace;
   --tint:#F1F2FF; --tint-deep:#E3E5FB; --paper:#FBFBFF; --surface:#FFFFFF; --surface2:#EEF0FC;
   --line:#D4D8F0; --line-soft:#E5E8F8;
   --ink:#14142B; --muted:#545676;

@@ -36,9 +36,7 @@ kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:5px;bor
 .tab{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r-pill);border:0;background:none;cursor:pointer;font-weight:650;color:var(--muted)}
 .tab:hover{background:var(--action-tint);color:var(--ink)}
 .tab.on{background:var(--action);color:var(--action-ink)}
-.ico{width:20px;height:20px;fill:currentColor;stroke:none}
-.ico .i2{opacity:.55}
-.ico path[class=i2],.ico path.i2{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;opacity:.8}
+.ico{flex:none;vertical-align:middle}   /* the family set (src/icons.js) sizes and strokes itself */
 .tools{display:flex;align-items:center;gap:6px}
 .tool{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--muted)}
 .tool:hover{color:var(--ink);border-color:var(--action)}
@@ -746,7 +744,9 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .g-met .g-lab{color:var(--mastered)}
 .rep-goals{background:var(--surface2);border-radius:var(--r-md);padding:12px 16px;margin:12px 0}
 .rg{margin:4px 0;font-size:var(--fs-label)}
-.rg span{white-space:nowrap}.rg-met{color:var(--mastered);font-weight:700}
+.rg{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.rg > b{flex-basis:100%}
+/* goal lines WRAP: on a 390px phone a nowrap line ran the page to 670px (FIX-MATHS §1, P1) */
+.rg span{white-space:normal;overflow-wrap:anywhere;min-width:0}.rg-met{color:var(--mastered);font-weight:700}
 @media (max-width:880px){.home-r3{grid-template-columns:1fr}.strands{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.amb,.map-amb{display:none}}
 @media print{.top,.tabbar,.foot{display:none}}

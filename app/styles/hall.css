@@ -1,6 +1,4 @@
 /* hall.css — the Contest Hall and the paper simulator. */
-.hero-tiles{grid-template-columns:1.3fr 1fr 1fr}
-@media (max-width:760px){.hero-tiles{grid-template-columns:1fr}}
 
 .hall{display:flex;flex-direction:column;gap:14px}
 .hall-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}

@@ -323,8 +323,147 @@ CONTEST = {
 for k, v in CONTEST.items(): JOBS[k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
 
 
-def call(model, prompt, ratio):
-    body = {"contents": [{"parts": [{"text": prompt}]}],
+# ------------------------------------------------------------------ the family layer (standard v2)
+# Octo, the mascot (§2), the 50 avatars that take the collection to 96 (§8), and the six
+# painted worlds with their separately painted nights (§7). Octo is drawn FROM the concept
+# model sheet (tools/art/ref/octo-sheet.webp, sent as a reference image) so all six poses
+# are one character. Each night plate is painted FROM its own day plate, so lamps light in
+# the same windows and nothing moves. The app icon is NOT generated: the cobalt tile and
+# its graph grid are drawn by process.py --icons, and the keyed wave pose is laid on top,
+# so the grid is exact and the tile has no lettering by construction.
+REF = os.path.join(HERE, 'ref')
+OCTO = ("Draw the SAME character as in the attached model sheet: Octo, a small round coral-orange octopus with a big "
+        "round glossy head, big glossy dark eyes with two white catch-lights, rosy cheeks, a light-blue graph-paper "
+        "neckerchief tied at the front, and EXACTLY EIGHT short curly arms. Same colours, same proportions, same thick "
+        "dark-plum outline and soft cel shading, children's sticker style. ONE single Octo, full body, centred, with a "
+        "comfortable margin all round. THE ENTIRE BACKGROUND IS FLAT PURE MAGENTA (hex FF00FF), one solid uniform field: "
+        "no ground, no shadow, no glow, no border, and no magenta or hot pink on the character. ABSOLUTELY NO TEXT, no "
+        "letters (not even a Z), no digits, no numbers, no symbols anywhere. The pose: ")
+OCTO_POSE = {
+    'octo-wave':  "waving hello with one arm raised high, a warm open smile, the other arms relaxed and curled.",
+    'octo-cheer': "cheering, two arms thrown up high in delight, eyes happily squeezed into upward curves, a big open smile, three tiny gold sparkle stars around the arms.",
+    'octo-think': "thinking, one curled arm touching the chin, eyes looking up and to the side, a small thoughtful smile, holding a short yellow pencil in another arm.",
+    'octo-point': "pointing to the viewer's right with one long arm stretched out sideways, looking that way with a bright encouraging smile.",
+    'octo-sleep': "fast asleep, curled up cosily, eyes peacefully closed as gentle downward curves, a small soft smile, a tiny pale-blue night cap, arms tucked in, resting on a small round pale-blue cushion.",
+    'octo-oops':  "an 'oops' moment: eyebrows raised, a small embarrassed wobbly smile, one arm scratching the back of its head, a single light-blue sweat drop beside the head, a short yellow pencil dropped beside it.",
+}
+for k, v in OCTO_POSE.items(): JOBS[k] = (OCTO + v, '1:1', [os.path.join(REF, 'octo-sheet.webp')])
+
+# The new avatars: the Bee family sticker style (chubby, thick plum outline, cel shading), keyed off magenta.
+AV2_STYLE = AV_STYLE.replace("A smooth, even, medium-thick dark navy-brown outline", "A smooth, even, THICK dark-plum outline") + (
+    " Chubby rounded proportions, sticker style, consistent with a collectible set.")
+AVATAR2 = {
+    # Shape Pals +2
+    'torupup':     "A puppy whose round body is a glazed TORUS, a ring doughnut shape with a hole clean through the middle, strawberry icing with tiny sprinkles, floppy ears, stubby legs, a wagging tail.",
+    'octachick':   "A chick whose body is a simple diamond-shaped OCTAHEDRON like two square pyramids glued base to base, one point at the top and one at the bottom, only FOUR large flat triangular faces visible from the front (lemon and gold, crisp edges), a small orange beak in the middle, tiny wings at the sides, orange feet under the bottom point.",
+    # Counting Critters
+    'ladybird':    "A round ladybird with a shiny red shell and exactly six round black spots, three on each side, a little black head with two antennae, six stubby legs.",
+    'beadpillar':  "A caterpillar whose body is a row of round beads in alternating green and yellow like a counting bead string, a happy round head with two tiny antennae, many stubby feet.",
+    'starfish':    "A starfish with exactly five rounded arms, coral orange with small cream dots in a neat row along each arm, standing up on two of its arms.",
+    'peapod':      "A puppy snuggled inside an open green pea pod, with a neat row of five round green peas beside it in the pod, floppy ears.",
+    'eggchick':    "A fluffy yellow chick sitting in a cardboard egg tray of two rows of three cups, five cups holding white eggs and the sixth holding the chick.",
+    'dalmatian':   "A dalmatian puppy, white with neat round black spots, a red collar with a round blank tag, sitting.",
+    'cubellama':   "A llama whose long neck is a tower of colourful interlocking linking cubes stacked one on another (red, blue, yellow, green), a fluffy cream body, little ears.",
+    'berrybear':   "A bear cub holding a bunch of round purple berries arranged in a neat triangle, one berry on top, two below, three below that; brown fur, round ears.",
+    # Tool Kit +2
+    'chalkbun':    "A bunny whose body is a stubby white CHALK stick standing upright, long ears, a pink nose, a few soft puffs of blue and yellow chalk dust.",
+    'sharpowl':    "A soft round sky-blue owl holding a small silver PENCIL SHARPENER in its wings, a sharp yellow pencil poking out of the sharpener and a little curl of wooden shaving falling, round fluffy ear tufts, big friendly eyes, an orange beak.",
+    # Fraction Feast
+    'pizzapanda':  "A panda cub holding a round pizza cut into four equal slices, one slice pulled a little way out.",
+    'piepig':      "A piglet sitting behind a round cherry pie cut into six equal slices.",
+    'orangeotter': "An otter holding an orange cut in half, showing its equal segments like the spokes of a wheel.",
+    'cakecat':     "A fluffy cream-coloured kitten sitting beside a ROUND two-layer strawberry cake seen from slightly above, the circular cake with exactly one quarter-slice cut out so a clean right-angled gap shows, pink icing, the kitten licking its lips.",
+    'melonwhale':  "A small whale whose body is a half-moon slice of watermelon, green rind, red flesh with neat rows of black seeds, a little water spout.",
+    'chocobear':   "A bear cub hugging a chocolate bar made of a neat grid of squares, two rows of four, with one square snapped off.",
+    'sandhippo':   "A small hippo holding a square sandwich cut corner to corner into two equal triangles.",
+    'pancakepeng': "A penguin balancing a stack of round pancakes with a perfect square pat of butter on top.",
+    # Gear Gang
+    'coggoat':     "A goat whose round body is a big brass COG wheel with even teeth around its edge, little curled horns, four stubby legs.",
+    'pulleyparrot':"A parrot hanging from a rope looped over a round wooden PULLEY wheel, bright green and red feathers.",
+    'springroo':   "A kangaroo bouncing on a tail that is a shiny metal coil SPRING, sandy fur, small pouch.",
+    'boltbeetle':  "A beetle whose shell is a silver hexagonal metal NUT with a short bolt through it, blue head, six stubby legs.",
+    'spannerwalrus':"A walrus whose two tusks are small silver spanners, chubby grey body, whiskers, flippers.",
+    'scalebadger': "A badger holding a small brass balance scale with two pans hanging perfectly level, one round weight in each pan.",
+    'hourhamster': "A hamster sitting inside a glass HOURGLASS with golden sand trickling down past it, wooden top and bottom caps.",
+    'windmouse':   "A mouse whose body is a little red-brick windmill with four sails, round mouse ears on top.",
+    # Star Crew +2
+    'meteorpup':   "A puppy riding a small glowing meteor with a short sparkly tail, wearing tiny flying goggles.",
+    'moonrover':   "A little six-wheeled moon rover robot with a round glass dome head and a friendly face, two small solar-panel wings.",
+    # Lab Friends +2
+    'prismcat':    "A cat whose body is a clear glass triangular PRISM, a thin beam of white light entering one side and a small rainbow fan coming out of the other.",
+    'magnifly':    "A firefly whose body is a round MAGNIFYING GLASS with a wooden handle as its tail, glowing gently, little wings.",
+    # Pattern Pets +2
+    'pineporc':    "A porcupine whose back is a PINE CONE with its scales in crossing spirals, warm brown, a small pink nose.",
+    'mandalamoth': "A moth with perfectly mirror-symmetric wings patterned with concentric circles and petals, soft lilac and gold, a fluffy body.",
+    # Symmetry Friends
+    'mirrorfly':   "A butterfly whose two wings are exact mirror images of each other, bright turquoise and orange with matching dots on each side.",
+    'pinpup':      "A puppy holding a paper PINWHEEL with four curled sails in four colours.",
+    'kaleidokoala':"A koala holding a KALEIDOSCOPE tube, with a six-fold coloured flower pattern glowing at its end.",
+    'kolamturtle': "A tortoise whose terracotta shell is decorated with a white dotted KOLAM pattern: a neat grid of white dots with smooth looping lines drawn around them.",
+    'kitekitten':  "A kitten holding the string of a diamond-shaped paper KITE made of four symmetric coloured triangles with a short tail of bows.",
+    'lanternlemur':"A ring-tailed lemur holding a round paper LANTERN with symmetric petal patterns, glowing warm.",
+    'toptapir':    "A baby tapir beside a wooden SPINNING TOP with symmetric painted stripes.",
+    'rangolirabbit':"A rabbit sitting beside a small round RANGOLI flower pattern of coloured petals with eight-fold symmetry.",
+    # Pixel Pals
+    'pixelkitty':  "A cat made of chunky square PIXELS like an 8-bit video-game sprite, orange and white, a smooth outline around the blocky shape.",
+    'blockfrog':   "A frog built from chunky square pixel blocks like a retro game sprite, lime green, a smooth outline around it.",
+    'tetrosnake':  "A snake made of four square blocks joined in an S shape like a falling-block puzzle piece, bright teal, a face on the end block.",
+    'voxelbear':   "A bear cub built from small 3D cubes (voxels), honey brown, chunky and cute.",
+    'joyjelly':    "A jellyfish whose round bell is the red ball on top of an arcade JOYSTICK, wavy purple tentacles below.",
+    'mazemole':    "A mole with a simple square MAZE pattern on its back, little pink paws, small round glasses.",
+    'bitbunny':    "A bunny made of chunky pixel blocks like an 8-bit sprite, pale pink and white, a smooth outline around it.",
+    'glitchgecko': "A gecko whose body has offset colour stripes like a friendly screen glitch, cyan and lime, a curled tail.",
+}
+for k, v in AVATAR2.items(): JOBS['av-' + k] = (v + ' ' + AV2_STYLE, '1:1')
+# Two packs that replace the faces borrowed from Bizzing Bee (Star Crew, Lab Friends): no face may be
+# in two apps' 96 (standard §8), so world 4 gets Sky Counters and Measure Lab, painted here.
+AVATAR3 = {
+    'phasefox':     "A fox whose big fluffy tail is marked with the phases of the moon in a row along it — a full moon, a half moon and a crescent — silver and midnight blue fur, a small star on its forehead.",
+    'rocketrabbit': "A bunny riding inside a little rocket built from simple solids: a CYLINDER body, a CONE nose and three triangular fins, cream and red, a tiny puff of cloud below.",
+    'stardeer':     "A young deer whose antlers are a CONSTELLATION: small bright dots joined by thin straight lines, soft lavender coat with tiny star freckles.",
+    'slothsat':     "A smiling sloth hanging by its arms from a small SATELLITE with two rectangular grid-panel wings, soft brown fur.",
+    'ringturtle':   "A turtle whose round shell is a little ringed PLANET with a tilted ring around it, banded in cream and apricot, a green turtle head and stubby legs.",
+    'galaxysnail':  "A snail whose shell is a SPIRAL GALAXY, arms of glowing stars curling inward to a bright golden centre, a deep violet body with glowing antennae.",
+    'thermobear':   "A polar bear cub holding a tall THERMOMETER marked with ONLY plain tick lines (no numerals), the red line half way up, a woolly blue scarf.",
+    'jugmouse':     "A mouse sitting in a clear glass MEASURING JUG with a spout and a handle and NO markings at all on the glass, the jug half full of blue water, round ears.",
+    'tapesnail':    "A snail whose shell is a coiled yellow TAPE MEASURE marked with ONLY plain tick lines (no numerals), the tape's end pulled out a little.",
+    'levellizard':  "A lizard lying along a SPIRIT LEVEL tool, a long green bar with a small window holding a bubble exactly in the middle, orange and green scales.",
+    'pendulumpanda':"A panda cub swinging happily on a PENDULUM: a straight rod with a round brass bob, hanging from a little wooden frame.",
+    'fractaldragon':"A friendly small dragon whose wings are FRACTAL snowflake shapes, edges made of smaller and smaller triangles, icy blue and silver body, no teeth showing.",
+}
+for k, v in AVATAR3.items(): JOBS['av-' + k] = (v + ' ' + AV2_STYLE, '1:1')
+
+# Six worlds: a painted day plate and, from it, a painted night. Places only: no people, no lettering.
+MW = {
+    'graph':     "A wide panorama of a sunny patchwork countryside seen from a gentle hill: fields laid out in neat squares and rectangles like a giant sheet of squared paper, hedgerows in straight lines crossing at right angles, a river that curves smoothly like a plotted curve, a little red-roofed farmhouse, rows of round trees evenly spaced, colourful kites high in a pale blue sky, soft white clouds. Fresh greens, cornflower blue, buttercup yellow.",
+    'chalk':     "A wide panorama of a cosy old village schoolhouse beside the sea: a stone schoolhouse with a little bell tower and tall windows on a green meadow, white chalk cliffs above a calm deep-green sea, a winding path of white pebbles, an apple tree, slate roofs, a few soft swirls of chalk dust in the air. Deep blackboard green, chalk white, warm wood brown, soft sky.",
+    'blueprint': "A wide panorama of an inventor's harbour shipyard on a bright morning: a half-built wooden airship inside a tall timber frame, cranes and pulleys, big gear wheels, a drafting table under an awning with rolled plans tied with string, brass telescopes, a lighthouse, a calm blue sea. Blueprint blues, white, brass and honey timber.",
+    'orbit':     "A wide panorama of a little moon-base garden on a small rocky planet at pastel dawn: round glass domes with green plants inside, a silver telescope, a small rocket on a launch pad, a huge ringed planet and two small moons in a lavender-and-peach sky, gentle craters, a few comets. Lavender, peach, deep navy and silver.",
+    'rangoli':   "A wide panorama of a sunny Indian courtyard house with carved wooden balconies and arches, the stone floor decorated with large colourful symmetrical rangoli floor patterns of coloured powder and petals (abstract geometric flowers, dots and petals only), marigold garlands strung across doorways, potted plants, colourful paper kites on the rooftops, brass pots, a mango tree. No religious objects, no figures. Marigold orange, magenta, turquoise, warm sandstone.",
+    'arcade':    "A wide panorama of a cheerful seaside funfair pier: a big ferris wheel, a curling roller-coaster track, a carousel, striped game booths whose boards are completely blank, strings of round light bulbs, colourful square pixel-block patterns painted on the booths, balloons, a calm sea and a bright afternoon sky. Electric teal, coral, sunny yellow, candy red.",
+}
+MW_NIGHT = {
+    'graph': "fireflies over the fields, the farmhouse windows glowing warm yellow, the kites carrying tiny lanterns",
+    'chalk': "every schoolhouse window glowing warm gold, a lantern by the door, the chalk cliffs pale silver in the moonlight",
+    'blueprint': "the shipyard lamps lit, warm lights inside the airship frame, the lighthouse beam sweeping across the sea",
+    'orbit': "the glass domes glowing from inside, the ringed planet lit silver, a sky thick with stars and a soft nebula",
+    'rangoli': "rows of small warm lamps along the balconies and steps, paper lanterns glowing, the rangoli lit gold by lamplight",
+    'arcade': "every light bulb and booth glowing in bright neon colours, the ferris wheel ringed with lights, reflections on the sea",
+}
+for k, v in MW.items():
+    JOBS['mw-' + k] = (v + ' ' + STYLE + " Very wide landscape composition.", '21:9')
+    JOBS['mn-' + k] = ("Repaint the attached painting as the SAME scene at night: keep exactly the same composition, the same "
+                       "viewpoint and every building, object and shape in the same place. A deep blue night sky with stars and a moon, "
+                       "gentle moonlight, " + MW_NIGHT[k] + ". Keep the warm hand-painted storybook style. " + STYLE, '21:9',
+                       [os.path.join(RAW, 'mw-' + k + '.png')])
+
+
+def call(model, prompt, ratio, refs=()):
+    parts = [{"text": prompt}]
+    for ref in refs:
+        mime = 'image/webp' if ref.endswith('.webp') else 'image/png'
+        parts.append({"inlineData": {"mimeType": mime, "data": base64.b64encode(open(ref, 'rb').read()).decode()}})
+    body = {"contents": [{"parts": parts}],
             "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": ratio}}}
     req = urllib.request.Request(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                                  data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "x-goog-api-key": KEY})
@@ -337,12 +476,14 @@ def call(model, prompt, ratio):
 
 
 def run(name):
-    prompt, ratio = JOBS[name]
+    prompt, ratio, *rest = JOBS[name]
+    refs = rest[0] if rest else ()
+    if any(not os.path.exists(r) for r in refs): return f'{name}: SKIPPED — its reference is not painted yet'
     out = os.path.join(RAW, name + '.png')
     for attempt in range(6):
         model = MODELS[attempt % len(MODELS)]
         try:
-            img = call(model, prompt, ratio)
+            img = call(model, prompt, ratio, refs)
             open(out, 'wb').write(img)
             return f'{name}: ok ({model}, {len(img)//1024} KB)'
         except Exception as e:

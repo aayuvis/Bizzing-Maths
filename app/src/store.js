@@ -16,10 +16,28 @@
 
 import { trackActivity, trackMilestone } from './integration/bizzing-activity.js';
 import * as W from './integration/bizzing-wallet.js';
+import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 7;
+export const SCHEMA = 9;
+
+/* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
+   running it twice changes nothing — step 8 runs it again for the households an
+   earlier Contest Hall build had already moved to v7 without it. */
+function familyV2(h) {
+  h.parent = h.parent || {}; if (!h.parent.plan) h.parent.plan = 'free';
+  const ORDER = ['graph', 'chalk', 'blueprint', 'orbit', 'rangoli', 'arcade'];
+  for (const k of h.kids) {
+    const shop = k.shop || (k.shop = { owned: [], worn: {} });
+    shop.owned = shop.owned || []; shop.worn = shop.worn || {};
+    shop.avatars = shop.avatars || []; if (k.avatar && !shop.avatars.includes(k.avatar)) shop.avatars.push(k.avatar);
+    shop.worlds = shop.worlds || [];
+    const n = ORDER.indexOf((k.prefs || {}).theme) + 1; if (n > 2 && !shop.worlds.includes(n)) shop.worlds.push(n);
+    k.mistakes = k.mistakes || {}; k.coinNotes = k.coinNotes || {};
+    k.prefs = k.prefs || {}; k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 };
+  }
+}
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -47,9 +65,28 @@ const STEPS = {
   // with Bizzing coins. Maths had no currency of its own, so there is nothing
   // to convert: the coins themselves live in the family wallet, not here.
   // weeks: one snapshot of what the child can do per week, for the report's trend.
-  // v7: the Contest Hall — papers sat (best per fixed paper, the last fifty) and one paper in progress.
-  6: (h) => { h.v = 7; for (const k of h.kids) { k.papers = k.papers || { best: {}, log: [] }; k.paperDraft = k.paperDraft || null; } return h; },
   5: (h) => { h.v = 6; for (const k of h.kids) { k.medals = k.medals || {}; k.shop = k.shop || { owned: [], worn: {} }; k.weeks = k.weeks || {}; } return h; },
+  // v7: the family's 96 avatars and six worlds (standard v2 §7–§8). Nothing a child had is
+  // taken away: the face they wear is theirs whatever its tier now is, and the world they
+  // were dressed in stays open to them. The mistakes deck and the coin notes start empty;
+  // the daily ring keeps its old goals as the grown-up's targets.
+  6: (h) => { h.v = 7; familyV2(h); return h; },
+  // v8: My Feed (standard §6a). What a child saw this week and which card questions have paid,
+  // per child; the grown-up's switch is the household's. Nothing a child had changes.
+  7: (h) => {
+    h.v = 8; h.parent = h.parent || {}; if (h.parent.feedOff == null) h.parent.feedOff = false;
+    for (const k of h.kids) k.feed = k.feed || { seen: {}, paid: {} };
+    return h;
+  },
+  // v9: the Contest Hall — papers sat (best per fixed paper, the last fifty) and one paper in
+  // progress. A household a Contest Hall build had already numbered v7 skipped the family v2
+  // step above, so it is run again here; it only fills what is missing.
+  8: (h) => {
+    h.v = 9; familyV2(h);
+    h.parent = h.parent || {}; if (h.parent.feedOff == null) h.parent.feedOff = false;
+    for (const k of h.kids) { k.feed = k.feed || { seen: {}, paid: {} }; k.papers = k.papers || { best: {}, log: [] }; k.paperDraft = k.paperDraft || null; }
+    return h;
+  },
 };
 
 export function migrate(h) {
@@ -117,8 +154,11 @@ export const APP_ID = 'maths';
 export const Family = {
   track(getName) { return DEMO ? () => {} : trackActivity(APP_ID, getName); },
   milestone(who, ev, label) { if (!DEMO && who) trackMilestone(APP_ID, who, ev, label); },
-  earn(who, event) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event); },
-  spend(who, price, why) { return DEMO || !who ? false : W.spend(APP_ID, who, price, why); },
+  earn(who, event, now = Date.now()) { return DEMO || !who ? 0 : W.earn(APP_ID, who, event, now); },
+  spend(who, price, why, now = Date.now()) { return DEMO || !who ? false : W.spend(APP_ID, who, price, why, now); },
+  /* avatars and worlds are bought only through the family engine, which pays through the wallet */
+  buyAvatar(who, av, ctx) { return DEMO || !who ? false : A.buy(APP_ID, who, av, ctx); },
+  buyWorld(who, n, ctx) { return DEMO || !who ? false : A.buyWorld(APP_ID, who, n, ctx); },
   balance(who) { return DEMO || !who ? 0 : W.balance(who); },
   ledger(who) { return DEMO || !who ? [] : W.ledger(who); },
   /* READ the activity feed (for the report card's minutes). This app writes it

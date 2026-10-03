@@ -83,19 +83,47 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 
 ### The family layer ([FAMILY-STANDARD](https://github.com/aayuvis/Bizzing_Schedule/blob/claude/amazing-knuth-4aemgz/docs/family/FAMILY-STANDARD.md))
 
-16. **The top bar is the family's**: ⬡ Hive · name · tabs · theme · 🔒 · avatar ▾ (the household
-    sheet: switch child, sound, light/dark), 56px. `test/family-ui.mjs` checks the order.
-17. **Home has ONE filled button — Continue** (`continueTarget`, shared with the Hive's `#/continue`),
-    above the fold at 390×844; Today's three; at most six ways in; number/trick of the day below.
-18. **Bizzing coins only through `Family.earn`/`Family.spend`** (store.js wraps the family's own
-    `src/integration/bizzing-wallet.js` — copy it from Bizzing_Schedule, never edit it here). Standard
-    events only: a right PRACTICE answer, a stop's first pass or a tower floor, a land or level
-    passed, a contest finished. Coins never touch xp. The shop (`shop.js`) sells frames at printed prices.
+16. **The chrome IS Bizzing Bee's** — `src/integration/bizzing-shell.js` + `styles/bizzing-shell.css`, copied
+    byte for byte from Bizzing_Schedule: the bar (⬡ ☰ Octo+wordmark … search | coins theme 🔒 avatar ▾), the tab
+    row (Home · Atlas · Library · Puzzles · Play · My Feed), the phone tab bar and the ☰ drawer in the family order, around
+    EVERY screen (`views.js shell()`, wired once by `bindShell` in main.js). This app passes words, mascot, tabs
+    and `--bz-*` colours only — never geometry. ⬡ hides only inside a timed contest question (`inRun`).
+17. **Home IS Bee's three rows** (`home()`): greeting · daily ring (with "Your level") · number of the hour; the
+    next stop (the ONE filled button, `#/continue`) · a second journey (the mistakes deck when something is due,
+    else the Puzzle Tower); trick of the hour · a fact from the story of numbers; the footer. Nothing else on Home.
+    `test/lib/shell-check.mjs` measures it against Bee at 1280×800 and 390×844, light and dark, and must return [].
+18. **Bizzing coins only through `Family.earn`/`Family.spend`, avatars and worlds only through
+    `Family.buyAvatar`/`Family.buyWorld`** (store.js wraps the family's own `src/integration/` files — copy them
+    from Bizzing_Schedule, never edit them here; `test/avatars.mjs` compares them byte for byte). Standard events
+    only; coins never touch xp. The 96 avatars are `avatars.js` (12 packs × 8, 2/3/2/1, `validate()` = []), every
+    Legendary asks for a learning milestone first. Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
+    Frames are the Extras. The wallet history says every line in words (`k.coinNotes`).
 19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
 20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
 21. **The Hive's feed is written by the drop-in only** (`Family.track`, `Family.milestone`); the
     report card (`report.js`) reads it for TIME and never counts minutes as learning.
+
+22. **Six worlds (§7)** — `themes.js` + `.wstage` in `styles/shell.css`: a painted day plate AND a separately
+    painted night (`art/world-<id>-{day,night}[-s].webp`), three ambient layers, paused when hidden, frozen under
+    reduced motion. One display face per world; the chrome is Hanken Grotesk, Fraunces and Sono everywhere,
+    ≤ 250 KB of fonts before first paint (`test/themes.mjs`).
+23. **No emoji in a control** (§9): every UI icon is SVG from `icons.js` (Bee's duotone set, extended);
+    `glyph()` draws a data file's emoji as its icon. `test/standard.mjs` counts emoji in controls on every screen.
+24. **Music is composed in code** (`music.js`, `music/CREDITS.md`): a loop per world, Home and the games,
+    lazy-loaded on the first tap, ducked under effects and read-aloud, off in Calm mode. No new narration.
+25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, greeting, finishes, empty and error
+    states. Aryabhata stays the ceremony elder.
+
+26. **My Feed ends, and nothing in it is typed** (FAMILY-STANDARD §6a; the LAST tab, after Play). `tools/build-feed.mjs`
+    cuts every card from the corpus — each with a `src` that resolves and words found in it — into `app/src/feed/`
+    (an index with no words, then one lazy group per journey level and one level-agnostic group; #/feed loads only the
+    groups its session needs). Every card question is re-run through the app's own rules (trick, `ans` and `expr`
+    agree; the prompt never shows its answer); no two cards' words are ≥ 80% the same. The family's engine
+    (`integration/bizzing-feed.js`, never edited) ranks on the device by journey level, what was just done and what
+    slipped; about twenty, then a finished card. Only a right answer pays, once, as `answer`. A grown-up can switch
+    it off behind the PIN. Change the corpus → rerun `node tools/build-feed.mjs`. `test/feed.mjs` and
+    `test/feed-ui.mjs` hold it.
 
 ### Art
 

@@ -466,7 +466,7 @@ function badge(done) {
 
 function rec(ctx) { const d = ctx.data; if (!d.passed) d.passed = {}; if (!d.best) d.best = {}; return d; }
 export const isPassed = (ctx, i) => !!rec(ctx).passed[JOURNEY[i].id];
-export const isOpen = (ctx, i) => i >= 0 && i < JOURNEY.length && (i === 0 || isPassed(ctx, i - 1));
+export const isOpen = (ctx, i) => i >= 0 && i < JOURNEY.length && (!!ctx.tester || i === 0 || isPassed(ctx, i - 1));
 const hereOf = (ctx) => { const i = JOURNEY.findIndex((_, k) => !isPassed(ctx, k)); return i < 0 ? JOURNEY.length : i; };
 const level = (ctx) => ctx.ui.lv || LV[ctx.band] || 2;
 const pages = (st) => st.cards.length + 1;   // the cards, then "Try it"
