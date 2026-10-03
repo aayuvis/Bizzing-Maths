@@ -21,7 +21,7 @@ const ITEMS = INDEX.map((x) => ({ ...BODIES[x.id], ...x, play: BODIES[x.id].play
 import { feedFor, order } from '../src/integration/bizzing-feed.js';
 import { session, options, markSeen, feedLevel, levelName, pay } from '../src/feed.js';
 import { TRICKS, byId, worldOf, learnCases, correct, parseNum } from '../src/tricks.js';
-import { STORIES } from '../src/stories.js';
+import { STORIES } from '../src/story-data.js';
 import { LEVELS } from '../src/levels.js';
 import { RANKS, newKid, newHousehold } from '../src/model.js';
 import * as F from '../src/facts.js';

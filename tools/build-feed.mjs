@@ -43,7 +43,8 @@
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { TRICKS, byId, worldOf, learnCases, correct, parseNum } from '../app/src/tricks.js';
-import { STORIES, evalSum } from '../app/src/stories.js';
+import { evalSum } from '../app/src/stories.js';
+import { STORIES } from '../app/src/story-data.js';
 import { LEVELS, CONCEPT_OF } from '../app/src/levels.js';
 import { RANKS, BANDS } from '../app/src/model.js';
 import * as F from '../app/src/facts.js';

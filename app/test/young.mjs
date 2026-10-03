@@ -9,7 +9,7 @@
 import { LEVELS } from '../src/levels.js';
 import { byId, drill } from '../src/tricks.js';
 import { BANK, text as factText, answer as factAnswer } from '../src/facts.js';
-import { STORIES } from '../src/stories.js';
+import { STORIES } from '../src/story-data.js';
 import { testBlurb } from '../src/journey.js';
 import { spoken } from '../src/views.js';
 import { GUIDE, guideSay, FEEDBACK } from '../src/lines.js';

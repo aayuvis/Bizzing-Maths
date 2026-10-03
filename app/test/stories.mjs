@@ -1,6 +1,7 @@
 /* test/stories.mjs — every stop has a story, every story's arithmetic is right,
    and every character is one of the Bee's ten. */
-import { STORIES, SCENES, evalSum } from '../src/stories.js';
+import { SCENES, evalSum } from '../src/stories.js';
+import { STORIES } from '../src/story-data.js';
 import { TRICKS } from '../src/tricks.js';
 import { RIVALS } from '../src/contest.js';
 import { existsSync } from 'node:fs';

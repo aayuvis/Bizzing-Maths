@@ -146,6 +146,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(total <= 1.5 * 1024 * 1024, `first screen on a phone is ≤ 1.5 MB (got ${(total / 1048576).toFixed(2)} MB: ${got.sort((a, b) => b.n - a.n).slice(0, 4).map((x) => x.u.split('/').pop() + ' ' + Math.round(x.n / 1024) + 'K').join(', ')})`);
   ok(js <= 400 * 1024, `initial JavaScript is ≤ 400 KB gzipped (got ${Math.round(js / 1024)} KB)`);
   ok(!got.some((x) => /\/(shapes|formulas|dictionary|vedic|chinese)-/.test(x.u)), 'no Library tool is downloaded for Home');
+  ok(!got.some((x) => /\/story-data-/.test(x.u)), 'no story is downloaded for Home — they arrive with the first screen that tells one');
   await ctx.close();
 }
 

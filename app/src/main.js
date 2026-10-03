@@ -31,7 +31,7 @@ import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
 import { toolById, SHELF, isTool, loadTool } from './library/index.js';
-import { STORIES } from './stories.js';
+import { STORIES, storiesReady, loadStories } from './stories.js';
 import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel } from './puzzles.js';
 import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor, byTheme, worldIsOpen } from './themes.js';
 import * as V3 from './views3.js';
@@ -292,7 +292,9 @@ function screen() {
 }
 
 let celShown = null;
+const STORY_SCREENS = ['stop', 'world', 'stories', 'search', 'atlas', 'journey'];   // the screens that tell or list a story
 function render() {
+  if (!storiesReady() && !STORY_FAIL && STORY_SCREENS.includes(R.ui.nav)) loadStories().then(() => { render(); speakBeat(); }, () => { STORY_FAIL = true; });
   const focusId = document.activeElement && document.activeElement.id;
   if (R.ui.cels.length && celShown !== R.ui.cels[0]) { const c = celShown = R.ui.cels[0]; sfx.level(); setTimeout(() => confetti(90), 250); if (readOn(kid(R.h))) setTimeout(() => say(`${c.title}. ${c.say}`), 700); }
   applyTheme(themeOf(kid(R.h), R.h));   // the active child's world; switching child switches it
@@ -801,14 +803,16 @@ function daily() {
 
 on('nav', (a) => go(a));
 on('openStop', (id) => {
+  if (!storiesReady() && !STORY_FAIL) return loadStories().then(() => fire('openStop', id), () => { STORY_FAIL = true; fire('openStop', id); });
   const k = kid(R.h);
   // a stop opens on its story until the story has been read once
   R.ui.tab = STORIES[id] && !(k.stories && k.stories[id]) ? 'story' : 'learn';
   R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = ((k.tricks[id] || {}).lvNext) || 1; R.ui.beat = 0; R.ui.jstep = null; storyVoice(k); go('stop', id); speakBeat();
 });
-on('openStory', (id) => { R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; storyVoice(kid(R.h)); go('stop', id); speakBeat(); });
+on('openStory', (id) => { if (!storiesReady() && !STORY_FAIL) return loadStories().then(() => fire('openStory', id), () => { STORY_FAIL = true; fire('openStory', id); }); R.ui.tab = 'story'; R.ui.beat = 0; R.ui.watch = 0; R.ui.lcase = 0; R.ui.level = 1; storyVoice(kid(R.h)); go('stop', id); speakBeat(); });
 /* 'Read it to me' starts on for a child whose questions are read aloud; once
    they switch it off it stays off for the rest of the visit. */
+let STORY_FAIL = false;   // offline before the stories chunk was ever cached: open on Learn rather than hang
 function storyVoice(k) { if (k && R.ui.storyFor !== k.id) { R.ui.storyFor = k.id; R.ui.storyRead = readOn(k); } }
 on('openWorld', (id) => { R.ui.pick = null; R.ui.scrolled = null; go('world', id); });
 on('shutWorld', () => toast('Not reached yet — finish the place before it on the road.'));

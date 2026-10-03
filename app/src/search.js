@@ -10,7 +10,7 @@
    screen would not (a locked stop still says it is locked). */
 
 import { TRICKS, WORLDS, worldOf } from './tricks.js';
-import { STORIES } from './stories.js';
+import { STORIES, storiesReady } from './stories.js';
 import { SHELF } from './library/shelf.js';
 import { bot } from './contest.js';
 import { FAMILIES } from './puzzles.js';
@@ -33,7 +33,7 @@ const GAMES = [
 
 let INDEX = null;
 function index() {
-  if (INDEX) return INDEX;
+  if (INDEX && (INDEX.stories || !storiesReady())) return INDEX;   // rebuilt once, when the stories arrive
   const out = [];
   for (const t of TRICKS) {
     const w = worldOf(t.world);
@@ -46,6 +46,7 @@ function index() {
   for (const g of GAMES) out.push({ kind: 'Play', ...g });
   for (const f of FAMILIES) out.push({ kind: 'Puzzle', title: f.name, sub: 'Puzzles · six to practise', act: 'practise', arg: `${f.id}:2`, words: `puzzle ${f.blurb || ''}` });
   for (const e of out) { e.nt = norm(e.title); e.nw = norm(e.words); }
+  out.stories = storiesReady();
   return (INDEX = out);
 }
 

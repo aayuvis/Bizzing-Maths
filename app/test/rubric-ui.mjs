@@ -83,6 +83,9 @@ try {
   // I4: Octo at a world's entrance
   await page.evaluate(() => window.__bzm.go('world', 'gardens')); await page.waitForTimeout(300);
   ok(await page.locator('.board .octo-gate .octo').count() === 1, 'Octo stands at the world’s entrance');
+  // stories load on first need (story-data.js), yet a first visit to a stop still opens on its story
+  await page.evaluate(() => window.__bzm.fire('openStop', 'make-ten')); await page.waitForTimeout(700);
+  ok(await page.evaluate(() => window.__bzm.R.ui.tab) === 'story' && await page.locator('.story[aria-label^="A story"]').count() === 1, 'a first visit to a stop opens on its story, after the stories arrive');
   await shot('world');
   await page.close();
 
@@ -100,4 +103,4 @@ try {
 }
 for (const e of errors) { fails++; console.error('  ✗ page error: ' + e); }
 if (fails) { console.error(`rubric-ui: ${fails} failure(s)`); process.exit(1); }
-console.log('ok rubric-ui — warm-up in ≤ 5 taps with a cheer, a hint for the youngest, today’s mix, type-ahead, Octo at the gate, the demo wallet');
+console.log('ok rubric-ui — warm-up in ≤ 5 taps with a cheer, a hint for the youngest, today’s mix, type-ahead, Octo at the gate, a first stop opens on its story, the demo wallet');
