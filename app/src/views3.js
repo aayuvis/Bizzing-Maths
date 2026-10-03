@@ -37,7 +37,7 @@ export function topBar(k, { timed, av }) {
     ${timed ? '' : `<a class="hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="The Bizzing Hive">${icon('hex', 24)}</a>`}
     <button class="tool menu-btn" data-act="drawer" aria-haspopup="dialog" aria-expanded="${!!R.ui.drawer}" aria-controls="drawer" aria-label="Menu">${icon('menu', 22)}</button>
     <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Maths — home">
-      <img class="brand-octo" src="mascot/octo-head.webp" width="28" height="28" alt="">
+      <img class="brand-octo" src="mascot/octo-logo.webp" width="28" height="28" alt="">
       <span class="brand-t"><b>Bizzing</b> <em>Maths</em></span>
     </button>
     <span class="grow"></span>
@@ -71,7 +71,7 @@ export function drawer(k) {
   const due = k ? MD.count(k).due : 0;
   return `<div class="drawer-back" data-act="drawer" aria-hidden="true"></div>
   <nav class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Menu">
-    <div class="dr-head"><img src="mascot/octo-head.webp" width="32" height="32" alt=""><b>Bizzing <em>Maths</em></b>
+    <div class="dr-head"><img src="mascot/octo-logo.webp" width="32" height="32" alt=""><b>Bizzing <em>Maths</em></b>
       <button class="tool dr-x" data-act="drawer" aria-label="Close the menu">${icon('x', 20)}</button></div>
     <div class="dr-quick">
       <button class="dr-q" data-act="nav" data-arg="search">${icon('search', 20)}<span>Search</span></button>

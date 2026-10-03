@@ -113,7 +113,16 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 24. **Music is composed in code** (`music.js`, `music/CREDITS.md`): a loop per world, Home and the games,
     lazy-loaded on the first tap, ducked under effects and read-aloud, off in Calm mode. No new narration.
 25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, greeting, finishes, empty and error
-    states. Aryabhata stays the ceremony elder.
+    states. Aryabhata stays the ceremony elder. **The logo is ALL of Octo** (`octo-logo.webp`, made by
+    `tools/art/process.py --logo` from the waving pose), never a crop — `test/standard.mjs` measures the
+    logo's edges and fails on a flat cut.
+    The avatar ▾ menu is Bee's: every child (✓ on the one playing) · My page — avatar, badges, collection ·
+    Settings · + Add a child (grown-ups).
+
+27. **The Contest Hall** ([docs/PAPER-CONTRACT.md](docs/PAPER-CONTRACT.md)): thirty strategy stops in three worlds
+    (`track: 'contest'`) and contest-style papers — 60 fixed per grade band and unlimited fresh — every problem
+    proved by an independent `solve()`. The strategies are also the **Contest thinking** land on every level
+    from 4 (a seventh land; levels may run to 32 steps). The hall and its banks load on their own route.
 
 26. **My Feed ends, and nothing in it is typed** (FAMILY-STANDARD §6a; the LAST tab, after Play). `tools/build-feed.mjs`
     cuts every card from the corpus — each with a `src` that resolves and words found in it — into `app/src/feed/`
@@ -186,9 +195,11 @@ npm run build && npm run check   # drives the built app in Chromium, desktop + p
 
 ## Ship
 
-`cd app && ./deploy.sh` — runs the tests, builds, replaces `gh-pages` wholesale, refuses to
-publish if the staged file count differs from the build. Commit the source to the working
-branch first.
+Every push comes from ONE chat, on `claude/magical-ptolemy-a97qe0` (owner, 3 Oct 2026) — a second
+session deploying its own copy once overwrote a day of work on the live site. Run `npm test` and
+`npm run check`, commit, push, then `cd app && ./deploy.sh`: it builds and replaces `gh-pages`
+wholesale in seconds (`--test` re-runs the suite first) and refuses to publish if the staged file
+count differs from the build.
 
 ## Commit trailer
 

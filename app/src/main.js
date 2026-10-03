@@ -7,8 +7,14 @@ import { sampleHousehold, tasterHousehold, tasterStop } from './demo.js';
 import { award, medalById } from './medals.js';
 import { buy } from './shop.js';
 import { snapshot } from './report.js';
-import * as H from './hall.js';
-import * as P from './papers/engine.js';
+/* The Contest Hall and its problem banks load on the hall's own route — 133 proved
+   templates are not part of a first screen (the family budget, standard §11). */
+let H = null, P = null, hallLoading = null;
+function loadHall() {
+  if (H) return Promise.resolve();
+  return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
+}
+const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
 import { on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
 import * as J from './journey.js';
 import { byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
@@ -218,8 +224,9 @@ function screen() {
     case 'facts': return V.viewFacts();
     case 'play': return V.viewArcade();
     case 'contest': return V.viewContest();
-    case 'hall': return H.viewHall();
-    case 'paper': return R.paper ? H.viewPaper() : H.viewHall();
+    case 'hall': case 'paper':
+      if (!H) { loadHall().then(render); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the Contest Hall…</p></div></section>'; }
+      return n === 'paper' && R.paper ? H.viewPaper() : H.viewHall();
     case 'me': return V.viewMe();
     case 'shop': return V3.viewShop();
     case 'collection': return V3.viewCollection();
@@ -670,9 +677,9 @@ function finishPaper() {
 }
 on('hallPick', (i) => { const n = +i; if (R.ui.hsel === n) { const el = root.querySelector('.card.pick .btn.primary'); if (el) el.click(); return; } R.ui.hsel = n; sfx.click(); render(); });
 on('hallPapers', () => { const el = document.getElementById('papers'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
-on('pband', (b) => { if (P.BANDS[b]) { R.ui.pband = b; render(); } });
-on('paperStart', (a) => { const [band, n] = String(a).split('|'); const no = n === 'fresh' ? 'fresh-' + Date.now().toString(36) : +n; if (!P.BANDS[band]) return; sitPaper(band, no); });
-on('paperResume', () => { const d = kid(R.h).paperDraft; if (d) sitPaper(d.band, d.no, d); });
+on('pband', whenHall((b) => { if (P.BANDS[b]) { R.ui.pband = b; render(); } }));
+on('paperStart', whenHall((a) => { const [band, n] = String(a).split('|'); const no = n === 'fresh' ? 'fresh-' + Date.now().toString(36) : +n; if (!P.BANDS[band]) return; sitPaper(band, no); }));
+on('paperResume', whenHall(() => { const d = kid(R.h).paperDraft; if (d) sitPaper(d.band, d.no, d); }));
 on('paperGo', (j) => { const Pp = R.paper; if (!Pp || Pp.over) return; const n = +j; if (n < 0 || n >= Pp.p.items.length) return; Pp.i = n; keepDraft(); render(); });
 on('paperPick', (c) => {
   const Pp = R.paper; if (!Pp || Pp.over) return;

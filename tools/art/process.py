@@ -110,6 +110,15 @@ def square(im, size, room=1.06):
     pad = Image.new('RGBA', (side, side), (0, 0, 0, 0))
     pad.paste(im, ((side - im.width) // 2, (side - im.height) // 2), im)
     return pad.resize((size, size), Image.LANCZOS)
+# The logo is ALL of Octo, never a crop (owner, 3 Oct 2026: "in full next to the name, not
+# cut off"): the whole waving pose, trimmed to its edges, centred in a transparent square.
+# Made from the published pose, so it can be rebuilt without the raw painting: --logo.
+def logo():
+    w = Image.open(os.path.join(MASCOT, 'octo-wave.webp')).convert('RGBA')
+    w = w.crop(w.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox())
+    p = os.path.join(MASCOT, 'octo-logo.webp'); square(w, 192, 1.06).save(p, 'WEBP', quality=90, method=6); print(f'octo-logo: 192 {os.path.getsize(p) // 1024} KB')
+if '--logo' in sys.argv:
+    logo(); sys.exit(0)
 if '--family' in sys.argv:
     os.makedirs(MASCOT, exist_ok=True)
     for pose in ['wave', 'cheer', 'think', 'point', 'sleep', 'oops']:
@@ -120,6 +129,7 @@ if '--family' in sys.argv:
     w = keyed(os.path.join(RAW, 'octo-wave.png')); head = w.crop((0, 0, w.width, int(w.height * .62)))
     hb = head.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox(); head = head.crop(hb)
     p = os.path.join(MASCOT, 'octo-head.webp'); square(head, 96, 1.02).save(p, 'WEBP', quality=88, method=6); print('octo-head: 96')
+    logo()
     # avatars: this app's new ones (raw/av-*.png) at 512
     n = 0
     for f in sorted(os.listdir(RAW)):

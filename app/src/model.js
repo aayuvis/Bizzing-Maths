@@ -200,7 +200,8 @@ export function isOpen(h, k, i) {
   if (h.parent.tester) return true;
   const node = ROUTE[i]; if (!node) return false;
   if (nodeDone(k, node)) return true;
-  if (contestWorld(node.world)) return ROUTE.findIndex((n) => n.world === node.world && !nodeDone(k, n)) === i;
+  // a contest world opens in its own order — and wherever the child's road has reached (its land on Levels 4–10)
+  if (contestWorld(node.world)) return ROUTE.findIndex((n) => n.world === node.world && !nodeDone(k, n)) === i || (onJourney(k) && node.kind === 'stop' && levelOpen(k, node.id));
   // a child on a journey walks the road: the Atlas opens exactly what the road has reached
   if (onJourney(k)) return node.kind === 'stop' ? levelOpen(k, node.id) : ROUTE.every((n) => n.world !== node.world || n.kind !== 'stop' || nodeDone(k, n));
   if (!worldOpen(h, k, node.world)) return false;

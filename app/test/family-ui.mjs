@@ -66,13 +66,15 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   // the switcher: two children, one tap, nothing mixed
   await p.click('[data-bz=kid]'); await p.waitForSelector('.sheet'); await p.waitForTimeout(300);
   await shot('sheet');
-  ok(await p.locator('.sheet .sk[data-act=switchKid]').count() === 2, `${tag}: the sheet lists both children`);
+  ok(await p.locator('.kid-menu .km-kid[data-act=switchKid]').count() === 2, `${tag}: the menu lists both children`);
+  ok(await p.locator('.kid-menu .km-kid.on .km-tick').count() === 1, `${tag}: the child playing has the tick`);
+  ok((await p.locator('.kid-menu .km-row').allTextContents()).map((t) => t.trim()).join(' | ') === 'My page — avatar, badges, collection | Settings | + Add a child grown-ups', `${tag}: My page, Settings, + Add a child (grown-ups), in Bee's words and order`);
   await p.evaluate(() => { const k = window.__bzm.R.h.kids[0]; k.xp = 37; k.tricks.zz = { stars: 2 }; });
-  await p.click('.sheet .sk[data-arg=kb]'); await p.waitForSelector('.home2');
+  await p.click('.kid-menu .km-kid[data-arg=kb]'); await p.waitForSelector('.home2');
   const sw = await p.evaluate(() => { const R = window.__bzm.R, b = R.h.kids.find((k) => k.id === R.h.active); return { active: R.h.active, xp: b.xp, tricks: Object.keys(b.tricks).length, name: document.querySelector('[data-bz=greet] strong').textContent }; });
   ok(sw.active === 'kb' && sw.xp === 0 && sw.tricks === 0 && sw.name === 'Kabir', `${tag}: switching shows the other child's own record (got ${JSON.stringify(sw)})`);
   ok(await p.locator('.sheet').count() === 0, `${tag}: the sheet closes after switching`);
-  await p.click('[data-bz=kid]'); await p.click('.sheet .sk[data-arg=ka]'); await p.waitForSelector('.home2');
+  await p.click('[data-bz=kid]'); await p.click('.kid-menu .km-kid[data-arg=ka]'); await p.waitForSelector('.home2');
 
   // back stays in the app
   await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/library"]' : '[data-bz=tab][href="#/library"]'); await p.waitForTimeout(150);

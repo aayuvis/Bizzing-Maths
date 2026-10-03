@@ -125,3 +125,16 @@
 .chip-s{font:700 11px var(--ui);background:var(--treasure-tint);color:var(--ink);padding:2px 8px;border-radius:99px;vertical-align:middle}
 @media (max-width:760px){ .rc-three{grid-template-columns:1fr} }
 .rc-cell .meter{display:block;margin:10px 0 12px}
+
+/* ---- the avatar ▾ menu, Bee's: children, a rule, My page · Settings · + Add a child */
+.kid-menu{padding:10px;width:min(360px,calc(100vw - 24px))}
+.km-kids{display:flex;flex-direction:column;gap:4px}
+.km-kid{display:flex;align-items:center;gap:14px;width:100%;padding:8px 12px;border:0;border-radius:16px;background:none;color:var(--ink);font:700 18px var(--ui);text-align:left;cursor:pointer}
+.km-kid .av{border-radius:50%;background:var(--surface2)}
+.km-kid.on{background:color-mix(in srgb,var(--action) 12%,var(--surface))}
+.km-kid:hover{background:color-mix(in srgb,var(--action) 8%,var(--surface))}
+.km-tick{margin-left:auto;color:var(--action);display:grid}
+.km-rule{border:0;border-top:2px solid var(--line);margin:8px 6px}
+.km-row{display:flex;align-items:center;width:100%;padding:12px 14px;border:0;border-radius:12px;background:none;color:var(--ink);font:700 17px var(--ui);text-align:left;cursor:pointer}
+.km-row:hover{background:var(--surface2)}
+.km-note{margin-left:auto;font:600 14px var(--ui);color:var(--muted)}

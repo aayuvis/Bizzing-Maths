@@ -16,19 +16,12 @@ const ok = (c, m) => { if (!c) bad(m); };
 
 /* ---- concepts */
 const cids = CONCEPTS.map((c) => c.id);
-ok(CONCEPTS.length >= 10 && CONCEPTS.length <= 14, `need 10–14 concepts, have ${CONCEPTS.length}`);
+ok(CONCEPTS.length >= 10 && CONCEPTS.length <= 15, `need 10–15 concepts, have ${CONCEPTS.length}`);   // 15th: Contest thinking (owner, 3 Oct 2026)
 ok(new Set(cids).size === cids.length, 'duplicate concept id');
 for (const c of CONCEPTS) ok(c.id && c.name && c.glyph, `concept ${c.id} needs id, name and glyph`);
 
 /* ---- every stop has exactly one concept, and nothing else does */
-/* the Contest Hall's stops (worlds with track: 'contest') are a track beside the
-   journeys, not a stage of them: they carry no concept and sit on no level — and
-   instead every one of them must be on the Contest Hall's road (hall.js). */
-const HALL = TRICKS.filter((t) => (WORLDS.find((w) => w.id === t.world) || {}).track === 'contest');
-const { HALL_WORLDS } = await import('../src/hall.js').catch(() => ({ HALL_WORLDS: ['strategy', 'logic', 'figures'] }));
-for (const t of HALL) ok(HALL_WORLDS.includes(t.world) && !CONCEPT_OF[t.id], `${t.id}: a contest-track stop must be on the Contest Hall road and nowhere on the journeys`);
-const JOURNEY = TRICKS.filter((t) => !HALL.includes(t));
-for (const t of JOURNEY) ok(cids.includes(CONCEPT_OF[t.id]), `${t.id}: no concept (or unknown concept ${CONCEPT_OF[t.id]})`);
+for (const t of TRICKS) ok(cids.includes(CONCEPT_OF[t.id]), `${t.id}: no concept (or unknown concept ${CONCEPT_OF[t.id]})`);
 for (const id of Object.keys(CONCEPT_OF)) ok(byId[id], `CONCEPT_OF names ${id}, which is not a stop`);
 for (const c of cids) ok(TRICKS.some((t) => CONCEPT_OF[t.id] === c), `concept ${c} has no stops`);
 
@@ -41,17 +34,23 @@ LEVELS.forEach((l, i) => {
   ok(ageOf(l.n) === `maths age ${AGES[i]}`, `ageOf(${l.n}) is "${ageOf(l.n)}"`);
   ok(typeof l.name === 'string' && l.name.length > 3 && l.name.length <= 28, `level ${l.n}: needs a short name`);
   ok(typeof l.blurb === 'string' && l.blurb.length > 20 && /\.$/.test(l.blurb), `level ${l.n}: needs a one-sentence blurb`);
-  ok(l.steps.length >= 16 && l.steps.length <= 26, `level ${l.n}: ${l.steps.length} steps, need 16–26`);
+  ok(l.steps.length >= 16 && l.steps.length <= 32, `level ${l.n}: ${l.steps.length} steps, need 16–32`);
 });
 
-/* ---- lands: each level a road of 4–6 lands, each land one concept area with a testable spread */
+/* ---- the Contest Hall's thirty strategies are on the hall's road AND on the journeys, as
+   the Contest thinking land of every level from 4 (owner, 3 Oct 2026) */
+const HALLT = TRICKS.filter((t) => (WORLDS.find((w) => w.id === t.world) || {}).track === 'contest');
+ok(HALLT.length === 30 && HALLT.every((t) => CONCEPT_OF[t.id] === 'contest'), `the thirty contest-track stops are the Contest thinking concept (${HALLT.length})`);
+ok(LEVELS.filter((l) => l.n >= 4).every((l) => l.lands.some((d) => d.concept === 'contest')), 'every level from 4 has a Contest thinking land');
+
+/* ---- lands: each level a road of 4–7 lands (the seventh, from Level 4, the Contest Hall's), each land one concept area with a testable spread */
 const wids = WORLDS.map((w) => w.id);
 const landIds = new Set();
 ok(landsOf(0).length === 0 && landsOf(11).length === 0, 'landsOf(): a level that does not exist has no lands');
 for (const l of LEVELS) {
   ok(Array.isArray(l.lands) && landsOf(l.n) === l.lands, `level ${l.n}: landsOf(${l.n}) is not its lands`);
   if (!Array.isArray(l.lands)) continue;
-  ok(l.lands.length >= 4 && l.lands.length <= 6, `level ${l.n}: ${l.lands.length} lands, need 4–6`);
+  ok(l.lands.length >= 4 && l.lands.length <= 7, `level ${l.n}: ${l.lands.length} lands, need 4–7`);
   const flat = l.lands.flatMap((d) => d.steps);
   ok(flat.length === l.steps.length && flat.every((s, i) => s.stop === l.steps[i].stop && s.lv === l.steps[i].lv), `level ${l.n}: steps is not its lands laid end to end`);
   l.lands.forEach((d, i) => {
@@ -99,7 +98,7 @@ for (const l of LEVELS) {
     lastInWorld[t.world] = s.stop;
   } }
 }
-const missing = JOURNEY.filter((t) => first[t.id] === undefined).map((t) => t.id);
+const missing = TRICKS.filter((t) => first[t.id] === undefined).map((t) => t.id);
 ok(!missing.length, `stops on no journey: ${missing.join(', ')}`);
 ok(steps === LEVELS.reduce((a, l) => a + l.steps.length, 0), 'a step sits in no land');
 

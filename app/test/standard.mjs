@@ -93,7 +93,21 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.waitForSelector('.home2');
   /* the chrome and Home are Bee's, by measurement (integration/shell-check.mjs): the bar, the tab row or the
      phone tab bar, the three rows of Home, and ☰ — opens, Esc closes, focus returns */
-  ok(/Bizzing\s*Maths/.test(await p.textContent('[data-bz=brand]')) && await p.$eval('[data-bz=brand] img', (i) => /octo-head/.test(i.src)), `${tag}: the logo is Octo's head and "Bizzing Maths"`);
+  ok(/Bizzing\s*Maths/.test(await p.textContent('[data-bz=brand]')) && await p.$eval('[data-bz=brand] img', (i) => /octo-logo/.test(i.src)), `${tag}: the logo is Octo and "Bizzing Maths"`);
+  // Octo in FULL beside the name (owner, 3 Oct 2026). A crop shows as a flat cut: the last painted row
+  // (or column) on that side is solid. A whole Octo ends in tentacle tips and a round head, never a line.
+  const cut = await p.$eval('[data-bz=brand] img', async (i) => {
+    if (!i.complete) await new Promise((r) => { i.onload = r; });
+    const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
+    const x = c.getContext('2d'); x.drawImage(i, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+    const a = (px, py) => d[(py * W + px) * 4 + 3];
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) if (a(px, py) > 16) { x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); }
+    const row = (py) => { let n = 0; for (let px = x0; px <= x1; px++) n += a(px, py) > 128; return n / (x1 - x0 + 1); };
+    const col = (px) => { let n = 0; for (let py = y0; py <= y1; py++) n += a(px, py) > 128; return n / (y1 - y0 + 1); };
+    return Math.max(row(y0), row(y1), col(x0), col(x1));
+  });
+  ok(cut < 0.3, `${tag}: the logo shows all of Octo — one edge is ${Math.round(cut * 100)}% solid, a cut`);
   const tabs = await p.$$eval(phone ? '[data-bz=tabbar] a' : '[data-bz=tab]', (b) => b.map((x) => x.textContent.trim()));
   // My Feed is the sixth and LAST tab, after Play (owner, 2 Oct 2026; standard §6a)
   ok(tabs.join() === 'Home,Atlas,Library,Puzzles,Play,My Feed', `${tag}: tabs are Home · Atlas · Library · Puzzles · Play · My Feed (got ${tabs})`);

@@ -452,8 +452,8 @@ async function run(vp, tag) {
   await page.waitForTimeout(400); await shot('19b-line-end');
   await page.click('.play-end [data-g=done]'); await page.waitForTimeout(100);
   ok(!(await page.locator('.play').count()) && await music() === 'off', 'a tap on Back leaves the game and the music stops');
-  // Change avatar in the Collection (from the household sheet)
-  await page.click('[data-bz=kid]'); await page.click('.sheet [data-arg=collection]'); await page.waitForSelector('.avgrid');
+  // Change avatar in the Collection (avatar ▾ → My page — avatar, badges, collection → the collection)
+  await page.click('[data-bz=kid]'); await page.click('.kid-menu [data-arg=me]'); await page.click('[data-act=nav][data-arg=collection]'); await page.waitForSelector('.avgrid');
   ok(await page.locator('.pack').count() === 12 && await page.locator('.bz-av').count() === 96, 'all ninety-six faces, twelve packs of eight, in the Collection');
   await page.click('.bz-av[data-id=protortle] [data-act=setAv]');
   ok(await page.evaluate(() => window.__bzm.R.h.kids[0].avatar) === 'protortle', 'Wear sets the child\'s face');

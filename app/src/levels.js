@@ -5,7 +5,8 @@
    The placement test finds a child's maths age and puts them on that level's
    journey; finishing a journey opens the next one.
 
-   A level is one straight road made of LANDS, four to six of them. A land is
+   A level is one straight road made of LANDS, four to seven of them (from Level 4
+   the seventh is the Contest Hall's: one strategy world, the ways into a hard problem). A land is
    one concept area of that level (fractions, below zero, chance…) shown as one
    Atlas world, three to six stops long, with a test at its end; the level
    ends in a mixed test drawn from all its lands. `steps` is the whole road,
@@ -37,6 +38,7 @@ export const CONCEPTS = [
   { id: 'negatives', name: 'Negative numbers', glyph: '🌡️' },
   { id: 'algebra', name: 'Algebra & patterns', glyph: '🔤' },
   { id: 'sets', name: 'Sets & logic', glyph: '🧩' },
+  { id: 'contest', name: 'Contest thinking', glyph: '🏆' },
 ];
 
 const C = (concept, ids) => Object.fromEntries(ids.trim().split(/\s+/).map((id) => [id, concept]));
@@ -72,6 +74,12 @@ export const CONCEPT_OF = {
     ups-and-downs multiply-signs divide-signs negative-squares`),
   ...C('algebra', `substitute like-terms solve-balance nth-term line-graph inequalities think-of-a-number`),
   ...C('sets', `set-member set-count union-meet venn-count subset-count who-has-which`),
+  // the Contest Hall's thirty strategies: a land on every road from Level 4, and the hall's own track
+  ...C('contest', `work-backwards guess-check-improve make-a-table find-the-rule bar-model heads-and-legs age-problems
+    simpler-case meeting-and-overtaking units-digit-cycles parity worst-case pigeonhole calendar-days
+    missing-digit-divisibility list-systematically truth-tellers digit-puzzles remainder-puzzles invariants
+    count-triangles count-rectangles handshakes grid-paths overlapping-groups staircase-perimeter area-cut-and-move
+    dice-faces angle-chasing painted-cubes`),
 };
 
 /* 'make-ten 1, near-doubles 2' → [{ stop: 'make-ten', lv: 1 }, { stop: 'near-doubles', lv: 2 }] */
@@ -83,6 +91,7 @@ export const NEEDS = {
   number: [], addsub: ['number'], muldiv: ['addsub'], fractions: ['muldiv'], decimals: ['fractions'],
   money: ['addsub', 'decimals'], measure: ['addsub'], shape: [], data: ['number'], factors: ['muldiv'],
   powers: ['muldiv'], negatives: ['addsub'], algebra: ['negatives'], sets: [],
+  contest: ['addsub', 'muldiv'],   // contest thinking leans on the arithmetic, so it comes last on a road
 };
 
 /* A LAND is one concept area of one level: one straight stretch of the road,
@@ -126,6 +135,7 @@ export const LEVELS = [
       land(4, 'money', 'coinstreet', 'Spending, saving and time', 'giving-change 3, twenty-four-hour 1, money-left 3, saving-goal 1'),
       land(4, 'shape', 'shapecity', 'Shapes, grids and area', 'kinds-of-triangle 1, four-sided-shapes 1, coordinates-and-moves 1, area-rectangles 1'),
       land(4, 'data', 'carnival', 'Reading graphs', 'pictogram-total 3, bar-compare 3, line-graph-read 1'),
+      land(4, 'contest', 'strategy', 'Ways into a problem', 'work-backwards 1, guess-check-improve 1, make-a-table 1, bar-model 1, units-digit-cycles 1'),
     ]),
   level(5, '10', 'Point and Per Cent',
     'Long multiplication, which sum comes first, primes, squares and cubes, decimals and percentages, sales and profit, area and angles on a line, and the mean.', [
@@ -135,6 +145,7 @@ export const LEVELS = [
       land(5, 'money', 'coinstreet', 'Sales and profit', 'best-buy 1, fraction-off 1, profit-and-loss 1'),
       land(5, 'measure', 'clocktower', 'Area and angles', 'perimeter 2, area-rectangles 2, compound-area 1, angles-on-a-line 1'),
       land(5, 'data', 'carnival', 'Averages and working back', 'mean-fair-share 1, data-range 1, think-of-a-number 1'),
+      land(5, 'contest', 'figures', 'Counting with care', 'count-triangles 1, count-rectangles 1, handshakes 1, staircase-perimeter 1'),
     ]),
   level(6, '11', 'Below Zero',
     'Adding and taking away negative numbers, prime factors, HCF and LCM, square roots, all four sums with fractions, area of triangles, angles in a shape, and the middle of a list.', [
@@ -144,6 +155,7 @@ export const LEVELS = [
       land(6, 'fractions', 'bakery', 'Fractions with any bottom', 'mixed-numbers 2, add-different-bottoms 1, multiply-fractions 1, divide-fractions 1'),
       land(6, 'shape', 'shapecity', 'Angles and triangles', 'angles-on-a-line 2, angles-in-a-shape 1, area-triangles 1'),
       land(6, 'data', 'carnival', 'Mean, median and mode', 'mean-fair-share 2, median-mode 1, data-range 2'),
+      land(6, 'contest', 'logic', 'What must be true', 'parity 1, worst-case 1, pigeonhole 1, calendar-days 1'),
     ]),
   level(7, '12', 'Letters and Ratios',
     'Multiplying and dividing negatives, kinds of number, ratio, percentage change and speed, first letters for numbers, circles and volume, chance as a fraction, and factorials and arrangements.', [
@@ -153,6 +165,7 @@ export const LEVELS = [
       land(7, 'algebra', 'setisland', 'Letters for numbers', 'think-of-a-number 2, substitute 1, like-terms 1, solve-balance 1'),
       land(7, 'shape', 'shapecity', 'Circles, triangles and solids', 'round-the-circle 1, construct-triangle 1, volume-cuboid 1'),
       land(7, 'data', 'carnival', 'Chance and arrangements', 'chance-fraction 1, list-outcomes 1, factorials 1, arrange-all 1'),
+      land(7, 'contest', 'strategy', 'Clever ways round', 'work-backwards 2, find-the-rule 1, heads-and-legs 1, age-problems 1, simpler-case 1, meeting-and-overtaking 1'),
     ]),
   level(8, '13', 'Powers and Proofs',
     'Vedic multiplying, digit roots and counting factors, the index laws, sets and Venn diagrams, constructions and Pythagoras, and permutations and combinations.', [
@@ -162,6 +175,7 @@ export const LEVELS = [
       land(8, 'sets', 'setisland', 'Sets and Venn diagrams', 'set-member 1, set-count 1, union-meet 1, venn-count 1, subset-count 1, who-has-which 1'),
       land(8, 'shape', 'shapecity', 'Constructions and Pythagoras', 'perpendicular-bisector 1, angle-bisector 1, pythagoras-side 1'),
       land(8, 'data', 'carnival', 'Orders and choices', 'arrange-all 2, permutations 1, combinations 1'),
+      land(8, 'contest', 'figures', 'Shapes that need a second look', 'grid-paths 2, overlapping-groups 2, area-cut-and-move 2, dice-faces 2, angle-chasing 2, painted-cubes 2'),
     ]),
   level(9, '14', 'The Lighthouse',
     'Roots that never end, decimals that recur, loans and compound interest, sequences, straight-line graphs and inequalities, trigonometry and bearings, scatter graphs and tree diagrams.', [
@@ -171,6 +185,7 @@ export const LEVELS = [
       land(9, 'algebra', 'setisland', 'Sequences and inequalities', 'like-terms 2, nth-term 1, line-graph 1, inequalities 1'),
       land(9, 'shape', 'lighthouse', 'Trigonometry and bearings', 'trig-sides 1, tan-height 1, sin-cos-side 1, special-angles 1, bearings 1'),
       land(9, 'data', 'carnival', 'Scatter graphs and trees', 'scatter-correlation 1, best-fit-estimate 1, tree-diagram 1, expected-frequency 1'),
+      land(9, 'contest', 'logic', 'Proof by reasoning', 'missing-digit-divisibility 2, list-systematically 2, truth-tellers 2, digit-puzzles 2, remainder-puzzles 2, invariants 2'),
     ]),
   level(10, '15+', 'The Stretch',
     'Every strand at its hardest: powers and roots, per cents and compound interest, equations, sequences and inequalities, sets, Pythagoras and trigonometry, and counting and probability, with no stabilisers.', [
@@ -180,6 +195,7 @@ export const LEVELS = [
       land(10, 'sets', 'setisland', 'Sets and logic', 'union-meet 3, venn-count 3, subset-count 3'),
       land(10, 'shape', 'lighthouse', 'Circles and triangles', 'round-the-circle 3, pythagoras-side 3, tan-height 3, sin-cos-side 3, special-angles 3, bearings 3'),
       land(10, 'data', 'carnival', 'Counting and chance', 'permutations 3, combinations 3, tree-diagram 3, expected-frequency 3'),
+      land(10, 'contest', 'strategy', 'Contest stretch', 'heads-and-legs 3, age-problems 3, simpler-case 3, meeting-and-overtaking 3, units-digit-cycles 3'),
     ]),
 ];
 

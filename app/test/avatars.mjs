@@ -42,7 +42,9 @@ for (const [app, f] of Object.entries(SIBS)) {
     theirs = new Set([...src.matchAll(/\['([a-z0-9_-]+)','[^']+','([a-z0-9]+)','(?:free|rare|epic|legendary)'/g)].filter((m) => !gone.has(move[m[1]] || m[2])).map((m) => m[1]));
   } else theirs = new Set([...src.matchAll(/\bid:\s*['"]([a-z0-9_-]+)['"]/g)].map((m) => m[1]));
   const both = CATALOGUE.filter((a) => theirs.has(a.id)).map((a) => a.id);
-  ok(both.length === 0, `no face shared with ${app}'s collection (shared: ${both.join(', ')})`);
+  // a WARNING, not a failure: this reads whatever copy of the sibling happens to be checked out on
+  // this machine, which this repo does not control and may be weeks stale (owner, 3 Oct 2026)
+  if (both.length) console.warn(`  ! ${app}'s checkout here shares ${both.length} faces with Maths: ${both.join(', ')} — check against ${app}'s live catalogue`);
 }
 // a Legendary's milestone is read from the record: finishing the Deep Mine opens the Sunflower Lion's
 const k = newKid('Asha', '8-10');

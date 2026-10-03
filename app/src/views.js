@@ -102,7 +102,7 @@ export function shell(body) {
   const p = k ? J.progress(k) : null;
   const top = `${R.fromHive && !timed ? `<a class="hive-chip" href="${HIVE}">← back to my day</a>` : ''}${k && k.sample ? demoBar(k) : ''}${h.parent.tester ? '<div class="tester" role="note">TESTER MODE — every stop is open. Nothing about the child changes. <button data-act="testerOff">Turn off</button></div>' : ''}`;
   return `<a class="skip" href="#main">Skip to the content</a>` + bzShell({
-    app: 'maths', name: 'Maths', mascot: 'mascot/octo-head.webp', tabs: tabsFor(h), active: nav,
+    app: 'maths', name: 'Maths', mascot: 'mascot/octo-logo.webp', tabs: tabsFor(h), active: nav,
     coins: k ? Family.balance(k.name) : 0, dark: document.documentElement.getAttribute('data-mode') === 'dark',
     kid: k ? { name: k.name, avatar: `avatars/${avatarFile(k.avatar)}.webp` } : null,
     search: 'Search stops, stories, words', query: R.ui.nav === 'search' ? R.ui.q || '' : '', inRun: timed,
@@ -124,16 +124,17 @@ function demoBar(k) {
     : '<div class="demo-bar" role="note"><b>Sample</b> — Asha is a made-up child with three weeks of play. Nothing here is saved or sent to the family. <a href="./">Leave the sample</a></div>';
 }
 
-/* The household sheet, from the avatar ▾: every child, one tap to switch
-   (Finance's "Children in this household"), plus the device's sound and
-   light/dark — the standard's one mute lives in this menu. */
+/* The avatar ▾ menu, in Bizzing Bee's words and order: every child in the
+   household (✓ on the one playing; one tap switches), then My page, Settings,
+   and adding a child — which is a grown-up's job, and says so. */
 function kidSheet(h, k) {
   return `<div class="sheet-back" data-act="sheet" aria-hidden="true"></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label="Who is playing">
-    <p class="kicker">Children in this household</p>
-    <div class="sheet-kids">${h.kids.map((c) => `<button class="sk${c.id === k.id ? ' on' : ''}" data-act="switchKid" data-arg="${c.id}" ${c.id === k.id ? 'aria-current="true"' : ''}>${av(c.avatar, 44, '')}<span><b>${esc(c.name)}</b><span class="muted small">Age ${esc(c.band.replace('-', '–'))}</span></span></button>`).join('')}
-      ${k.sample ? '' : `<button class="sk add" data-act="addKid"><span class="plus" aria-hidden="true">${icon('plus', 22)}</span><span><b>Add a child</b><span class="muted small">${icon('lock', 12)} grown-ups</span></span></button>`}</div>
-    <div class="sheet-row"><button class="btn small" data-act="nav" data-arg="me">${icon('user', 16)} My page</button><button class="btn small" data-act="nav" data-arg="collection">${icon('cards', 16)} Collection</button></div>
+  <div class="sheet kid-menu" role="dialog" aria-modal="true" aria-label="Who is playing">
+    <div class="km-kids">${h.kids.map((c) => `<button class="km-kid${c.id === k.id ? ' on' : ''}" data-act="switchKid" data-arg="${c.id}" ${c.id === k.id ? 'aria-current="true"' : ''}>${av(c.avatar, 52, '')}<b>${esc(c.name)}</b>${c.id === k.id ? `<span class="km-tick" aria-label="playing now">${icon('check', 22)}</span>` : ''}</button>`).join('')}</div>
+    <hr class="km-rule">
+    <button class="km-row" data-act="nav" data-arg="me">My page — avatar, badges, collection</button>
+    <button class="km-row" data-act="nav" data-arg="settings">Settings</button>
+    ${k.sample ? '' : '<button class="km-row" data-act="addKid">+ Add a child <span class="km-note">grown-ups</span></button>'}
   </div>`;
 }
 

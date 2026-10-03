@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
-# deploy.sh — test, build Bizzing Maths, and publish it to the gh-pages branch.
+# deploy.sh — build Bizzing Maths and publish it to the gh-pages branch.
+#
+# Every push comes from one chat now (owner, 3 Oct 2026), which runs npm test and
+# npm run check before it commits — so the deploy no longer re-runs the suite and
+# goes live in seconds. --test runs it anyway. The staged-file count below stays:
+# it is instant, and it is what stops a silent partial publish.
 #
 # GitHub Pages serves the site from the ROOT of gh-pages, so the build output
 # goes there unwrapped, exactly as bizzingindia.com and bizzingfinance do it. .nojekyll stops
 # Jekyll eating the assets/ directory.
 #
 #   ./deploy.sh            build and deploy
+#   ./deploy.sh --test     run npm test first, then build and deploy
 #   ./deploy.sh --dry      build only, show what would be published
 set -euo pipefail
 
@@ -15,7 +21,7 @@ WORK="$(mktemp -d)"
 trap 'git -C "$ROOT" worktree remove --force "$WORK" 2>/dev/null || true; rm -rf "$WORK"' EXIT
 
 cd "$HERE"
-npm test                                # a trick that disagrees with arithmetic never ships
+if [ "${1:-}" = "--test" ]; then npm test; fi   # the chat runs the suite before every commit
 npm run build
 touch build/.nojekyll
 
