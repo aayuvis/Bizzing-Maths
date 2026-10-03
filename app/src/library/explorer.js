@@ -291,6 +291,9 @@ function remember(ctx, n) {
 }
 function show(ctx, n) { ctx.ui.n = String(n); remember(ctx, n); }
 
+/* A deep link names a number (#/lib/explorer|<n>): the Explorer opens on its page. */
+export function openItem(n, ctx) { act('set', n, ctx); }
+
 export function act(name, arg, ctx) {
   const p = parse(current(ctx));
   if (name === 'go') { if (p.n != null) { remember(ctx, p.n); ctx.ui.n = String(p.n); } else if (p.err) ctx.toast(p.err); return; }

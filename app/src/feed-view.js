@@ -42,6 +42,22 @@ export function todays(h, k) {
   return list;
 }
 
+/* The family's card (integration/bizzing-feed.js, never edited here) shows a title and a body.
+   A Maths card also carries WHERE it lives (a place line above the title) and MORE (a second
+   line under the body) — both cut from the corpus like everything else (tools/build-feed.mjs). */
+const escH = (v) => String(v).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+function withMore(html, it) {
+  if (!it || !html) return html;
+  let out = html;
+  if (it.where) out = out.replace('<h3>', `<p class="bzf-where">${escH(it.where)}</p><h3>`);
+  if (it.more) {
+    const at = ['<p class="bzf-q">', '<div class="bzf-row">'].map((m) => out.indexOf(m)).filter((i) => i >= 0);
+    const i = at.length ? Math.min(...at) : out.lastIndexOf('</div></article>');
+    out = out.slice(0, i) + `<p class="bzf-more">${escH(it.more)}</p>` + out.slice(i);
+  }
+  return out;
+}
+
 export function viewFeed(save) {
   const h = R.h, k = kid(h);
   const head = feedHead({ name: 'My Feed', sub: `Picked for you from across the app, for ${levelName(feedLevel(k))} — about twenty, and then it ends.` });
@@ -55,7 +71,7 @@ export function viewFeed(save) {
   const cards = list.map((x) => {
     let it = BODY[x.id] && { ...BODY[x.id], kind: x.kind }, st = P[x.id] || {};
     if (it && it.play && st.st === 'done') { it = { ...it, play: undefined }; st = {}; }
-    return feedCard(it, x, st);
+    return withMore(feedCard(it, x, st), it);
   }).join('');
   return `<section class="feed-page">${head}<div class="bzf-list" data-feed="1">${cards}${feedEnd({ href: '#/continue', label: `${c.label}: ${c.title}`, alt: { href: '#/home', label: 'Home' } })}</div></section>`;
 }

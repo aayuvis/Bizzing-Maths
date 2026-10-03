@@ -310,14 +310,14 @@ export function viewHome() {
     ${bzHome({
       greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(lastLine(k)) },
       ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
-        foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: '#/me' } },
-      hour: { kicker: 'Number of the hour', title: String(nh.n), sub: plain(nh.facts[0] || ''), icon: 'clock', href: '#/library' },
+        foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: p ? `#/journey/${p.level}` : '#/me' } },
+      hour: { kicker: 'Number of the hour', title: String(nh.n), sub: plain(nh.facts[0] || ''), icon: 'clock', href: `#/lib/explorer|${nh.n}` },
       next: { plate: c.world ? `art/w-${c.world}.webp` : 'art/atlas.webp', icon: 'path', chip: p ? `stop ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'ten levels',
         kicker: p ? `Next on your journey · Level ${p.level} · ${p.age}` : 'Ten levels · maths age 6 to 15+', title: c.title, sub: p ? p.L.name : 'A few questions find where your road starts.',
         href: '#/continue', cta: c.label, progress: p ? { pct: Math.round(100 * p.done / p.total), label: `${p.done} of ${p.total} stops on this road` } : null },
       second: mk.due ? { plate: 'art/lib-working.webp', icon: 'flag', chip: `${mk.due} ready`, kicker: 'My mistakes', title: `${mk.due} to try again`, sub: 'They come back after a gap — that is how they stick.', href: '#/mistakes', cta: 'Look again', ctaIcon: 'pen', progress: null }
         : { plate: 'art/q-tower.webp', icon: 'puzzle', chip: `floor ${Math.min(12, floors + 1)} of 12`, kicker: 'Your puzzle journey', title: 'The Puzzle Tower', sub: 'Twelve floors of thinking puzzles — the kind contests are made of.', href: '#/puzzles', cta: 'Climb', ctaIcon: 'puzzle', progress: { pct: Math.round(100 * floors / 12), label: `${floors} of 12 floors cleared` } },
-      tip: { kicker: 'Trick of the hour', text: `${tip.title}: ${tip.idea}`, href: `#/stop/${tip.id}` },
+      tip: { kicker: 'Trick of the hour', text: `${tip.title}: ${tip.idea}`, href: `#/stop/${tip.id}|learn` },
       quote: { kicker: 'From the story of numbers', text: fact.why, who: '', href: '#/me' },
       foot: FOOT,
     })}

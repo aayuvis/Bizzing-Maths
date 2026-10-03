@@ -707,6 +707,14 @@ export function view(ctx) {
   return i != null && isOpen(ctx, i) ? stepView(ctx, i) : pathView(ctx);
 }
 
+/* A deep link names a stone by its id (#/lib/chinese|<stone>): open it if the child has
+   walked to it, else stand on it on the path, where the screen says what opens it. */
+export function openItem(id, ctx) {
+  const i = JOURNEY.findIndex((st) => st.id === id); if (i < 0) return;
+  ctx.ui.sel = i;
+  if (isOpen(ctx, i)) { ctx.ui.step = i; ctx.ui.card = 0; }
+}
+
 export function act(name, arg, ctx) {
   const ui = ctx.ui;
   if (name === 'pick') { const i = +arg; if (ctx.ui.sel === i && isOpen(ctx, i)) return act('open', arg, ctx); ctx.ui.sel = i; return; }

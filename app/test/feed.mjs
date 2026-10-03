@@ -63,13 +63,69 @@ const n = (x) => Number(typeof x === 'number' ? x : parseNum(x));
 const near = (a, b) => Math.abs(n(a) - n(b)) < 1e-9;
 const evalExpr = (e) => Function(`return (${e})`)();
 const KNOWN_ROUTES = (() => { const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'); return JSON.parse(/export const ROUTES = (\[[^\]]+\])/.exec(src)[1].replace(/'/g, '"').replace(/\s+/g, ' ')); })();
+/* a route opens a real screen — and a deep one names a real thing on it (main.js deepen()) */
+const STONE = { vedic: VED.JOURNEY, chinese: CHI.JOURNEY };
 export function routeOk(r) {
   const mm = /^#\/([a-z]+)(?:\/(.+))?$/.exec(r || ''); if (!mm || !KNOWN_ROUTES.includes(mm[1])) return false;
-  const [, nav, arg] = mm;
-  if (nav === 'stop') return !!byId[arg];
+  const [, nav, arg] = mm, [a, b, c] = String(arg || '').split('|');
+  if (nav === 'stop') {
+    const t = byId[a]; if (!t) return false; if (!b) return true;
+    if (b === 'learn') return c === undefined || +c < learnCases(t).length;
+    if (b === 'story') return !!STORIES[t.id] && (c === undefined || +c < STORIES[t.id].beats.length);
+    return b === 'turn' || b === 'drill';
+  }
   if (nav === 'world') return !!worldOf(arg);
-  if (nav === 'lib') return SHELF.some((t) => t.id === arg && t.kind === 'tool');
+  if (nav === 'lib') {
+    if (!SHELF.some((t) => t.id === a && t.kind === 'tool')) return false; if (!b) return true;
+    const item = String(arg).slice(a.length + 1);
+    if (a === 'dictionary') return !!DICT.ENTRIES.find((e) => e.word === item);
+    if (a === 'formulas') return !!FORM.CARDS.find((x) => x.id === item);
+    if (STONE[a]) return !!STONE[a].find((st) => st.id === item);
+    return false;
+  }
+  if (nav === 'facts') return !arg || (F.OPS.includes(a) && (!b || !!F.BANK[a].find((f) => F.key(f) === b)));
+  if (nav === 'journey') return !arg || (+arg >= 1 && +arg <= LEVELS.length);
+  if (nav === 'play') return !arg || GAMES.some((g) => g.id === arg);
+  if (nav === 'puzzles') return !arg || FAMILIES.some((f) => f.id === arg);
   return !arg;
+}
+/* and it is the SPECIFIC thing the card is about (owner, 3 Oct 2026): never the generic tool */
+function specific(c) {
+  const [kind] = c.src.split(':'), rest = c.src.slice(kind.length + 1), [obj, part] = rest.split('#');
+  if (kind === 'stop' || kind === 'story') {
+    const tab = c.route.split('|')[1];
+    if (kind === 'story') { const beat = +String(part).replace(/^beat/, '') || 0; return c.route === `#/stop/${obj}|story|${part === 'open' ? 0 : beat}` ? '' : 'not the story beat'; }
+    if (/^(case|worked)\d+$/.test(part)) return c.route === `#/stop/${obj}|learn|${part.replace(/\D+/, '')}` ? '' : 'not the worked idea';
+    return tab === 'learn' ? '' : 'not the Learn tab';
+  }
+  if (kind === 'try') return c.route.endsWith('|drill') ? '' : 'not the drill';
+  if (kind === 'dictionary') return c.route === `#/lib/dictionary|${obj}` ? '' : 'not the word';
+  if (kind === 'formula') return c.route === `#/lib/formulas|${obj}` ? '' : 'not the formula';
+  if (kind === 'journey') { const [tool, id] = obj.split('/'); return c.route === `#/lib/${tool}|${id}` ? '' : 'not the stone'; }
+  if (kind === 'fact') return c.route === `#/facts/${F.parseKey(obj).op}|${obj}` ? '' : 'not the fact';
+  if (kind === 'level') return c.route === `#/journey/${obj}` ? '' : 'not the level';
+  if (kind === 'arcade') return GAMES.some((g) => g.id === obj) ? (c.route === `#/play/${obj}` ? '' : 'not the game') : '';
+  if (kind === 'puzzles') return c.route === `#/puzzles/${obj}` ? '' : 'not the family';
+  if (kind === 'pattern') return c.route === '#/puzzles/patterns' ? '' : 'not patterns';
+  if (kind === 'magic') return c.route === '#/puzzles/logic' ? '' : 'not logic';
+  return '';
+}
+/* MORE and WHERE are cut from the corpus too: a stop card's second line is the stop's idea, its
+   algebra or the idea's own note; a word's or formula's names the stops that teach it */
+function moreOk(c) {
+  const [kind] = c.src.split(':'), rest = c.src.slice(kind.length + 1), [obj, part] = rest.split('#');
+  const st = (kind === 'stop' || kind === 'story') ? byId[obj] : null;
+  if (st) {
+    if (!c.more || !(c.more.endsWith(st.idea) || c.more.endsWith(st.alg) || learnCases(st).some((x) => x.note && c.more.endsWith(x.note)))) return 'more is not the stop\'s';
+    return c.where === `${worldOf(st.world).name} · Level ${c.level}` ? '' : 'where';
+  }
+  if ((kind === 'dictionary' && part === 'def') || (kind === 'formula' && !part)) {
+    const stops = (kind === 'dictionary' ? DICT.ENTRIES.find((e) => e.word === obj).stops : FORM.CARDS.find((x) => x.id === obj).stops).filter((x) => byId[x]);
+    if (!stops.length) return c.more ? 'more with no stops' : '';
+    return c.more === `Taught at: ${stops.slice(0, 4).map((x) => byId[x].title).join(' · ')}.` && c.where === worldOf(byId[stops[0]].world).name ? '' : 'taught-at';
+  }
+  if (kind === 'rank') { const r = RANKS.find((x) => x.n === obj); return c.more && c.more.startsWith(`Reached at ${r.xp} right answers`) ? '' : 'rank more'; }
+  return '';
 }
 /* a play's own rules, shared by every kind */
 function playOk(c) {
@@ -189,7 +245,7 @@ export function resolve(c) {
   return 'unknown src';
 }
 
-const bad = (c) => resolve(c) || playOk(c) || (routeOk(c.route) ? '' : `route ${c.route}`);
+const bad = (c) => resolve(c) || playOk(c) || (routeOk(c.route) ? '' : `route ${c.route}`) || (specific(c) ? `route ${c.route}: ${specific(c)}` : '') || moreOk(c);
 for (const c of ITEMS) { const e = bad(c); ok(!e, `${c.id} (${c.src}): ${e}`); }
 // distinct: no two cards share src + kind + text
 const sig = (c) => [c.src, c.kind, c.title, c.body, c.play && c.play.q].join('|');
@@ -287,6 +343,17 @@ const broken = [
   ['a word question whose wrong option shares its topic', { ...first('wordq'), play: { ...first('wordq').play, opts: [first('wordq').play.opts[0], ...DICT.ENTRIES.filter((e) => e.topic === DICT.entry(first('wordq').play.opts[0]).topic && e.word !== first('wordq').play.opts[0]).slice(0, 2).map((e) => e.word)] } }],
   ['a stone that hides needsReview', { ...first('stone'), source: first('stone').source.replace('being checked by a second reader', 'checked'), badge: undefined }],
   ['a route to no screen', { ...first('formula'), route: '#/nowhere' }],
+  // deep links (owner, 3 Oct 2026): each of these goes to the generic room, not the thing — caught
+  ['a word that opens the Dictionary, not the word', { ...first('word'), route: '#/lib/dictionary' }],
+  ['a formula that opens the Formula Book, not the formula', { ...first('formula'), route: '#/lib/formulas' }],
+  ['a stone that opens the journey, not the stone', { ...first('stone'), route: '#/lib/vedic' }],
+  ['a worked idea that opens the stop, not the idea', { ...first('worked'), route: first('worked').route.replace(/\|learn\|\d+$/, '') }],
+  ['a story moment that opens the story at its start', { ...first('moment'), route: first('moment').route.replace(/\|story\|\d+$/, '|story|0') }],
+  ['a fact that opens the facts page, not the fact', { ...ITEMS.find((c) => c.kind === 'fact'), route: '#/facts' }],
+  ['a game that opens the Play room, not the game', { ...ITEMS.find((c) => c.src.startsWith('arcade:') && GAMES.some((g) => c.src === 'arcade:' + g.id)), route: '#/play' }],
+  ['a link to a word that does not exist', { ...first('word'), route: '#/lib/dictionary|nonsenseword' }],
+  ['a stop card whose second line is not the stop\'s', { ...first('hook'), more: 'The way in: something nobody wrote.' }],
+  ['a stop card placed in the wrong world', { ...first('trick'), where: 'Nowhere · Level 1' }],
   ['a pattern whose answer is wrong', { ...ITEMS.find((c) => c.src.startsWith('pattern:')), play: { ...ITEMS.find((c) => c.src.startsWith('pattern:')).play, opts: ['1', '2', '3'] } }],
 ];
 for (const [what, c] of broken) ok(!!bad(c), `the check catches ${what}`);

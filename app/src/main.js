@@ -43,6 +43,8 @@ import { makeCert } from './cert.js';
 import { bindShell } from './integration/bizzing-shell.js';
 import { bindFeedKeys } from './integration/bizzing-feed.js';
 import * as FV from './feed-view.js';
+import { GAMES } from './arcade.js';
+const GAME_IDS = GAMES.map((g) => g.id);
 import { pay as feedPay } from './feed.js';
 
 const root = document.getElementById('app');
@@ -167,7 +169,28 @@ const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked ba
 export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
   'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
   'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper'];
-const NEEDS_ARG = { stop: (a) => !!byId[a], world: (a) => !!worldOf(a), lib: (a) => isTool(a) || !!toolById[a], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
+const head = (a) => String(a || '').split('|')[0];
+const NEEDS_ARG = { stop: (a) => !!byId[head(a)], world: (a) => !!worldOf(a), lib: (a) => isTool(head(a)) || !!toolById[head(a)], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
+/* DEEP LINKS (owner, 3 Oct 2026): a link goes to the THING, not the room it is in.
+     #/stop/<id>|<tab>[|<n>]      a stop on its tab — learn (n: the worked idea), story (n: the beat), turn, drill
+     #/lib/<tool>|<item>          a Library tool opened on one item: a word, a formula card, a journey stone
+     #/facts/<op>[|<fact>]        the facts grid for an operation, with one fact picked
+     #/journey/<n>                one level's road
+     #/play/<game>  #/puzzles/<family>   straight into that game, or six puzzles of that family
+   Returns the bare arg the screen expects; the rest is state set here. */
+const TABS = ['story', 'learn', 'turn', 'drill'];
+function deepen(nav, arg) {
+  if (arg == null) return arg;
+  const parts = String(arg).split('|'), [a, b, c] = parts;
+  if (nav === 'stop' && b && TABS.includes(b)) {
+    R.ui.tab = b; R.ui.watch = 0; R.ui.lcase = b === 'learn' ? Math.max(0, +c || 0) : 0; R.ui.beat = b === 'story' ? Math.max(0, +c || 0) : 0;
+    return a;
+  }
+  if (nav === 'lib' && b) { R.ui.libOpen = { id: a, item: parts.slice(1).join('|') }; return a; }
+  if (nav === 'facts') { if (F.OPS.includes(a)) { R.ui.factOp = a; R.ui.cell = b || null; } return null; }
+  if (nav === 'journey') { const n = +a; if (n >= 1 && n <= 10) R.ui.jlv = n; return null; }
+  return arg;
+}
 
 function go(nav, arg = null, fromHash = false) {
   // #/continue — the Hive's deep link — goes wherever Home's Continue would
@@ -181,6 +204,13 @@ function go(nav, arg = null, fromHash = false) {
   if (fromHash && TRANSIENT.includes(nav) && !R.run) nav = 'home';
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
   if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
+  // a game or a puzzle family named in the link starts it — the address then settles on its room
+  if ((nav === 'play' || nav === 'puzzles') && arg) {
+    const what = arg; history.replaceState(null, '', `#/${nav}`); arg = null;
+    if (nav === 'play' && GAME_IDS.includes(what)) setTimeout(() => fire('play', what));
+    if (nav === 'puzzles' && famOf(what)) { const k = kid(R.h); setTimeout(() => fire('practise', `${what}:${bandLevel(k ? k.band : '8-10')}`)); }
+  }
+  arg = deepen(nav, arg);
   if (nav !== R.ui.nav && !fromHash) R.ui.prev = R.ui.nav;
   R.ui.sheet = false; R.ui.drawer = false; R.ui.wallet = false;
   if (nav === 'search' && R.ui.nav !== 'search') { R.ui.q = R.ui.q || ''; R.ui.more = []; }
@@ -214,7 +244,11 @@ function screen() {
     case 'puzzles': return V2.viewTower();
     case 'library': return V2.viewLibrary(SHELF);
     case 'lib':
-      if (toolById[R.ui.arg]) return V2.viewTool(toolById[R.ui.arg], libCtx(R.ui.arg));
+      if (toolById[R.ui.arg]) {
+        const o = R.ui.libOpen, tool = toolById[R.ui.arg];
+        if (o && o.id === R.ui.arg) { R.ui.libOpen = null; const ctx = libCtx(R.ui.arg); (tool.openItem || ((it, cx) => tool.act && tool.act('open', it, cx)))(o.item, ctx); }
+        return V2.viewTool(tool, libCtx(R.ui.arg));
+      }
       if (isTool(R.ui.arg)) { const id = R.ui.arg; loadTool(id).then(() => { if (R.ui.arg === id) render(); }); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the tool…</p></div></section>'; }
       return V2.viewLibrary(SHELF);
     case 'goals': return V2.viewGoals();

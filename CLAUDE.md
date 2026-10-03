@@ -131,7 +131,11 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     agree; the prompt never shows its answer); no two cards' words are ≥ 80% the same. The family's engine
     (`integration/bizzing-feed.js`, never edited) ranks on the device by journey level, what was just done and what
     slipped; about twenty, then a finished card. Only a right answer pays, once, as `answer`. A grown-up can switch
-    it off behind the PIN. Change the corpus → rerun `node tools/build-feed.mjs`. `test/feed.mjs` and
+    it off behind the PIN. Change the corpus → rerun `node tools/build-feed.mjs`.
+    **Every card links to its THING, not the room** (owner, 3 Oct 2026): the stop on its tab and the worked idea
+    or story beat it quotes, the word, the formula card, the stone, the fact, the game, the puzzle family, the
+    level's road (main.js `deepen()`; a tool opens an item with `openItem()` or its `act('open')`). Each card
+    also carries `where` and `more`, cut from the corpus like its words. `test/feed.mjs` fails a generic link. `test/feed.mjs` and
     `test/feed-ui.mjs` hold it.
 
 ### Art

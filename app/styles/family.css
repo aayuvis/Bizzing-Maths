@@ -138,3 +138,7 @@
 .km-row{display:flex;align-items:center;width:100%;padding:12px 14px;border:0;border-radius:12px;background:none;color:var(--ink);font:700 17px var(--ui);text-align:left;cursor:pointer}
 .km-row:hover{background:var(--surface2)}
 .km-note{margin-left:auto;font:600 14px var(--ui);color:var(--muted)}
+
+/* My Feed: where a card lives, and its second line */
+.bzf-where{margin:0 0 2px;font:700 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bzf-more{margin:6px 0 2px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--action) 7%,transparent);font-size:14px;line-height:1.45;color:var(--ink)}

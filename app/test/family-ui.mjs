@@ -25,6 +25,7 @@ const port = +(process.env.PORT_BASE || 5200) + 2;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 const BASE = `http://127.0.0.1:${port}/Bizzing-Maths/`;
+const FORMULA_ID = (await import('../src/library/formulas.js')).CARDS[0].id, STONE_ID = (await import('../src/library/vedic.js')).JOURNEY[0].id;
 
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.error('  ✗ ' + m); } else if (process.env.V) console.log('  ✓ ' + m); };
 const browser = await chromium.launch({ executablePath: existsSync('/opt/pw-browsers/chromium-1194/chrome-linux/chrome') ? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' : undefined });
@@ -171,6 +172,39 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(await p.locator('.pe-item').count() === 23 && await p.locator('.pe-item [data-act=openStop]').count() >= 1, 'every miss is reviewed, with the way in to practise');
   const rec = await p.evaluate(() => { const k = window.__bzm.R.h.kids.find((x) => x.id === window.__bzm.R.h.active); return { best: k.papers.best['g34:2'], draft: k.paperDraft }; });
   ok(rec.best === sc.points && rec.draft === null, 'the best score is kept and the draft is cleared');
+  await ctx.close();
+}
+
+/* deep links (owner, 3 Oct 2026): every link lands on the THING it names, not the room it is in */
+{
+  const { p, ctx, shot } = await page({ width: 1280, height: 800 }, 'deep');
+  await p.goto(BASE); await p.waitForSelector('.home2, [data-bz=home], main');
+  const at = async (hash) => { await p.evaluate((h) => { location.hash = h; }, hash); await p.waitForTimeout(450); return p.evaluate(() => { const R = window.__bzm.R; return { nav: R.ui.nav, arg: R.ui.arg, tab: R.ui.tab, lcase: R.ui.lcase, beat: R.ui.beat, cell: R.ui.cell, op: R.ui.factOp, jlv: R.ui.jlv, lib: R.ui.lib, run: R.run && { kind: R.run.kind, fam: R.run.fam } }; }); };
+  let s = await at('#/lib/dictionary|perimeter');
+  ok(s.lib && s.lib.dictionary && s.lib.dictionary.open === 'perimeter' && /perimeter/i.test(await p.textContent('main')), `a word link opens that word in the Dictionary (${JSON.stringify(s.lib && s.lib.dictionary)})`);
+  s = await at('#/lib/formulas|' + FORMULA_ID);
+  ok(s.lib && s.lib.formulas && s.lib.formulas.card && s.lib.formulas.tab === 'card', `a formula link opens that formula's card (${JSON.stringify(s.lib && s.lib.formulas)})`);
+  s = await at('#/lib/vedic|' + STONE_ID);
+  ok(s.lib && s.lib.vedic && s.lib.vedic.step === 0, 'a stone link opens that stone on its journey');
+  s = await at('#/lib/explorer|360');
+  ok(s.lib && s.lib.explorer && s.lib.explorer.n === '360', 'the number of the hour opens on its page in the Number Explorer');
+  s = await at('#/stop/times-eleven|learn|1');
+  ok(s.nav === 'stop' && s.arg === 'times-eleven' && s.tab === 'learn' && s.lcase === 1, `a worked-idea link opens the stop on Learn, on that idea (${JSON.stringify(s)})`);
+  s = await at('#/stop/times-eleven|story|3');
+  ok(s.tab === 'story' && s.beat === 3, 'a story-moment link opens the story at that beat');
+  s = await at('#/facts/×|7×8');
+  ok(s.nav === 'facts' && s.op === '×' && s.cell === '7×8', `a fact link opens the facts grid on that fact (${s.op} ${s.cell})`);
+  s = await at('#/journey/2');
+  ok(s.nav === 'journey' && s.jlv === 2, 'a level link opens that level\'s road');
+  s = await at('#/puzzles/space');
+  ok(s.run && s.run.kind === 'puzzle' && s.run.fam === 'space', 'a puzzle-family link starts six of that family');
+  await p.evaluate(() => window.__bzm.fire('quitRun'));
+  // and a card in My Feed: tap its button, land on its thing
+  await at('#/feed'); await p.waitForSelector('.bzf-card[data-kind] .bzf-row a', { timeout: 15000 });
+  await shot('feed');
+  ok(await p.locator('.bzf-card .bzf-more').count() > 0 && await p.locator('.bzf-card .bzf-where').count() > 0, 'feed cards carry a second line and where they live');
+  const card = await p.$eval('.bzf-card[data-kind] .bzf-row a', (x) => x.getAttribute('href'));
+  ok(/\|/.test(card) || /^#\/(journey|play|puzzles|facts|world|me|contest|lib\/[a-z]+$)/.test(card), `the card's link is specific (${card})`);
   await ctx.close();
 }
 
