@@ -112,7 +112,7 @@ export const JOURNEY = [
   },
   {
     id: 'ekadhika', title: 'One more than the one before', kicker: 'Squares ending in 5',
-    sutra: { sa: 'Ekādhikena Pūrvena', en: 'by one more than the one before' }, stop: 'square-five',
+    sutra: { sa: 'Ekādhikena Pūrvena', en: 'by one more than the one before' }, stop: 'square-five', see: ['ekadhika-decimals'],
     cards: [
       'To square a number that ends in 5, look at the digits in front of the 5. Multiply them by one more than themselves. Then write 25 on the end.',
       '65²: in front of the 5 is 6. One more than 6 is 7, and 6 × 7 = 42. Write 25 after it: 4225.',
@@ -137,7 +137,7 @@ export const JOURNEY = [
   },
   {
     id: 'nikhilam-10', title: 'All from nine, the last from ten', kicker: 'Multiplying near 10',
-    sutra: { sa: 'Nikhilam Navataścaramaṁ Daśataḥ', en: 'all from nine and the last from ten' }, stop: 'nikhilam-10',
+    sutra: { sa: 'Nikhilam Navataścaramaṁ Daśataḥ', en: 'all from nine and the last from ten' }, stop: 'nikhilam-10', see: ['nine-division'],
     cards: [
       'For two numbers close to 10, look at how far each one is from 10 — its gap.',
       'Cross: take one number\'s gap away from the other number. That gives the tens. Then multiply the two gaps: that gives the units. 8 × 7: gaps 2 and 3. 8 − 3 = 5 tens; 2 × 3 = 6. Answer 56.',
@@ -156,7 +156,7 @@ export const JOURNEY = [
   },
   {
     id: 'nikhilam-100', title: 'Near 100, near 1000', kicker: 'The same cross, bigger bases',
-    sutra: { sa: 'Nikhilam Navataścaramaṁ Daśataḥ', en: 'all from nine and the last from ten' }, stop: 'nikhilam-100', see: ['above-100'],
+    sutra: { sa: 'Nikhilam Navataścaramaṁ Daśataḥ', en: 'all from nine and the last from ten' }, stop: 'nikhilam-100', see: ['above-100', 'base-division'],
     cards: [
       'The cross works around any base: 100, 1000, even 10 000. Near 100, the gaps multiply into the LAST TWO digits; near 1000, into the last three.',
       '97 × 96: gaps 3 and 4. 97 − 4 = 93 hundreds. 3 × 4 = 12. Answer 9312. Above: 104 × 107 is 104 + 7 = 111 hundreds and 4 × 7 = 28, so 11128.',
@@ -249,7 +249,7 @@ export const JOURNEY = [
   },
   {
     id: 'urdhva', title: 'Vertically and crosswise', kicker: 'Any two numbers, one line',
-    sutra: { sa: 'Ūrdhva-tiryagbhyām', en: 'vertically and crosswise' }, stop: 'crosswise',
+    sutra: { sa: 'Ūrdhva-tiryagbhyām', en: 'vertically and crosswise' }, stop: 'crosswise', see: ['duplex'],
     cards: [
       'Write the two numbers one above the other. Work from the right: multiply the units vertically; then crosswise, and add; then the tens vertically. Carry as you go.',
       '23 × 41: units 3 × 1 = 3. Crosswise 2 × 1 + 3 × 4 = 14 — write 4, carry 1. Tens 2 × 4 = 8, and the 1 carried makes 9. Answer 943.',
@@ -272,7 +272,7 @@ export const JOURNEY = [
   },
   {
     id: 'antyayor', title: 'When the last digits make ten', kicker: '43 × 47 in one breath',
-    sutra: { sa: "Antyayordaśake'pi", en: 'when the last digits add up to ten', sub: true }, see: ['square-five'],
+    sutra: { sa: "Antyayordaśake'pi", en: 'when the last digits add up to ten', sub: true }, see: ['square-five', 'pick-the-sutra'],
     cards: [
       'This is a sub-sutra that goes with "one more than the one before". It works when the front parts are the same and the last digits add up to 10 — like 43 × 47 (3 + 7 = 10).',
       'Multiply the front by one more than itself: 4 × 5 = 20. Multiply the last digits: 3 × 7 = 21. Side by side: 2021. If the last digits multiply to one digit, write a 0 first: 51 × 59 → 30 and 09 → 3009.',
@@ -325,7 +325,7 @@ export const JOURNEY = [
   },
   {
     id: 'paravartya', title: 'Transpose and apply', kicker: 'Dividing by 11, 12 and 13',
-    sutra: { sa: 'Parāvartya Yojayet', en: 'transpose and apply' },
+    sutra: { sa: 'Parāvartya Yojayet', en: 'transpose and apply' }, see: ['flag-division'],
     cards: [
       'To divide by a number just over 10, like 12, split it into 10 and 2 — then turn the 2 into −2. Bring down the first digit. Each next digit: add the flag (−2) times the number you just wrote.',
       '156 ÷ 12: bring down 1. Next: 5 − 2 × 1 = 3. Last: 6 − 2 × 3 = 0. The last column is the remainder (0), the others are the answer: 13.',
@@ -381,7 +381,7 @@ export const JOURNEY = [
   },
   {
     id: 'sankalana', title: 'By adding and by subtracting', kicker: 'Two puzzles at once',
-    sutra: { sa: 'Saṅkalana-vyavakalanābhyām', en: 'by addition and by subtraction' },
+    sutra: { sa: 'Saṅkalana-vyavakalanābhyām', en: 'by addition and by subtraction' }, stop: 'sutra-equations',
     cards: [
       'Sometimes two equations have their numbers swapped: 5x + 3y = 21 and 3x + 5y = 19. Add them, and subtract them.',
       'Add: 8x + 8y = 40, so x + y = 5. Subtract: 2x − 2y = 2, so x − y = 1. Now x is halfway between: (5 + 1) ÷ 2 = 3, and y = (5 − 1) ÷ 2 = 2.',
@@ -698,7 +698,7 @@ export function selftest(ok, makeCtx) {
   for (const st of JOURNEY) {
     ok(st.cards.length >= 2 && st.cards.length <= 5, `vedic/${st.id}: 2–5 cards`);
     if (st.needsReview) ok(st.sources && st.sources.length, `vedic/${st.id}: needsReview without sources`);
-    if (st.stop) ok(byId[st.stop] && byId[st.stop].world === 'observatory', `vedic/${st.id}: stop ${st.stop} is an Observatory stop`);
+    if (st.stop) ok(byId[st.stop] && ['observatory', 'ladder'].includes(byId[st.stop].world), `vedic/${st.id}: stop ${st.stop} is a Vedic stop (Observatory or Sutra Ladder)`);
     if (st.stop && byId[st.stop] && byId[st.stop].sutra) ok(st.sutra.sa.startsWith(byId[st.stop].sutra.sa), `vedic/${st.id}: sutra name agrees with the Observatory`);
     for (const s of st.see || []) ok(byId[s], `vedic/${st.id}: linked stop ${s} exists`);
     if (!st.gen) continue;

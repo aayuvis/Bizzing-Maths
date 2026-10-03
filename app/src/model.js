@@ -175,7 +175,7 @@ export const optional = (k, n, i) => (k.placed != null && i < k.placed) || bandR
 export const NEEDS = {
   workshop: 'market', forest: 'market', observatory: 'workshop', palace: 'market',
   dock: 'bakery', setisland: 'forest', harbour: 'observatory', court: 'workshop',
-  quarry: 'forest', mine: 'library', lighthouse: 'palace',
+  quarry: 'forest', mine: 'library', lighthouse: 'palace', ladder: 'observatory',
 };
 const firstIndex = (wid) => ROUTE.findIndex((n) => n.world === wid);
 

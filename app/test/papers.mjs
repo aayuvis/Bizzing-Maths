@@ -63,6 +63,12 @@ ok(wrong.points === N - sum / 4 && wrong.wrong === N, `all wrong loses a quarter
 ok(practiseNext(wrong).reduce((a, x) => a + x.n, 0) === N, 'every miss points to a strategy to practise');
 ok(bandFor({ band: '6-7' }) === 'g12' && bandFor({ band: '8-10', journey: { level: 6 } }) === 'g56' && bandFor({ journey: { level: 9 } }) === 'g78', 'a child starts in the band their level or age suggests');
 
+/* another way in: every method link names a real template and a Sutra Ladder or Counting Court stop */
+{ const { METHOD_OF } = await import('../src/papers/methods.js'), { byId } = await import('../src/tricks.js');
+  const linkOk = (M) => Object.entries(M).every(([tid, stop]) => tById[tid] && byId[stop] && ['ladder', 'court'].includes(byId[stop].world));
+  ok(Object.keys(METHOD_OF).length >= 8 && linkOk(METHOD_OF), 'every "another way in" link names a real template and a Ladder or Court stop');
+  ok(!linkOk({ ...METHOD_OF, 'old-wheels': 'heads-and-legs' }) && !linkOk({ ...METHOD_OF, 'no-such-template': 'fangcheng' }), 'BROKEN: a link to a strategy stop or a missing template is caught'); }
+
 /* proof by breaking it: a template whose solve() disagrees on one paper is caught */
 const before = fails;
 const liar = ALL.map((t, i) => (i === 0 ? { ...t, solve: (params) => t.solve(params).map((v) => (typeof v === 'number' ? v + 1 : v + '!')) } : t));

@@ -13,6 +13,7 @@ import { kid, avatarFile } from './model.js';
 import { byId, worldOf, tricksIn } from './tricks.js';
 import { paintedRoad } from './board.js';
 import { BANDS, BAND_IDS, FIXED, LETTERS, bandFor, practiseNext } from './papers/engine.js';
+import { METHOD_OF } from './papers/methods.js';
 
 export const HALL_WORLDS = ['strategy', 'logic', 'figures'];
 const stars = (k, id) => ((k.tricks[id] || {}).stars || 0);
@@ -130,6 +131,7 @@ function viewPaperEnd(P) {
       <p class="pq-text">${esc(q.text)}</p>${q.fig ? `<div class="pq-fig">${q.fig}</div>` : ''}
       <p><b>The answer is ${esc(q.ans)}.</b> ${esc(q.why)}</p>
       ${byId[q.strategy] ? `<button class="hi-stop" data-act="openStop" data-arg="${q.strategy}">The way in: ${esc(byId[q.strategy].title)} →</button>` : ''}
+      ${byId[METHOD_OF[q.tid]] ? `<button class="hi-stop hi-method" data-act="openStop" data-arg="${METHOD_OF[q.tid]}">Another way in, from ${esc(worldOf(byId[METHOD_OF[q.tid]].world).name)}: ${esc(byId[METHOD_OF[q.tid]].title)} →</button>` : ''}
     </div>`).join('')}
   </section>`;
 }

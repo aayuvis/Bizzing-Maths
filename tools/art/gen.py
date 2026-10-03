@@ -64,6 +64,12 @@ WORLD = {
                  "white plaster wall at one end, grey roof tiles with gently upturned eaves, a paved floor of plain square "
                  "stones, a still pond with lily pads, plain round paper lanterns with no markings hanging from the eaves, "
                  "a gnarled pine. Jade green, warm cinnabar red, cream plaster, slate grey.",
+    'w-ladder':  "A wide panorama of a tall terraced hillside at dusk, built of long flights of broad pale "
+                 "sandstone steps climbing in tiers from a valley of mango trees and a small stream up to a high open "
+                 "stone terrace on the summit, where a round platform, low parapet walls and a few plain stone arcs and "
+                 "a curved sundial wedge stand under the first evening stars. Little brass oil lamps glow along the "
+                 "edges of each tier, banyan roots spill over a retaining wall, a slender waterfall runs beside the "
+                 "steps. A deep violet-to-rose sky, a thin crescent moon, warm lamp gold, sandstone, dusky plum.",
 }
 ATLAS = ("A storybook fantasy MAP seen from above at a gentle angle, of a single island land made of five regions "
          "joined by one winding road from lower-left to upper-right: first a green terraced FLOWER GARDEN region "
