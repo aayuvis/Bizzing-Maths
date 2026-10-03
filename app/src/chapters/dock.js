@@ -101,13 +101,13 @@ export const TRICKS = [
       if (q.kind === 'build') {
         const names = ['tenths', 'hundredths', 'thousandths'];
         return [
-          { t: 'The ones go before the point', v: q.o },
-          ...q.ds.map((d, i) => ({ t: `${d} ${names[i]} — place ${i + 1} after the point`, v: d / P10(i + 1) })),
+          { t: 'The ones go before the point', v: q.o, x: `Math.floor(${q.o}${q.ds.map((d, i) => `+${d}/${P10(i + 1)}`).join('')})` },
+          ...q.ds.map((d, i) => ({ t: `${d} ${names[i]} — place ${i + 1} after the point`, v: d / P10(i + 1), x: `${d}*Math.pow(10,-${i + 1})` })),
           { t: 'Put them together', v: q.ans },
         ];
       }
       const d = Math.floor(q.N / P10(q.dp - q.pos)) % 10;
-      return [{ t: `How many places after the point is the ${d}?`, v: q.pos }, { t: `So it is worth`, v: q.ans }];
+      return [{ t: `How many places after the point is the ${d}?`, v: q.pos, x: `(${q.N}/${P10(q.dp)}).toFixed(${q.dp}).split('.')[1].indexOf('${d}')+1` }, { t: `So it is worth`, v: q.ans }];
     },
     draw: (q) => (q.kind === 'build' ? between(q.o, q.o + 1, q.o + 0.5, '?') : pv([q.N / P10(q.dp)])),
   },
@@ -146,7 +146,7 @@ export const TRICKS = [
     },
     work(q) {
       return [
-        { t: `How many zeros in ${P10(q.k)}?`, v: q.k },
+        { t: `How many zeros in ${P10(q.k)}?`, v: q.k, x: `String(${P10(q.k)}).length-1` },
         { t: `Slide every digit ${q.k} place${q.k > 1 ? 's' : ''} ${q.op === '×' ? 'left (bigger)' : 'right (smaller)'}`, v: q.ans },
       ];
     },
@@ -195,9 +195,9 @@ export const TRICKS = [
       const D = Math.max(da, db), unit = D === 1 ? 'tenths' : 'hundredths', a2 = A * P10(D - da), b2 = B * P10(D - db);
       const s = op === '+' ? a2 + b2 : a2 - b2;
       return [
-        { t: `${A / P10(da)} in ${unit}`, v: a2 },
-        { t: `${B / P10(db)} in ${unit}`, v: b2 },
-        { t: `${op === '+' ? 'Add' : 'Take away'} the ${unit}`, v: s },
+        { t: `${A / P10(da)} in ${unit}`, v: a2, x: `Math.round(${A / P10(da)}*${P10(D)})` },
+        { t: `${B / P10(db)} in ${unit}`, v: b2, x: `Math.round(${B / P10(db)}*${P10(D)})` },
+        { t: `${op === '+' ? 'Add' : 'Take away'} the ${unit}`, v: s, x: `Math.round((${A / P10(da)}${op === '+' ? '+' : '-'}${B / P10(db)})*${P10(D)})` },
         { t: `Back to a decimal: ÷ ${P10(D)}`, v: s / P10(D) },
       ];
     },
@@ -242,8 +242,8 @@ export const TRICKS = [
     work({ N, dp, to }) {
       const s = P10(dp - to), low = Math.floor(N / s) / P10(to), dec = Math.floor((N % s) / (s / 10));
       return [
-        { t: `Cut it off after ${to === 0 ? 'the ones' : `${to} decimal place${to > 1 ? 's' : ''}`}`, v: low },
-        { t: 'The very next digit', v: dec },
+        { t: `Cut it off after ${to === 0 ? 'the ones' : `${to} decimal place${to > 1 ? 's' : ''}`}`, v: low, x: `Number((${N / P10(dp)}).toFixed(${dp}).slice(0,${to === 0 ? -(dp + 1) : -(dp - to)}))` },
+        { t: 'The very next digit', v: dec, x: `Number((${N / P10(dp)}).toFixed(${dp}).split('.')[1][${to}])` },
         { t: '5 or more goes up; 4 or less stays', v: Math.round(N / s) / P10(to) },
       ];
     },
@@ -295,11 +295,11 @@ export const TRICKS = [
       return { ...a, per, text: `${a.a}/${a.b} as a decimal`, expr: `${a.a}/${a.b}`, ans: top / base };
     },
     work(q) {
-      if (q.kind === 'd2p') return [{ t: `${q.h / 100} is how many hundredths?`, v: q.h }, { t: 'Per cent means hundredths', v: q.h }];
-      if (q.kind === 'p2f') { const g = gcd(q.p, 100); return [{ t: `${q.p}% = ?/100`, v: q.p }, { t: `Divide top and bottom by`, v: g }, { t: 'The fraction', v: F(q.p / g, 100 / g) }]; }
+      if (q.kind === 'd2p') return [{ t: `${q.h / 100} is how many hundredths?`, v: q.h, x: `Math.round(${q.h / 100}*100)` }, { t: 'Per cent means hundredths', v: q.h }];
+      if (q.kind === 'p2f') { const g = gcd(q.p, 100); return [{ t: `${q.p}% = ?/100`, v: q.p, x: `${q.p}/100*100` }, { t: `Divide top and bottom by`, v: g, x: `[...Array(101).keys()].filter((d) => d && ${q.p}%d===0 && 100%d===0).pop()` }, { t: 'The fraction', v: F(q.p / g, 100 / g) }]; }
       const base = 100 % q.b === 0 ? 100 : 1000, top = (q.a * base) / q.b, name = base === 100 ? 'hundredths' : 'thousandths';
-      if (q.kind === 'f2p') return [{ t: `${q.a}/${q.b} = ?/${base}`, v: top }, { t: base === 100 ? 'Hundredths are per cent' : `÷ 10 for per cent`, v: (top * 100) / base }];
-      return [{ t: `${q.a}/${q.b} = ?/${base}`, v: top }, { t: `${name} as a decimal`, v: top / base }];
+      if (q.kind === 'f2p') return [{ t: `${q.a}/${q.b} = ?/${base}`, v: top, x: `${q.a}*${base}/${q.b}` }, { t: base === 100 ? 'Hundredths are per cent' : `÷ 10 for per cent`, v: (top * 100) / base }];
+      return [{ t: `${q.a}/${q.b} = ?/${base}`, v: top, x: `${q.a}*${base}/${q.b}` }, { t: `${name} as a decimal`, v: top / base }];
     },
     draw: (q) => (q.kind === 'p2f' ? hundred(q.p) : q.kind === 'd2p' ? between(Math.floor(q.h / 100), Math.floor(q.h / 100) + 1, q.h / 100, String(q.h / 100)) : fracBar(q.b, q.a)),
   },
@@ -336,11 +336,11 @@ export const TRICKS = [
     q({ p, n }) { return { p, n, build: p === 10 ? 'ten' : p === 5 ? 'five' : p % 10 === 0 ? 'tens' : 'tens and five', text: `${p}% of ${n}`, say: `${p} percent of ${n}`, expr: `${n}/100*${p}`, ans: (p * n) / 100 }; },
     work({ p, n }) {
       const tens = Math.floor(p / 10), five = p % 10 === 5, s = [];
-      if (p === 10) return [{ t: 'How many tenths make the whole?', v: 10 }, { t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 }];
-      s.push({ t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 });
-      if (tens > 1) s.push({ t: `${tens * 10}%: ${tens} lots of 10%`, v: (tens * n) / 10 });
-      if (five) s.push({ t: '5%: half of 10%', v: n / 20 });
-      if (five && tens > 0) s.push({ t: 'Add them', v: (p * n) / 100 });
+      if (p === 10) return [{ t: 'How many tenths make the whole?', v: 10, x: `100/${p}` }, { t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 }];
+      s.push({ t: `10% of ${n}: ${n} ÷ 10`, v: n / 10, x: `${n}*10/100` });
+      if (tens > 1) s.push({ t: `${tens * 10}%: ${tens} lots of 10%`, v: (tens * n) / 10, x: `${n}*${p - (p % 10)}/100` });
+      if (five) s.push({ t: '5%: half of 10%', v: n / 20, x: `${n}*5/100` });
+      if (five && tens > 0) s.push({ t: 'Add them', v: (p * n) / 100, x: `${n}*${p}/100` });
       return s;
     },
     draw: ({ p }) => hundred(p),
@@ -376,7 +376,7 @@ export const TRICKS = [
     },
     work({ n, per2, m, thing }) {
       const amount = (per2 * n) / 2;
-      return [{ t: `For 1: ${amount} ÷ ${n}`, v: per2 / 2 }, { t: `For ${m}: × ${m}`, v: (per2 * m) / 2 }];
+      return [{ t: `For 1: ${amount} ÷ ${n}`, v: per2 / 2, x: `${amount}/${n}` }, { t: `For ${m}: × ${m}`, v: (per2 * m) / 2 }];
     },
     draw: ({ n }) => fracBar(n, 1),
   },
@@ -417,8 +417,8 @@ export const TRICKS = [
     },
     work({ n, p, dir, lv = 1 }) {
       const off = dir === 'off', ans = (n * (off ? 100 - p : 100 + p)) / 100;
-      if (lv === 3) return [{ t: off ? `Per cent you pay: 100 − ${p}` : `New per cent: 100 + ${p}`, v: off ? 100 - p : 100 + p }, { t: `${off ? 100 - p : 100 + p}% of ${n}`, v: ans }];
-      return [{ t: `${p}% of ${n}`, v: (p * n) / 100 }, { t: off ? 'Take it off' : 'Add it on', v: ans }];
+      if (lv === 3) return [{ t: off ? `Per cent you pay: 100 − ${p}` : `New per cent: 100 + ${p}`, v: off ? 100 - p : 100 + p, x: `100${off ? '-' : '+'}${p}` }, { t: `${off ? 100 - p : 100 + p}% of ${n}`, v: ans }];
+      return [{ t: `${p}% of ${n}`, v: (p * n) / 100, x: `${n}*${p}/100` }, { t: off ? 'Take it off' : 'Add it on', v: ans }];
     },
     draw: ({ p }) => fracBar(20, p / 5),
   },
@@ -455,11 +455,11 @@ export const TRICKS = [
     },
     work(q) {
       const { kind, a, b } = q;
-      if (kind === 'simplify') return [{ t: `${a * q.g} ÷ what makes ${a}?`, v: q.g }, { t: `Same to the other side: ${b * q.g} ÷ ${q.g}`, v: b }];
+      if (kind === 'simplify') return [{ t: `${a * q.g} ÷ what makes ${a}?`, v: q.g, x: `${a * q.g}/${a}` }, { t: `Same to the other side: ${b * q.g} ÷ ${q.g}`, v: b }];
       const part = q.big ? Math.max(a, b) : Math.min(a, b);
       return [
-        { t: `Parts in one round: ${a} + ${b}`, v: a + b },
-        { t: `One part: ${q.n} ÷ ${a + b}`, v: q.n / (a + b) },
+        { t: `Parts in one round: ${a} + ${b}`, v: a + b, x: `${a}+${b}` },
+        { t: `One part: ${q.n} ÷ ${a + b}`, v: q.n / (a + b), x: `${q.n}/(${a}+${b})` },
         { t: `The ${q.big ? 'larger' : 'smaller'} share: × ${part}`, v: (q.n / (a + b)) * part },
       ];
     },
@@ -503,10 +503,10 @@ export const TRICKS = [
     },
     work(q) {
       const { kind, s, t } = q, d = s * t;
-      if (kind === 'min') return [{ t: `How many ${q.mins}-minute pieces make an hour?`, v: 60 / q.mins }, { t: `Km in ${q.mins} minutes: ${s} ÷ ${60 / q.mins}`, v: (s * q.mins) / 60 }];
-      if (kind === 's') return [{ t: 'Hours taken', v: t }, { t: `Km in one hour: ${d} ÷ ${t}`, v: s }];
-      if (kind === 't') return [{ t: 'Km in one hour', v: s }, { t: `How many ${s}s make ${d}?`, v: t }];
-      return [{ t: 'Km in one hour', v: s }, { t: `In ${t} hours: × ${t}`, v: d }];
+      if (kind === 'min') return [{ t: `How many ${q.mins}-minute pieces make an hour?`, v: 60 / q.mins, x: `60/${q.mins}` }, { t: `Km in ${q.mins} minutes: ${s} ÷ ${60 / q.mins}`, v: (s * q.mins) / 60 }];
+      if (kind === 's') return [{ t: 'Hours taken', v: t, x: `Number(${JSON.stringify(q.text)}.match(/in (\\d+) hours/)[1])` }, { t: `Km in one hour: ${d} ÷ ${t}`, v: s }];
+      if (kind === 't') return [{ t: 'Km in one hour', v: s, x: `Number(${JSON.stringify(q.text)}.match(/at (\\d+) km\\/h/)[1])` }, { t: `How many ${s}s make ${d}?`, v: t }];
+      return [{ t: 'Km in one hour', v: s, x: `Number(${JSON.stringify(q.text)}.match(/^(\\d+) km\\/h/)[1])` }, { t: `In ${t} hours: × ${t}`, v: d }];
     },
   },
 ];

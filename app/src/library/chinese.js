@@ -130,6 +130,8 @@ const qGougu = (a, b, c, ask) => ({ kind: 'gougu', a, b, c, ask,
 const qSunzi = (ms, rs) => ({ kind: 'sunzi', ms, rs,
   text: `A number leaves ${ms.map((m, i) => `${rs[i]} when divided by ${m}`).join(', ').replace(/, ([^,]*)$/, ', and $1')}. What is the smallest such number?`,
   expr: `(()=>{for(let n=1;;n++)if(${ms.map((m, i) => `n%${m}===${rs[i]}`).join('&&')})return n})()`, ans: sunzi(ms, rs) });
+/* n choose k by factorials, as a plain expression (a second route beside choose()'s running product) */
+const nck = (n, k) => `((f)=>f(${n})/(f(${k})*f(${n - k})))((m)=>Array.from({length:m},(_,i)=>i+1).reduce((a,b)=>a*b,1))`;
 const prodExpr = (n, k) => { const kk = Math.min(k, n - k); if (kk === 0) return '1'; const top = [], bot = []; for (let i = 0; i < kk; i++) { top.push(n - i); bot.push(kk - i); } return `(${top.join('*')})/(${bot.join('*')})`; };
 const qYang = (n, k) => ({ kind: 'yang', n, k, text: `Row ${n} of the triangle (the single 1 at the top is row 0): what is number ${k} along, counting the first 1 as number 0?`, expr: prodExpr(n, k), ans: choose(n, k), html: n <= 9 ? yangSvg(n, k) : '' });
 const qYangSum = (n) => ({ kind: 'yangsum', n, text: `Add up every number in row ${n} of the triangle.`, expr: `2**${n}`, ans: 2 ** n, html: n <= 8 ? yangSvg(n - 1, -1) : '' });
@@ -167,9 +169,9 @@ export const JOURNEY = [
       return qRead(lv === 1 ? int(1, 99, r) : lv === 2 ? int(10, 999, r) : int(100, 9999, r));
     }),
     work(q) {
-      if (q.kind === 'form') return [{ t: `The ${PLACE[q.p]} place is place number ${q.p} from the right, counting the units as 0`, v: q.p }, { t: q.p % 2 === 0 ? 'Even places stand upright' : 'Odd places lie flat', v: q.ans }];
+      if (q.kind === 'form') return [{ t: `The ${PLACE[q.p]} place is place number ${q.p} from the right, counting the units as 0`, v: q.p, x: `${JSON.stringify(PLACE)}.indexOf('${PLACE[q.p]}')` }, { t: q.p % 2 === 0 ? 'Even places stand upright' : 'Odd places lie flat', v: q.ans }];
       const cells = rodEncode(q.n);
-      return [...cells.map((c) => ({ t: `${PLACE[c.p][0].toUpperCase() + PLACE[c.p].slice(1)}: ${rodSays(c)}`, v: c.empty ? 0 : 5 * c.five + c.ones })), { t: 'Read the places together', v: q.n }];
+      return [...cells.map((c) => ({ t: `${PLACE[c.p][0].toUpperCase() + PLACE[c.p].slice(1)}: ${rodSays(c)}`, v: c.empty ? 0 : 5 * c.five + c.ones, x: `Math.floor(${q.n}/${10 ** c.p})%10` })), { t: 'Read the places together', v: q.n }];
     },
     fig: (q) => rodSvg(q.n, true),
   },
@@ -190,13 +192,13 @@ export const JOURNEY = [
     }),
     work(q) {
       if (q.kind === 'rodadd') {
-        const s = [{ t: 'Top number', v: q.a }, { t: 'Bottom number', v: q.b }];
+        const s = [{ t: 'Top number', v: q.a, x: rodExpr(q.a) }, { t: 'Bottom number', v: q.b, x: rodExpr(q.b) }];
         const A = digitsOf(q.a).reverse(), B = digitsOf(q.b).reverse(); let carry = 0;
-        for (let p = 0; p < Math.max(A.length, B.length); p++) { const t = (A[p] || 0) + (B[p] || 0) + carry; s.push({ t: `${PLACE[p]}: ${A[p] || 0} + ${B[p] || 0}${carry ? ' + 1 carried' : ''}, keep`, v: t % 10 }); carry = Math.floor(t / 10); }
+        for (let p = 0; p < Math.max(A.length, B.length); p++) { const t = (A[p] || 0) + (B[p] || 0) + carry; s.push({ t: `${PLACE[p]}: ${A[p] || 0} + ${B[p] || 0}${carry ? ' + 1 carried' : ''}, keep`, v: t % 10, x: `Math.floor((${q.a}+${q.b})/${10 ** p})%10` }); carry = Math.floor(t / 10); }
         s.push({ t: 'Read the board', v: q.ans });
         return s;
       }
-      return [...rodEncode(q.n).map((c) => ({ t: `${PLACE[c.p]}: ${rodSays(c)}`, v: c.empty ? 0 : 5 * c.five + c.ones })), { t: 'Read the places together', v: q.n }];
+      return [...rodEncode(q.n).map((c) => ({ t: `${PLACE[c.p]}: ${rodSays(c)}`, v: c.empty ? 0 : 5 * c.five + c.ones, x: `Math.floor(${q.n}/${10 ** c.p})%10` })), { t: 'Read the places together', v: q.n }];
     },
     fig: (q) => rodSvg(q.n, true),
   },
@@ -219,11 +221,11 @@ export const JOURNEY = [
     work(q) {
       if (q.kind === 'abread') {
         const ab = abEncode(q.n), s = [];
-        ab.h.forEach((h, i) => { const p = ROD_COUNT - 1 - i; if (p < String(q.n).length) s.push({ t: `${PLACE[p]} rod: ${h} upper bead${h === 1 ? '' : 's'} (${5 * h}) and ${ab.e[i]} lower`, v: abRod(ab, i) }); });
+        ab.h.forEach((h, i) => { const p = ROD_COUNT - 1 - i; if (p < String(q.n).length) s.push({ t: `${PLACE[p]} rod: ${h} upper bead${h === 1 ? '' : 's'} (${5 * h}) and ${ab.e[i]} lower`, v: abRod(ab, i), x: `Math.floor(${q.n}/${10 ** p})%10` }); });
         return [...s, { t: 'Read the rods', v: q.n }];
       }
       const A = digitsOf(q.a).reverse(), B = digitsOf(q.b).reverse(), s = []; let carry = 0;
-      for (let p = 0; p < Math.max(A.length, B.length) || carry; p++) { const t = (A[p] || 0) + (B[p] || 0) + carry; s.push({ t: `${PLACE[p]} rod: ${A[p] || 0} + ${B[p] || 0}${carry ? ' + 1 carried' : ''}${t > 9 ? ' — clear ten, carry one' : ''}`, v: t % 10 }); carry = Math.floor(t / 10); }
+      for (let p = 0; p < Math.max(A.length, B.length) || carry; p++) { const t = (A[p] || 0) + (B[p] || 0) + carry; s.push({ t: `${PLACE[p]} rod: ${A[p] || 0} + ${B[p] || 0}${carry ? ' + 1 carried' : ''}${t > 9 ? ' — clear ten, carry one' : ''}`, v: t % 10, x: `Math.floor((${q.a}+${q.b})/${10 ** p})%10` }); carry = Math.floor(t / 10); }
       return [...s, { t: 'Read the rods', v: q.ans }];
     },
     fig: (q) => abSvg(abEncode(q.a)) + `<p class="${P}-cap">${q.a} on the suanpan. Add ${q.b}, rod by rod.</p>`,
@@ -240,7 +242,7 @@ export const JOURNEY = [
     gen: guard((r, lv) => (lv === 1 ? qMul(int(11, 99, r), int(2, 9, r)) : lv === 2 ? qMul(int(11, 99, r), int(11, 99, r)) : qMul(int(101, 999, r), int(11, 99, r)))),
     work({ a, b }) {
       const d = digitsOf(a), s = [];
-      d.forEach((x, i) => { const p = d.length - 1 - i; if (x) s.push({ t: `${x}${'0'.repeat(p)} × ${b}`, v: x * 10 ** p * b }); });
+      d.forEach((x, i) => { const p = d.length - 1 - i; if (x) s.push({ t: `${x}${'0'.repeat(p)} × ${b}`, v: x * 10 ** p * b, x: `(Math.floor(${a}/${10 ** p})%10)*${10 ** p}*${b}` }); });
       return [...s, { t: 'Add them in the middle row', v: a * b }];
     },
     fig: (q) => boardSvg(q.a, q.b, q.a * q.b),
@@ -264,8 +266,8 @@ export const JOURNEY = [
     work(q) {
       if (q.kind === 'lototal') return [{ t: `Add the top row: ${q.g[0].join(' + ')}`, v: q.T }];
       return [
-        { t: `A full line: ${q.full.join(' + ')}`, v: q.T },
-        { t: `The line through ?: its other two, ${q.others[0]} + ${q.others[1]}`, v: q.others[0] + q.others[1] },
+        { t: `A full line: ${q.full.join(' + ')}`, v: q.T, x: `(${q.g.flat().join('+')})/3` },
+        { t: `The line through ?: its other two, ${q.others[0]} + ${q.others[1]}`, v: q.others[0] + q.others[1], x: `(${q.g.flat().join('+')})/3-${q.g[q.ask[0]][q.ask[1]]}` },
         { t: `${q.T} − ${q.others[0] + q.others[1]}`, v: q.ans },
       ];
     },
@@ -287,8 +289,8 @@ export const JOURNEY = [
     }),
     work(q) {
       return [
-        { t: `Add the parts: ${q.w.join(' + ')}`, v: q.S },
-        { t: `One part: ${q.T} ÷ ${q.S}`, v: q.u },
+        { t: `Add the parts: ${q.w.join(' + ')}`, v: q.S, x: q.w.join('+') },
+        { t: `One part: ${q.T} ÷ ${q.S}`, v: q.u, x: `${q.T}/(${q.w.join('+')})` },
         { t: `The ${['first', 'second', 'third', 'fourth', 'fifth'][q.i]} share: ${q.w[q.i]} parts`, v: q.ans },
       ];
     },
@@ -311,7 +313,7 @@ export const JOURNEY = [
         if ((c * b) % a === 0 && c !== a && b !== a) return qRate(a, b, c);
       }
     }),
-    work: (q) => [{ t: `What you have × the rate you want: ${q.c} × ${q.b}`, v: q.c * q.b }, { t: `÷ the rate you have, ${q.a}`, v: q.ans }],
+    work: (q) => [{ t: `What you have × the rate you want: ${q.c} × ${q.b}`, v: q.c * q.b, x: `${q.c}*${q.b}` }, { t: `÷ the rate you have, ${q.a}`, v: q.ans }],
     fig: (q) => rateSvg(q.a, q.b, q.c),
   },
   {
@@ -333,15 +335,15 @@ export const JOURNEY = [
     }),
     work(q) {
       if (q.kind === 'guess') return [
-        { t: `${q.g1} × ${q.d2} (first guess × second error)`, v: q.g1 * q.d2 },
-        { t: `${q.g2} × ${q.e1} (second guess × first error)`, v: q.g2 * q.e1 },
-        { t: 'Add them', v: q.g1 * q.d2 + q.g2 * q.e1 },
+        { t: `${q.g1} × ${q.d2} (first guess × second error)`, v: q.g1 * q.d2, x: `${q.g1}*${q.d2}` },
+        { t: `${q.g2} × ${q.e1} (second guess × first error)`, v: q.g2 * q.e1, x: `${q.g2}*${q.e1}` },
+        { t: 'Add them', v: q.g1 * q.d2 + q.g2 * q.e1, x: `${q.g1}*${q.d2}+${q.g2}*${q.e1}` },
         { t: `÷ (${q.e1} + ${q.d2})`, v: q.ans },
       ];
       const s = [
-        { t: `Excess + deficit: ${q.e} + ${q.d}`, v: q.e + q.d },
-        { t: `Difference in what each pays: ${q.a} − ${q.b}`, v: q.a - q.b },
-        { t: `People: ${q.e + q.d} ÷ ${q.a - q.b}`, v: q.n },
+        { t: `Excess + deficit: ${q.e} + ${q.d}`, v: q.e + q.d, x: `${q.e}+${q.d}` },
+        { t: `Difference in what each pays: ${q.a} − ${q.b}`, v: q.a - q.b, x: `${q.a}-${q.b}` },
+        { t: `People: ${q.e + q.d} ÷ ${q.a - q.b}`, v: q.n, x: `(${q.e}+${q.d})/(${q.a}-${q.b})` },
       ];
       if (q.ask === 'price') s.push({ t: `Price: ${q.n} × ${q.a} − ${q.e}`, v: q.p });
       return s;
@@ -371,9 +373,9 @@ export const JOURNEY = [
     work(q) {
       const D = q.a1 * q.b2 - q.a2 * q.b1, E = q.a1 * q.c2 - q.a2 * q.c1, y = E / D;
       const s = [
-        { t: `Left column × ${q.a1}, less right column × ${q.a2}: low bundles left, ${q.a1}×${q.b2} − ${q.a2}×${q.b1}`, v: D },
-        { t: `Measures left: ${q.a1}×${q.c2} − ${q.a2}×${q.c1}`, v: E },
-        { t: `One low bundle: ${E} ÷ ${D}`, v: y },
+        { t: `Left column × ${q.a1}, less right column × ${q.a2}: low bundles left, ${q.a1}×${q.b2} − ${q.a2}×${q.b1}`, v: D, x: `${q.a1}*${q.b2}-${q.a2}*${q.b1}` },
+        { t: `Measures left: ${q.a1}×${q.c2} − ${q.a2}×${q.c1}`, v: E, x: `${q.a1}*${q.c2}-${q.a2}*${q.c1}` },
+        { t: `One low bundle: ${E} ÷ ${D}`, v: y, x: `(${q.c1}-${q.a1}*(${q.c1}*${q.b2}-${q.c2}*${q.b1})/(${q.a1}*${q.b2}-${q.a2}*${q.b1}))/${q.b1}` },
       ];
       if (q.ask === 'x') s.push({ t: `Right column: (${q.c1} − ${q.b1} × ${y}) ÷ ${q.a1}`, v: (q.c1 - q.b1 * y) / q.a1 });
       return s;
@@ -396,8 +398,8 @@ export const JOURNEY = [
     }),
     work(q) {
       return q.ask === 'xian'
-        ? [{ t: `Gou × gou: ${q.a} × ${q.a}`, v: q.a * q.a }, { t: `Gu × gu: ${q.b} × ${q.b}`, v: q.b * q.b }, { t: 'Add: xian × xian', v: q.c * q.c }, { t: `Which number times itself makes ${q.c * q.c}?`, v: q.c }]
-        : [{ t: `Xian × xian: ${q.c} × ${q.c}`, v: q.c * q.c }, { t: `Gou × gou: ${q.a} × ${q.a}`, v: q.a * q.a }, { t: 'Take away: gu × gu', v: q.b * q.b }, { t: `Which number times itself makes ${q.b * q.b}?`, v: q.b }];
+        ? [{ t: `Gou × gou: ${q.a} × ${q.a}`, v: q.a * q.a, x: `${q.a}**2` }, { t: `Gu × gu: ${q.b} × ${q.b}`, v: q.b * q.b, x: `${q.b}**2` }, { t: 'Add: xian × xian', v: q.c * q.c, x: `${q.a}**2+${q.b}**2` }, { t: `Which number times itself makes ${q.c * q.c}?`, v: q.c }]
+        : [{ t: `Xian × xian: ${q.c} × ${q.c}`, v: q.c * q.c, x: `${q.c}**2` }, { t: `Gou × gou: ${q.a} × ${q.a}`, v: q.a * q.a, x: `${q.a}**2` }, { t: 'Take away: gu × gu', v: q.b * q.b, x: `${q.c}**2-${q.a}**2` }, { t: `Which number times itself makes ${q.b * q.b}?`, v: q.b }];
     },
     fig: () => xianSvg(3, 4),
   },
@@ -419,8 +421,10 @@ export const JOURNEY = [
     work(q) {
       const ms = q.ms, i0 = ms.length - 1, M = ms[i0], start = q.rs[i0] || M, s = [];
       let x = start, step = M;
-      s.push({ t: `Leaves ${q.rs[i0]} by ${M}s: start at`, v: start });
-      for (let j = i0 - 1; j >= 0; j--) { while (x % ms[j] !== q.rs[j]) x += step; s.push({ t: `Step on by ${step} until it also leaves ${q.rs[j]} by ${ms[j]}s`, v: x }); step *= ms[j]; }
+      /* x: the smallest number above zero that keeps every leftover asked so far, found by trying them all */
+      const least = (from) => { const js = ms.map((m, j) => j).filter((j) => j >= from); return `[...Array(${js.reduce((p, j) => p * ms[j], 1)}+1).keys()].find((n)=>n>0&&${js.map((j) => `n%${ms[j]}===${q.rs[j]}`).join('&&')})`; };
+      s.push({ t: `Leaves ${q.rs[i0]} by ${M}s: start at`, v: start, x: least(i0) });
+      for (let j = i0 - 1; j >= 0; j--) { while (x % ms[j] !== q.rs[j]) x += step; s.push({ t: `Step on by ${step} until it also leaves ${q.rs[j]} by ${ms[j]}s`, v: x, x: least(j) }); step *= ms[j]; }
       s.push({ t: 'The smallest number with every leftover', v: q.ans });
       return s;
     },
@@ -443,8 +447,9 @@ export const JOURNEY = [
       return qYang(n, int(2, n - 2, r));   // never number 1: it is the row number itself, printed in the question
     }),
     work(q) {
-      if (q.kind === 'yangsum') return [{ t: `Row ${q.n - 1} adds up to`, v: 2 ** (q.n - 1) }, { t: 'Every number is used twice in the row below: double it', v: q.ans }];
-      return [{ t: `Above-left: row ${q.n - 1}, number ${q.k - 1}`, v: choose(q.n - 1, q.k - 1) }, { t: `Above-right: row ${q.n - 1}, number ${q.k}`, v: choose(q.n - 1, q.k) }, { t: 'Add them', v: q.ans }];
+      if (q.kind === 'yangsum') return [{ t: `Row ${q.n - 1} adds up to`, v: 2 ** (q.n - 1), x: `2**${q.n}/2` }, { t: 'Every number is used twice in the row below: double it', v: q.ans }];
+      /* x: the factorial formula n! ÷ (k! (n − k)!), never the triangle's own loop */
+      return [{ t: `Above-left: row ${q.n - 1}, number ${q.k - 1}`, v: choose(q.n - 1, q.k - 1), x: nck(q.n - 1, q.k - 1) }, { t: `Above-right: row ${q.n - 1}, number ${q.k}`, v: choose(q.n - 1, q.k), x: nck(q.n - 1, q.k) }, { t: 'Add them', v: q.ans }];
     },
     fig: () => yangSvg(6, -1, true),
   },

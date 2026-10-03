@@ -11,6 +11,7 @@ import { evalSum } from '../src/stories.js';
 import { RIVALS } from '../src/contest.js';
 import { newKid } from '../src/model.js';
 import { seeded } from '../src/rand.js';
+import { checkSteps } from './lib/steps.mjs';
 
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 40) console.error('  ✗ ' + m); } };
 const esc = (s) => String(s);
@@ -42,6 +43,8 @@ for (const tool of TOOLS) {
       const want = q.choices ? q.ans : typeof q.ans === 'number' ? q.ans : parseNum(q.ans);
       ok(q.choices ? plain === q.ans : Math.abs(plain - want) < 1e-9, `${id}/${st.id}: ${q.text} ans ${q.ans}, plain says ${plain}`);
       ok(correct(q, String(q.ans)), `${id}/${st.id}: rejects its own answer`);
+      // every MIDDLE step a child types carries its own plain arithmetic, checked like the Atlas's (test/lib/steps.mjs)
+      if (st.work) checkSteps(`${id}/${st.id}`, q, st.work(q), ok);
       if (st.work) { const w = st.work(q); const last = w.at(-1).v; ok(q.choices ? last === q.ans : Math.abs((typeof last === 'number' ? last : parseNum(last)) - want) < 1e-9, `${id}/${st.id}: steps end on ${last}, answer ${q.ans}`); }
       if (!q.choices && String(q.ans).length > 1) ok(!q.text.split(/[^0-9./]/).includes(String(q.ans)), `${id}/${st.id}: prompt shows its answer: ${q.text}`);
     }

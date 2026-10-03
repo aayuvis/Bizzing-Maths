@@ -49,10 +49,10 @@ const nearOf = (B, lo, hi, r, side) => (side < 0 ? B - int(lo, hi, r) : B + int(
 function nearBase(a, b, B) {
   const x = a - B, y = b - B, side = (v) => (v < 0 ? 'below' : 'above');
   return [
-    { t: `${a} is ${side(x)} ${B} by`, v: Math.abs(x) },
-    { t: `${b} is ${side(y)} ${B} by`, v: Math.abs(y) },
-    { t: `Cross: ${a} ${sgn(y)} ${Math.abs(y)}`, v: a + y },
-    { t: `Multiply the gaps: ${Math.abs(x)} × ${Math.abs(y)}`, v: x * y },
+    { t: `${a} is ${side(x)} ${B} by`, v: Math.abs(x), x: `Math.abs(${a}-${B})` },
+    { t: `${b} is ${side(y)} ${B} by`, v: Math.abs(y), x: `Math.abs(${b}-${B})` },
+    { t: `Cross: ${a} ${sgn(y)} ${Math.abs(y)}`, v: a + y, x: `${b}+${a}-${B}` },
+    { t: `Multiply the gaps: ${Math.abs(x)} × ${Math.abs(y)}`, v: x * y, x: `${a}*${b}-${B}*(${a}+${b}-${B})` },
     { t: `${a + y} × ${B} + ${x * y}`, v: a * b },
   ];
 }
@@ -125,13 +125,13 @@ export const JOURNEY = [
     gen: guard((r, lv) => (lv === 3 && r() < 0.3 ? q19(int(5, 15, r)) : qSq5(int(1, lv === 1 ? 9 : lv === 2 ? 14 : 19, r) * 10 + 5))),
     work(q) {
       if (q.kind === 'r19') {
-        const s = [{ t: 'Digit 18, at the right-hand end, is', v: R19[18] }];
-        for (let p = 17; p >= q.k; p--) s.push({ t: `Digit ${p}: double digit ${p + 1}, add any carry, keep the last digit`, v: R19[p] });
+        const s = [{ t: 'Digit 18, at the right-hand end, is', v: R19[18], x: `Number(10n**18n/19n%10n)` }];
+        for (let p = 17; p >= q.k; p--) s.push({ t: `Digit ${p}: double digit ${p + 1}, add any carry, keep the last digit`, v: R19[p], x: `Number(10n**${p}n/19n%10n)` });
         s.push({ t: `So digit ${q.k} is`, v: q.ans });
         return s;
       }
       const n = Math.floor(q.a / 10);
-      return [{ t: `One more than ${n} is ${n + 1}; ${n} × ${n + 1}`, v: n * (n + 1) }, { t: 'Write 25 on the end', v: q.ans }];
+      return [{ t: `One more than ${n} is ${n + 1}; ${n} × ${n + 1}`, v: n * (n + 1), x: `(${q.a}*${q.a}-25)/100` }, { t: 'Write 25 on the end', v: q.ans }];
     },
     fig: (q, ctx) => sq5Fig(q.a) + (ctx && ctx.band === '11-14' ? r19Fig() : ''),
   },
@@ -191,8 +191,8 @@ export const JOURNEY = [
     }),
     work({ a, b }) {
       const w = String(a).length - 1, d = String(b).padStart(w, '0').split('').map(Number);
-      const s = d.slice(0, -1).map((x) => ({ t: `9 − ${x}`, v: 9 - x }));
-      s.push({ t: `10 − ${d.at(-1)} (the last digit)`, v: 10 - d.at(-1) });
+      const s = d.slice(0, -1).map((x, i) => ({ t: `9 − ${x}`, v: 9 - x, x: `Math.floor((${a}-${b})/${10 ** (w - 1 - i)})%10` }));
+      s.push({ t: `10 − ${d.at(-1)} (the last digit)`, v: 10 - d.at(-1), x: `(${a}-${b})%10` });
       s.push({ t: 'Read the digits', v: a - b });
       return s;
     },
@@ -212,8 +212,8 @@ export const JOURNEY = [
     gen: guard((r, lv) => (lv === 1 ? mul(int(2, 9, r), 9) : lv === 2 ? mul(int(11, 98, r), 99) : r() < 0.5 ? mul(int(11, 98, r), 99) : mul(int(101, 998, r), 999))),
     work({ a, b }) {
       return [
-        { t: `One less than ${a}`, v: a - 1 },
-        { t: `${b} − ${a - 1}`, v: b - (a - 1) },
+        { t: `One less than ${a}`, v: a - 1, x: `Math.floor(${a}*${b}/(${b}+1))` },
+        { t: `${b} − ${a - 1}`, v: b - (a - 1), x: `(${a}*${b})%(${b}+1)` },
         { t: 'Side by side', v: a * b },
       ];
     },
@@ -239,9 +239,9 @@ export const JOURNEY = [
     work({ a, B }) {
       const d = a - B;
       return [
-        { t: `How far from ${B}? (${d > 0 ? 'over' : 'short'})`, v: Math.abs(d) },
-        { t: d > 0 ? `Go up again: ${a} + ${d}` : `Go down again: ${a} − ${-d}`, v: a + d },
-        { t: `Square the gap: ${Math.abs(d)}²`, v: d * d },
+        { t: `How far from ${B}? (${d > 0 ? 'over' : 'short'})`, v: Math.abs(d), x: `Math.abs(${a}-${B})` },
+        { t: d > 0 ? `Go up again: ${a} + ${d}` : `Go down again: ${a} − ${-d}`, v: a + d, x: `2*${a}-${B}` },
+        { t: `Square the gap: ${Math.abs(d)}²`, v: d * d, x: `(${a}-${B})**2` },
         { t: `${a + d} × ${B} + ${d * d}`, v: a * a },
       ];
     },
@@ -266,7 +266,7 @@ export const JOURNEY = [
     }),
     work({ a, b }) {
       const cols = columns(a, b), names = cols.length === 3 ? ['Units, vertically', 'Crosswise', 'Tens, vertically'] : ['Units, vertically', 'Crosswise', 'The star (three pairs)', 'Crosswise', 'Hundreds, vertically'];
-      return [...cols.map((c, i) => ({ t: `${names[i]}: ${c.parts.join(' + ')}`, v: c.s })), { t: 'Carry and read', v: a * b }];
+      return [...cols.map((c, i) => ({ t: `${names[i]}: ${c.parts.join(' + ')}`, v: c.s, x: `Array.from({length:${i + 1}},(_,j)=>(Math.floor(${a}/10**j)%10)*(Math.floor(${b}/10**(${i}-j))%10)).reduce((s,v)=>s+v,0)` })), { t: 'Carry and read', v: a * b }];
     },
     fig: (q) => urdhvaFig(q.a, q.b),
   },
@@ -288,8 +288,8 @@ export const JOURNEY = [
     work({ a, b }) {
       const n = Math.floor(a / 10), u = a % 10, v = b % 10;
       return [
-        { t: `The front: ${n} × ${n + 1}`, v: n * (n + 1) },
-        { t: `The last digits: ${u} × ${v} (two places)`, v: u * v },
+        { t: `The front: ${n} × ${n + 1}`, v: n * (n + 1), x: `Math.floor(${a}*${b}/100)` },
+        { t: `The last digits: ${u} × ${v} (two places)`, v: u * v, x: `${a}*${b}%100` },
         { t: 'Side by side', v: a * b },
       ];
     },
@@ -313,11 +313,11 @@ export const JOURNEY = [
     work({ a, b }) {
       const x = a - 50, y = b - 50;
       return [
-        { t: `${a} is ${x < 0 ? 'below' : 'above'} 50 by`, v: Math.abs(x) },
-        { t: `${b} is ${y < 0 ? 'below' : 'above'} 50 by`, v: Math.abs(y) },
-        { t: `Cross: ${a} ${sgn(y)} ${Math.abs(y)}`, v: a + y },
-        { t: `Base 50 is half of 100: ${a + y} × 100 ÷ 2`, v: (a + y) * 50 },
-        { t: `Multiply the gaps: ${Math.abs(x)} × ${Math.abs(y)}`, v: x * y },
+        { t: `${a} is ${x < 0 ? 'below' : 'above'} 50 by`, v: Math.abs(x), x: `Math.abs(${a}-50)` },
+        { t: `${b} is ${y < 0 ? 'below' : 'above'} 50 by`, v: Math.abs(y), x: `Math.abs(${b}-50)` },
+        { t: `Cross: ${a} ${sgn(y)} ${Math.abs(y)}`, v: a + y, x: `${b}+${a}-50` },
+        { t: `Base 50 is half of 100: ${a + y} × 100 ÷ 2`, v: (a + y) * 50, x: `${a}*${b}-(${a}-50)*(${b}-50)` },
+        { t: `Multiply the gaps: ${Math.abs(x)} × ${Math.abs(y)}`, v: x * y, x: `${a}*${b}-50*(${a}+${b}-50)` },
         { t: `${(a + y) * 50} + ${x * y}`, v: a * b },
       ];
     },
@@ -342,9 +342,11 @@ export const JOURNEY = [
     }),
     work({ N, d }) {
       const { f, a, c, Q, R } = para(N, d);
-      const s = [{ t: `${d} is 10 + ${f}: the flag is −${f}. Bring down ${a[0]}`, v: c[0] }];
-      for (let i = 1; i < c.length; i++) s.push({ t: `${a[i]} − ${f} × ${c[i - 1] < 0 ? `(${c[i - 1]})` : c[i - 1]}${i === c.length - 1 ? ' (the remainder column)' : ''}`, v: c[i] });
-      s.push({ t: 'Read the answer columns, carries in', v: Q });
+      /* x: column i is the first i + 1 digits of N read in base −f (the remainder theorem), never the running column */
+      const atFlag = (i) => String(N).slice(0, i + 1).split('').map((g, j) => `${g}*(${-f})**${i - j}`).join('+');
+      const s = [{ t: `${d} is 10 + ${f}: the flag is −${f}. Bring down ${a[0]}`, v: c[0], x: `Math.floor(${N}/10**${a.length - 1})` }];
+      for (let i = 1; i < c.length; i++) s.push({ t: `${a[i]} − ${f} × ${c[i - 1] < 0 ? `(${c[i - 1]})` : c[i - 1]}${i === c.length - 1 ? ' (the remainder column)' : ''}`, v: c[i], x: atFlag(i) });
+      s.push({ t: 'Read the answer columns, carries in', v: Q, x: `(${N}-(${atFlag(a.length - 1)}))/${d}` });
       s.push({ t: R === 0 ? 'Nothing left over, so the answer is' : `The remainder ${R} is ${R / d} lots of ${d}; so the answer is`, v: Q + R / d });
       return s;
     },
@@ -371,9 +373,9 @@ export const JOURNEY = [
     }),
     work(q) {
       const ra = droot(q.a), rb = droot(q.b), rp = droot(ra * rb);
-      const s = [{ t: `Digit root of ${q.a}`, v: ra }, { t: `Digit root of ${q.b}`, v: rb }, { t: `${ra} × ${rb} = ${ra * rb}, and its digit root`, v: rp }];
+      const s = [{ t: `Digit root of ${q.a}`, v: ra, x: `(${q.a}-1)%9+1` }, { t: `Digit root of ${q.b}`, v: rb, x: `(${q.b}-1)%9+1` }, { t: `${ra} × ${rb} = ${ra * rb}, and its digit root`, v: rp, x: `(${q.a}*${q.b}-1)%9+1` }];
       if (q.kind === 'root') return s;
-      s.push({ t: `Digit root of ${q.claim}`, v: droot(q.claim) });
+      s.push({ t: `Digit root of ${q.claim}`, v: droot(q.claim), x: `(${q.claim}-1)%9+1` });
       s.push({ t: rp === droot(q.claim) ? 'They match' : 'They do not match', v: q.ans });
       return s;
     },
@@ -398,8 +400,8 @@ export const JOURNEY = [
     work(q) {
       const s = (q.p + q.q) / (q.a + q.b), d = (q.p - q.q) / (q.a - q.b);
       return [
-        { t: `Add: ${q.a + q.b}(x + y) = ${q.p + q.q}, so x + y`, v: s },
-        { t: `Subtract: ${q.a - q.b}(x − y) = ${q.p - q.q}, so x − y`, v: d },
+        { t: `Add: ${q.a + q.b}(x + y) = ${q.p + q.q}, so x + y`, v: s, x: `((${q.p}*${q.a}-${q.q}*${q.b})+(${q.q}*${q.a}-${q.p}*${q.b}))/(${q.a}*${q.a}-${q.b}*${q.b})` },
+        { t: `Subtract: ${q.a - q.b}(x − y) = ${q.p - q.q}, so x − y`, v: d, x: `((${q.p}*${q.a}-${q.q}*${q.b})-(${q.q}*${q.a}-${q.p}*${q.b}))/(${q.a}*${q.a}-${q.b}*${q.b})` },
         q.ask === 'x' ? { t: `x = (${s} + ${d}) ÷ 2`, v: (s + d) / 2 } : { t: `y = (${s} − ${d}) ÷ 2`, v: (s - d) / 2 },
       ];
     },

@@ -151,7 +151,11 @@ export const TRICKS = [
     },
     work({ x, evs }) {
       let v = runEv(x, evs); const s = [];
-      for (const [k, n] of [...evs].reverse()) { const nv = EV[k].undo(v, n); s.push({ t: `${EV[k].how(n)}: from ${v}`, v: nv }); v = nv; }
+      const end = v;
+      [...evs].reverse().forEach(([k, n], j) => {
+        const nv = EV[k].undo(v, n), rest = evs.slice(evs.length - 1 - j).reduce((e, [kk, nn]) => `(${e}${EV[kk].js(nn)})`, 's');
+        s.push({ t: `${EV[k].how(n)}: from ${v}`, v: nv, x: `[...Array(5000).keys()].find((s)=>${rest}===${end})` }); v = nv;
+      });
       return s;
     },
     draw({ x, evs }) { return flow(['?', ...evs.map(([k, n]) => EV[k].box(n)), String(runEv(x, evs))], 'What happened, in order, from an unknown start to the end'); },
@@ -197,11 +201,11 @@ export const TRICKS = [
     },
     work({ kind, n, a, b }) {
       if (kind === 'consec') { const g = roundGuess(n);
-        return [{ t: `Guess: ${g} × ${g + 1}`, v: g * (g + 1) }, { t: `Too ${g < n ? 'small, so go up' : 'big, so go down'}. Which smaller number works?`, v: n }, { t: `Add them: ${n} + ${n + 1}`, v: 2 * n + 1 }]; }
+        return [{ t: `Guess: ${g} × ${g + 1}`, v: g * (g + 1), x: `${g}*${g + 1}` }, { t: `Too ${g < n ? 'small, so go up' : 'big, so go down'}. Which smaller number works?`, v: n, x: `Math.floor(Math.sqrt(${n * (n + 1)}))` }, { t: `Add them: ${n} + ${n + 1}`, v: 2 * n + 1 }]; }
       if (kind === 'sumprod') { const S = a + b, h = Math.floor(S / 2);
-        return [{ t: `Guess an even split: ${h} × ${S - h}`, v: h * (S - h) }, { t: 'Too big — spread them apart. Which smaller number works?', v: a }, { t: `The bigger one: ${S} − ${a}`, v: b }]; }
+        return [{ t: `Guess an even split: ${h} × ${S - h}`, v: h * (S - h), x: `${h}*(${S}-${h})` }, { t: 'Too big — spread them apart. Which smaller number works?', v: a, x: `(${S}-Math.sqrt(${S}*${S}-4*${a * b}))/2` }, { t: `The bigger one: ${S} − ${a}`, v: b }]; }
       const g = roundGuess(n);
-      return [{ t: `Guess: ${g} × ${g + 1} × ${g + 2}`, v: g * (g + 1) * (g + 2) }, { t: `Too ${g < n ? 'small, so go up' : 'big, so go down'}. Which smallest number works?`, v: n }, { t: `Add them: ${n} + ${n + 1} + ${n + 2}`, v: 3 * n + 3 }];
+      return [{ t: `Guess: ${g} × ${g + 1} × ${g + 2}`, v: g * (g + 1) * (g + 2), x: `${g}*${g + 1}*${g + 2}` }, { t: `Too ${g < n ? 'small, so go up' : 'big, so go down'}. Which smallest number works?`, v: n, x: `Math.floor(Math.cbrt(${n * (n + 1) * (n + 2)}))` }, { t: `Add them: ${n} + ${n + 1} + ${n + 2}`, v: 3 * n + 3 }];
     },
   },
 
@@ -261,11 +265,11 @@ export const TRICKS = [
     work(o) {
       const { kind, A } = o;
       if (kind === 'catchup') { const { B, a, p, b, q } = o;
-        return [{ t: `After 1 week, ${A} has`, v: a + p }, { t: `After 1 week, ${B} has`, v: b + q }, { t: `The gap started at ${a - b}. Each week it closes by`, v: q - p }, { t: `Weeks to close a gap of ${a - b}`, v: (a - b) / (q - p) }]; }
+        return [{ t: `After 1 week, ${A} has`, v: a + p, x: `${a}+${p}` }, { t: `After 1 week, ${B} has`, v: b + q, x: `${b}+${q}` }, { t: `The gap started at ${a - b}. Each week it closes by`, v: q - p, x: `(${a}-${b})-((${a}+${p})-(${b}+${q}))` }, { t: `Weeks to close a gap of ${a - b}`, v: (a - b) / (q - p) }]; }
       if (kind === 'total') { const { s, d, T } = o; const k = this.q(o).ans;
-        return [{ t: 'Total for days 1, 2 and 3', v: 3 * s + 3 * d }, { t: `Keep the table going. How many pages are read on the day the total reaches ${T}?`, v: s + (k - 1) * d }, { t: 'Which day is that?', v: k }]; }
+        return [{ t: 'Total for days 1, 2 and 3', v: 3 * s + 3 * d, x: `${s}+(${s}+${d})+(${s}+2*${d})` }, { t: `Keep the table going. How many pages are read on the day the total reaches ${T}?`, v: s + (k - 1) * d, x: `(()=>{let t=0,day=0;while(t<${T}){day++;t+=${s}+(day-1)*${d};}return ${s}+(day-1)*${d};})()` }, { t: 'Which day is that?', v: k }]; }
       const { p, q, T } = o; const ys = []; for (let y = 1; q * y < T; y++) if ((T - q * y) % p === 0) ys.push(y);
-      return [{ t: `Fewest rulers that leave a multiple of ${p} coins`, v: ys[0] }, { t: 'Most rulers that still leave money for a pencil', v: ys.at(-1) }, { t: `The rulers that work go up ${p} at a time. How many ways?`, v: ys.length }];
+      return [{ t: `Fewest rulers that leave a multiple of ${p} coins`, v: ys[0], x: `[...Array(${T}).keys()].find((y)=>y>0&&${q}*y<${T}&&(${T}-${q}*y)%${p}===0)` }, { t: 'Most rulers that still leave money for a pencil', v: ys.at(-1), x: `[...Array(${T}).keys()].filter((y)=>y>0&&${q}*y<${T}&&(${T}-${q}*y)%${p}===0).pop()` }, { t: `The rulers that work go up ${p} at a time. How many ways?`, v: ys.length }];
     },
     draw(o) {
       const { kind, A } = o;
@@ -318,9 +322,9 @@ export const TRICKS = [
         expr: `[...Array(1000).keys()].find((k)=>k>0&&${a}+(k-1)*${d}===${T})`, ans: n };
     },
     work({ kind, a, d, n }) {
-      const z = a - d, T = a + (n - 1) * d, s = [{ t: 'How many more each time?', v: d }, { t: 'Step back one: how many in "shape 0"?', v: z }];
-      if (kind === 'term') return [...s, { t: `${n} lots of ${d}: ${n} × ${d}`, v: n * d }, { t: `Add shape 0: ${n * d} + ${z}`, v: T }];
-      return [...s, { t: `Take off shape 0: ${T} − ${z}`, v: T - z }, { t: `How many lots of ${d}?`, v: n }];
+      const z = a - d, T = a + (n - 1) * d, s = [{ t: 'How many more each time?', v: d, x: `${a + d}-${a}` }, { t: 'Step back one: how many in "shape 0"?', v: z, x: `${a}-(${a + d}-${a})` }];
+      if (kind === 'term') return [...s, { t: `${n} lots of ${d}: ${n} × ${d}`, v: n * d, x: `${n}*(${a + 2 * d}-${a + d})` }, { t: `Add shape 0: ${n * d} + ${z}`, v: T }];
+      return [...s, { t: `Take off shape 0: ${T} − ${z}`, v: T - z, x: `${T}-(2*${a}-${a + d})` }, { t: `How many lots of ${d}?`, v: n }];
     },
     draw({ a, d }) {
       const u = 11; let s = '', W = 0;
@@ -379,11 +383,11 @@ export const TRICKS = [
     work(o) {
       const { kind, A } = o;
       if (kind === 'sumdiff') { const { a, D } = o, S = 2 * a + D;
-        return [{ t: `Cut off the extra: ${S} − ${D}`, v: S - D }, { t: `Two equal bars: ${S - D} ÷ 2`, v: a }, { t: `${A} is one bar and the extra: ${a} + ${D}`, v: a + D }]; }
+        return [{ t: `Cut off the extra: ${S} − ${D}`, v: S - D, x: `${S}-${D}` }, { t: `Two equal bars: ${S - D} ÷ 2`, v: a, x: `(${S}-${D})/2` }, { t: `${A} is one bar and the extra: ${a} + ${D}`, v: a + D }]; }
       if (kind === 'times') { const { x, k } = o, T = (k + 1) * x;
-        return [{ t: `How many equal bars? ${k} + 1`, v: k + 1 }, { t: `One bar: ${T} ÷ ${k + 1}`, v: x }, { t: `${A} has ${k} bars: ${k} × ${x}`, v: k * x }]; }
+        return [{ t: `How many equal bars? ${k} + 1`, v: k + 1, x: `${k}+1` }, { t: `One bar: ${T} ÷ ${k + 1}`, v: x, x: `${T}/(${k}+1)` }, { t: `${A} has ${k} bars: ${k} × ${x}`, v: k * x }]; }
       const { x, k } = o, g = ((k - 1) * x) / 2;
-      return [{ t: `How many bars is the gap? ${k} − 1`, v: k - 1 }, { t: `Giving ${g} closes the gap from both ends: ${g} + ${g}`, v: 2 * g }, { t: `One bar: ${2 * g} ÷ ${k - 1}`, v: x }, { t: `${A} started with ${k} bars: ${k} × ${x}`, v: k * x }];
+      return [{ t: `How many bars is the gap? ${k} − 1`, v: k - 1, x: `${k}-1` }, { t: `Giving ${g} closes the gap from both ends: ${g} + ${g}`, v: 2 * g, x: `2*${g}` }, { t: `One bar: ${2 * g} ÷ ${k - 1}`, v: x, x: `2*${g}/(${k}-1)` }, { t: `${A} started with ${k} bars: ${k} × ${x}`, v: k * x }];
     },
     draw(o) {
       const { kind, A, B } = o, u = 48;
@@ -442,10 +446,10 @@ export const TRICKS = [
     },
     work(o) {
       if (o.kind === 'penalty') { const { n, a, b, w } = o, s = a * (n - w) - b * w;
-        return [{ t: `If all ${n} were right: ${n} × ${a}`, v: n * a }, { t: `Points short: ${n * a} − ${s}`, v: n * a - s }, { t: `Each wrong answer costs ${a} + ${b}`, v: a + b }, { t: `Wrong answers: ${n * a - s} ÷ ${a + b}`, v: w }, { t: `Right answers: ${n} − ${w}`, v: n - w }]; }
+        return [{ t: `If all ${n} were right: ${n} × ${a}`, v: n * a, x: `${n}*${a}` }, { t: `Points short: ${n * a} − ${s}`, v: n * a - s, x: `${n}*${a}-${s}` }, { t: `Each wrong answer costs ${a} + ${b}`, v: a + b, x: `${a}+${b}` }, { t: `Wrong answers: ${n * a - s} ÷ ${a + b}`, v: w, x: `(${n}*${a}-${s})/(${a}+${b})` }, { t: `Right answers: ${n} − ${w}`, v: n - w }]; }
       const [lo, hi, small, one, part] = o.kind === 'legs' ? [CREATURES[o.c].a, CREATURES[o.c].b, CREATURES[o.c].lo, CREATURES[o.c].one, ' ' + CREATURES[o.c].part] : [o.lo, o.hi, `${o.lo}s`, `${o.hi}`, ''];
       const tot = lo * (o.H - o.y) + hi * o.y, extra = tot - o.H * lo;
-      return [{ t: `If all ${o.H} were ${small}: ${o.H} × ${lo}`, v: o.H * lo }, { t: `Still to explain: ${tot} − ${o.H * lo}`, v: extra }, { t: `Each swap to a ${one} adds ${hi} − ${lo}${part}`, v: hi - lo }, { t: `Swaps: ${extra} ÷ ${hi - lo}`, v: o.y }];
+      return [{ t: `If all ${o.H} were ${small}: ${o.H} × ${lo}`, v: o.H * lo, x: `${o.H}*${lo}` }, { t: `Still to explain: ${tot} − ${o.H * lo}`, v: extra, x: `${tot}-${o.H}*${lo}` }, { t: `Each swap to a ${one} adds ${hi} − ${lo}${part}`, v: hi - lo, x: `${hi}-${lo}` }, { t: `Swaps: ${extra} ÷ ${hi - lo}`, v: o.y }];
     },
   },
 
@@ -497,9 +501,9 @@ export const TRICKS = [
     },
     work(o) {
       if (o.kind === 'sum') { const { a, b, T } = o;
-        return [{ t: `Their ages add up to ${a} + ${b} now`, v: a + b }, { t: `Still to go: ${T} − ${a + b}`, v: T - a - b }, { t: 'Each year, the total grows by', v: 2 }, { t: `Years: ${T - a - b} ÷ 2`, v: (T - a - b) / 2 }]; }
+        return [{ t: `Their ages add up to ${a} + ${b} now`, v: a + b, x: `${a}+${b}` }, { t: `Still to go: ${T} − ${a + b}`, v: T - a - b, x: `${T}-${a}-${b}` }, { t: 'Each year, the total grows by', v: 2, x: `((${a}+1)+(${b}+1))-(${a}+${b})` }, { t: `Years: ${T - a - b} ÷ 2`, v: (T - a - b) / 2 }]; }
       const { A, c, M, k } = o, G = M - c, then = G / (k - 1);
-      return [{ t: `The gap: ${M} − ${c}`, v: G }, { t: k === 2 ? `It never changes. When it is twice, ${A}'s age equals the gap. So ${A} is then` : `It never changes. At ${k} times, the gap is ${k - 1} lots of ${A}'s age. So ${A} is then ${G} ÷ ${k - 1}`, v: then },
+      return [{ t: `The gap: ${M} − ${c}`, v: G, x: `${M}-${c}` }, { t: k === 2 ? `It never changes. When it is twice, ${A}'s age equals the gap. So ${A} is then` : `It never changes. At ${k} times, the gap is ${k - 1} lots of ${A}'s age. So ${A} is then ${G} ÷ ${k - 1}`, v: then, x: `(${M}-${c})/(${k}-1)` },
         o.kind === 'times' ? { t: `Years from now: ${then} − ${c}`, v: then - c } : { t: `Years ago: ${c} − ${then}`, v: c - then }];
     },
   },
@@ -553,11 +557,11 @@ export const TRICKS = [
         expr: `Array.from({length:${o.N}},(_,i)=>String(i+1).length).reduce((a,b)=>a+b,0)`, ans: o.N < 100 ? 9 + 2 * (o.N - 9) : 189 + 3 * (o.N - 99) };
     },
     work(o) {
-      if (o.kind === 'posts') return [{ t: `Tiny fence first: ${2 * o.g} metres. How many posts?`, v: 3 }, { t: `So posts = gaps + 1. Gaps in the real fence: ${o.L} ÷ ${o.g}`, v: o.L / o.g }, { t: `Posts: ${o.L / o.g} + 1`, v: o.L / o.g + 1 }];
-      if (o.kind === 'cuts') return [{ t: 'Tiny case first: how many cuts make 3 pieces?', v: 2 }, { t: `So cuts = pieces − 1. Cuts for ${o.n} pieces`, v: o.n - 1 }, { t: `Minutes: ${o.n - 1} × ${o.t}`, v: (o.n - 1) * o.t }];
-      if (o.kind === 'ring') return [{ t: 'Tiny ring first: 3 gaps round a circle. How many trees?', v: 3 }, { t: `In a ring, trees = gaps. Gaps: ${o.P} ÷ ${o.g}`, v: o.P / o.g }];
-      if (o.N < 100) return [{ t: 'Pages 1 to 9: one digit each', v: 9 }, { t: `Pages 10 to ${o.N}: ${o.N - 9} pages × 2`, v: 2 * (o.N - 9) }, { t: `Add: 9 + ${2 * (o.N - 9)}`, v: 9 + 2 * (o.N - 9) }];
-      return [{ t: 'Pages 1 to 9: one digit each', v: 9 }, { t: 'Pages 10 to 99: 90 pages × 2', v: 180 }, { t: `Pages 100 to ${o.N}: ${o.N - 99} pages × 3`, v: 3 * (o.N - 99) }, { t: `Add: 9 + 180 + ${3 * (o.N - 99)}`, v: 189 + 3 * (o.N - 99) }];
+      if (o.kind === 'posts') return [{ t: `Tiny fence first: ${2 * o.g} metres. How many posts?`, v: 3, x: `${2 * o.g}/${o.g}+1` }, { t: `So posts = gaps + 1. Gaps in the real fence: ${o.L} ÷ ${o.g}`, v: o.L / o.g, x: `${o.L}/${o.g}` }, { t: `Posts: ${o.L / o.g} + 1`, v: o.L / o.g + 1 }];
+      if (o.kind === 'cuts') return [{ t: 'Tiny case first: how many cuts make 3 pieces?', v: 2, x: `3-1` }, { t: `So cuts = pieces − 1. Cuts for ${o.n} pieces`, v: o.n - 1, x: `${o.n}-1` }, { t: `Minutes: ${o.n - 1} × ${o.t}`, v: (o.n - 1) * o.t }];
+      if (o.kind === 'ring') return [{ t: 'Tiny ring first: 3 gaps round a circle. How many trees?', v: 3, x: `${3 * o.g}/${o.g}` }, { t: `In a ring, trees = gaps. Gaps: ${o.P} ÷ ${o.g}`, v: o.P / o.g }];
+      if (o.N < 100) return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: `String(123456789).length` }, { t: `Pages 10 to ${o.N}: ${o.N - 9} pages × 2`, v: 2 * (o.N - 9), x: `(${o.N}-10+1)*2` }, { t: `Add: 9 + ${2 * (o.N - 9)}`, v: 9 + 2 * (o.N - 9) }];
+      return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: `String(123456789).length` }, { t: 'Pages 10 to 99: 90 pages × 2', v: 180, x: `(99-10+1)*2` }, { t: `Pages 100 to ${o.N}: ${o.N - 99} pages × 3`, v: 3 * (o.N - 99), x: `(${o.N}-100+1)*3` }, { t: `Add: 9 + 180 + ${3 * (o.N - 99)}`, v: 189 + 3 * (o.N - 99) }];
     },
     draw(o) {
       if (o.kind === 'posts') { let s = `<line x1="20" y1="44" x2="220" y2="44" class="dg-line"/>`;
@@ -623,9 +627,9 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, A, B, p, q } = o;
-      if (kind === 'meet' || kind === 'where') { const d = (p + q) * o.t, s = [{ t: `Each minute the gap shrinks by ${p} + ${q}`, v: p + q }, { t: `Minutes: ${d} ÷ ${p + q}`, v: o.t }];
+      if (kind === 'meet' || kind === 'where') { const d = (p + q) * o.t, s = [{ t: `Each minute the gap shrinks by ${p} + ${q}`, v: p + q, x: `${p}+${q}` }, { t: `Minutes: ${d} ÷ ${p + q}`, v: o.t, x: `${d}/(${p}+${q})` }];
         return kind === 'meet' ? s : [...s, { t: `${A} walks ${o.t} × ${p}`, v: p * o.t }]; }
-      const { h } = o, t = (p * h) / (q - p), s = [{ t: `${A}'s head start: ${h} × ${p}`, v: p * h }, { t: `Each minute ${B} gains ${q} − ${p}`, v: q - p }, { t: `Minutes to catch up: ${p * h} ÷ ${q - p}`, v: t }];
+      const { h } = o, t = (p * h) / (q - p), s = [{ t: `${A}'s head start: ${h} × ${p}`, v: p * h, x: `${h}*${p}` }, { t: `Each minute ${B} gains ${q} − ${p}`, v: q - p, x: `${q}-${p}` }, { t: `Minutes to catch up: ${p * h} ÷ ${q - p}`, v: t, x: `${h}*${p}/(${q}-${p})` }];
       return kind === 'catch' ? s : [...s, { t: `${B} cycles ${t} × ${q}`, v: q * t }];
     },
     draw(o) {
@@ -683,11 +687,11 @@ export const TRICKS = [
     work(o) {
       const place = (L, n) => ((n - 1) % L) + 1;
       if (o.kind === 'pattern') { const L = o.cyc.length;
-        return [{ t: 'How long is the block that repeats?', v: L }, { t: `Place in the block: the remainder of ${o.n} ÷ ${L} (0 means the end)`, v: place(L, o.n) }, { t: 'So the digit is', v: o.cyc[(o.n - 1) % L] }]; }
+        return [{ t: 'How long is the block that repeats?', v: L, x: `${JSON.stringify(o.cyc.join(','))}.split(',').length` }, { t: `Place in the block: the remainder of ${o.n} ÷ ${L} (0 means the end)`, v: place(L, o.n), x: `${o.n}%${L}||${L}` }, { t: 'So the digit is', v: o.cyc[(o.n - 1) % L] }]; }
       if (o.kind === 'power') { const c = lastDigitCycle(o.a), L = c.length;
-        return [{ t: `Last digits of ${o.a}, ${o.a}², ${o.a}³, ${o.a}⁴, … repeat every`, v: L }, { t: `Place in the cycle: the remainder of ${o.n} ÷ ${L} (0 means the end)`, v: place(L, o.n) }, { t: 'So the last digit is', v: c[(o.n - 1) % L] }]; }
+        return [{ t: `Last digits of ${o.a}, ${o.a}², ${o.a}³, ${o.a}⁴, … repeat every`, v: L, x: `[1,2,3,4].find((L)=>Number(${o.a}n**BigInt(1+L)%10n)===${o.a}%10)` }, { t: `Place in the cycle: the remainder of ${o.n} ÷ ${L} (0 means the end)`, v: place(L, o.n), x: `${o.n}%${L}||${L}` }, { t: 'So the last digit is', v: c[(o.n - 1) % L] }]; }
       const c1 = lastDigitCycle(o.a), c2 = lastDigitCycle(o.b), d1 = c1[(o.n - 1) % c1.length], d2 = c2[(o.m - 1) % c2.length];
-      return [{ t: `Last digit of ${o.a}${sup(o.n)} (its cycle is ${c1.length} long)`, v: d1 }, { t: `Last digit of ${o.b}${sup(o.m)} (its cycle is ${c2.length} long)`, v: d2 }, { t: `${d1} + ${d2}, keeping only the last digit`, v: (d1 + d2) % 10 }];
+      return [{ t: `Last digit of ${o.a}${sup(o.n)} (its cycle is ${c1.length} long)`, v: d1, x: `Number(${o.a}n**${o.n}n%10n)` }, { t: `Last digit of ${o.b}${sup(o.m)} (its cycle is ${c2.length} long)`, v: d2, x: `Number(${o.b}n**${o.m}n%10n)` }, { t: `${d1} + ${d2}, keeping only the last digit`, v: (d1 + d2) % 10 }];
     },
   },
 ];
