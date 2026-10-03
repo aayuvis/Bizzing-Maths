@@ -611,7 +611,7 @@ export const TRICKS = [
   /* ---------------------------------------------------------------- 7. fangcheng */
   {
     id: 'fangcheng', world: 'court', band: '11-14', title: 'Fangcheng: clearing the columns',
-    hook: '3 bags of rice and 2 of lentils weigh 29 kg; 2 of rice and 3 of lentils weigh 26 kg. How heavy is each bag?',
+    hook: 'Two shopping lists, two totals, two prices nobody told you — the board finds both without a single guess.',
     idea: 'Write each fact as a column; multiply one column and take another away from it again and again until a place is empty — then one unknown is left alone.',
     why: [
       'The eighth chapter of the Nine Chapters, Fangcheng, sets out each fact as a column of rods on the board — the first fact on the right — and solves for several unknowns at once by working on whole columns.',

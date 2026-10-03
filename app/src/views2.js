@@ -36,7 +36,7 @@ const back = (act, label = 'Back', arg = '') =>
 export const MAP_PINS = {
   gardens: { x: 20, y: 66 }, market: { x: 31, y: 42 }, workshop: { x: 51, y: 50 },
   observatory: { x: 63, y: 25 }, harbour: { x: 83, y: 34 }, ladder: { x: 67, y: 66 },
-  court: { x: 57, y: 70 },   // the open meadow south of the road, between the garden terraces and the workshop
+  court: { x: 47, y: 78 },   // the open grass by the south shore, clear of the Ladder and its label
 };
 /* The Far Isles — measured against atlas2.webp the same way. */
 export const MAP2_PINS = {
