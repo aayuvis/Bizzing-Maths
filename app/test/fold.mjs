@@ -15,7 +15,7 @@ const { chromium } = require(process.env.PW || '/opt/node22/lib/node_modules/pla
 const HERE = resolve(import.meta.dirname, '..'), SITE = resolve(HERE, '.site-fold');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 5203;
+const port = +(process.env.PORT_BASE || 5200) + 3;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
@@ -46,6 +46,8 @@ const SCREENS = [
   ['play', (b) => b.go('play'), '.hero-tiles'],
   ['goals', (b) => b.go('goals'), '.strands'],
   ['story shelf', (b) => b.go('stories'), '.shelf'],
+  // My Feed (standard §6a): the cards themselves, not a title about them; the data is a lazy chunk, so wait for it
+  ['my feed', async (b) => { b.go('feed'); for (let i = 0; i < 50 && !document.querySelector('.bzf-card[data-kind]'); i++) await new Promise((r) => setTimeout(r, 100)); }, '.bzf-list', '.bzf-card[data-kind] h3'],
   // the games: the title card, then the play itself (the how-to skipped by its own button)
   ['game · title card', (b) => b.fire('play', 'rush'), '.g-card', '.g-card [data-g=go]'],
   ['game · rush', () => document.querySelector('.g-intro [data-g=go]').click(), '.rush-stage', '.rush-in'],

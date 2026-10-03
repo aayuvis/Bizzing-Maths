@@ -9,7 +9,7 @@
 import { site, household, kidRec, checker, SHOTS } from './lib/site.mjs';
 import { checkShell } from './lib/shell-check.mjs';
 
-const { BASE, browser, close } = await site('std', 5204);
+const { BASE, browser, close } = await site('std', +(process.env.PORT_BASE || 5200) + 4);
 const { ok, fails } = checker();
 const errors = [];
 const SHELL = {};
@@ -95,10 +95,11 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
      phone tab bar, the three rows of Home, and ☰ — opens, Esc closes, focus returns */
   ok(/Bizzing\s*Maths/.test(await p.textContent('[data-bz=brand]')) && await p.$eval('[data-bz=brand] img', (i) => /octo-head/.test(i.src)), `${tag}: the logo is Octo's head and "Bizzing Maths"`);
   const tabs = await p.$$eval(phone ? '[data-bz=tabbar] a' : '[data-bz=tab]', (b) => b.map((x) => x.textContent.trim()));
-  ok(tabs.join() === 'Home,Atlas,Library,Puzzles,Play', `${tag}: tabs are Home · Atlas · Library · Puzzles · Play (got ${tabs})`);
+  // My Feed is the sixth and LAST tab, after Play (owner, 2 Oct 2026; standard §6a)
+  ok(tabs.join() === 'Home,Atlas,Library,Puzzles,Play,My Feed', `${tag}: tabs are Home · Atlas · Library · Puzzles · Play · My Feed (got ${tabs})`);
   ok(await p.locator('[data-bz=greet] img[src*=octo]').count() === 1 && (await p.textContent('[data-bz=greet] .bz-bubble')).length > 20, `${tag}: Octo greets with a line about the child`);
   const items = await p.$$eval('[data-bz=drawer] a', (x) => x.map((e) => e.querySelector('b').textContent.trim()));
-  ok(items.join('|') === 'My page|Shop|Collection|Medals|My mistakes|What I’m learning|The Story Shelf|Mock contest|Settings|Grown-ups|Help|Privacy|Back to the Hive', `${tag}: ☰ lists the family order (got ${items.join('|')})`);
+  ok(items.join('|') === 'My page|Shop|Collection|Medals|My mistakes|What I’m learning|The Story Shelf|My Feed|Settings|Grown-ups|Help|Privacy|Back to the Hive', `${tag}: ☰ lists the family order (got ${items.join('|')})`);
   /* the coin chip opens the wallet history (§1.1) */
   await p.click('[data-bz=coins]'); await p.waitForTimeout(150);
   ok(await p.locator('.sheet.wallet').count() === 1 && /Bizzing coins/.test(await p.textContent('.sheet.wallet')), `${tag}: the coin chip opens the wallet`);

@@ -33,6 +33,9 @@ import { setSayRate } from './voice.js';
 import { byAvatar, avatarCtx, ownsAvatar } from './avatars.js';
 import { makeCert } from './cert.js';
 import { bindShell } from './integration/bizzing-shell.js';
+import { bindFeedKeys } from './integration/bizzing-feed.js';
+import * as FV from './feed-view.js';
+import { pay as feedPay } from './feed.js';
 
 const root = document.getElementById('app');
 
@@ -155,7 +158,7 @@ const TRANSIENT = ['run'];     // screens that cannot be deep-linked back into
    argument and is given a bad one (#/stop/bad, #/world/bad, #/lib/bad) lands on Home too. */
 export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
   'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
-  'settings', 'help', 'mistakes', 'search', 'wallet'];
+  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed'];
 const NEEDS_ARG = { stop: (a) => !!byId[a], world: (a) => !!worldOf(a), lib: (a) => isTool(a) || !!toolById[a], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
 
 function go(nav, arg = null, fromHash = false) {
@@ -221,6 +224,9 @@ function screen() {
     case 'mistakes': return V3.viewMistakes();
     case 'search': return V3.viewSearch(searchCore(R.ui.q || ''), R.ui.more);
     case 'who': return V.viewWho();
+    case 'feed':
+      if (!FV.feedData() && !R.h.parent.feedOff) FV.loadFeed().then(() => { if (R.ui.nav === 'feed') render(); });
+      return FV.viewFeed(save);
     default: return V.viewHome();
   }
 }
@@ -978,6 +984,7 @@ on('lock', () => { R.ui.gate = false; go('home'); });
 on('toggle', (key) => {
   const k = kid(R.h);
   if (key === 'tester') R.h.parent.tester = !R.h.parent.tester;
+  if (key === 'feed' && R.ui.gate) R.h.parent.feedOff = !R.h.parent.feedOff;
   if (key === 'plan' && R.ui.gate) R.h.parent.plan = R.h.parent.plan === 'family' ? 'free' : 'family';
   if (key === 'puzzleTarget' && k && R.ui.gate) { k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 }; k.prefs.targets.puzzle = k.prefs.targets.puzzle === 0 ? 1 : 0; }
   if (key === 'sound') return fire('sound');
@@ -1125,6 +1132,24 @@ root.addEventListener('input', (e) => {
 });
 
 bindRoot(root);
+/* My Feed (standard §6a): a card's question is answered by a tap or by keys 1–4 on the focused
+   card; a right answer pays once, as 'answer'; a wrong one holds until Continue. j/k and the
+   arrows step card to card (the family's bindFeedKeys). Scrolling earns nothing. */
+function feedRefocus(id) { const c = root.querySelector(`.bzf-card[data-id="${CSS.escape(id)}"]`); if (c) { const b = c.querySelector('[data-bzf=cont]') || c; b.focus({ preventScroll: true }); } }
+root.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('[data-bzf]'); if (!b || R.ui.nav !== 'feed') return;
+  const id = b.dataset.id, k = kid(R.h); if (!k) return;
+  if (b.dataset.bzf === 'ans') FV.answer(id, b.dataset.o, { pay: (cid) => { if (feedPay(k, cid)) earn(k, 'answer', 'a question in My Feed'); }, good: () => sfx.good(), bad: () => sfx.bad() });
+  else if (b.dataset.bzf === 'cont') FV.cont(id);
+  save(); render(); feedRefocus(id);
+});
+addEventListener('keydown', (e) => {
+  if (R.ui.nav !== 'feed' || !/^[1-4]$/.test(e.key) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const card = document.activeElement && document.activeElement.closest && document.activeElement.closest('.bzf-card'); if (!card) return;
+  const opt = card.querySelectorAll('.bzf-opt:not(:disabled)')[+e.key - 1]; if (!opt) return;
+  e.preventDefault(); e.stopImmediatePropagation(); opt.click();
+}, true);
+bindFeedKeys();
 /* Bee's chrome: one delegated binding for ☰ (open, Esc, focus back), and the bar's buttons */
 bindShell({
   onTheme: () => fire('mode'), onLock: () => go('grownups'), onKid: () => fire('sheet'), onCoins: () => fire('wallet'), onSound: () => fire('sound'),
@@ -1148,4 +1173,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app

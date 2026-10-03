@@ -15,7 +15,7 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 const SITE = resolve(HERE, '.site');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true }); mkdirSync(SHOTS, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 5201;   // this agent's range is 5200–5219
+const port = +(process.env.PORT_BASE || 5200) + 1;   // PORT_BASE moves every check into another agent's range
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 

@@ -20,7 +20,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 7;
+export const SCHEMA = 8;
 
 const STEPS = {
   // v0 is "no version field at all": anything from a pre-release build
@@ -65,6 +65,13 @@ const STEPS = {
       k.mistakes = k.mistakes || {}; k.coinNotes = k.coinNotes || {};
       k.prefs = k.prefs || {}; k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 };
     }
+    return h;
+  },
+  // v8: My Feed (standard §6a). What a child saw this week and which card questions have paid,
+  // per child; the grown-up's switch is the household's. Nothing a child had changes.
+  7: (h) => {
+    h.v = 8; h.parent = h.parent || {}; if (h.parent.feedOff == null) h.parent.feedOff = false;
+    for (const k of h.kids) k.feed = k.feed || { seen: {}, paid: {} };
     return h;
   },
 };

@@ -21,7 +21,7 @@ const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 const SITE = resolve(HERE, '.site-fam');
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true }); mkdirSync(SHOTS, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = 5202;
+const port = +(process.env.PORT_BASE || 5200) + 2;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
 const BASE = `http://127.0.0.1:${port}/Bizzing-Maths/`;

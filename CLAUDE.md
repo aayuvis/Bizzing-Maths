@@ -85,7 +85,7 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 
 16. **The chrome IS Bizzing Bee's** — `src/integration/bizzing-shell.js` + `styles/bizzing-shell.css`, copied
     byte for byte from Bizzing_Schedule: the bar (⬡ ☰ Octo+wordmark … search | coins theme 🔒 avatar ▾), the tab
-    row (Home · Atlas · Library · Puzzles · Play), the phone tab bar and the ☰ drawer in the family order, around
+    row (Home · Atlas · Library · Puzzles · Play · My Feed), the phone tab bar and the ☰ drawer in the family order, around
     EVERY screen (`views.js shell()`, wired once by `bindShell` in main.js). This app passes words, mascot, tabs
     and `--bz-*` colours only — never geometry. ⬡ hides only inside a timed contest question (`inRun`).
 17. **Home IS Bee's three rows** (`home()`): greeting · daily ring (with "Your level") · number of the hour; the
@@ -114,6 +114,16 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     lazy-loaded on the first tap, ducked under effects and read-aloud, off in Calm mode. No new narration.
 25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, greeting, finishes, empty and error
     states. Aryabhata stays the ceremony elder.
+
+26. **My Feed ends, and nothing in it is typed** (FAMILY-STANDARD §6a; the LAST tab, after Play). `tools/build-feed.mjs`
+    cuts every card from the corpus — each with a `src` that resolves and words found in it — into `app/src/feed/`
+    (an index with no words, then one lazy group per journey level and one level-agnostic group; #/feed loads only the
+    groups its session needs). Every card question is re-run through the app's own rules (trick, `ans` and `expr`
+    agree; the prompt never shows its answer); no two cards' words are ≥ 80% the same. The family's engine
+    (`integration/bizzing-feed.js`, never edited) ranks on the device by journey level, what was just done and what
+    slipped; about twenty, then a finished card. Only a right answer pays, once, as `answer`. A grown-up can switch
+    it off behind the PIN. Change the corpus → rerun `node tools/build-feed.mjs`. `test/feed.mjs` and
+    `test/feed-ui.mjs` hold it.
 
 ### Art
 

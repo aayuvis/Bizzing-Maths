@@ -24,6 +24,7 @@ import { icon, glyph } from './icons.js';
 import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
 import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
 import * as MD from './mistakes.js';
+import { HEROES, GAMES } from './arcade.js';
 import { ownsAvatar, byAvatar } from './avatars.js';
 import { TIERS } from './integration/bizzing-avatars.js';
 
@@ -90,6 +91,9 @@ export const BZ_TABS = [
   { id: 'puzzles', label: 'Puzzles', icon: 'puzzle', href: '#/puzzles' },
   { id: 'play', label: 'Play', icon: 'play', href: '#/play' },
 ];
+/* My Feed is the LAST tab, after Play (owner, 2 Oct 2026; standard §6a) — unless a grown-up switched it off */
+const FEED_TAB = { id: 'feed', label: 'My Feed', icon: 'feed', href: '#/feed' };
+export const tabsFor = (h) => (h.parent.feedOff ? BZ_TABS : [...BZ_TABS, FEED_TAB]);
 const FOOT = `Bizzing Maths · part of the Bizzing family with <a href="https://www.bizzingbee.com/" rel="noopener">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/" rel="noopener">Bizzing India</a>, <a href="https://aayuvis.github.io/bizzingfinance/" rel="noopener">Bizzing Finance</a> and the <a href="${HIVE3}" rel="noopener">Hive</a> · No ads, no tracking, nothing leaves this device. <a href="#/privacy">Privacy</a>`;
 export function shell(body) {
   const h = R.h, k = kid(h);
@@ -98,7 +102,7 @@ export function shell(body) {
   const p = k ? J.progress(k) : null;
   const top = `${R.fromHive && !timed ? `<a class="hive-chip" href="${HIVE}">← back to my day</a>` : ''}${k && k.sample ? demoBar(k) : ''}${h.parent.tester ? '<div class="tester" role="note">TESTER MODE — every stop is open. Nothing about the child changes. <button data-act="testerOff">Turn off</button></div>' : ''}`;
   return `<a class="skip" href="#main">Skip to the content</a>` + bzShell({
-    app: 'maths', name: 'Maths', mascot: 'mascot/octo-head.webp', tabs: BZ_TABS, active: nav,
+    app: 'maths', name: 'Maths', mascot: 'mascot/octo-head.webp', tabs: tabsFor(h), active: nav,
     coins: k ? Family.balance(k.name) : 0, dark: document.documentElement.getAttribute('data-mode') === 'dark',
     kid: k ? { name: k.name, avatar: `avatars/${avatarFile(k.avatar)}.webp` } : null,
     search: 'Search stops, stories, words', query: R.ui.nav === 'search' ? R.ui.q || '' : '', inRun: timed,
@@ -106,7 +110,9 @@ export function shell(body) {
       app: [{ icon: 'flag', label: 'My mistakes', sub: 'questions that come back after a gap', href: '#/mistakes' },
         { icon: 'learn', label: 'What I’m learning', sub: 'every goal, measured from what you did', href: '#/goals' },
         { icon: 'book', label: 'The Story Shelf', sub: 'a story for every trick', href: '#/stories' },
-        { icon: 'medal', label: 'Mock contest', sub: 'you and ten rivals', href: '#/contest' }] },
+        // the shell's ☰ holds four of the app's own rows: with My Feed on, it takes the fourth (the contest is on the Play tab)
+        h.parent.feedOff ? { icon: 'medal', label: 'Mock contest', sub: 'you and ten rivals', href: '#/contest' }
+          : { icon: 'feed', label: 'My Feed', sub: 'about twenty cards from across the app, and then it ends', href: '#/feed' }] },
     content: top + body + (R.ui.nav === 'home' && k ? '' : `<footer class="foot">${FOOT}</footer>`),
   }) + `${k && R.ui.sheet ? kidSheet(h, k) : ''}${k && R.ui.wallet ? walletSheet(k) : ''}${k && R.ui.cels && R.ui.cels.length ? celebration() : ''}`;
 }
@@ -553,14 +559,10 @@ export function viewArcade() {
   return `<section>
     ${pageHead('Play')}
     <div class="hero-tiles">
-      <button class="card hero-t contest-t" data-act="nav" data-arg="contest"><span class="kicker">The main event</span><b>Mock Contest</b><span>You and ten rivals. One question each, every round. Miss and you sit down.</span></button>
-      <button class="card hero-t facts-t" data-act="startFacts" data-arg="${k.prefs.op}"><span class="kicker">5 minutes</span><b>Twenty facts</b><span>Picked for you: your traps first, then what is due, then a few new ones.</span></button>
-      <button class="card hero-t daily-t" data-act="daily"><span class="kicker">Today's puzzle</span><b>${puzzleDone ? 'Solved' : 'Make the target'}</b><span>The same puzzle in every house today. Compare notes at breakfast.</span></button>
+      ${HEROES.map((x) => `<button class="card hero-t ${x.id}-t" data-act="${x.act}"${x.id === 'contest' ? ` data-arg="${x.arg}"` : x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : ''}><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
     </div>
     <div class="gtiles">
-      ${tile('rush', 'Number Rush', 'Facts fall. Type the answer to pop them before they land.', 'art-rush', 'digits + Enter')}
-      ${tile('target', 'Make the Target', 'Four numbers, one target, + − × ÷. Use every number.', 'art-target', '1–4 and + − × ÷')}
-      ${tile('line', 'Number Line', 'Where does 637 go between 0 and 1000? Estimation, the skill contests lean on.', 'art-line', '← → and Enter')}
+      ${GAMES.map((x) => tile(x.id, esc(x.title), esc(x.blurb), x.art, esc(x.keys))).join('')}
     </div>
   </section>`;
 }
@@ -777,6 +779,7 @@ export function viewGrownups() {
         <div class="set"><span>Sound on this device</span>${toggle('sound', R.sound)}</div>
         <button class="btn small" data-act="addKid">${icon('plus', 16)} Add a child</button>` : ''}
         <div class="set"><span>Family plan <span class="muted small">opens all six worlds for every child here. A preview until the family's shared billing exists — no payment is taken, and a child's screen never shows a price in money.</span></span>${toggle('plan', h.parent.plan === 'family')}</div>
+        <div class="set"><span>My Feed <span class="muted small">about twenty cards from across the app, then it ends. Off removes the tab and its ☰ row for every child here</span></span>${toggle('feed', !h.parent.feedOff)}</div>
         <div class="set"><span>Tester mode <span class="muted small">opens every stop; changes nothing about the child</span></span>${toggle('tester', h.parent.tester)}</div>
       </div>
       <div class="card">

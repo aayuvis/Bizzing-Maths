@@ -18,7 +18,7 @@ ok(validate(CATALOGUE.map((a, i) => (i ? a : { ...a, tier: 'rare' }))).length > 
 ok(sacredSafe(CATALOGUE, []).length === 0 && !CATALOGUE.some((a) => a.real || a.sacred), 'no real person or sacred figure in the collection');
 // the engine is the family's, byte for byte
 for (const [f, here] of [['bizzing-avatars.js', '../src/integration/'], ['bizzing-wallet.js', '../src/integration/'], ['bizzing-activity.js', '../src/integration/'],
-  ['bizzing-shell.js', '../src/integration/'], ['bizzing-shell.css', '../styles/'], ['bizzing-avatars.css', '../styles/'], ['shell-check.mjs', './lib/']]) {
+  ['bizzing-shell.js', '../src/integration/'], ['bizzing-shell.css', '../styles/'], ['bizzing-feed.js', '../src/integration/'], ['bizzing-feed.css', '../styles/'], ['bizzing-avatars.css', '../styles/'], ['shell-check.mjs', './lib/']]) {
   const theirs = '/home/user/Bizzing_Schedule/integration/' + f;
   if (existsSync(theirs)) ok(readFileSync(theirs, 'utf8') === readFileSync(new URL(here + f, import.meta.url), 'utf8'), `${f} is the family's copy, unedited`);
 }

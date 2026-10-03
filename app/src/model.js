@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 7, kids: [], active: null, parent: { pin: null, tester: false, plan: 'free' } }; }
+export function newHousehold() { return { v: 8, kids: [], active: null, parent: { pin: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -108,6 +108,7 @@ export function newKid(name, band, avatar) {
     weeks: {},            // week (Monday's day key) → what the child could do that week — report.js
     shop: { owned: [], worn: {}, avatars: [], worlds: [] },   // bought with Bizzing coins: frames (Extras), avatars, worlds 3–6 — the coins live in the family wallet
     mistakes: {},         // the mistakes deck: missed questions that come back after a gap (mistakes.js)
+    feed: { seen: {}, paid: {} },   // My Feed: card id → day seen (this week sinks), card id → paid once (feed.js)
     coinNotes: {},        // ledger time → what this app paid it for, so the wallet history can say it in words
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
