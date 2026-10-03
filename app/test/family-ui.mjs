@@ -247,6 +247,14 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const { p, ctx } = await page({ width: 390, height: 844 }, 'first', { seed: false });
   await p.goto(BASE); await p.waitForSelector('.ob-land');
   ok(await p.locator('.ob-land a[href="./?demo=try"]').count() === 1, 'the landing offers "Try a trick first"');
+  // the landing is the app's own first screen (owner, A1): two doors into the app and nothing else
+  const doors = await p.$$eval('.ob-land a, .ob-land button', (els) => els.map((e) => e.dataset.act || e.getAttribute('href')));
+  ok(doors.length === 2 && doors.includes('obStart') && doors.includes('./?demo=try'), `every door on the landing leads into the app (got ${doors.join(', ')})`);
+  ok(await p.locator('.ob-land img').count() === 1, 'no screenshots on the landing — Octo only');
+  const land = await p.textContent('.ob-land');
+  ok(/ages 6 to 14\b/.test(land) && !/ages 6 to 15/.test(land), 'the age line says 6 to 14, as the age bands do');
+  ok(!/Bizzing Bee|Bizzing India|Bizzing Finance/.test(land) && await p.locator('footer.foot').count() === 1, 'the family is named once, in the footer, not twice');
+  ok(/grown-ups/i.test(await p.textContent('.ob-land .ob-grown')), 'one plain sentence for grown-ups');
   await ctx.close();
 }
 
