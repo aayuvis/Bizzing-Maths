@@ -863,12 +863,13 @@ import * as lighthouse from './chapters/lighthouse.js';
 import * as strategy from './chapters/strategy.js';
 import * as logic from './chapters/logic.js';
 import * as figures from './chapters/figures.js';
-export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival, quarry, mine, coinstreet, lighthouse, strategy, logic, figures];
+import * as court from './chapters/court.js';
+export const CHAPTERS = [library, clocktower, bakery, shapecity, forest, palace, dock, setisland, carnival, quarry, mine, coinstreet, lighthouse, strategy, logic, figures, court];
 
 export const ORDER = ['gardens', 'market', 'library', 'clocktower', 'bakery', 'coinstreet', 'shapecity', 'workshop', 'mine', 'forest',
-  'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'lighthouse', 'carnival',
+  'quarry', 'observatory', 'palace', 'dock', 'setisland', 'harbour', 'court', 'lighthouse', 'carnival',
   'strategy', 'logic', 'figures'];   // the Contest Hall's strategy worlds (track: 'contest') come after the Atlas road
-export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, quarry: 3, mine: 3, coinstreet: 3, lighthouse: 3,
+export const ISLAND = { gardens: 1, market: 1, workshop: 1, observatory: 1, harbour: 1, court: 1, quarry: 3, mine: 3, coinstreet: 3, lighthouse: 3,
   strategy: 'hall', logic: 'hall', figures: 'hall' };   // everything else: island 2. 'hall': the Contest Hall's road, not an island
 
 const ALL_WORLDS = [...CORE_WORLDS, ...CHAPTERS.map((c) => c.WORLD)];

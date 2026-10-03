@@ -36,6 +36,7 @@ const back = (act, label = 'Back', arg = '') =>
 export const MAP_PINS = {
   gardens: { x: 20, y: 66 }, market: { x: 31, y: 42 }, workshop: { x: 51, y: 50 },
   observatory: { x: 63, y: 25 }, harbour: { x: 83, y: 34 },
+  court: { x: 57, y: 70 },   // the open meadow south of the road, between the garden terraces and the workshop
 };
 /* The Far Isles — measured against atlas2.webp the same way. */
 export const MAP2_PINS = {
@@ -110,7 +111,7 @@ export function viewAtlasMap() {
 const ROAD = { gardens: [72, 7, 1.3], market: [78, 5, 1.1], workshop: [80, 5, 1.6], observatory: [72, 6, 1.2], harbour: [82, 4, 1.4],
   library: [80, 4, 1.2], clocktower: [80, 5, 1.4], bakery: [80, 4, 1.1], shapecity: [82, 4, 1.5], forest: [78, 5, 1.2],
   palace: [80, 5, 1.3], dock: [80, 4, 1.2], setisland: [82, 4, 1.1], carnival: [80, 5, 1.4],
-  quarry: [80, 4, 1.2], mine: [80, 4, 1.3], coinstreet: [82, 4, 1.2], lighthouse: [80, 5, 1.2] };
+  quarry: [80, 4, 1.2], mine: [80, 4, 1.3], coinstreet: [82, 4, 1.2], lighthouse: [80, 5, 1.2], court: [84, 4, 1.2] };
 function roadY(wid, x) { const [b, a, f] = ROAD[wid] || [78, 5, 1.3]; return b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6); }
 
 export function viewWorld(wid) {
