@@ -126,6 +126,15 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     proved by an independent `solve()`. The strategies are also the **Contest thinking** land on every level
     from 4 (a seventh land; levels may run to 32 steps). The hall and its banks load on their own route.
 
+28. **The deep methods of two traditions** (owner, 3 Oct 2026): the **Sutra Ladder** (`chapters/ladder.js`, 12 stops:
+    straight division, duplexes, roots, cube roots, osculators, sutra equations, quadratics, pick-the-sutra) and the
+    **Counting Court** (`chapters/court.js`, 11 stops: suanpan with complements, red and black rods, fangcheng, excess and
+    deficit, out-in areas, Liu Hui, Sunzi multipliers, the Sea Island, the Hundred Fowls). Each is a concept with its own
+    land on every road from Level 5 (Level 3–4 fold their first steps into a nearby land), placed by difficulty: a stop
+    enters at lv 1 where its band allows and climbs to lv 3 by Level 10. That is why a level may now hold 9 lands and 42
+    steps, and why no other topic gave up a revisit to make room. Every history line is cited and `needsReview: true`.
+    `papers/methods.js` links a contest template to a Ladder or Court stop only when that method solves the SAME problem.
+
 26. **My Feed ends, and nothing in it is typed** (FAMILY-STANDARD §6a; the LAST tab, after Play). `tools/build-feed.mjs`
     cuts every card from the corpus — each with a `src` that resolves and words found in it — into `app/src/feed/`
     (an index with no words, then one lazy group per journey level and one level-agnostic group; #/feed loads only the
