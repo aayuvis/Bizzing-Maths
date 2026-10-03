@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 9, kids: [], active: null, parent: { pin: null, tester: false, plan: 'free', feedOff: false } }; }
+export function newHousehold() { return { v: 10, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no

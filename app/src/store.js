@@ -14,13 +14,14 @@
    Never edit an old step — a device that skipped a release still has to walk
    every step in order. */
 
+import { pinHash } from './pin.js';
 import { trackActivity, trackMilestone } from './integration/bizzing-activity.js';
 import * as W from './integration/bizzing-wallet.js';
 import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 9;
+export const SCHEMA = 10;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -85,6 +86,14 @@ const STEPS = {
     h.v = 9; familyV2(h);
     h.parent = h.parent || {}; if (h.parent.feedOff == null) h.parent.feedOff = false;
     for (const k of h.kids) { k.feed = k.feed || { seen: {}, paid: {} }; k.papers = k.papers || { best: {}, log: [] }; k.paperDraft = k.paperDraft || null; }
+    return h;
+  },
+  // v10: the grown-ups' PIN is kept as a salted hash, never as itself (owner, 3 Oct 2026).
+  // A PIN already on this device is hashed here and the plain copy removed.
+  9: (h) => {
+    h.v = 10; h.parent = h.parent || {};
+    if (h.parent.pin != null && !h.parent.pinHash) h.parent.pinHash = pinHash(String(h.parent.pin));
+    delete h.parent.pin; if (h.parent.pinHash === undefined) h.parent.pinHash = null;
     return h;
   },
 };

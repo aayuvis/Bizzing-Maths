@@ -43,6 +43,7 @@ import { makeCert } from './cert.js';
 import { bindShell } from './integration/bizzing-shell.js';
 import { bindFeedKeys } from './integration/bizzing-feed.js';
 import * as FV from './feed-view.js';
+import { pinHash, pinOk } from './pin.js';
 import { GAMES } from './arcade.js';
 const GAME_IDS = GAMES.map((g) => g.id);
 import { pay as feedPay } from './feed.js';
@@ -907,7 +908,7 @@ on('obNext', () => {
 });
 on('draftBand', (b) => { const d = draft(); d.band = b; d.step = 2; sfx.click(); render(); obSay(); });
 on('draftAv', (a) => { const d = draft(); const was = d.step || 0; d.avatar = a; if (was === 2) d.step = 3; sfx.click(); render(); if (was === 2) obSay(); });
-/* Nova reads her line aloud to a six- or seven-year-old, once their age is known */
+/* Octo reads the line aloud to a six- or seven-year-old, once their age is known */
 function obSay() { const d = draft(); if (d.band === '6-7') say(guideSay(['name', 'band', 'face', 'world'][d.step || 0])); }
 on('obTheme', (t) => { const d = draft(); d.theme = t; fire('createKid'); });
 on('avEdit', () => { R.ui.avEdit = !R.ui.avEdit; render(); });
@@ -1085,8 +1086,8 @@ function gateKey(k) {
   if (k === '⌫') R.ui.gateIn = R.ui.gateIn.slice(0, -1);
   else if (/^\d$/.test(k) && R.ui.gateIn.length < 4) R.ui.gateIn += k;
   if (R.ui.gateIn.length === 4) {
-    if (!R.h.parent.pin) { R.h.parent.pin = R.ui.gateIn; R.ui.gate = true; Store.saveNow(R.h); toast('PIN set.'); }
-    else if (R.ui.gateIn === R.h.parent.pin) { R.ui.gate = true; if (R.ui.after === 'addKid') { R.ui.after = null; R.ui.gateIn = ''; R.ui.draft = null; return go('welcome'); } }
+    if (!R.h.parent.pinHash) { R.h.parent.pinHash = pinHash(R.ui.gateIn); R.ui.gate = true; Store.saveNow(R.h); toast('PIN set.'); }
+    else if (pinOk(R.ui.gateIn, R.h.parent.pinHash)) { R.ui.gate = true; if (R.ui.after === 'addKid') { R.ui.after = null; R.ui.gateIn = ''; R.ui.draft = null; return go('welcome'); } }
     else { toast('That is not the PIN.'); sfx.bad(); }
     R.ui.gateIn = '';
   }

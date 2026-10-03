@@ -90,6 +90,10 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(await p.locator('.pin-dots').count() === 1 && await p.locator('.report').count() === 0, `${tag}: grown-ups asks for the PIN first`);
   for (const ch of '1234') await p.keyboard.press(ch);
   await p.waitForSelector('.rc'); await shot('report');
+  // the PIN is never kept as itself: the seeded plain '1234' was hashed on load, and nothing stores it
+  await p.waitForTimeout(400);
+  const kept = await p.evaluate(() => localStorage.getItem('bzm_household') || '');
+  ok(!/"pin"\s*:/.test(kept) && !kept.includes('"1234"') && /"pinHash":"[0-9a-f]{32}\$[0-9a-f]{64}"/.test(kept), `${tag}: the PIN is kept only as a salted hash`);
   const rc = await p.$$eval('.rc', (cs) => cs.map((c) => [...c.querySelectorAll('.rc-cell .kicker')].map((x) => x.textContent).join()));
   ok(rc.length === 2 && rc.every((x) => x === 'Time,Progress,Mastery'), `${tag}: a report card per child in Time · Progress · Mastery (got ${JSON.stringify(rc)})`);
   ok(await p.locator('.rc').first().locator('.rc-st').count() >= 6, `${tag}: the report card charts every strand`);

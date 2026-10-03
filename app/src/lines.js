@@ -7,12 +7,12 @@
    the name, the voice does not pretend to know it. */
 
 export const GUIDE = {
-  nameFirst: 'Hello! I am Nova. I will walk the first road with you. What shall I call you?',
+  nameFirst: 'Hello! I am Octo. I will walk the first road with you. What shall I call you?',
   nameMore: 'Another mathematician! What shall I call this one?',
   bandHi: 'Good to meet you',          // the screen adds ", <name>." — the voice says it with a full stop
   bandAsk: 'How old are you? It decides where your first road starts.',
-  face: 'Pick a face to walk the roads with. There are twenty-five more on your page, whenever you want a change.',
-  world: 'Last one. Which world should the app wear? You can swap it — there are four more — on your page any time.',
+  face: 'Pick a face to walk the roads with. Many more wait in your collection, whenever you want a change.',
+  world: 'Last one. Which world should the app wear? You can swap it on your page any time, and four more worlds open as you go.',
 };
 export const guideSay = (k) => (k === 'band' ? `${GUIDE.bandHi}. ${GUIDE.bandAsk}` : GUIDE[k]);
 

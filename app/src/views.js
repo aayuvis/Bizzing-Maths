@@ -141,7 +141,7 @@ function kidSheet(h, k) {
 /* ------------------------------------------------------------- welcome */
 
 /* A new child, one question at a time — Bizzing Finance's onboarding: a
-   landing the first time, then Nova (one of the Bee's ten) asks for a name, an
+   landing the first time, then Octo, the mascot, asks for a name, an
    age, a face from five and a world from two. Everything else waits until
    they are in. Nothing typed here leaves the device. */
 const OB_STEPS = ['name', 'band', 'face', 'world'];
@@ -750,7 +750,7 @@ export function viewWho() {
 export function viewGrownups() {
   const h = R.h;
   if (!R.ui.gate) {
-    const setting = !h.parent.pin;
+    const setting = !h.parent.pinHash;
     return `<section class="narrow">
       ${pageHead("Grown-ups", setting ? 'Choose a four-digit PIN for this page.' : 'Enter your PIN.', back('nav', 'Back', 'home'))}
       <div class="card center-card">

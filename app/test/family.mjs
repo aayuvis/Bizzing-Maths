@@ -58,5 +58,12 @@ ok(F.tally(s.facts, '×').fluent > 0 && s.journey.level === 3 && Object.keys(s.j
 ok(Object.keys(s.medals).length > 0 && Object.values(s.medals).every((m) => m.seen), 'the sample has medals, already celebrated');
 ok(Object.keys(mem).sort().join() === keysBefore, 'building the sample wrote nothing to storage');
 
+/* the guide is Octo, the mascot — never one of the ten rival children (owner, 3 Oct 2026) */
+const { GUIDE } = await import('../src/lines.js');
+const { RIVALS } = await import('../src/contest.js');
+ok(/\bOcto\b/.test(GUIDE.nameFirst), 'the guide introduces itself as Octo');
+for (const [k, line] of Object.entries(GUIDE)) ok(!RIVALS.some((r) => new RegExp(`\\b${r.name}\\b`).test(line)), `guide line ${k} names no rival (${line})`);
+ok(!/twenty-five|thirty faces/.test(Object.values(GUIDE).join(' ')), 'the guide does not count faces that no longer exist');
+
 console.log(`${fails ? 'FAIL' : 'ok'} family — coins at standard amounts, fixed prices, medals from evidence, the sample`);
 if (fails) process.exit(1);
