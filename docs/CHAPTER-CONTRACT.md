@@ -1,8 +1,9 @@
 # The chapter contract
 
 Every world of the Number Atlas outside the first island is one file in `app/src/chapters/<world>.js`.
-It exports exactly three things — `WORLD`, `TRICKS`, `STORIES` — and `src/tricks.js` / `src/stories.js`
-pick them up. Read `app/src/tricks.js` (the first 27 stops) before writing one: they are the house style.
+It exports `WORLD` and `TRICKS`, which `src/tricks.js` picks up; its `STORIES` live beside it in
+`app/src/chapters/stories/<world>.js`, gathered by `src/story-data.js` — a chunk of their own that loads on
+first need, never on first paint (the 400 KB first-load budget). Read `app/src/tricks.js` (the first 27 stops) before writing one: they are the house style.
 
 The two tests that decide whether a chapter ships:
 
