@@ -292,7 +292,7 @@ const STOPS = [
       const B = 10 ** String(d).length, c = B - d, a = Math.floor(N / B), b = N % B, R1 = a * c + b;
       const steps = [
         { t: `${d} is how far below ${B}?`, v: c, x: `${B}-${d}` },
-        { t: `${N} is ${a} lot${a > 1 ? 's' : ''} of ${B} and ${b}. Spares: ${a} × ${c}`, v: a * c + 1, x: `Math.floor(${N}/${B})*(${B}-${d})` },
+        { t: `${N} is ${a} lot${a > 1 ? 's' : ''} of ${B} and ${b}. Spares: ${a} × ${c}`, v: a * c, x: `Math.floor(${N}/${B})*(${B}-${d})` },
         // x: what is left of N after that many whole divisors are taken out
         { t: `Spares plus the end: ${a * c} + ${b}`, v: R1, x: `${N}-${d}*Math.floor(${N}/${B})` },
       ];
