@@ -35,6 +35,10 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
    `test/tricks.mjs` runs ~57,000 generated questions through all three. A trick that is
    wrong one time in a thousand teaches a child that maths is unreliable. **Never loosen that
    test to make a chapter pass** — fix the generator.
+   **Every MIDDLE step is checked too** (owner, 3 Oct 2026): each step but the last carries `x`, its
+   value as plain arithmetic on the question's own numbers, and `test/lib/steps.mjs` evaluates it
+   against `v` — for every stop and every Vedic and Chinese journey stone. `x` is a second route,
+   never a copy of the trick's running variable; a bare number is refused.
 2. **Difficulty is trickiness, not size.** The Bee's founding idea, for numbers: 7 × 8 is
    harder than 12 × 12. `facts.js` `tricky()` is the ramp key and `why()` names the reason.
    Any new "hardest first" selection uses `tricky()`, never the size of the answer.

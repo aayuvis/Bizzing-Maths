@@ -3,6 +3,9 @@
    and a plain evaluation of q.expr. Any disagreement fails the build. */
 import { TRICKS, WORLDS, example, correct, parseNum, learnCases, caseSig } from '../src/tricks.js';
 import { seeded } from '../src/rand.js';
+import { checkSteps } from './lib/steps.mjs';
+// STEPS_ONLY=world,world limits the middle-step check while a world is being given its x (never in CI)
+const STEPS_ONLY = process.env.STEPS_ONLY ? process.env.STEPS_ONLY.split(',') : null;
 
 let fails = 0, n = 0;
 const bad = (m) => { fails++; if (fails < 30) console.error('  ✗ ' + m); };
@@ -42,6 +45,7 @@ for (const t of TRICKS) {
     ok(w.length >= 1, `${t.id}: no steps`);
     const last = w.at(-1).v;
     ok(q.choices ? last === q.ans : Math.abs((typeof last === 'number' ? last : parseNum(last)) - want) < 1e-9, `${t.id}: ${q.text} trick ends on ${last}, answer is ${q.ans}`);
+    if (!STEPS_ONLY || STEPS_ONLY.includes(t.world)) checkSteps(t.id, q, w, ok);
     for (const s of w) {
       const ok1 = s.choices ? s.choices.includes(s.v) : typeof s.v === 'string' ? Number.isFinite(parseNum(s.v)) : Number.isFinite(s.v) && (t.decimals || Number.isInteger(s.v));
       ok(s.v !== undefined && ok1, `${t.id}: ${q.text} step "${s.t}" has a value a child cannot type (${s.v})`);
@@ -54,6 +58,14 @@ for (const t of TRICKS) {
     if (!q.choices && String(q.ans).length > 1 && !t.echo) ok(!q.text.split(/[^0-9./]/).includes(String(q.ans)), `${t.id}: prompt "${q.text}" shows its answer`);
   }
 }
+// proof by breaking it: the middle-step check catches a step one off, a bare-number x and a missing x, and passes a true one
+{ const seen = []; const probe = (w) => { let c = 0; checkSteps('probe', { text: '6 × 7 + 1' }, w, (cond) => { if (!cond) c++; }); seen.push(c); };
+  probe([{ t: '6 × 7', v: 43, x: '6*7' }, { t: 'add 1', v: 43 }]);
+  probe([{ t: '6 × 7', v: 42, x: '42' }, { t: 'add 1', v: 43 }]);
+  probe([{ t: '6 × 7', v: 42 }, { t: 'add 1', v: 43 }]);
+  probe([{ t: 'Which is bigger?', v: 'A', x: "6*7>40?'A':'B'", choices: ['A', 'B'] }, { t: 'add 1', v: 43 }]);
+  probe([{ t: '6 × 7', v: 42, x: '6*7' }, { t: 'add 1', v: 43 }]);
+  ok(seen.join() === '1,1,1,0,0', `the middle-step check itself is broken (${seen})`); }
 // band gating must mean something: every world has a stop open to the youngest band that world is for
 // every trig ratio a Lighthouse prompt GIVES must be the true value, rounded as shown
 ok((await import('../src/chapters/lighthouse.js')).RATIOS_ARE_TRUE(), 'lighthouse: a given trig ratio is not the true value');

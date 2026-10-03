@@ -42,7 +42,7 @@ A stop teaches ONE idea. Its fields, all required unless marked:
 | `ex` | the example the Learn tab teaches from — the argument object for `q()` |
 | `q(args)` | builds a question from arguments. Returns `{ text, expr, ans, ...args }` (see below). Pure. |
 | `gen(r, lv)` | returns `this.q({...})` with random arguments from `r` (a 0..1 generator — use `int(lo, hi, r)` and `pick(arr, r)` from `../rand.js`). Three levels: 1 easy, 2 medium, 3 stretch. |
-| `work(q)` | the method as STEPS: `[{ t: 'what to do', v: value }, ...]`. The child types each `v` on the "Your turn" tab. The LAST step's `v` is the answer. 2–5 steps. |
+| `work(q)` | the method as STEPS: `[{ t: 'what to do', v: value, x: 'plain arithmetic' }, ...]`. The child types each `v` on the "Your turn" tab. The LAST step's `v` is the answer. 2–5 steps. **Every step but the last carries `x`**: its value as a JS expression on the question's own numbers (`` `${a}*${b}` ``, `` `${n}%9` ``, `` `${a}>${b}?'Yes':'No'` ``), written from the step's plain meaning — a second route, never the trick's running variable. `test/lib/steps.mjs` evaluates it against `v`. |
 | `draw(q)` *(optional, strongly wanted for shape, measure, fraction, data and set worlds)* | returns an SVG string built with `./kit.js` — the picture the question is about. Must not reveal the answer. |
 | `fig(q)` *(optional)* | existing figure kinds for the Learn tab: `{kind:'jumps',from,jumps}`, `{kind:'area',h,parts}`, `{kind:'grid',a,b}` |
 | `keys` *(optional)* | extra keypad keys the answers need: any of `'.'`, `'−'`, `'/'` |
