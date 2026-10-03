@@ -174,7 +174,7 @@ export const optional = (k, n, i) => (k.placed != null && i < k.placed) || bandR
    the stops still open one at a time, in order — a world teaches in order. */
 export const NEEDS = {
   workshop: 'market', forest: 'market', observatory: 'workshop', palace: 'market',
-  dock: 'bakery', setisland: 'forest', harbour: 'observatory',
+  dock: 'bakery', setisland: 'forest', harbour: 'observatory', court: 'workshop',
   quarry: 'forest', mine: 'library', lighthouse: 'palace',
 };
 const firstIndex = (wid) => ROUTE.findIndex((n) => n.world === wid);

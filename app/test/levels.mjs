@@ -16,7 +16,7 @@ const ok = (c, m) => { if (!c) bad(m); };
 
 /* ---- concepts */
 const cids = CONCEPTS.map((c) => c.id);
-ok(CONCEPTS.length >= 10 && CONCEPTS.length <= 15, `need 10–15 concepts, have ${CONCEPTS.length}`);   // 15th: Contest thinking (owner, 3 Oct 2026)
+ok(CONCEPTS.length >= 10 && CONCEPTS.length <= 17, `need 10–17 concepts, have ${CONCEPTS.length}`);   // 15th: Contest thinking; 16th–17th: the Vedic and Chinese methods (owner, 3 Oct 2026)
 ok(new Set(cids).size === cids.length, 'duplicate concept id');
 for (const c of CONCEPTS) ok(c.id && c.name && c.glyph, `concept ${c.id} needs id, name and glyph`);
 
@@ -34,7 +34,7 @@ LEVELS.forEach((l, i) => {
   ok(ageOf(l.n) === `maths age ${AGES[i]}`, `ageOf(${l.n}) is "${ageOf(l.n)}"`);
   ok(typeof l.name === 'string' && l.name.length > 3 && l.name.length <= 28, `level ${l.n}: needs a short name`);
   ok(typeof l.blurb === 'string' && l.blurb.length > 20 && /\.$/.test(l.blurb), `level ${l.n}: needs a one-sentence blurb`);
-  ok(l.steps.length >= 16 && l.steps.length <= 32, `level ${l.n}: ${l.steps.length} steps, need 16–32`);
+  ok(l.steps.length >= 16 && l.steps.length <= 42, `level ${l.n}: ${l.steps.length} steps, need 16–42`);   // 42: room for the Vedic and Chinese lands (owner, 3 Oct 2026)
 });
 
 /* ---- the Contest Hall's thirty strategies are on the hall's road AND on the journeys, as
@@ -50,7 +50,7 @@ ok(landsOf(0).length === 0 && landsOf(11).length === 0, 'landsOf(): a level that
 for (const l of LEVELS) {
   ok(Array.isArray(l.lands) && landsOf(l.n) === l.lands, `level ${l.n}: landsOf(${l.n}) is not its lands`);
   if (!Array.isArray(l.lands)) continue;
-  ok(l.lands.length >= 4 && l.lands.length <= 7, `level ${l.n}: ${l.lands.length} lands, need 4–7`);
+  ok(l.lands.length >= 4 && l.lands.length <= 9, `level ${l.n}: ${l.lands.length} lands, need 4–9`);
   const flat = l.lands.flatMap((d) => d.steps);
   ok(flat.length === l.steps.length && flat.every((s, i) => s.stop === l.steps[i].stop && s.lv === l.steps[i].lv), `level ${l.n}: steps is not its lands laid end to end`);
   l.lands.forEach((d, i) => {

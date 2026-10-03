@@ -58,6 +58,12 @@ WORLD = {
     'w-harbour': "A wide panorama of a cheerful harbour at golden-blue evening. Painted fishing boats "
                  "in rows, a striped lighthouse, stone quay with coiled ropes, fishing nets drying in geometric patterns, "
                  "tide poles, gulls far away, sparkling water. Teal, sea-blue, coral and warm lamplight.",
+    'w-court':   "A wide panorama of a calm walled courtyard garden in soft late-afternoon light. A long low polished "
+                 "wooden table runs along the middle of the courtyard, its top bare and empty apart from a few closed plain "
+                 "wooden boxes and a smooth stone bowl. Swaying green bamboo groves on both sides, a round moon gate in a "
+                 "white plaster wall at one end, grey roof tiles with gently upturned eaves, a paved floor of plain square "
+                 "stones, a still pond with lily pads, plain round paper lanterns with no markings hanging from the eaves, "
+                 "a gnarled pine. Jade green, warm cinnabar red, cream plaster, slate grey.",
 }
 ATLAS = ("A storybook fantasy MAP seen from above at a gentle angle, of a single island land made of five regions "
          "joined by one winding road from lower-left to upper-right: first a green terraced FLOWER GARDEN region "

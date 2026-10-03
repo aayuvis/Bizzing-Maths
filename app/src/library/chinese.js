@@ -22,6 +22,7 @@
 import { paintedRoad } from '../board.js';
 import { avatarFile } from '../model.js';
 import { int, pick, shuffle } from '../rand.js';
+import { byId } from '../tricks.js';
 import { META } from './shelf.js';
 
 export const TOOL = META.chinese;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
@@ -200,7 +201,7 @@ export const JOURNEY = [
     fig: (q) => rodSvg(q.n, true),
   },
   {
-    id: 'suanpan', title: 'The suanpan', kicker: 'The Chinese abacus',
+    id: 'suanpan', stop: 'suanpan-add', see: ['suanpan-take'], title: 'The suanpan', kicker: 'The Chinese abacus',
     cards: [
       'The suanpan is the Chinese abacus: a frame of rods with beads, and a beam across the middle. Each rod is one place — units on the right, then tens, hundreds and on.',
       'On a suanpan each rod has two beads above the beam and five below. A bead counts when it is pushed to the beam: an upper bead is worth 5, a lower bead 1. So 7 is one upper bead and two lower. Try it — tap the beads, or use the arrow keys.',
@@ -228,7 +229,7 @@ export const JOURNEY = [
     fig: (q) => abSvg(abEncode(q.a)) + `<p class="${P}-cap">${q.a} on the suanpan. Add ${q.b}, rod by rod.</p>`,
   },
   {
-    id: 'board', title: 'Multiplying on the counting board', kicker: 'Top, middle and bottom rows',
+    id: 'board', stop: 'board-multiply', title: 'Multiplying on the counting board', kicker: 'Top, middle and bottom rows',
     cards: [
       'The Sunzi suanjing — Master Sun\'s Mathematical Manual, usually dated to between the third and fifth centuries CE — describes multiplying with rods. One number goes in the top row, the other in the bottom row, and the answer grows in the middle row.',
       'Start with the highest digit of the top number. Multiply the whole bottom number by it, and lay the result in the middle, lined up under that digit\'s place. Then take the next digit, and add its product into the middle. When the top row is used up, the middle row is the answer.',
@@ -314,7 +315,7 @@ export const JOURNEY = [
     fig: (q) => rateSvg(q.a, q.b, q.c),
   },
   {
-    id: 'excess', title: 'Excess and deficit', kicker: 'Yíng bù zú · two guesses',
+    id: 'excess', stop: 'excess-deficit', title: 'Excess and deficit', kicker: 'Yíng bù zú · two guesses',
     cards: [
       'The seventh chapter of the Nine Chapters is called Ying buzu — "excess and deficit". It has problems like this: some people buy a thing together. If each pays 8 coins, there are 3 too many; if each pays 7, there are 4 too few. How many people, and what is the price?',
       'The method: add the excess and the deficit (3 + 4 = 7). Take the smaller payment from the bigger (8 − 7 = 1). The number of people is 7 ÷ 1 = 7. Then the price: 7 people × 8 coins is 56, less the 3 too many: 53.',
@@ -348,7 +349,7 @@ export const JOURNEY = [
     fig: (q) => buySvg(q),
   },
   {
-    id: 'fangcheng', title: 'Fangcheng: the counting-board array', kicker: 'Two unknowns at once',
+    id: 'fangcheng', stop: 'fangcheng', see: ['red-black-rods'], title: 'Fangcheng: the counting-board array', kicker: 'Two unknowns at once',
     cards: [
       'The eighth chapter of the Nine Chapters, Fangcheng, solves problems with several unknowns at once. Each condition is set out as a column of rods on the board, and whole columns are combined until only one unknown is left. The same chapter gives rules for working with positive and negative numbers.',
       'Two kinds of grain: the right column says 3 bundles of top grain and 2 of low grain give 29 measures; the left says 2 top and 3 low give 26. Multiply the left column by 3 (the right column\'s top), then take away the right column twice. The top place empties.',
@@ -401,7 +402,7 @@ export const JOURNEY = [
     fig: () => xianSvg(3, 4),
   },
   {
-    id: 'sunzi', title: 'The Sunzi remainder problem', kicker: 'Counting by threes, fives and sevens',
+    id: 'sunzi', stop: 'sunzi-multipliers', title: 'The Sunzi remainder problem', kicker: 'Counting by threes, fives and sevens',
     cards: [
       'The Sunzi suanjing (Master Sun\'s Mathematical Manual) asks: there are some things, and we do not know how many. Counted by threes, 2 are left over. Counted by fives, 3 are left. Counted by sevens, 2 are left. How many things are there? Its answer is 23.',
       'One way: list the numbers that leave 2 when counted by sevens — 2, 9, 16, 23, … — and find the first that leaves 3 by fives. That is 23. Check it by threes: 23 = 21 + 2. Done.',
@@ -698,9 +699,13 @@ function stepView(ctx, i) {
       </div>
       <p class="${P}-keys muted">${abacusCard ? 'Keys: [ ] turn the cards · Esc back to the path' : 'Keys: ← → turn the cards · Esc back to the path'}</p>
     </div>
+    ${links(st)}
     ${st.sources ? `<details class="${P}-src"><summary>Sources${st.needsReview ? ' · being checked by a second reader' : ''}</summary><ol>${st.sources.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></details>` : ''}
   </div>`;
 }
+/* A stone whose method the Counting Court drills links to it: read it here, do it there. */
+const linksOf = (st) => [st.stop, ...(st.see || [])].filter((s) => s && byId[s]);
+const links = (st) => { const l = linksOf(st); return l.length ? `<div class="${P}-links"><span class="muted">Practise it in the Atlas:</span> ${l.map((s) => `<button class="btn small" data-act="openStop" data-arg="${s}">${esc(byId[s].title)}</button>`).join('')}</div>` : ''; };
 
 export function view(ctx) {
   const i = ctx.ui.step;
@@ -864,6 +869,7 @@ export const CSS = `
 .${P}-dots button.on{background:var(--fix);border-color:var(--fix)}
 .${P}-dots button:last-child{border-radius:3px}
 .${P}-keys{font-size:var(--fs-meta);text-align:center;margin:0 0 12px}
+.${P}-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
 .${P}-src{font-size:var(--fs-label);color:var(--muted);margin-bottom:16px}.${P}-src summary{cursor:pointer;font-weight:650}
 @media (max-width:560px){.${P}-lab{width:34vw;font-size:12px}.${P}-lab i{display:none}.${P}-hero{min-height:170px}}
 `;
@@ -889,6 +895,8 @@ export function selftest(ok, makeCtx) {
     }
   }
   ok(JOURNEY.length >= 10 && JOURNEY.length <= 12, 'chinese: 10–12 stones');
+  for (const st of JOURNEY) for (const s of [st.stop, ...(st.see || [])].filter(Boolean)) ok(byId[s] && byId[s].world === 'court', `chinese/${st.id}: practise link ${s} is a Counting Court stop`);
+  ok(JOURNEY.filter((st) => st.stop).length >= 5, 'chinese: the stones whose methods the Counting Court drills link to it');
   ok(new Set(JOURNEY.map((s) => s.id)).size === JOURNEY.length, 'chinese: stone ids unique');
   // no ranking of traditions, no "first" claims, anywhere on the road
   const all = JOURNEY.flatMap((s) => s.cards).join(' ');

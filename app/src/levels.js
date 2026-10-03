@@ -39,6 +39,9 @@ export const CONCEPTS = [
   { id: 'algebra', name: 'Algebra & patterns', glyph: '🔤' },
   { id: 'sets', name: 'Sets & logic', glyph: '🧩' },
   { id: 'contest', name: 'Contest thinking', glyph: '🏆' },
+  // the deep methods of two traditions, each a land on the roads it suits (owner, 3 Oct 2026)
+  { id: 'vedic', name: 'The Vedic methods', glyph: '🪜' },
+  { id: 'chinese', name: 'The Chinese counting board', glyph: '🧮' },
 ];
 
 const C = (concept, ids) => Object.fromEntries(ids.trim().split(/\s+/).map((id) => [id, concept]));
@@ -80,6 +83,9 @@ export const CONCEPT_OF = {
     missing-digit-divisibility list-systematically truth-tellers digit-puzzles remainder-puzzles invariants
     count-triangles count-rectangles handshakes grid-paths overlapping-groups staircase-perimeter area-cut-and-move
     dice-faces angle-chasing painted-cubes`),
+  // the Counting Court: the suanpan, the rods and the Nine Chapters' methods
+  ...C('chinese', `suanpan-add suanpan-take board-multiply out-in red-black-rods excess-deficit fangcheng
+    sunzi-multipliers sea-island liu-hui hundred-fowls`),
 };
 
 /* 'make-ten 1, near-doubles 2' → [{ stop: 'make-ten', lv: 1 }, { stop: 'near-doubles', lv: 2 }] */
@@ -92,6 +98,7 @@ export const NEEDS = {
   money: ['addsub', 'decimals'], measure: ['addsub'], shape: [], data: ['number'], factors: ['muldiv'],
   powers: ['muldiv'], negatives: ['addsub'], algebra: ['negatives'], sets: [],
   contest: ['addsub', 'muldiv'],   // contest thinking leans on the arithmetic, so it comes last on a road
+  vedic: ['muldiv'], chinese: ['addsub'],
 };
 
 /* A LAND is one concept area of one level: one straight stretch of the road,
@@ -120,7 +127,7 @@ export const LEVELS = [
     ]),
   level(3, '8', 'The Column Road',
     'Three-digit column sums and mental shortcuts, the nine and twelve times tables, equivalent fractions, time, length and perimeter, and kinds of angle.', [
-      land(3, 'addsub', 'workshop', 'Adding in your head', 'column-add 2, column-sub 2, round-add 1, round-sub 1'),
+      land(3, 'addsub', 'workshop', 'Adding in your head', 'column-add 2, column-sub 2, round-add 1, round-sub 1, suanpan-add 1'),
       land(3, 'muldiv', 'market', 'Nines and twelves', 'times-nine 1, times-twelve 1, split-multiply 1, nikhilam-10 1'),
       land(3, 'factors', 'forest', 'Odds, evens and multiples', 'odd-even-rules 1, multiples 1, divisible-2-5-10 1'),
       land(3, 'fractions', 'bakery', 'Equal fractions', 'fraction-parts 3, equivalent-fractions 1, compare-fractions 1, add-same-bottom 1'),
@@ -135,6 +142,7 @@ export const LEVELS = [
       land(4, 'money', 'coinstreet', 'Spending, saving and time', 'giving-change 3, twenty-four-hour 1, money-left 3, saving-goal 1'),
       land(4, 'shape', 'shapecity', 'Shapes, grids and area', 'kinds-of-triangle 1, four-sided-shapes 1, coordinates-and-moves 1, area-rectangles 1'),
       land(4, 'data', 'carnival', 'Reading graphs', 'pictogram-total 3, bar-compare 3, line-graph-read 1'),
+      land(4, 'chinese', 'court', 'Beads and the five', 'suanpan-add 2, suanpan-take 1, out-in 1'),
       land(4, 'contest', 'strategy', 'Ways into a problem', 'work-backwards 1, guess-check-improve 1, make-a-table 1, bar-model 1, units-digit-cycles 1'),
     ]),
   level(5, '10', 'Point and Per Cent',
@@ -145,6 +153,7 @@ export const LEVELS = [
       land(5, 'money', 'coinstreet', 'Sales and profit', 'best-buy 1, fraction-off 1, profit-and-loss 1'),
       land(5, 'measure', 'clocktower', 'Area and angles', 'perimeter 2, area-rectangles 2, compound-area 1, angles-on-a-line 1'),
       land(5, 'data', 'carnival', 'Averages and working back', 'mean-fair-share 1, data-range 1, think-of-a-number 1'),
+      land(5, 'chinese', 'court', 'Borrowing beads and rods', 'suanpan-take 2, board-multiply 1, red-black-rods 1'),
       land(5, 'contest', 'figures', 'Counting with care', 'count-triangles 1, count-rectangles 1, handshakes 1, staircase-perimeter 1'),
     ]),
   level(6, '11', 'Below Zero',
@@ -155,6 +164,7 @@ export const LEVELS = [
       land(6, 'fractions', 'bakery', 'Fractions with any bottom', 'mixed-numbers 2, add-different-bottoms 1, multiply-fractions 1, divide-fractions 1'),
       land(6, 'shape', 'shapecity', 'Angles and triangles', 'angles-on-a-line 2, angles-in-a-shape 1, area-triangles 1'),
       land(6, 'data', 'carnival', 'Mean, median and mode', 'mean-fair-share 2, median-mode 1, data-range 2'),
+      land(6, 'chinese', 'court', 'Red rods and black', 'board-multiply 2, out-in 2, red-black-rods 2, excess-deficit 1'),
       land(6, 'contest', 'logic', 'What must be true', 'parity 1, worst-case 1, pigeonhole 1, calendar-days 1'),
     ]),
   level(7, '12', 'Letters and Ratios',
@@ -165,6 +175,7 @@ export const LEVELS = [
       land(7, 'algebra', 'setisland', 'Letters for numbers', 'think-of-a-number 2, substitute 1, like-terms 1, solve-balance 1'),
       land(7, 'shape', 'shapecity', 'Circles, triangles and solids', 'round-the-circle 1, construct-triangle 1, volume-cuboid 1'),
       land(7, 'data', 'carnival', 'Chance and arrangements', 'chance-fraction 1, list-outcomes 1, factorials 1, arrange-all 1'),
+      land(7, 'chinese', 'court', 'The board solves for two', 'excess-deficit 2, fangcheng 1, sunzi-multipliers 1, sea-island 1'),
       land(7, 'contest', 'strategy', 'Clever ways round', 'work-backwards 2, find-the-rule 1, heads-and-legs 1, age-problems 1, simpler-case 1, meeting-and-overtaking 1'),
     ]),
   level(8, '13', 'Powers and Proofs',
@@ -175,6 +186,7 @@ export const LEVELS = [
       land(8, 'sets', 'setisland', 'Sets and Venn diagrams', 'set-member 1, set-count 1, union-meet 1, venn-count 1, subset-count 1, who-has-which 1'),
       land(8, 'shape', 'shapecity', 'Constructions and Pythagoras', 'perpendicular-bisector 1, angle-bisector 1, pythagoras-side 1'),
       land(8, 'data', 'carnival', 'Orders and choices', 'arrange-all 2, permutations 1, combinations 1'),
+      land(8, 'chinese', 'court', 'Remainders, circles and fowls', 'fangcheng 2, sunzi-multipliers 2, liu-hui 1, hundred-fowls 1'),
       land(8, 'contest', 'figures', 'Shapes that need a second look', 'grid-paths 2, overlapping-groups 2, area-cut-and-move 2, dice-faces 2, angle-chasing 2, painted-cubes 2'),
     ]),
   level(9, '14', 'The Lighthouse',
@@ -185,6 +197,7 @@ export const LEVELS = [
       land(9, 'algebra', 'setisland', 'Sequences and inequalities', 'like-terms 2, nth-term 1, line-graph 1, inequalities 1'),
       land(9, 'shape', 'lighthouse', 'Trigonometry and bearings', 'trig-sides 1, tan-height 1, sin-cos-side 1, special-angles 1, bearings 1'),
       land(9, 'data', 'carnival', 'Scatter graphs and trees', 'scatter-correlation 1, best-fit-estimate 1, tree-diagram 1, expected-frequency 1'),
+      land(9, 'chinese', 'court', 'Three unknowns and a far peak', 'fangcheng 3, sea-island 2, liu-hui 2, hundred-fowls 2'),
       land(9, 'contest', 'logic', 'Proof by reasoning', 'missing-digit-divisibility 2, list-systematically 2, truth-tellers 2, digit-puzzles 2, remainder-puzzles 2, invariants 2'),
     ]),
   level(10, '15+', 'The Stretch',
@@ -195,6 +208,7 @@ export const LEVELS = [
       land(10, 'sets', 'setisland', 'Sets and logic', 'union-meet 3, venn-count 3, subset-count 3'),
       land(10, 'shape', 'lighthouse', 'Circles and triangles', 'round-the-circle 3, pythagoras-side 3, tan-height 3, sin-cos-side 3, special-angles 3, bearings 3'),
       land(10, 'data', 'carnival', 'Counting and chance', 'permutations 3, combinations 3, tree-diagram 3, expected-frequency 3'),
+      land(10, 'chinese', 'court', 'The board at full stretch', 'sunzi-multipliers 3, sea-island 3, liu-hui 3, hundred-fowls 3'),
       land(10, 'contest', 'strategy', 'Contest stretch', 'heads-and-legs 3, age-problems 3, simpler-case 3, meeting-and-overtaking 3, units-digit-cycles 3'),
     ]),
 ];
