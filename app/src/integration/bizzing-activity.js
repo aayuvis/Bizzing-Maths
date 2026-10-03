@@ -48,7 +48,7 @@ export function trackActivity(app, getName = () => null) {
     activeMs += dt;
     if (activeMs < 60000) return;          // write whole minutes only
     activeMs -= 60000;
-    const o = load(), d = new Date(), who = (getName() || '').trim() || undefined;
+    const o = load(), d = new Date(Date.now()), who = (getName() || '').trim() || undefined;
     // continue the session if it is the same app, child and day, and < 5 min since last active
     if (!session || now - lastActive > GAP || session.d !== ymd(d) || session.who !== who) {
       session = { a: app, d: ymd(d), t: d.getHours() * 60 + d.getMinutes(), m: 0, ...(who ? { who } : {}) };
@@ -70,7 +70,7 @@ export function trackActivity(app, getName = () => null) {
 export function trackMilestone(app, who, ev, label) {
   if (typeof window === 'undefined' || !/^(bee|maths|geography|india|finance)$/.test(app)) return;
   if (!/^(band|world|stop|mastery)$/.test(ev)) return;
-  const d = new Date(), o = load();
+  const d = new Date(Date.now()), o = load();
   o.s.push({ a: app, d: ymd(d), t: d.getHours() * 60 + d.getMinutes(), m: 0, ev, label: String(label).slice(0, 80), ...(who ? { who: who.trim() } : {}) });
   store(o);
 }
