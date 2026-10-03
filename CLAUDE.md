@@ -97,7 +97,9 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     from Bizzing_Schedule, never edit them here; `test/avatars.mjs` compares them byte for byte). Standard events
     only; coins never touch xp. The 96 avatars are `avatars.js` (12 packs × 8, 2/3/2/1, `validate()` = []), every
     Legendary asks for a learning milestone first. Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
-    Frames are the Extras. The wallet history says every line in words (`k.coinNotes`).
+    The Extras are frames, road skins and bonus game modes (`extras.js`; bought once, at the printed price, never
+    random). **Bonus modes stay paid** (owner, 3 Oct 2026): each is a new way to play a skill the Atlas already
+    teaches free — never sell the teaching itself. The wallet history says every line in words (`k.coinNotes`).
 19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
 20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
