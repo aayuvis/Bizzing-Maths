@@ -281,6 +281,11 @@ GAMES = {
                 "standing in calm turquoise water, a small round lamp post at each end, gulls in the sky, a calm sea and a "
                 "pale sunrise sky with soft clouds above, small sailing boats far away. Clean, calm and uncluttered. "
                 "Turquoise, sand, coral pink, soft sky blue.",
+    'g-sudoku': "A wide view of a quiet sunlit courtyard garden seen from slightly above, its floor laid with plain square "
+                "terracotta and cream tiles in a neat grid with no pattern or marks on any tile, potted tulsi and marigolds and a "
+                "small round stone fountain at the left and right edges, a carved wooden lattice screen and climbing jasmine "
+                "along the far wall, an empty wooden bench. The centre is open plain tiles in soft even "
+                "morning light. Calm and uncluttered. Terracotta, cream, leaf green, marigold orange.",
 }
 for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
 

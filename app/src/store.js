@@ -21,7 +21,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 10;
+export const SCHEMA = 11;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -94,6 +94,17 @@ const STEPS = {
     h.v = 10; h.parent = h.parent || {};
     if (h.parent.pin != null && !h.parent.pinHash) h.parent.pinHash = pinHash(String(h.parent.pin));
     delete h.parent.pin; if (h.parent.pinHash === undefined) h.parent.pinHash = null;
+    return h;
+  },
+  // v11: more for coins to buy (extras.js) — road skins and bonus game modes, owned per child,
+  // and the skin a child is wearing. Everyone starts with none and the road they had.
+  10: (h) => {
+    h.v = 11;
+    for (const k of h.kids) {
+      const shop = k.shop || (k.shop = { owned: [], worn: {} });
+      shop.worn = shop.worn || {}; shop.skins = shop.skins || []; shop.modes = shop.modes || [];
+      if (shop.worn.skin === undefined) shop.worn.skin = null;
+    }
     return h;
   },
 };

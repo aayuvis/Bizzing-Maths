@@ -7,9 +7,19 @@
    data-motion="reduced") the particles are dropped for a still, fading ring. */
 
 /* ---------------------------------------------------------- painted plates */
-.play.has-art{--veil:color-mix(in srgb,var(--paper) 30%,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
-.play.has-art .play-bar{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px)}
-.play.g-target .play-body,.play.g-line .play-body{background:linear-gradient(color-mix(in srgb,var(--paper) 42%,transparent),color-mix(in srgb,var(--paper) 42%,transparent))}
+.play.has-art{--veil:color-mix(in srgb,var(--paper) 8%,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
+.play.has-art .play-bar{background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(6px)}
+/* The veil is thin so the painting shows (audit G9). Contrast does not lean on it: every line of
+   words on a plate sits on its own near-opaque surface, and test/extras-ui.mjs measures the
+   worst case — that surface over a pure black and a pure white pixel — at AA, light and dark. */
+.play.has-art .mt-msg,.play.has-art .nl-msg,.play.has-art .mt-keys,.play.has-art .nl-q{background:color-mix(in srgb,var(--surface) 94%,transparent);color:var(--ink);border-radius:12px;padding:4px 12px;display:inline-block}
+.play.has-art .nl-q{border-radius:16px;padding:4px 18px;margin:0}
+.play.has-art .nl-tick{color:var(--ink)}
+.play.g-sudoku .sdk{box-shadow:var(--sh-raised)}
+.play.has-art .btn.ghost{background:color-mix(in srgb,var(--surface) 94%,transparent)}
+/* dark mode's --fix is a light coral: white on it was 2.4:1, so the target's words go dark there */
+:root[data-mode=dark] .mt-target{color:#170b0a}
+.play.g-sudoku .sdk-nums{background:color-mix(in srgb,var(--surface) 60%,transparent);border-radius:18px;padding:8px;backdrop-filter:blur(4px)}
 
 /* Arcade tiles: the same plates the games are played on (set inline by viewArcade,
    so the path is relative to the page, like every other plate) */
@@ -79,11 +89,10 @@
 .mt-card.born{animation:g-born .38s cubic-bezier(.3,1.6,.5,1)}
 .mt-target.won{animation:g-born .5s cubic-bezier(.3,1.6,.5,1)}
 @keyframes g-born{from{transform:scale(.4);opacity:.2}}
-.g-target .mt-msg,.g-line .nl-msg{background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:12px;padding:4px 12px;display:inline-block}
+
 
 /* ---------------------------------------------------------- Number Line */
-.g-line .nl-track{background:color-mix(in srgb,var(--surface) 86%,transparent);border-radius:18px;box-shadow:var(--sh-raised)}
-.g-line .nl-q{display:inline-block;background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:16px;padding:4px 18px;margin:0}
+.g-line .nl-track{background:color-mix(in srgb,var(--surface) 94%,transparent);border-radius:18px;box-shadow:var(--sh-raised)}
 .nl-mark.set{animation:nl-drop .3s ease-out}
 @keyframes nl-drop{from{transform:translate(-50%,-14px)}to{transform:translate(-50%,0)}}
 .nl-true{animation:nl-rise .45s cubic-bezier(.3,1.6,.5,1)}

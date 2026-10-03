@@ -39,7 +39,36 @@ export const active = () => current;
 if (typeof window !== 'undefined') window.__bzmGames = { active };
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
 
-function frame(title, sub, onClose, art) {
+/* A GAME HAS A HASH (audit C2). Opening one pushes #/game/<id> onto the history, so the
+   browser's Back closes the game and lands on the screen it was opened from — instead of
+   leaving that screen. Closing it any other way (Back button in the bar, Escape, Done)
+   steps the history back off that entry, so the address is never left on a closed game.
+   "Play again" replaces the entry rather than stacking another one. */
+const GSTATE = 'bzmGame';
+const onGameEntry = () => { try { return !!(history.state && history.state[GSTATE]); } catch { return false; } };
+let backPending = false, queued = null, restarting = false;
+function pushGame(gid) {
+  // a game opened while the last one's step back is still under way waits for it to land
+  if (backPending) { queued = gid; return; }
+  try {
+    if (onGameEntry()) history.replaceState({ [GSTATE]: gid }, '', '#/game/' + gid);
+    else history.pushState({ [GSTATE]: gid }, '', '#/game/' + gid);
+  } catch (e) {}
+}
+function stepBack() { if (!restarting && !backPending && onGameEntry()) { backPending = true; history.back(); } }
+if (typeof window !== 'undefined') addEventListener('popstate', () => {
+  if (backPending) { backPending = false; if (queued) { const q = queued; queued = null; pushGame(q); } return; }
+  if (current && !onGameEntry()) current.quit();   // the browser's Back: close the game
+});
+/* "Play again" closes the round and opens the next one as ONE step: the entry stays. */
+function restart(again) {
+  restarting = true;
+  try { again(); } finally { restarting = false; }
+  if (!current) stepBack();
+}
+
+function frame(title, sub, onClose, art, gid = art || 'game') {
+  pushGame(gid);
   const el = document.createElement('div');
   el.className = 'play' + (art ? ' has-art g-' + art : '');
   // inline, so the plate resolves against the page like every other plate (a url in a
@@ -79,6 +108,8 @@ function end(g) {
   g.f.el.remove();
   document.documentElement.classList.remove('playing');
   if (current === g) current = null;
+  // closed from inside the game (not by the browser's Back): take its entry off the history
+  stepBack();
 }
 
 export function closeGame() { if (current) current.quit(); }
@@ -169,7 +200,17 @@ export const HOWTO = {
   target: { practises: 'joining numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'The two join into one new number.'], ['◎', 'Use every number to make the target.']] },
   line: { practises: 'estimating where a number sits', steps: [['?', 'A number appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
   sudoku: { practises: 'logic: every row, column and box once', steps: [['▢', 'Pick an empty square.'], ['✎', 'Fill it in, by tap or by key.'], ['✓', 'No row, column or box may repeat one.']] },
+  // the bonus modes (extras.js): each its own how-to, the same keys and pad as its game
+  'rush:mixed': { practises: 'all four operations, at speed', steps: [['±', 'Adding, taking away, times and sharing — all falling at once.'], ['⌨', 'Type the answer on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
+  'rush:squares': { practises: 'square numbers, at speed', steps: [['▢', 'Every bubble is a number times itself.'], ['⌨', 'Type the square on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
+  'target:five': { practises: 'joining five numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'Five numbers this time: keys 1 to 5.'], ['◎', 'Use every number to make the target.']] },
+  'target:hard': { practises: 'reaching big targets with × and ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['×', 'Adding alone will not get there: you need × or ÷.'], ['◎', 'Use every number to make the target.']] },
+  'line:fractions': { practises: 'where a fraction sits between 0 and 1', steps: [['½', 'A fraction appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Halves first, then quarters. The closer, the more points.']] },
+  'line:negatives': { practises: 'numbers below nought', steps: [['0', 'Nought is in the middle; below it, the negatives.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
 };
+const MODE_NAME = { 'rush:mixed': 'Mixed operations', 'rush:squares': 'Squares', 'target:five': 'Five numbers', 'target:hard': 'Hard target', 'line:fractions': 'Fractions', 'line:negatives': 'Negatives' };
+const modeKey = (game, mode) => (mode && HOWTO[game + ':' + mode] ? game + ':' + mode : null);
+const titled = (t, mk) => (mk ? `${t} · ${MODE_NAME[mk]}` : t);
 export const INTRO_MS = 3000;
 function intro(g, title, id, begin) {
   const h = HOWTO[id];
@@ -227,11 +268,11 @@ function resultCard(g, { title, lines, stars, again, done, practised, best }) {
         <button class="btn primary" data-g="again">Play again <kbd>Enter</kbd></button>
         <button class="btn" data-g="done">Back <kbd>Esc</kbd></button>
       </div></div>`;
-  f.body.querySelector('[data-g=again]').onclick = again;
+  f.body.querySelector('[data-g=again]').onclick = () => restart(again);
   f.body.querySelector('[data-g=done]').onclick = done;
   f.body.querySelector('[data-g=again]').focus({ preventScroll: true });
   g.key = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { again(); return true; }
+    if (e.key === 'Enter' || e.key === ' ') { restart(again); return true; }
     if (e.key === 'Escape' || e.key === 'Backspace') { done(); return true; }
     return false;
   };
@@ -262,8 +303,15 @@ export function keypad(keys = []) {
 /* Facts fall; type the answer to pop one. The facts are the child's OWN —
    the ones they have met, weighted to the ones not yet fluent — so the game
    is fact practice at speed. Lives, not a clock: three misses and it ends. */
-export function numberRush(kid, { onTick, onEnd }) {
-  const ops = kid.band === '6-7' ? ['+', '-'] : kid.band === '8-10' ? ['×', '+', '-', '÷'] : ['×', '÷'];
+/* What falls. The standard game serves the child's own facts for their band; "mixed"
+   serves all four operations; "squares" serves the squares bank (facts.js '²', the
+   squares the app asks every child to know), up to 10² / 12² / 20² by band. */
+export function rushPool(kid, mode = null) {
+  if (mode === 'squares') {
+    const top = kid.band === '6-7' ? 10 : kid.band === '8-10' ? 12 : 20;
+    return ramp('²').filter((f) => f.a >= 2 && f.a <= top).map((f) => ({ fact: f, ...f }));
+  }
+  const ops = mode === 'mixed' ? ['+', '-', '×', '÷'] : kid.band === '6-7' ? ['+', '-'] : kid.band === '8-10' ? ['×', '+', '-', '÷'] : ['×', '÷'];
   const pool = [];
   for (const op of ops) {
     const r = ramp(op).filter((f) => f.a > 0 && f.b > 0);
@@ -271,7 +319,13 @@ export function numberRush(kid, { onTick, onEnd }) {
     const edge = r.filter((f) => !met.includes(f)).slice(0, 12);
     pool.push(...(met.length > 8 ? met : r.slice(0, 30)), ...edge);
   }
-  const f = frame('Number Rush', 'Type the answer to pop a bubble', () => g.quit(), 'rush');
+  return pool.map((f) => ({ fact: f, a: f.a, b: f.b, op: f.op }));
+}
+export function numberRush(kid, { onTick, onEnd, mode = null }) {
+  const mk = modeKey('rush', mode);
+  const pool = rushPool(kid, mk ? mode : null);
+  const ops = uniq(pool.map((x) => x.op));
+  const f = frame(titled('Number Rush', mk), mode === 'squares' && mk ? 'Pop each square: a number times itself' : 'Type the answer to pop a bubble', () => g.quit(), 'rush', mk || 'rush');
   const g = { f, tune: 'bright' };
   let raf = 0, bubbles = [], input = '', score = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = 0.05, over = false;
   const popped = [], landed = [];
@@ -309,8 +363,8 @@ export function numberRush(kid, { onTick, onEnd }) {
   }
 
   function spawn(now) {
-    const fact = pick(pool);
-    const g = (fact.op === '×' || fact.op === '+') && Math.random() < 0.5 ? { ...fact, a: fact.b, b: fact.a } : fact;
+    const { fact, ...q } = pick(pool);
+    const g = (q.op === '×' || q.op === '+') && Math.random() < 0.5 ? { ...q, a: q.b, b: q.a } : q;
     const r = 38 + Math.min(10, ftext(g).length);
     const lanes = Math.max(2, Math.floor(W / (r * 2.4)));
     const lane = int(0, lanes - 1);
@@ -383,17 +437,17 @@ export function numberRush(kid, { onTick, onEnd }) {
     onEnd(score, stars);
     resultCard(g, {
       title: score ? `${score} popped` : 'The bubbles won that one',
-      practised: { skill: rushSkill(ops), items: uniq(popped).slice(0, 12), again: uniq(landed).slice(0, 6) },
+      practised: { skill: mode === 'squares' && mk ? 'square numbers, at speed' : rushSkill(ops), items: uniq(popped).slice(0, 12), again: uniq(landed).slice(0, 6) },
       best: combo.best,
       lines: [score >= 15 ? 'That is real speed.' : 'The ones you know best go fastest. Keep playing and more of them will be.'],
-      stars, again: () => { g.quit(); numberRush(kid, { onTick, onEnd }); }, done: () => g.quit(),
+      stars, again: () => { g.quit(); numberRush(kid, { onTick, onEnd, mode }); }, done: () => g.quit(),
     });
   }
   g.stop = () => { over = true; cancelAnimationFrame(raf); removeEventListener('resize', size); };
   g.quit = () => end(g);
   g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), finish: () => !over && finish() };
   current = g;
-  intro(g, 'Number Rush', 'rush', begin);
+  intro(g, titled('Number Rush', mk), mk || 'rush', begin);
   return g;
 }
 
@@ -407,7 +461,7 @@ export function numberRush(kid, { onTick, onEnd }) {
 
 const OPS = { '+': (a, b) => a + b, '−': (a, b) => (a >= b ? a - b : null), '×': (a, b) => a * b, '÷': (a, b) => (b && a % b === 0 ? a / b : null) };
 
-export function solve(nums, target) {
+export function solve(nums, target, ops = OPS) {
   const memo = new Set();
   function go(items) {
     if (items.length === 1) return items[0].v === target ? items[0].s : null;
@@ -416,7 +470,7 @@ export function solve(nums, target) {
     for (let i = 0; i < items.length; i++) for (let j = 0; j < items.length; j++) {
       if (i === j) continue;
       const a = items[i], b = items[j], rest = items.filter((_, x) => x !== i && x !== j);
-      for (const [op, fn] of Object.entries(OPS)) {
+      for (const [op, fn] of Object.entries(ops)) {
         if ((op === '+' || op === '×') && i > j) continue;
         const v = fn(a.v, b.v); if (v == null || v > 10000) continue;
         const s = go([...rest, { v, s: `(${a.s} ${op} ${b.s})` }]);
@@ -430,31 +484,43 @@ export function solve(nums, target) {
   return s ? s.replace(/^\((.*)\)$/, '$1') : null;
 }
 
-export function makePuzzle(band, r = Math.random) {
-  const n = band === '6-7' ? 3 : 4;
+/* adding and taking away only: a "hard target" is one these cannot reach */
+const ADD_ONLY = { '+': OPS['+'], '−': OPS['−'] };
+/* Modes (extras.js): "five" serves one more number than the band's standard game;
+   "hard" serves a bigger target that + and − alone cannot make from these numbers —
+   proved by the solver run with only + and −. Either way the puzzle is solved first. */
+export function makePuzzle(band, r = Math.random, mode = null) {
+  const n = (band === '6-7' ? 3 : 4) + (mode === 'five' ? 1 : 0);
   const hi = band === '6-7' ? 9 : band === '8-10' ? 10 : 13;
-  for (let tries = 0; tries < 400; tries++) {
+  const hard = mode === 'hard';
+  for (let tries = 0; tries < (mode ? 3000 : 400); tries++) {
     const nums = Array.from({ length: n }, () => int(1, hi, r));
     // build a target by combining the numbers at random
     let items = nums.slice();
     while (items.length > 1) {
       items = shuffle(items, r);
       const a = items.pop(), b = items.pop();
-      const ops = Object.keys(OPS).filter((o) => OPS[o](a, b) != null && !(band === '6-7' && (o === '×' || o === '÷')));
+      const ops = Object.keys(OPS).filter((o) => OPS[o](a, b) != null && !(band === '6-7' && !hard && (o === '×' || o === '÷')));
       items.push(OPS[pick(ops, r)](a, b));
     }
     const target = items[0];
-    const lo = band === '6-7' ? 5 : 10, top = band === '6-7' ? 20 : band === '8-10' ? 60 : 150;
+    const lo = hard ? (band === '6-7' ? 21 : band === '8-10' ? 61 : 151) : band === '6-7' ? 5 : 10;
+    const top = hard ? (band === '6-7' ? 60 : band === '8-10' ? 200 : 600) : band === '6-7' ? 20 : band === '8-10' ? 60 : 150;
     if (target < lo || target > top || nums.includes(target)) continue;
+    if (hard && solve(nums, target, ADD_ONLY)) continue;
     const sol = solve(nums, target);
     if (sol) return { nums, target, sol };
   }
+  // never reached in practice (test/games.mjs walks hundreds of seeds); still solved, never typed
+  const fb = mode === 'five' ? [[2, 3, 4, 6, 1], 24] : hard ? (band === '6-7' ? [[7, 8, 9], 47] : band === '8-10' ? [[7, 8, 9, 3], 159] : [[7, 8, 9, 3], 501]) : null;
+  if (fb) return { nums: fb[0], target: fb[1], sol: solve(fb[0], fb[1]) };
   return { nums: [2, 3, 4, 6], target: 24, sol: '(6 × 4) × (3 − 2)' };
 }
 
-export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
-  const title = daily ? "Today's puzzle" : 'Make the Target';
-  const f = frame(title, daily ? 'The same puzzle in every house today' : 'Use every number to hit the target', () => g.quit(), 'target');
+export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) {
+  const mk = daily ? null : modeKey('target', mode);
+  const title = daily ? "Today's puzzle" : titled('Make the Target', mk);
+  const f = frame(title, daily ? 'The same puzzle in every house today' : 'Use every number to hit the target', () => g.quit(), 'target', daily ? 'daily' : mk || 'target');
   const g = { f, tune: 'calm' };
   let round = 0, solved = 0, puzzle, cards, pickA = null, op = null, history = [], shown = false, born = null, combo;
   const made = [], showed = [];
@@ -463,7 +529,7 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
 
   function next() {
     round++; shown = false;
-    puzzle = daily ? makePuzzle(kid.band, seeded('daily:' + dayKey())) : makePuzzle(kid.band);
+    puzzle = daily ? makePuzzle(kid.band, seeded('daily:' + dayKey())) : makePuzzle(kid.band, Math.random, mk ? mode : null);
     cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) }));
     pickA = null; op = null; history = []; born = null;
     draw();
@@ -541,7 +607,7 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
     onEnd(solved, stars);
     resultCard(g, { title: `${solved} of ${ROUNDS} made`, practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made, again: showed }, best: combo.best,
       lines: ['There is usually more than one way. The one "Show me" gives is just one of them.'], stars,
-      again: () => { g.quit(); makeTarget(kid, { onSolve, onEnd }); }, done: () => g.quit() });
+      again: () => { g.quit(); makeTarget(kid, { onSolve, onEnd, mode }); }, done: () => g.quit() });
   }
   function begin() {
     combo = comboMeter(g);
@@ -560,7 +626,7 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
   g.quit = () => end(g);
   g.probe = { finish: () => !g.ended && finish() };
   current = g;
-  intro(g, title, 'target', begin);
+  intro(g, title, mk || 'target', begin);
   return g;
 }
 
@@ -569,37 +635,61 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd }) {
 /* Where does it go? Estimation is the number sense contests lean on and
    drills never train. Drag, tap, or arrow keys; Enter to place. Scored on
    how close, never on speed. */
-export function numberLine(kid, { onTick, onEnd }) {
-  const max = kid.band === '6-7' ? 20 : kid.band === '8-10' ? 100 : 1000;
-  const f = frame('Number Line', `Place the number between 0 and ${max}`, () => g.quit(), 'line');
+/* The line a round is played on. Standard: 0 to 20 / 100 / 1000 by band. "fractions":
+   0 to 1, placing a proper fraction (halves and quarters for the youngest, then thirds,
+   fifths, eighths, tenths; twelfths for the oldest). "negatives": −N to N with nought in
+   the middle. Every target is a real point on its line, and a round never asks for the
+   exact middle (that is the one place anybody can put a marker without thinking). */
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+export function lineSpec(band, mode = null) {
+  if (mode === 'fractions') {
+    const dens = band === '6-7' ? [2, 4] : band === '8-10' ? [2, 3, 4, 5, 8, 10] : [3, 4, 5, 6, 8, 10, 12];
+    return { lo: 0, hi: 1, snap: 100, ends: ['0', '1'], skill: 'Placing fractions between 0 and 1',
+      pick(r = Math.random) {
+        for (;;) { const d = dens[int(0, dens.length - 1, r)], n = int(1, d - 1, r); if (gcd(n, d) === 1 && 2 * n !== d) return { v: n / d, label: `${n}/${d}` }; }
+      } };
+  }
+  const max = band === '6-7' ? 20 : band === '8-10' ? 100 : 1000;
+  if (mode === 'negatives') {
+    const m = band === '6-7' ? 10 : band === '8-10' ? 50 : 500;
+    return { lo: -m, hi: m, snap: m <= 10 ? 2 : 1, ends: [`−${m}`, String(m)], mid: '0', skill: `Placing numbers between −${m} and ${m}`,
+      pick(r = Math.random) { for (;;) { const v = int(-m + 1, m - 1, r); if (v !== 0 && Math.abs(v) >= m * 0.06) return { v, label: v < 0 ? `−${-v}` : String(v) }; } } };
+  }
+  return { lo: 0, hi: max, snap: max <= 20 ? 2 : 1, ends: ['0', String(max)], skill: `Estimating where a number sits between 0 and ${max}`,
+    pick(r = Math.random) { let v; do { v = int(1, max - 1, r); } while (Math.abs(v - max / 2) < max * 0.06); return { v, label: String(v) }; } };
+}
+export function numberLine(kid, { onTick, onEnd, mode = null }) {
+  const mk = modeKey('line', mode), L = lineSpec(kid.band, mk ? mode : null);
+  const { lo, hi } = L, span = hi - lo, mid = (lo + hi) / 2;
+  const f = frame(titled('Number Line', mk), `Place the number between ${L.ends[0]} and ${L.ends[1]}`, () => g.quit(), 'line', mk || 'line');
   const g = { f, tune: 'sea' };
   const ROUNDS = 8;
-  let round = 0, total = 0, target = 0, pos = max / 2, placed = false, combo;
+  let round = 0, total = 0, target = 0, label = '', pos = mid, placed = false, combo;
   const close = [], far = [];
 
   function next() {
-    round++; placed = false; pos = max / 2;
-    do { target = int(1, max - 1); } while (Math.abs(target - max / 2) < max * 0.06);
+    round++; placed = false; pos = mid;
+    ({ v: target, label } = L.pick());
     draw();
   }
-  function pct(v) { return (v / max) * 100; }
+  function pct(v) { return ((v - lo) / span) * 100; }
   function draw(msg = '') {
-    const ticks = [0, max / 4, max / 2, (3 * max) / 4, max];
+    const ticks = [0, 1, 2, 3, 4].map((i) => lo + (span * i) / 4);
     f.hud.innerHTML = `<span class="chip">Round <b>${round}</b> of ${ROUNDS}</span><span class="chip">Points <b>${total}</b></span>`;
     f.body.innerHTML = `<div class="nl">
-      <p class="nl-q">Where does <b class="mono">${target}</b> go?</p>
-      <div class="nl-track" role="slider" tabindex="0" aria-label="Position" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${Math.round(pos)}">
+      <p class="nl-q">Where does <b class="mono">${esc(label)}</b> go?</p>
+      <div class="nl-track" role="slider" tabindex="0" aria-label="Position" aria-valuemin="${lo}" aria-valuemax="${hi}" aria-valuenow="${+pos.toFixed(2)}">
         <div class="nl-line"></div>
-        ${ticks.map((t) => `<span class="nl-tick" style="left:${pct(t)}%"><i></i>${t === 0 || t === max ? t : ''}</span>`).join('')}
+        ${ticks.map((t, i) => `<span class="nl-tick" style="left:${pct(t)}%"><i></i>${i === 0 ? L.ends[0] : i === 4 ? L.ends[1] : i === 2 && L.mid ? L.mid : ''}</span>`).join('')}
         <div class="nl-mark${placed ? ' set' : ''}" style="left:${pct(pos)}%"><span>▼</span></div>
-        ${placed ? `<div class="nl-true" style="left:${pct(target)}%"><span>${target}</span></div>` : ''}
+        ${placed ? `<div class="nl-true" style="left:${pct(target)}%"><span>${esc(label)}</span></div>` : ''}
       </div>
       <div class="nl-msg" aria-live="polite">${msg || 'Drag the marker, tap the line, or use ← → (hold Shift for big steps).'}</div>
       <div class="row gap center">
         ${placed ? `<button class="btn primary" data-n="next">${round < ROUNDS ? 'Next number' : 'See how you did'} <kbd>Enter</kbd></button>` : `<button class="btn primary" data-n="place">Place it here <kbd>Enter</kbd></button>`}
       </div></div>`;
     const tr = f.body.querySelector('.nl-track');
-    const at = (e) => { const r = tr.getBoundingClientRect(); return Math.max(0, Math.min(max, ((e.clientX - r.left) / r.width) * max)); };
+    const at = (e) => { const r = tr.getBoundingClientRect(); return Math.max(lo, Math.min(hi, lo + ((e.clientX - r.left) / r.width) * span)); };
     let drag = false;
     tr.onpointerdown = (e) => { if (placed) return; drag = true; tr.setPointerCapture(e.pointerId); move(at(e)); };
     tr.onpointermove = (e) => { if (drag) move(at(e)); };
@@ -607,17 +697,17 @@ export function numberLine(kid, { onTick, onEnd }) {
     const b = f.body.querySelector('[data-n]'); b.onclick = () => (placed ? advance() : place());
   }
   function move(v) {
-    pos = Math.round(v * (max <= 20 ? 2 : 1)) / (max <= 20 ? 2 : 1);
+    pos = Math.max(lo, Math.min(hi, Math.round(v * L.snap) / L.snap));
     const m = f.body.querySelector('.nl-mark'); if (m) m.style.left = pct(pos) + '%';
-    const tr = f.body.querySelector('.nl-track'); if (tr) tr.setAttribute('aria-valuenow', Math.round(pos));
+    const tr = f.body.querySelector('.nl-track'); if (tr) tr.setAttribute('aria-valuenow', +pos.toFixed(2));
   }
   function place() {
     placed = true;
-    const err = Math.abs(pos - target) / max;
+    const err = Math.abs(pos - target) / span;
     const pts = err <= 0.02 ? 10 : err <= 0.05 ? 7 : err <= 0.1 ? 4 : err <= 0.2 ? 1 : 0;
     total += pts;
     onTick(pts >= 4);
-    const off = Math.abs(pos - target), offs = `${target} — ${off === 0 ? 'bang on' : `${+off.toFixed(1)} away`}`;
+    const off = Math.abs(pos - target), offs = `${label} — ${off < 1e-9 ? 'bang on' : `${+off.toFixed(span <= 1 ? 2 : 1)} away`}`;
     (pts >= 4 ? close : far).push(offs);
     draw(pts === 10 ? 'Bang on.' : pts >= 7 ? 'Very close.' : pts >= 4 ? 'Close.' : `It was here — ${Math.round(err * 100)} hundredths of the line away.`);
     sfx.place();
@@ -634,25 +724,26 @@ export function numberLine(kid, { onTick, onEnd }) {
   function finish() {
     const stars = total >= 60 ? 3 : total >= 40 ? 2 : total >= 20 ? 1 : 0;
     onEnd(total, stars);
-    resultCard(g, { title: `${total} points`, practised: { skill: `Estimating where a number sits between 0 and ${max}`, items: close, again: far }, best: combo.best,
-      lines: ['Halfway, then quarters: find those first and the rest falls between them.'], stars,
-      again: () => { g.quit(); numberLine(kid, { onTick, onEnd }); }, done: () => g.quit() });
+    resultCard(g, { title: `${total} points`, practised: { skill: L.skill, items: close, again: far }, best: combo.best,
+      lines: [mode === 'fractions' && mk ? 'Find the half first, then the quarters: every fraction sits beside one of them.' : 'Halfway, then quarters: find those first and the rest falls between them.'], stars,
+      again: () => { g.quit(); numberLine(kid, { onTick, onEnd, mode }); }, done: () => g.quit() });
   }
   function begin() {
     combo = comboMeter(g);
     g.key = (e) => {
       if (e.key === 'Escape') { g.quit(); return true; }
-      const step = e.shiftKey ? max / 10 : max <= 20 ? 0.5 : max / 100;
-      if (!placed && e.key === 'ArrowLeft') { move(Math.max(0, pos - step)); return true; }
-      if (!placed && e.key === 'ArrowRight') { move(Math.min(max, pos + step)); return true; }
+      const step = e.shiftKey ? span / 10 : 1 / L.snap > span / 100 ? 1 / L.snap : span / 100;
+      if (!placed && e.key === 'ArrowLeft') { move(pos - step); return true; }
+      if (!placed && e.key === 'ArrowRight') { move(pos + step); return true; }
       if (e.key === 'Enter' || e.key === ' ') { placed ? advance() : place(); return true; }
       return false;
     };
     next();
   }
   g.quit = () => end(g);
+  g.probe = { target: () => target, place: (v) => { move(v); place(); }, finish: () => !g.ended && finish() };
   current = g;
-  intro(g, 'Number Line', 'line', begin);
+  intro(g, titled('Number Line', mk), mk || 'line', begin);
   return g;
 }
 
@@ -666,7 +757,7 @@ export function numberLine(kid, { onTick, onEnd }) {
    solved. */
 
 export function sudoku(kid, n, lv, { onEnd }) {
-  const f = frame('Sudoku', `${n}×${n} — each row, column and box holds 1 to ${n} once`, () => g.quit());
+  const f = frame('Sudoku', `${n}×${n} — each row, column and box holds 1 to ${n} once`, () => g.quit(), 'sudoku');
   const g = { f, tune: 'calm' };
   const p = makeSudoku(n, lv);
   const given = p.grid.map(Boolean);
