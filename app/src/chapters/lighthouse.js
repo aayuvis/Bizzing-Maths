@@ -36,6 +36,10 @@ const leaks = (q) => !q.choices && String(q.ans).length > 1 && q.text.replace(/,
 function fresh(make) { let q; for (let i = 0; i < 200; i++) { q = make(); if (!leaks(q)) return q; } return q; }
 const YN = ['Yes', 'No'];
 const pad3 = (b) => String(b).padStart(3, '0');
+/* The steps' x (test/lib/steps.mjs): the highest common factor found by search, not by gcd(). */
+const hcfX = (a, b) => `Math.max(...Array.from({length:${Math.max(1, Math.min(a, b))}},(_,i)=>i+1).filter((g)=>${a}%g===0&&${b}%g===0))`;
+/* which of two ratio names is nearer the side ÷ side the question gives, measured with Math.sin/cos/tan */
+const nearest = (fs, deg, ratio) => `[${fs.map((f) => `'${f}'`)}].reduce((p,f)=>Math.abs(Math[f](${deg}*Math.PI/180)-(${ratio}))<Math.abs(Math[p](${deg}*Math.PI/180)-(${ratio}))?f:p)`;
 
 /* A given ratio: the value as a fraction num/den (so answers are exact) and
    as the child sees it. `exact` says "=" rather than "≈". */
@@ -284,9 +288,9 @@ export const TRICKS = [
       return { a, b, c, find, side, text: `A right-angled triangle has a longest side of ${c} m and one short side of ${known} m. How long is the other short side?`, expr: `Math.sqrt(${c}*${c}-${known}*${known})`, ans: want };
     },
     work({ a, b, c, find }) {
-      if (find === 'c') return [{ t: `${a}²`, v: a * a }, { t: `${b}²`, v: b * b }, { t: `${a * a} + ${b * b}`, v: c * c }, { t: `Which number squared makes ${c * c}?`, v: c }];
+      if (find === 'c') return [{ t: `${a}²`, v: a * a, x: `${a}*${a}` }, { t: `${b}²`, v: b * b, x: `${b}*${b}` }, { t: `${a * a} + ${b * b}`, v: c * c, x: `${a}**2+${b}**2` }, { t: `Which number squared makes ${c * c}?`, v: c }];
       const known = find === 'a' ? b : a, want = find === 'a' ? a : b;
-      return [{ t: `${c}²`, v: c * c }, { t: `${known}²`, v: known * known }, { t: `${c * c} − ${known * known}`, v: want * want }, { t: `Which number squared makes ${want * want}?`, v: want }];
+      return [{ t: `${c}²`, v: c * c, x: `${c}*${c}` }, { t: `${known}²`, v: known * known, x: `${known}*${known}` }, { t: `${c * c} − ${known * known}`, v: want * want, x: `${c}**2-${known}**2` }, { t: `Which number squared makes ${want * want}?`, v: want }];
     },
     draw({ a, b, c, find }) { return squares(a, b, find === 'a' ? '?' : `${a}²`, find === 'b' ? '?' : `${b}²`, find === 'c' ? '?' : `${c}²`); },
   },
@@ -319,9 +323,10 @@ export const TRICKS = [
       return { deg, at, mirror, flip, hi, text: 'Look from the marked angle θ. What is the highlighted side called?', choices: ['opposite', 'adjacent', 'hypotenuse'], ans: name,
         expr: `(()=>{const V='${at}'==='P'?'P':'Q',ends={base:'PR',wall:'RQ',slope:'PQ'}['${hi}'];return !ends.includes('R')?'hypotenuse':ends.includes(V)?'adjacent':'opposite';})()` };
     },
-    work({ hi, ans }) {
-      const s = [{ t: 'Is it the side facing the right angle — the longest one?', v: hi === 'slope' ? 'Yes' : 'No', choices: YN }];
-      if (hi !== 'slope') s.push({ t: 'Does it touch the marked angle θ?', v: ans === 'adjacent' ? 'Yes' : 'No', choices: YN });
+    work({ hi, ans, at }) {
+      const ends = `{base:'PR',wall:'RQ',slope:'PQ'}['${hi}']`;   // the side's two corners; R is the right angle
+      const s = [{ t: 'Is it the side facing the right angle — the longest one?', v: hi === 'slope' ? 'Yes' : 'No', choices: YN, x: `${ends}.includes('R')?'No':'Yes'` }];
+      if (hi !== 'slope') s.push({ t: 'Does it touch the marked angle θ?', v: ans === 'adjacent' ? 'Yes' : 'No', choices: YN, x: `${ends}.includes('${at}')?'Yes':'No'` });
       s.push({ t: 'So it is the', v: ans, choices: ['opposite', 'adjacent', 'hypotenuse'] });
       return s;
     },
@@ -365,7 +370,7 @@ export const TRICKS = [
     },
     work({ deg, d, find }) {
       const t = TAN.find(([x]) => x === deg)[1], h = (d * t.num) / t.den;
-      const s = [{ t: 'Height is opposite the angle, distance is adjacent. Which ratio links them?', v: 'tan', choices: ['sin', 'cos', 'tan'] }];
+      const s = [{ t: 'Height is opposite the angle, distance is adjacent. Which ratio links them?', v: 'tan', choices: ['sin', 'cos', 'tan'], x: nearest(['sin', 'cos', 'tan'], deg, `${h}/${d}`) }];
       if (find === 'd') s.push({ t: `distance = height ÷ tan ${deg}° = ${h} ÷ ${t.show}`, v: d });
       else s.push({ t: `height = distance × tan ${deg}° = ${d} × ${t.show}`, v: h });
       return s;
@@ -424,8 +429,8 @@ export const TRICKS = [
     work({ deg, L, want }) {
       const [, sn, cs] = SINCOS.find(([x]) => x === deg), up = (L * sn.num) / sn.den, out = (L * cs.num) / cs.den;
       const isUp = want.endsWith('up'), f = isUp ? 'sin' : 'cos', r = isUp ? sn : cs;
-      const s = [{ t: `The ladder is the hypotenuse. The ${isUp ? 'height up the wall' : 'distance along the ground'} is the side…`, v: isUp ? 'opposite' : 'adjacent', choices: ['opposite', 'adjacent'] },
-        { t: 'So the ratio to use is', v: f, choices: ['sin', 'cos'] }];
+      const s = [{ t: `The ladder is the hypotenuse. The ${isUp ? 'height up the wall' : 'distance along the ground'} is the side…`, v: isUp ? 'opposite' : 'adjacent', choices: ['opposite', 'adjacent'], x: `${nearest(['sin', 'cos'], deg, `${isUp ? up : out}/${L}`)}==='sin'?'opposite':'adjacent'` },
+        { t: 'So the ratio to use is', v: f, choices: ['sin', 'cos'], x: nearest(['sin', 'cos'], deg, `${isUp ? up : out}/${L}`) }];
       if (want.startsWith('L')) s.push({ t: `ladder = ${isUp ? up : out} ÷ ${f} ${deg}° = ${isUp ? up : out} ÷ ${r.show}`, v: L });
       else s.push({ t: `${L} × ${f} ${deg}° = ${L} × ${r.show}`, v: isUp ? up : out });
       return s;
@@ -466,9 +471,10 @@ export const TRICKS = [
         expr: `['30°','45°','60°'].find((s)=>Math.abs(Math.${f}(parseInt(s)*Math.PI/180)-(${val}))<1e-9)`, tri };
     },
     work({ i }) {
-      const [f, show, , deg, tri] = SPECIAL[i];
+      const [f, show, val, deg, tri] = SPECIAL[i];
       return [
-        { t: `Which triangle has sides that give ${show}: the half-square (1, 1, √2) or the half-equilateral (1, √3, 2)?`, v: tri, choices: ['half-square', 'half-equilateral'] },
+        { t: `Which triangle has sides that give ${show}: the half-square (1, 1, √2) or the half-equilateral (1, √3, 2)?`, v: tri, choices: ['half-square', 'half-equilateral'],
+          x: `[1/1,1/Math.SQRT2].some((r)=>Math.abs(r-(${val}))<1e-9)?'half-square':'half-equilateral'` },
         { t: `In it, which angle has ${f} = ${show}?`, v: `${deg}°`, choices: ['30°', '45°', '60°'] },
       ];
     },
@@ -512,7 +518,7 @@ export const TRICKS = [
         expr: `(${out}+180)%360`, ans: out < 180 ? out + 180 : out - 180 };
     },
     work({ out }) {
-      return [{ t: `Is ${pad3(out)}° less than 180°?`, v: out < 180 ? 'Yes' : 'No', choices: YN },
+      return [{ t: `Is ${pad3(out)}° less than 180°?`, v: out < 180 ? 'Yes' : 'No', choices: YN, x: `${out}+180<360?'Yes':'No'` },
         out < 180 ? { t: `So add half a turn: ${out} + 180`, v: out + 180 } : { t: `So take half a turn away: ${out} − 180`, v: out - 180 }];
     },
     draw({ out }) { return compass(out); },
@@ -542,8 +548,9 @@ export const TRICKS = [
       return { kind, pts, text: `The keeper logs two readings on each of ${pts.length} nights and plots them. What correlation does the scatter graph show?`, choices: CORRS, ans: kind,
         expr: `((c)=>c>${BOUND.strong}?'positive':c<-${BOUND.strong}?'negative':Math.abs(c)<${BOUND.none}?'none':'too weak to call')(${CORR}(${JSON.stringify(pts)}))` };
     },
-    work({ kind }) {
-      return [{ t: 'Reading left to right, do the dots tend to go up, go down, or neither?', v: kind === 'positive' ? 'up' : kind === 'negative' ? 'down' : 'neither', choices: ['up', 'down', 'neither'] },
+    work({ kind, pts }) {
+      return [{ t: 'Reading left to right, do the dots tend to go up, go down, or neither?', v: kind === 'positive' ? 'up' : kind === 'negative' ? 'down' : 'neither', choices: ['up', 'down', 'neither'],
+        x: `((c)=>c>${BOUND.strong}?'up':c<-${BOUND.strong}?'down':'neither')(${CORR}(${JSON.stringify(pts)}))` },
         { t: 'So the correlation is', v: kind, choices: CORRS }];
     },
     draw({ pts }) { return plot(pts, 10); },
@@ -591,8 +598,8 @@ export const TRICKS = [
     work({ x1, y1, x2, y2, x0 }) {
       const m = (y2 - y1) / (x2 - x1), dx = x0 - x1, out = x0 < x1 || x0 > x2;
       return [
-        { t: `From x = ${x1} to x = ${x2}, how much does y change? (use − if it falls)`, v: y2 - y1 },
-        { t: `So for each 1 across, y changes by ${N(y2 - y1)} ÷ ${x2 - x1}`, v: m },
+        { t: `From x = ${x1} to x = ${x2}, how much does y change? (use − if it falls)`, v: y2 - y1, x: `${y2}-(${y1})` },
+        { t: `So for each 1 across, y changes by ${N(y2 - y1)} ÷ ${x2 - x1}`, v: m, x: `(${y2}-(${y1}))/(${x2}-(${x1}))` },
         { t: `x = ${x0} is ${N(dx)} across from x = ${x1}: ${y1} + (${N(dx)}) × (${N(m)})${out ? ' — an extrapolation, so trust it less' : ''}`, v: y1 + dx * m },
       ];
     },
@@ -648,18 +655,19 @@ export const TRICKS = [
       const E = EVENTS[e], [a, b] = p1, [c, d] = p2, W = E.words;
       const f1 = (y) => fr(y ? a : b - a, b), f2 = (y) => fr(y ? c : d - c, d);
       const path = (y1, y2) => fr((y1 ? a : b - a) * (y2 ? c : d - c), b * d);
+      const P1 = (y) => (y ? `${a}/${b}` : `(1-${a}/${b})`), P2 = (y) => (y ? `${c}/${d}` : `(1-${c}/${d})`);   // a "not" branch is what is left of 1
       if (ask === 'one' || ask === 'same') {
         const [p, q] = ask === 'one' ? [[1, 0], [0, 1]] : [[1, 1], [0, 0]];
         return [
-          { t: `Path ${W[p[0] ? 0 : 1]} then ${W[p[1] ? 0 : 1]}: ${f1(p[0])} × ${f2(p[1])}`, v: path(p[0], p[1]) },
-          { t: `Path ${W[q[0] ? 0 : 1]} then ${W[q[1] ? 0 : 1]}: ${f1(q[0])} × ${f2(q[1])}`, v: path(q[0], q[1]) },
+          { t: `Path ${W[p[0] ? 0 : 1]} then ${W[p[1] ? 0 : 1]}: ${f1(p[0])} × ${f2(p[1])}`, v: path(p[0], p[1]), x: `${P1(p[0])}*${P2(p[1])}` },
+          { t: `Path ${W[q[0] ? 0 : 1]} then ${W[q[1] ? 0 : 1]}: ${f1(q[0])} × ${f2(q[1])}`, v: path(q[0], q[1]), x: `${P1(q[0])}*${P2(q[1])}` },
           { t: 'Either path will do, so add them', v: fr((p[0] ? a : b - a) * (p[1] ? c : d - c) + (q[0] ? a : b - a) * (q[1] ? c : d - c), b * d) },
         ];
       }
       const y1 = ask[0] === 'y', y2 = ask[1] === 'y';
       return [
-        { t: `The chance on the “${W[y1 ? 0 : 1]}” branch for the ${E.names[0]}`, v: f1(y1) },
-        { t: `The chance on the “${W[y2 ? 0 : 1]}” branch for the ${E.names[1]}`, v: f2(y2) },
+        { t: `The chance on the “${W[y1 ? 0 : 1]}” branch for the ${E.names[0]}`, v: f1(y1), x: P1(y1) },
+        { t: `The chance on the “${W[y2 ? 0 : 1]}” branch for the ${E.names[1]}`, v: f2(y2), x: P2(y2) },
         { t: 'Multiply along the path', v: path(y1, y2) },
       ];
     },
@@ -719,21 +727,22 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, T } = o;
-      let num, den, first;
+      let num, den, first, top, bot;   // top/bot: the chance before simplifying, for the x
       if (kind === 'spin' || kind === 'log' || kind === 'die') {
         const [k, n] = kind === 'die' ? [DIE[o.i][0], 6] : [o.k, o.n];
-        [num, den] = fr(k, n).split('/').map(Number);
-        first = { t: kind === 'die' ? `The chance: winning faces out of 6, in its simplest form` : `The chance as a fraction: ${k} out of ${n}, in its simplest form`, v: fr(k, n) };
+        [num, den] = fr(k, n).split('/').map(Number); [top, bot] = [k, n];
+        first = { t: kind === 'die' ? `The chance: winning faces out of 6, in its simplest form` : `The chance as a fraction: ${k} out of ${n}, in its simplest form`, v: fr(k, n),
+          x: kind === 'die' ? `[1,2,3,4,5,6].filter((f)=>${DIE[o.i][1]}).length/6` : `${k}/${n}` };
       } else if (kind === 'dec') {
-        [num, den] = fr(o.c, 100).split('/').map(Number);
-        first = { t: `${o.c / 100} as a fraction in its simplest form`, v: fr(o.c, 100) };
+        [num, den] = fr(o.c, 100).split('/').map(Number); [top, bot] = [o.c, 100];
+        first = { t: `${o.c / 100} as a fraction in its simplest form`, v: fr(o.c, 100), x: `${o.c}/100` };
       } else {
         const [a, b] = o.p1, [c, d] = o.p2, y1 = o.ask[0] === 'y', y2 = o.ask[1] === 'y';
         const f1 = fr(y1 ? a : b - a, b), f2 = fr(y2 ? c : d - c, d), path = fr((y1 ? a : b - a) * (y2 ? c : d - c), b * d);
-        [num, den] = path.split('/').map(Number);
-        first = { t: `Multiply along the path: ${f1} × ${f2}`, v: path };
+        [num, den] = path.split('/').map(Number); [top, bot] = [(y1 ? a : b - a) * (y2 ? c : d - c), b * d];
+        first = { t: `Multiply along the path: ${f1} × ${f2}`, v: path, x: `${y1 ? `${a}/${b}` : `(1-${a}/${b})`}*${y2 ? `${c}/${d}` : `(1-${c}/${d})`}` };
       }
-      const s = [first, { t: `Share the ${T} trials into ${den} equal parts: ${T} ÷ ${den}`, v: T / den }];
+      const s = [first, { t: `Share the ${T} trials into ${den} equal parts: ${T} ÷ ${den}`, v: T / den, x: `${T}/(${bot}/${hcfX(top, bot)})` }];
       if (num > 1) s.push({ t: `Take ${num} of those parts: ${T / den} × ${num}`, v: (T / den) * num });
       return s;
     },
@@ -794,9 +803,9 @@ export const TRICKS = [
     work({ a, b, op, k, form, ans, choices }) {
       const c = a * k + b, sol = a < 0 ? FLIP[op] : op;
       const s = [
-        { t: b >= 0 ? `Take ${b} from both sides: ${N(c)} − ${b}` : `Add ${-b} to both sides: ${N(c)} + ${-b}`, v: c - b },
-        { t: `Divide both sides by ${N(a)}: ${N(c - b)} ÷ ${a < 0 ? `(${N(a)})` : a}`, v: k },
-        { t: `Did you divide by a negative number, so the sign turns round?`, v: a < 0 ? 'Yes' : 'No', choices: YN },
+        { t: b >= 0 ? `Take ${b} from both sides: ${N(c)} − ${b}` : `Add ${-b} to both sides: ${N(c)} + ${-b}`, v: c - b, x: `(${c})-(${b})` },
+        { t: `Divide both sides by ${N(a)}: ${N(c - b)} ÷ ${a < 0 ? `(${N(a)})` : a}`, v: k, x: `((${c})-(${b}))/(${a})` },
+        { t: `Did you divide by a negative number, so the sign turns round?`, v: a < 0 ? 'Yes' : 'No', choices: YN, x: `(${a})<0?'Yes':'No'` },
       ];
       if (form === 'set') s.push({ t: 'So the answer is', v: ans, choices });
       else s.push({ t: `${setLabel(sol, k)}, so the ${sol[0] === '<' ? 'largest' : 'smallest'} integer is`, v: ans });

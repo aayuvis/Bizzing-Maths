@@ -237,10 +237,10 @@ const STOPS = [
         expr: ask === 'quotient' ? `Math.floor(${N}/9)` : `${N}%9`, ans: ask === 'quotient' ? Math.floor(N / 9) : N % 9 };
     },
     work({ N, ask }) {
-      const { cols, s } = nineCols(N), Q0 = (N - s) / 9;
+      const { cols, s } = nineCols(N), Q0 = (N - s) / 9, sx = digits(N).join('+');
       const steps = [
-        { t: cols.length > 1 ? `Running totals: ${cols.join(' | ')}. Read them as one number, carrying` : `The answer column is the first digit`, v: Q0 },
-        { t: 'Add ALL the digits: the remainder column', v: s },
+        { t: cols.length > 1 ? `Running totals: ${cols.join(' | ')}. Read them as one number, carrying` : `The answer column is the first digit`, v: Q0, x: `(${N}-(${sx}))/9` },
+        { t: 'Add ALL the digits: the remainder column', v: s, x: sx },
       ];
       const k = Math.floor(s / 9);
       if (k > 0) steps.push(ask === 'quotient' ? { t: `${s} holds ${k} more 9${k > 1 ? 's' : ''}: ${Q0} + ${k}`, v: Q0 + k } : { t: `${s} holds ${k} more 9${k > 1 ? 's' : ''}: ${s} − ${9 * k}`, v: s - 9 * k });
@@ -291,9 +291,10 @@ const STOPS = [
     work({ N, d, ask }) {
       const B = 10 ** String(d).length, c = B - d, a = Math.floor(N / B), b = N % B, R1 = a * c + b;
       const steps = [
-        { t: `${d} is how far below ${B}?`, v: c },
-        { t: `${N} is ${a} lot${a > 1 ? 's' : ''} of ${B} and ${b}. Spares: ${a} × ${c}`, v: a * c },
-        { t: `Spares plus the end: ${a * c} + ${b}`, v: R1 },
+        { t: `${d} is how far below ${B}?`, v: c, x: `${B}-${d}` },
+        { t: `${N} is ${a} lot${a > 1 ? 's' : ''} of ${B} and ${b}. Spares: ${a} × ${c}`, v: a * c + 1, x: `Math.floor(${N}/${B})*(${B}-${d})` },
+        // x: what is left of N after that many whole divisors are taken out
+        { t: `Spares plus the end: ${a * c} + ${b}`, v: R1, x: `${N}-${d}*Math.floor(${N}/${B})` },
       ];
       if (R1 >= d) steps.push(ask === 'quotient' ? { t: `${R1} holds one more ${d}: ${a} + 1`, v: a + 1 } : { t: `${R1} holds one more ${d}: ${R1} − ${d}`, v: R1 - d });
       else if (ask === 'quotient') steps.push({ t: `${R1} is less than ${d}, so the answer is the count`, v: a });
@@ -350,9 +351,10 @@ const STOPS = [
         let prev = `${10 * fd.rin[j] + n[j]}`;
         for (let i = 1; i <= fd.k; i++) if (j - i >= 0) prev += ` − ${fd.f[i - 1]} × ${fd.Q[j - i]}`;
         const t = j === 0 ? `Divide by ${fd.m} (flag ${fl}): ${n[0]} ÷ ${fd.m}` : `Next column: ${prev} = ${g}. ${g} ÷ ${fd.m}`;
-        return { t: t + (fd.back[j] ? ' — one less, or the next column goes below zero' : ''), v: q };
+        // x: digit j of the true answer, read off N ÷ D
+        return { t: t + (fd.back[j] ? ' — one less, or the next column goes below zero' : ''), v: q, x: `Math.floor(Math.floor(${N}/${D})/${10 ** (fd.Q.length - 1 - j)})%10` };
       });
-      steps.push({ t: 'What is left in the last column: the remainder', v: fd.R });
+      steps.push({ t: 'What is left in the last column: the remainder', v: fd.R, x: `${N}%${D}` });
       steps.push({ t: `Read the answer digits ${fd.Q.join(' ')}`, v: fd.Qn });
       return steps;
     },
@@ -396,15 +398,16 @@ const STOPS = [
     work({ n, mode }) {
       const d = digits(n);
       if (mode === 'duplex') {
-        if (d.length === 2) return [{ t: `${d[0]} × ${d[1]}`, v: d[0] * d[1] }, { t: 'Double it', v: 2 * d[0] * d[1] }];
-        if (d.length === 3) return [{ t: `Twice the outer pair: 2 × ${d[0]} × ${d[2]}`, v: 2 * d[0] * d[2] }, { t: `The middle, squared: ${d[1]}²`, v: d[1] ** 2 }, { t: 'Add them', v: duplex(d) }];
-        return [{ t: `Twice the outer pair: 2 × ${d[0]} × ${d[3]}`, v: 2 * d[0] * d[3] }, { t: `Twice the inner pair: 2 × ${d[1]} × ${d[2]}`, v: 2 * d[1] * d[2] }, { t: 'Add them', v: duplex(d) }];
+        if (d.length === 2) return [{ t: `${d[0]} × ${d[1]}`, v: d[0] * d[1], x: `Math.floor(${n}/10)*(${n}%10)` }, { t: 'Double it', v: 2 * d[0] * d[1] }];
+        if (d.length === 3) return [{ t: `Twice the outer pair: 2 × ${d[0]} × ${d[2]}`, v: 2 * d[0] * d[2], x: `2*Math.floor(${n}/100)*(${n}%10)` }, { t: `The middle, squared: ${d[1]}²`, v: d[1] ** 2, x: `(Math.floor(${n}/10)%10)**2` }, { t: 'Add them', v: duplex(d) }];
+        return [{ t: `Twice the outer pair: 2 × ${d[0]} × ${d[3]}`, v: 2 * d[0] * d[3], x: `2*Math.floor(${n}/1000)*(${n}%10)` }, { t: `Twice the inner pair: 2 × ${d[1]} × ${d[2]}`, v: 2 * d[1] * d[2], x: `2*(Math.floor(${n}/100)%10)*(Math.floor(${n}/10)%10)` }, { t: 'Add them', v: duplex(d) }];
       }
       const c = sqCols(n), s = d.join('');
       const mid = d.length === 3 ? [1, 2, 3] : [2, 3, 4];
       const seg = (t) => s.slice(Math.max(0, t - d.length + 1), Math.min(t, d.length - 1) + 1);
       return [
-        ...mid.map((t) => ({ t: `Duplex of ${seg(t)}`, v: c[t] })),
+        // x: the column of n × n by vertically and crosswise — every digit pair whose places add to t
+        ...mid.map((t) => ({ t: `Duplex of ${seg(t)}`, v: c[t], x: d.flatMap((a, i) => d.map((b, j) => (i + j === t ? `${a}*${b}` : null))).filter(Boolean).join('+') })),
         { t: `Columns ${c.join(' | ')}: carry from the right`, v: n * n },
       ];
     },
@@ -440,9 +443,10 @@ const STOPS = [
     },
     work({ N }) {
       const cands = SQ_END[N % 10], g = Math.floor(N / 100), t = isqrt(g), root = isqrt(N);
-      const s = [{ t: `${N} ends in ${N % 10}, so the root ends in ${cands.join(' or ')}. Cover the last two digits: ${g}. The biggest square not over it is ?²`, v: t }];
+      const tx = `Math.floor(Math.sqrt(${N})/10)`;   // the tens digit of the root
+      const s = [{ t: `${N} ends in ${N % 10}, so the root ends in ${cands.join(' or ')}. Cover the last two digits: ${g}. The biggest square not over it is ?²`, v: t, x: tx }];
       if (cands.length === 1) { s.push({ t: `Tens ${t}, ending ${cands[0]}: the root`, v: root }); return s; }
-      s.push({ t: `${t} × ${t + 1}`, v: t * (t + 1) });
+      s.push({ t: `${t} × ${t + 1}`, v: t * (t + 1), x: `${tx}*(${tx}+1)` });
       s.push({ t: `Is ${g} at least ${t * (t + 1)}? Yes: the higher ending (${t}${Math.max(...cands)}); no: the lower (${t}${Math.min(...cands)}). The root`, v: root });
       return s;
     },
@@ -482,10 +486,11 @@ const STOPS = [
     work({ N }) {
       const L = rootLong(N);
       return [
-        { t: `First group ${L.g1}: the biggest square not over it is ?²`, v: L.a },
-        { t: `Divisor 2 × ${L.a} = ${L.dv}. ${L.r0} left, bring down ${L.d[0]}: ${L.gross1} ÷ ${L.dv}${L.b < Math.floor(L.gross1 / L.dv) ? ' — one less, or the next column goes below zero' : ''}`, v: L.b },
-        { t: `${L.rem1} left, bring down ${L.d[1]}, take off the duplex ${L.b}²`, v: L.gross2 },
-        { t: `${L.gross2} ÷ ${L.dv}${L.c < Math.floor(L.gross2 / L.dv) ? ' — one less, or a later column goes below zero' : ''}`, v: L.c },
+        // x: the digits of the true root; the column after b is what is left of the first five digits' worth once (10a + b)² is taken away
+        { t: `First group ${L.g1}: the biggest square not over it is ?²`, v: L.a, x: `Math.floor(Math.sqrt(${N})/100)` },
+        { t: `Divisor 2 × ${L.a} = ${L.dv}. ${L.r0} left, bring down ${L.d[0]}: ${L.gross1} ÷ ${L.dv}${L.b < Math.floor(L.gross1 / L.dv) ? ' — one less, or the next column goes below zero' : ''}`, v: L.b, x: `Math.floor(Math.sqrt(${N})/10)%10` },
+        { t: `${L.rem1} left, bring down ${L.d[1]}, take off the duplex ${L.b}²`, v: L.gross2, x: `Math.floor(${N}/100)-Math.floor(Math.sqrt(${N})/10)**2` },
+        { t: `${L.gross2} ÷ ${L.dv}${L.c < Math.floor(L.gross2 / L.dv) ? ' — one less, or a later column goes below zero' : ''}`, v: L.c, x: `Math.floor(Math.sqrt(${N}))%10` },
         { t: 'The root', v: L.root },
       ];
     },
@@ -520,8 +525,8 @@ const STOPS = [
     work({ N }) {
       const u = CUBE_END[N % 10], g = Math.floor(N / 1000), t = icbrt(g);
       return [
-        { t: `${N} ends in ${N % 10}. The root ends in`, v: u },
-        { t: `Cover the last three digits: ${g}. The biggest cube not over it is ?³`, v: t },
+        { t: `${N} ends in ${N % 10}. The root ends in`, v: u, x: `Math.round(Math.cbrt(${N}))%10` },
+        { t: `Cover the last three digits: ${g}. The biggest cube not over it is ?³`, v: t, x: `Math.floor(Math.round(Math.cbrt(${N}))/10)` },
         { t: `Tens ${t}, ending ${u}: the root`, v: icbrt(N) },
       ];
     },
@@ -565,13 +570,15 @@ const STOPS = [
     },
     work({ ask, p, N }) {
       if (ask === 'osc') {
-        if (p % 10 === 9) return [{ t: `${p} ends in 9. The digits before the 9`, v: (p - 9) / 10 }, { t: 'One more than that', v: oscOf(p) }];
-        const k = toNine(p);
-        return [{ t: `${p} times what ends in 9?`, v: k }, { t: `${p} × ${k}`, v: p * k }, { t: 'One more than the digits before the 9', v: oscOf(p) }];
+        if (p % 10 === 9) return [{ t: `${p} ends in 9. The digits before the 9`, v: (p - 9) / 10, x: `Math.floor(${p}/10)` }, { t: 'One more than that', v: oscOf(p) }];
+        const k = toNine(p), kx = `[1,2,3,4,5,6,7,8,9].find((k)=>String(${p}*k).endsWith('9'))`;
+        return [{ t: `${p} times what ends in 9?`, v: k, x: kx }, { t: `${p} × ${k}`, v: p * k, x: `${p}*${kx}` }, { t: 'One more than the digits before the 9', v: oscOf(p) }];
       }
       const { m, chain } = osculate(N, p);
-      const s = [{ t: `The osculator for ${p}`, v: m }];
-      for (let i = 1; i < chain.length; i++) { const x = chain[i - 1]; s.push({ t: `${Math.floor(x / 10)} + ${x % 10} × ${m}`, v: chain[i] }); }
+      // x: the osculator from p (one more than the digits before the 9 of p's first multiple ending in 9), and each link re-run from N
+      const mx = `(${p}*[1,2,3,4,5,6,7,8,9].find((k)=>String(${p}*k).endsWith('9'))+1)/10`;
+      const s = [{ t: `The osculator for ${p}`, v: m, x: mx }];
+      for (let i = 1; i < chain.length; i++) { const x = chain[i - 1]; s.push({ t: `${Math.floor(x / 10)} + ${x % 10} × ${m}`, v: chain[i], x: `((x,M)=>{for(let i=0;i<${i};i++)x=Math.floor(x/10)+M*(x%10);return x;})(${N},${mx})` }); }
       s.push({ t: `Is ${chain.at(-1)} in the ${p} times table?`, v: yn(N % p === 0), choices: YN });
       return s;
     },
@@ -617,9 +624,10 @@ const STOPS = [
     work({ p, kind, k }) {
       const m = ekadhikaOf(p);
       if (kind === 'end') {
-        return mulDigits(p, k).slice(1).map((s, i) => ({ t: `${ord(i + 2)} from the end: ${m} × ${s.from}${s.carryIn ? ` + carry ${s.carryIn}` : ''} = ${s.t}, keep the last digit`, v: s.e }));
+        // x: that digit of 1 ÷ p by long division — the (i + 2)th from the end of the block is digit P − i − 1 after the point
+        return mulDigits(p, k).slice(1).map((s, i) => ({ t: `${ord(i + 2)} from the end: ${m} × ${s.from}${s.carryIn ? ` + carry ${s.carryIn}` : ''} = ${s.t}, keep the last digit`, v: s.e, x: `Number(10n**${PERIOD[p] - i - 1}n/${p}n%10n)` }));
       }
-      const ds = divDigits(p, k).map((s, i) => ({ t: i === 0 ? `One more than ${(p - 9) / 10} is ${m}. Digit 1: 1 ÷ ${m}` : `Digit ${i + 1}: remainder in front of the last digit, ${s.x} ÷ ${m}`, v: s.d }));
+      const ds = divDigits(p, k).map((s, i) => ({ t: i === 0 ? `One more than ${(p - 9) / 10} is ${m}. Digit 1: 1 ÷ ${m}` : `Digit ${i + 1}: remainder in front of the last digit, ${s.x} ÷ ${m}`, v: s.d, x: `Number(10n**${i + 1}n/${p}n%10n)` }));
       if (kind === 'half') ds.push({ t: `Half a block later, take it from 9: 9 − ${ds.at(-1).v}`, v: 9 - ds.at(-1).v });
       return ds;
     },
@@ -664,18 +672,23 @@ const STOPS = [
     work(q) {
       if (q.kind === 'swapped') {
         const a = q.a1, b = q.b1, s = (q.c1 + q.c2) / (a + b), d = (q.c1 - q.c2) / (a - b);
+        // x: x and y by elimination (Cramer), then their sum and difference
+        const X = `(${q.c1}*${q.b2}-${q.c2}*${q.b1})/(${q.a1}*${q.b2}-${q.a2}*${q.b1})`, Y = `(${q.a1}*${q.c2}-${q.a2}*${q.c1})/(${q.a1}*${q.b2}-${q.a2}*${q.b1})`;
         return [
-          { t: `Add: ${a + b}(x + y) = ${q.c1 + q.c2}, so x + y`, v: s },
-          { t: `Subtract: ${neg(a - b)}(x − y) = ${neg(q.c1 - q.c2)}, so x − y`, v: d },
+          { t: `Add: ${a + b}(x + y) = ${q.c1 + q.c2}, so x + y`, v: s, x: `${X}+${Y}` },
+          { t: `Subtract: ${neg(a - b)}(x − y) = ${neg(q.c1 - q.c2)}, so x − y`, v: d, x: `${X}-${Y}` },
           q.ask === 'x' ? { t: `x = (${s} + ${par(d)}) ÷ 2`, v: (s + d) / 2 } : { t: `y = (${s} − ${par(d)}) ÷ 2`, v: (s - d) / 2 },
         ];
       }
       let [A1, B1, C1, A2, B2, C2] = [q.a1, q.b1, q.c1, q.a2, q.b2, q.c2];
       if (B1 * A2 - B2 * A1 < 0) [A1, B1, C1, A2, B2, C2] = [A2, B2, C2, A1, B1, C1];
       const den = B1 * A2 - B2 * A1, nx = B1 * C2 - B2 * C1, ny = C1 * A2 - C2 * A1;
+      // x: the bottom is the size of the determinant; each top is its unknown (by elimination) times the bottom
+      const det = `(${q.a1}*${q.b2}-${q.a2}*${q.b1})`, bot = `Math.abs${det}`;
       return [
-        { t: `Bottom: ${par(B1)} × ${par(A2)} − ${par(B2)} × ${par(A1)}`, v: den },
-        q.ask === 'x' ? { t: `Top for x: ${par(B1)} × ${par(C2)} − ${par(B2)} × ${par(C1)}`, v: nx } : { t: `Top for y: ${par(C1)} × ${par(A2)} − ${par(C2)} × ${par(A1)}`, v: ny },
+        { t: `Bottom: ${par(B1)} × ${par(A2)} − ${par(B2)} × ${par(A1)}`, v: den, x: bot },
+        q.ask === 'x' ? { t: `Top for x: ${par(B1)} × ${par(C2)} − ${par(B2)} × ${par(C1)}`, v: nx, x: `(${q.c1}*${q.b2}-${q.c2}*${q.b1})/${det}*${bot}` }
+          : { t: `Top for y: ${par(C1)} × ${par(A2)} − ${par(C2)} × ${par(A1)}`, v: ny, x: `(${q.a1}*${q.c2}-${q.a2}*${q.c1})/${det}*${bot}` },
         { t: `${q.ask} = top ÷ bottom`, v: q.ask === 'x' ? nx / den : ny / den },
       ];
     },
@@ -729,15 +742,16 @@ const STOPS = [
       if (o.kind === 'proportion') {
         const { r, p, s, q, a, b, c } = o, u = r * q, v = p * s;
         return [
-          { t: `Split ${b} into two parts that multiply to ${a} × ${c} = ${a * c}: the larger part`, v: Math.max(u, v) },
-          { t: 'and the smaller part', v: Math.min(u, v) },
+          // x: the two parts are the roots of t² − bt + ac = 0
+          { t: `Split ${b} into two parts that multiply to ${a} × ${c} = ${a * c}: the larger part`, v: Math.max(u, v), x: `(${b}+Math.sqrt(${b}**2-4*${a}*${c}))/2` },
+          { t: 'and the smaller part', v: Math.min(u, v), x: `(${b}-Math.sqrt(${b}**2-4*${a}*${c}))/2` },
           { t: `${a} : part, in lowest terms, is ${r} : ? — for the part that gives ${r}`, v: p },
         ];
       }
       const { p, q, b, c } = o;
       return [
-        { t: `Two numbers that multiply to ${neg(c)} and add to ${neg(b)}: the larger`, v: Math.max(p, q) },
-        { t: 'and the smaller', v: Math.min(p, q) },
+        { t: `Two numbers that multiply to ${neg(c)} and add to ${neg(b)}: the larger`, v: Math.max(p, q), x: `(${b}+Math.sqrt((${b})**2-4*(${c})))/2` },
+        { t: 'and the smaller', v: Math.min(p, q), x: `(${b}-Math.sqrt((${b})**2-4*(${c})))/2` },
         { t: `So (x ${Math.max(p, q) < 0 ? '−' : '+'} ${Math.abs(Math.max(p, q))})(x ${Math.min(p, q) < 0 ? '−' : '+'} ${Math.abs(Math.min(p, q))}) = 0. The larger x is minus the smaller number`, v: -Math.min(p, q) },
       ];
     },
@@ -789,8 +803,8 @@ const STOPS = [
     work(q) {
       const ten = sameFrontTen(q.a, q.b), base = nearBase(q.a, q.b);
       return [
-        { t: `Same front part, and last digits that add to 10?`, v: yn(ten), choices: YN },
-        { t: `Both within a tenth of the same base (100 or 1000)?`, v: yn(!!base), choices: YN },
+        { t: `Same front part, and last digits that add to 10?`, v: yn(ten), choices: YN, x: `String(${q.a}).slice(0,-1)===String(${q.b}).slice(0,-1)&&${q.a}%10+${q.b}%10===10?'Yes':'No'` },
+        { t: `Both within a tenth of the same base (100 or 1000)?`, v: yn(!!base), choices: YN, x: `[100,1000].some((B)=>Math.abs(${q.a}-B)<=B/10&&Math.abs(${q.b}-B)<=B/10)?'Yes':'No'` },
         { t: 'So the best method is', v: q.ans, choices: METHODS },
       ];
     },

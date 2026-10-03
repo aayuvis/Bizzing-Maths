@@ -118,10 +118,11 @@ export const TRICKS = [
         expr: `(Math.floor(${ha}/30)||12)+':'+String(Math.round(${ma}/6)).padStart(2,'0')` };
     },
     work({ h, m, ask, opts }) {
-      if (ask === 'to') return [{ t: 'The long hand: how many minutes past the hour?', v: m }, { t: `An hour is 60 minutes: 60 − ${m}`, v: 60 - m }];
+      const ha = ((h % 12) + m / 60) * 30, ma = m * 6;   // the hands' angles, as q() draws them: the x read the clock face
+      if (ask === 'to') return [{ t: 'The long hand: how many minutes past the hour?', v: m, x: `${ma}/6` }, { t: `An hour is 60 minutes: 60 − ${m}`, v: 60 - m }];
       return [
-        { t: 'The long hand: how many minutes past the hour?', v: m },
-        { t: 'The short hand: which hour has it reached or just passed?', v: h },
+        { t: 'The long hand: how many minutes past the hour?', v: m, x: `${ma}/6` },
+        { t: 'The short hand: which hour has it reached or just passed?', v: h, x: `Math.floor(${ha}/30)||12` },
         { t: 'So the time is', v: fmt(h, m), choices: opts },
       ];
     },
@@ -161,10 +162,10 @@ export const TRICKS = [
     },
     work({ qty, price, pay }) {
       const tot = qty * price, s = [];
-      if (qty > 1) s.push({ t: `The total: ${qty} × ${price}`, v: tot });
+      if (qty > 1) s.push({ t: `The total: ${qty} × ${price}`, v: tot, x: `${qty}*${price}` });
       const nt = Math.ceil(tot / 10) * 10;
-      if (nt > tot) s.push({ t: `${tot} up to ${nt}`, v: nt - tot });
-      if (pay > nt) s.push({ t: `${nt} up to ${pay}`, v: pay - nt });
+      if (nt > tot) s.push({ t: `${tot} up to ${nt}`, v: nt - tot, x: `10-${qty}*${price}%10` });
+      if (pay > nt) s.push({ t: `${nt} up to ${pay}`, v: pay - nt, x: `${pay}-${qty}*${price}-(10-${qty}*${price}%10)%10` });
       s.push({ t: 'Add the jumps: your change', v: pay - tot });
       return s;
     },
@@ -201,12 +202,12 @@ export const TRICKS = [
     },
     work({ H, m1, E, m2 }) {
       const D = (E - H) * 60 + m2 - m1;
-      if (E === H) return [{ t: 'Minutes past the hour at the start', v: m1 }, { t: 'Minutes past the hour at the end', v: m2 }, { t: `${m2} − ${m1}`, v: D }];
+      if (E === H) return [{ t: 'Minutes past the hour at the start', v: m1, x: `(${H}*60+${m1})%60` }, { t: 'Minutes past the hour at the end', v: m2, x: `(${E}*60+${m2})%60` }, { t: `${m2} − ${m1}`, v: D }];
       const s = []; let base = H;
-      if (m1 > 0) { base = H + 1; s.push({ t: `${fmt(h12(H), m1)} up to ${h12(base)}:00`, v: 60 - m1 }); }
+      if (m1 > 0) { base = H + 1; s.push({ t: `${fmt(h12(H), m1)} up to ${h12(base)}:00`, v: 60 - m1, x: `60-(${H}*60+${m1})%60` }); }
       const k = E - base;
-      if (k > 0) s.push({ t: `${h12(base)}:00 up to ${h12(E)}:00 — ${k === 1 ? 'one hour' : 'whole hours'} in minutes`, v: 60 * k });
-      if (m2 > 0) s.push({ t: `${h12(E)}:00 up to ${fmt(h12(E), m2)}`, v: m2 });
+      if (k > 0) s.push({ t: `${h12(base)}:00 up to ${h12(E)}:00 — ${k === 1 ? 'one hour' : 'whole hours'} in minutes`, v: 60 * k, x: `${E}*60-Math.ceil((${H}*60+${m1})/60)*60` });
+      if (m2 > 0) s.push({ t: `${h12(E)}:00 up to ${fmt(h12(E), m2)}`, v: m2, x: `(${E}*60+${m2})%60` });
       s.push({ t: 'Add the jumps', v: D });
       return s;
     },
@@ -257,13 +258,13 @@ export const TRICKS = [
     work({ H, m, dir, opts }) {
       const h = h12(H), pm = H >= 12, yn = ['Yes', 'No'];
       if (dir === 'to24') return [
-        { t: 'Is it after midday (pm)?', v: pm ? 'Yes' : 'No', choices: yn },
-        { t: H === 12 ? 'Midday stays 12' : H === 0 ? '12 at night starts the day again: the hour is' : pm ? `${h} + 12` : 'Before midday the hour stays', v: H },
+        { t: 'Is it after midday (pm)?', v: pm ? 'Yes' : 'No', choices: yn, x: `${H}*60+${m}>=12*60?'Yes':'No'` },
+        { t: H === 12 ? 'Midday stays 12' : H === 0 ? '12 at night starts the day again: the hour is' : pm ? `${h} + 12` : 'Before midday the hour stays', v: H, x: `${h}%12+${pm ? 12 : 0}` },
         { t: 'So it is', v: `${pad(H)}:${pad(m)}`, choices: opts },
       ];
       return [
-        { t: 'Is the hour 12 or more (pm)?', v: pm ? 'Yes' : 'No', choices: yn },
-        { t: H > 12 ? `${H} − 12` : H === 0 ? 'Hour 00 is 12 at night: the hour is' : 'The hour stays', v: h },
+        { t: 'Is the hour 12 or more (pm)?', v: pm ? 'Yes' : 'No', choices: yn, x: `${H}>=12?'Yes':'No'` },
+        { t: H > 12 ? `${H} − 12` : H === 0 ? 'Hour 00 is 12 at night: the hour is' : 'The hour stays', v: h, x: `(${H}+11)%12+1` },
         { t: 'So it is', v: `${h}:${pad(m)} ${pm ? 'pm' : 'am'}`, choices: opts },
       ];
     },
@@ -311,9 +312,9 @@ export const TRICKS = [
       return { kind, u, x, y, form, text: `How many ${small} is ${x} ${big}?`, expr: `${x}*${f}`, ans: R3(x * f) };
     },
     work({ kind, u, x, y }) {
-      const { big, small, f } = UNITS[u], s = [{ t: `How many ${small} make 1 ${big}?`, v: f }];
+      const { big, small, f } = UNITS[u], s = [{ t: `How many ${small} make 1 ${big}?`, v: f, x: `10**${Math.round(Math.log10(f))}` }];
       if (kind === 'up') s.push({ t: `${x} ÷ ${f}`, v: x / f });
-      else if (kind === 'mixed') s.push({ t: `${x} × ${f}`, v: x * f }, { t: `Add the ${y} ${small}`, v: x * f + y });
+      else if (kind === 'mixed') s.push({ t: `${x} × ${f}`, v: x * f, x: `${x}*${f}` }, { t: `Add the ${y} ${small}`, v: x * f + y });
       else s.push({ t: `${x} × ${f}`, v: R3(x * f) });
       return s;
     },
@@ -351,9 +352,9 @@ export const TRICKS = [
       return { kind, W, H, w1, h1, text: `A rectangle is ${W} cm long and ${H} cm wide. What is its perimeter, in cm?`, expr: `${W}+${H}+${W}+${H}`, ans: 2 * (W + H) };
     },
     work({ kind, W, H, w1, h1 }) {
-      if (kind === 'L') return [{ t: 'The missing across side', v: W - w1 }, { t: 'The missing up-and-down side', v: H - h1 }, { t: 'Add all six sides', v: 2 * (W + H) }];
-      if (kind === 'square') return [{ t: 'A square has four equal sides', v: 4 }, { t: `4 × ${W}`, v: 4 * W }];
-      return [{ t: `One length and one width: ${W} + ${H}`, v: W + H }, { t: 'Two of each: double it', v: 2 * (W + H) }];
+      if (kind === 'L') return [{ t: 'The missing across side', v: W - w1, x: `${W}-${w1}` }, { t: 'The missing up-and-down side', v: H - h1, x: `${H}-${h1}` }, { t: 'Add all six sides', v: 2 * (W + H) }];
+      if (kind === 'square') return [{ t: 'A square has four equal sides', v: 4, x: `[${W},${W},${W},${W}].length` }, { t: `4 × ${W}`, v: 4 * W }];
+      return [{ t: `One length and one width: ${W} + ${H}`, v: W + H, x: `${W}+${H}` }, { t: 'Two of each: double it', v: 2 * (W + H) }];
     },
     draw({ kind, W, H, w1, h1 }) {
       if (kind === 'L') return shape(lPoints(W, H, w1, h1, 18), lLabels(W, H, w1, h1));
@@ -393,9 +394,9 @@ export const TRICKS = [
       if (lv === 3) return { lv, W, H, text: `A rectangle has an area of ${W * H} cm² and a length of ${W} cm. How wide is it, in cm?`, expr: `${W * H}/${W}`, ans: H };
       return { lv, W, H, text: `A rectangle is ${W} cm long and ${H} cm wide. What is its area, in cm²?`, expr: Array(H).fill(W).join('+'), ans: W * H };
     },
-    work({ lv, W, H }) {
-      if (lv === 3) return [{ t: 'The area', v: W * H }, { t: `Rows of ${W}: ${W * H} ÷ ${W}`, v: H }];
-      return [{ t: 'Squares in one row', v: W }, { t: 'Number of rows', v: H }, { t: `${W} × ${H}`, v: W * H }];
+    work({ lv, W, H, c0 = 0, r0 = 0 }) {
+      if (lv === 3) return [{ t: 'The area', v: W * H, x: `${W}*${H}` }, { t: `Rows of ${W}: ${W * H} ÷ ${W}`, v: H }];
+      return [{ t: 'Squares in one row', v: W, x: `${c0 + W}-${c0}` }, { t: 'Number of rows', v: H, x: `${r0 + H}-${r0}` }, { t: `${W} × ${H}`, v: W * H }];
     },
     draw({ lv, W, H, cols, rows, c0, r0 }) {
       if (lv === 1) { const s = new Set(); for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) s.add(`${r0 + i},${c0 + j}`); return grid(cols, rows, s); }
@@ -427,9 +428,9 @@ export const TRICKS = [
     },
     work({ W, H, w1, h1 }) {
       return [
-        { t: `The bottom strip: ${W} × ${h1}`, v: W * h1 },
-        { t: `The height of the part above it: ${H} − ${h1}`, v: H - h1 },
-        { t: `The part above: ${w1} × ${H - h1}`, v: w1 * (H - h1) },
+        { t: `The bottom strip: ${W} × ${h1}`, v: W * h1, x: `${W}*${h1}` },
+        { t: `The height of the part above it: ${H} − ${h1}`, v: H - h1, x: `${H}-${h1}` },
+        { t: `The part above: ${w1} × ${H - h1}`, v: w1 * (H - h1), x: `${w1}*(${H}-${h1})` },
         { t: 'Add the two pieces', v: W * h1 + w1 * (H - h1) },
       ];
     },
@@ -472,9 +473,9 @@ export const TRICKS = [
       return { kind, b, h, o, sl, slope: sl ? 'given' : 'none', text: `A ${name} has a base of ${b} cm and a height of ${h} cm${sl ? ` (its sloping side is ${sl} cm)` : ''}. What is its area, in cm²?`,
         expr: shoelace(pts), ans: kind === 'para' ? b * h : (b * h) / 2 };
     },
-    work({ kind, b, h }) {
-      if (kind === 'para') return [{ t: 'Slide the end triangle across: a rectangle this wide', v: b }, { t: 'and this tall (straight up, not the slope)', v: h }, { t: `${b} × ${h}`, v: b * h }];
-      return [{ t: `The parallelogram (or rectangle) it is half of: ${b} × ${h}`, v: b * h }, { t: 'The triangle is half of that', v: (b * h) / 2 }];
+    work({ kind, b, h, o = 0 }) {
+      if (kind === 'para') return [{ t: 'Slide the end triangle across: a rectangle this wide', v: b, x: `${b + o}-${o}` }, { t: 'and this tall (straight up, not the slope)', v: h, x: `${h}-0` }, { t: `${b} × ${h}`, v: b * h }];
+      return [{ t: `The parallelogram (or rectangle) it is half of: ${b} × ${h}`, v: b * h, x: `${b}*${h}` }, { t: 'The triangle is half of that', v: (b * h) / 2 }];
     },
     draw({ kind, b, h, o, sl }) {
       const u = Math.min(20, Math.floor(200 / Math.max(b + o, h))), under = h + 22 / u;
@@ -518,12 +519,12 @@ export const TRICKS = [
     },
     work({ ask, l, w, h }) {
       if (ask === 'sa') return [
-        { t: `Front and back: 2 × ${l} × ${h}`, v: 2 * l * h },
-        { t: `Top and bottom: 2 × ${l} × ${w}`, v: 2 * l * w },
-        { t: `The two ends: 2 × ${w} × ${h}`, v: 2 * w * h },
+        { t: `Front and back: 2 × ${l} × ${h}`, v: 2 * l * h, x: `${l}*${h}+${l}*${h}` },
+        { t: `Top and bottom: 2 × ${l} × ${w}`, v: 2 * l * w, x: `${l}*${w}+${l}*${w}` },
+        { t: `The two ends: 2 × ${w} × ${h}`, v: 2 * w * h, x: `${w}*${h}+${w}*${h}` },
         { t: 'Add the six faces', v: 2 * (l * w + l * h + w * h) },
       ];
-      return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w }, { t: 'Number of layers', v: h }, { t: `${l * w} × ${h}`, v: l * w * h }];
+      return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w, x: `${l}*${w}` }, { t: 'Number of layers', v: h, x: `${h}-0` }, { t: `${l * w} × ${h}`, v: l * w * h }];
     },
     draw({ l, w, h }) { return box(l, h, w); },
   },

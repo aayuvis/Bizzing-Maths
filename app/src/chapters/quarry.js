@@ -133,15 +133,16 @@ export const TRICKS = [
     work(q) {
       const { x, show, choices } = q, s = [];
       const sum = show.startsWith('the answer to ') ? show.slice(14) : null;
-      if (sum && Number.isInteger(x)) s.push({ t: `Work it out: ${sum}`, v: x });
+      const { js } = q, isW = `Number.isInteger(${js})?'Yes':'No'`;
+      if (sum && Number.isInteger(x)) s.push({ t: `Work it out: ${sum}`, v: x, x: `(${js})` });
       if (!Number.isInteger(x)) {
-        s.push({ t: sum ? `Does ${sum} come out exactly, with nothing left over?` : `Is ${show} a whole amount, with nothing after the point?`, v: 'No', choices: YN });
+        s.push({ t: sum ? `Does ${sum} come out exactly, with nothing left over?` : `Is ${show} a whole amount, with nothing after the point?`, v: 'No', choices: YN, x: isW });
         s.push({ t: 'So which family?', v: FAM[3], choices });
         return s;
       }
-      if (!sum) s.push({ t: `Is ${show} a whole amount, with nothing after the point?`, v: 'Yes', choices: YN });
-      s.push({ t: 'Is it below zero?', v: yn(x < 0), choices: YN });
-      if (x >= 0) s.push({ t: 'Is it zero?', v: yn(x === 0), choices: YN });
+      if (!sum) s.push({ t: `Is ${show} a whole amount, with nothing after the point?`, v: 'Yes', choices: YN, x: isW });
+      s.push({ t: 'Is it below zero?', v: yn(x < 0), choices: YN, x: `(${js})<0?'Yes':'No'` });
+      if (x >= 0) s.push({ t: 'Is it zero?', v: yn(x === 0), choices: YN, x: `(${js})===0?'Yes':'No'` });
       s.push({ t: 'So the smallest family is', v: family(x), choices });
       return s;
     },
@@ -188,8 +189,8 @@ export const TRICKS = [
     work(q) {
       const { a, op, b, ans } = q, pa = a % 2 ? 'odd' : 'even', pb = b % 2 ? 'odd' : 'even', c = ['odd', 'even'];
       return [
-        { t: `Is ${a} odd or even? Look at its last digit`, v: pa, choices: c },
-        { t: `And ${b}?`, v: pb, choices: c },
+        { t: `Is ${a} odd or even? Look at its last digit`, v: pa, choices: c, x: `${a}%2===1?'odd':'even'` },
+        { t: `And ${b}?`, v: pb, choices: c, x: `${b}%2===1?'odd':'even'` },
         { t: `${pa} ${op} ${pb} makes`, v: ans, choices: c },
       ];
     },
@@ -241,12 +242,12 @@ export const TRICKS = [
     work({ n }) {
       const s = [], c = ['square', 'triangular', 'cube', 'prime'];
       const tests = [
-        [`Is ${n} a square — some number times itself?`, isSquare(n), 'square'],
-        [`Is ${n} triangular — 1 + 2 + 3 + … up to some number?`, isTri(n), 'triangular'],
-        [`Is ${n} a cube — some number times itself, times itself again?`, isCube(n), 'cube'],
-        [`Is ${n} prime — can it only stand in one straight line?`, isPrime(n), 'prime'],
+        [`Is ${n} a square — some number times itself?`, isSquare(n), 'square', `(function(n){for(let k=1;k*k<=n;k++)if(k*k===n)return 'Yes';return 'No'})(${n})`],
+        [`Is ${n} triangular — 1 + 2 + 3 + … up to some number?`, isTri(n), 'triangular', `(function(n){for(let k=1,t=0;t<n;k++){t+=k;if(t===n)return 'Yes'}return 'No'})(${n})`],
+        [`Is ${n} a cube — some number times itself, times itself again?`, isCube(n), 'cube', `(function(n){for(let k=1;k*k*k<=n;k++)if(k*k*k===n)return 'Yes';return 'No'})(${n})`],
+        [`Is ${n} prime — can it only stand in one straight line?`, isPrime(n), 'prime', `(function(n){for(let d=2;d<n;d++)if(n%d===0)return 'No';return n>1?'Yes':'No'})(${n})`],
       ];
-      for (const [t, yes, kind] of tests) { s.push({ t, v: yn(yes), choices: YN }); if (yes) { s.push({ t: 'So its shape is', v: kind, choices: c }); break; } }
+      for (const [t, yes, kind, x] of tests) { s.push({ t, v: yn(yes), choices: YN, x }); if (yes) { s.push({ t: 'So its shape is', v: kind, choices: c }); break; } }
       return s;
     },
     draw() {
@@ -297,11 +298,11 @@ export const TRICKS = [
       const { list, miss, n } = q;
       if (miss < 0) {
         const s = []; let run = list[0];
-        for (const p of list.slice(1)) { s.push({ t: `${run} × ${p}`, v: run * p }); run *= p; }
+        for (const [i, p] of list.slice(1).entries()) { s.push({ t: `${run} × ${p}`, v: run * p, x: list.slice(0, i + 2).join('*') }); run *= p; }
         return s;
       }
       const have = q.shown.reduce((a, b) => a * b, 1);
-      return [{ t: `Multiply the stones you have: ${q.shown.join(' × ')}`, v: have }, { t: `${n} ÷ ${have}`, v: n / have }];
+      return [{ t: `Multiply the stones you have: ${q.shown.join(' × ')}`, v: have, x: q.shown.join('*') }, { t: `${n} ÷ ${have}`, v: n / have }];
     },
     draw(q) { return q.miss < 0 ? stoneRow(q.list, '?') : stoneRow([...q.shown, '?'], q.n); },
   },
@@ -337,7 +338,7 @@ export const TRICKS = [
       let root = Math.floor(Math.sqrt(n)); while (root * root > n) root--; while ((root + 1) * (root + 1) <= n) root++;
       let p = root; while (!isPrime(p)) p--;
       return [
-        { t: `The biggest whole number whose square is not more than ${n}`, v: root },
+        { t: `The biggest whole number whose square is not more than ${n}`, v: root, x: `Math.floor(Math.sqrt(${n}))` },
         { t: `The biggest prime that is not more than ${root}`, v: p },
       ];
     },
@@ -374,7 +375,7 @@ export const TRICKS = [
       const ps = powers(a).map(([p]) => p), s = [];
       for (const [i, p] of ps.entries()) {
         const goes = b % p === 0;
-        s.push({ t: `${i === 0 ? `${a} = ${stones(a).join(' × ')}. ` : ''}Does ${p} go into ${b}?`, v: yn(goes), choices: YN });
+        s.push({ t: `${i === 0 ? `${a} = ${stones(a).join(' × ')}. ` : ''}Does ${p} go into ${b}?`, v: yn(goes), choices: YN, x: `${b}%${p}===0?'Yes':'No'` });
         if (goes) return [...s, { t: `They share the stone ${p}. Coprime?`, v: 'No', choices: YN }];
       }
       return [...s, { t: 'No stone shared. Coprime?', v: 'Yes', choices: YN }];
@@ -412,7 +413,7 @@ export const TRICKS = [
         expr: `(function(n){let c=0;for(let d=1;d*d<=n;d++)if(n%d===0)c+=d*d===n?1:2;return c})(${n})`, ans: pw.reduce((m, [, e]) => m * (e + 1), 1) };
     },
     work({ pw }) {
-      const s = pw.map(([p, e]) => ({ t: `How many ${p}s can a factor take? (none, one, … up to ${e})`, v: e + 1 }));
+      const s = pw.map(([p, e]) => ({ t: `How many ${p}s can a factor take? (none, one, … up to ${e})`, v: e + 1, x: `${e}+1` }));
       s.push({ t: `Multiply the choices: ${pw.map(([, e]) => e + 1).join(' × ')}`, v: pw.reduce((m, [, e]) => m * (e + 1), 1) });
       return s;
     },
@@ -463,8 +464,8 @@ export const TRICKS = [
     work({ a, b }) {
       const g = gcd(a, b), bot = b / g; let m = bot; while (m % 2 === 0) m /= 2; while (m % 5 === 0) m /= 5;
       return [
-        { t: `Simplify ${a}/${b}. What is the bottom now?`, v: bot },
-        { t: `Take every 2 and every 5 out of ${bot}. What is left?`, v: m },
+        { t: `Simplify ${a}/${b}. What is the bottom now?`, v: bot, x: `${b}/(function g(x,y){return y?g(y,x%y):x})(${a},${b})` },
+        { t: `Take every 2 and every 5 out of ${bot}. What is left?`, v: m, x: `(function(m){while(m%2===0)m/=2;while(m%5===0)m/=5;return m})(${b}/(function g(x,y){return y?g(y,x%y):x})(${a},${b}))` },
         { t: 'Left with 1: it ends. Anything else: it goes on for ever. So', v: m === 1 ? 'it ends' : 'goes on for ever', choices: ['it ends', 'goes on for ever'] },
       ];
     },
@@ -517,14 +518,14 @@ export const TRICKS = [
       if (d) {
         const u = unpaired(n) + unpaired(d);
         return [
-          { t: `How many different stones of ${n} are left without a partner?`, v: unpaired(n) },
-          { t: `And of ${d}?`, v: unpaired(d) },
+          { t: `How many different stones of ${n} are left without a partner?`, v: unpaired(n), x: `(function(n){let c=0;for(let p=2;p<=n;p++){let e=0;while(n%p===0){n/=p;e++}if(e%2)c++}return c})(${n})` },
+          { t: `And of ${d}?`, v: unpaired(d), x: `(function(n){let c=0;for(let p=2;p<=n;p++){let e=0;while(n%p===0){n/=p;e++}if(e%2)c++}return c})(${d})` },
           { t: u ? 'A lonely stone somewhere, so √ of this fraction is' : 'Every stone paired, top and bottom, so it is', v: u ? 'irrational' : 'rational', choices: c },
         ];
       }
       const u = unpaired(n);
       return [
-        { t: `Write ${n} in prime stones. How many different stones are left without a partner?`, v: u },
+        { t: `Write ${n} in prime stones. How many different stones are left without a partner?`, v: u, x: `(function(n){let c=0;for(let p=2;p<=n;p++){let e=0;while(n%p===0){n/=p;e++}if(e%2)c++}return c})(${n})` },
         { t: u ? 'A lonely stone, so the root is' : 'Every stone has a partner, so the root is', v: u ? 'irrational' : 'rational', choices: c },
       ];
     },

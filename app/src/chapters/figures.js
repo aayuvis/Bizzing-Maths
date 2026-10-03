@@ -34,6 +34,14 @@ const PG = (pts, cls) => `<polygon points="${pts.map((p) => `${R2(p[0])},${R2(p[
 const T = (x, y, s, cls = 'dg-text', anchor = 'middle') => text(R2(x), R2(y), s, cls, anchor);
 const DASH = ' stroke-dasharray="5 4"';
 
+/* ---- the steps' x (test/lib/steps.mjs): second routes measured from the drawing itself ---- */
+const pairsX = (p) => `Array.from({length:${p}},(_,i)=>i).reduce((s,i)=>s+i,0)`;   // 0 + 1 + … + (p − 1): the pairs, added up
+/* every string of right/up moves to (X, Y), kept if it never lands on the rock */
+const walkX = (X, Y, rock) => `(()=>{let c=0;for(let m=0;m<${1 << (X + Y)};m++){let x=0,y=0,ok=true;for(let i=0;i<${X + Y};i++){if(m>>i&1)x++;else y++;if(x>${X}||y>${Y}||(${rock ? `${rock[0]}===x&&${rock[1]}===y` : 'false'})){ok=false;break;}}if(ok&&x===${X}&&y===${Y})c++;}return c;})()`;
+const shoeX = (P) => `((P)=>Math.abs(P.reduce((s,p,i)=>s+p[0]*P[(i+1)%P.length][1]-P[(i+1)%P.length][0]*p[1],0))/2)(${JSON.stringify(P)})`;
+const boxX = (P) => `((P,c)=>(Math.max(...c(0))-Math.min(...c(0)))*(Math.max(...c(1))-Math.min(...c(1))))(0,(k)=>${JSON.stringify(P)}.map((p)=>p[k]))`;
+const sideX = (V, k) => `((V)=>V.reduce((s,a,i)=>s+Math.abs(V[(i+1)%V.length][${k}]-a[${k}]),0))(${JSON.stringify(V)})`;   // walk the outline: k = 0 across, 1 up-and-down
+
 /* ---- triangles in a drawing, found by brute force ----
    The figure is a list of straight segments. Every end and every crossing is
    a point; three points make a triangle when each pair lies along one drawn
@@ -257,9 +265,10 @@ export const TRICKS = [
       expr: `${trianglesIn(segs)}`, ans: C2(p) * (m + 1) };
     },
     work(q) {
-      if (q.kind === 'grid') return [{ t: 'Triangles pointing UP, of every size', v: q.up }, { t: 'Triangles pointing DOWN, of every size', v: q.dn }, { t: 'All the triangles', v: q.ans }];
-      const s = [{ t: 'Lines leaving the top corner', v: q.p }, { t: `Ways to choose two of them: ${q.p} × ${q.p - 1} ÷ 2`, v: C2(q.p) }];
-      if (q.m) s.push({ t: 'Lines going across that can close a triangle (the bottom edge counts)', v: q.m + 1 }, { t: 'Triangles: pairs × across lines', v: q.ans });
+      if (q.kind === 'grid') return [{ t: 'Triangles pointing UP, of every size', v: q.up, x: `(()=>{let c=0;for(let s=1;s<=${q.n};s++)for(let r=0;r+s<=${q.n};r++)for(let i=0;i<=r;i++)c++;return c;})()` }, { t: 'Triangles pointing DOWN, of every size', v: q.dn, x: `(()=>{let c=0;for(let s=1;s<=${q.n};s++)for(let r=s;r+s<=${q.n};r++)for(let i=0;i+s<=r;i++)c++;return c;})()` }, { t: 'All the triangles', v: q.ans }];
+      const S = JSON.stringify(this.segs(q));   // the drawn segments: the first starts at the top corner
+      const s = [{ t: 'Lines leaving the top corner', v: q.p, x: `((S)=>S.filter((g)=>g[0]===S[0][0]&&g[1]===S[0][1]).length)(${S})` }, { t: `Ways to choose two of them: ${q.p} × ${q.p - 1} ÷ 2`, v: C2(q.p), x: pairsX(q.p) }];
+      if (q.m) s.push({ t: 'Lines going across that can close a triangle (the bottom edge counts)', v: q.m + 1, x: `${S}.filter((g)=>g[1]===g[3]).length` }, { t: 'Triangles: pairs × across lines', v: q.ans });
       return s;
     },
     draw(q) {
@@ -309,10 +318,11 @@ export const TRICKS = [
     },
     work(q) {
       const { kind, w, h } = q;
-      if (kind === 'strip') return [{ t: 'Dividing lines across the strip (both ends count)', v: w + 1 }, { t: `Choose two of them for the ends: ${w + 1} × ${w} ÷ 2`, v: q.ans }];
-      if (kind === 'grid') return [{ t: `Choose 2 of the ${w + 1} upright lines: ${w + 1} × ${w} ÷ 2`, v: C2(w + 1) }, { t: `Choose 2 of the ${h + 1} across lines: ${h + 1} × ${h} ÷ 2`, v: C2(h + 1) }, { t: 'Multiply: every pair of sides goes with every top and bottom', v: q.ans }];
+      if (kind === 'strip') return [{ t: 'Dividing lines across the strip (both ends count)', v: w + 1, x: `${w}+1` }, { t: `Choose two of them for the ends: ${w + 1} × ${w} ÷ 2`, v: q.ans }];
+      if (kind === 'grid') return [{ t: `Choose 2 of the ${w + 1} upright lines: ${w + 1} × ${w} ÷ 2`, v: C2(w + 1), x: pairsX(w + 1) }, { t: `Choose 2 of the ${h + 1} across lines: ${h + 1} × ${h} ÷ 2`, v: C2(h + 1), x: pairsX(h + 1) }, { t: 'Multiply: every pair of sides goes with every top and bottom', v: q.ans }];
       const s = [];
-      for (let k = 1; k <= Math.min(w, h); k++) s.push({ t: `${k} by ${k} squares: ${w - k + 1} × ${h - k + 1}`, v: (w - k + 1) * (h - k + 1) });
+      for (let k = 1; k <= Math.min(w, h); k++) s.push({ t: `${k} by ${k} squares: ${w - k + 1} × ${h - k + 1}`, v: (w - k + 1) * (h - k + 1),
+        x: `(()=>{let c=0;for(let x=0;x+${k}<=${w};x++)for(let y=0;y+${k}<=${h};y++)c++;return c;})()` });   // walk every place a k-square fits
       s.push({ t: 'All the squares', v: q.ans });
       return s;
     },
@@ -368,10 +378,10 @@ export const TRICKS = [
     },
     work(q) {
       const { kind, n } = q;
-      if (kind === 'once') return [{ t: 'Hands one person shakes', v: n - 1 }, { t: `Counted from every person: ${n} × ${n - 1}`, v: n * (n - 1) }, { t: 'Each handshake was counted twice — halve', v: q.ans }];
-      if (kind === 'twice') return [{ t: 'Home games for one team (one against each other team)', v: n - 1 }, { t: `Home games for all ${n} teams — every game is someone's home game`, v: q.ans }];
-      if (kind === 'reverse') return [{ t: `Double the handshakes: ${q.H} × 2`, v: 2 * q.H }, { t: 'That is a number times the one just below it. The bigger number is', v: n }];
-      return [{ t: 'People altogether', v: 2 * n }, { t: 'Hands one person shakes (not themselves, not their partner)', v: 2 * n - 2 }, { t: `Counted from every person: ${2 * n} × ${2 * n - 2}`, v: 2 * n * (2 * n - 2) }, { t: 'Halve: each handshake was counted twice', v: q.ans }];
+      if (kind === 'once') return [{ t: 'Hands one person shakes', v: n - 1, x: `${n}-1` }, { t: `Counted from every person: ${n} × ${n - 1}`, v: n * (n - 1), x: `${n}*(${n}-1)` }, { t: 'Each handshake was counted twice — halve', v: q.ans }];
+      if (kind === 'twice') return [{ t: 'Home games for one team (one against each other team)', v: n - 1, x: `${n}-1` }, { t: `Home games for all ${n} teams — every game is someone's home game`, v: q.ans }];
+      if (kind === 'reverse') return [{ t: `Double the handshakes: ${q.H} × 2`, v: 2 * q.H, x: `${q.H}*2` }, { t: 'That is a number times the one just below it. The bigger number is', v: n }];
+      return [{ t: 'People altogether', v: 2 * n, x: `${n}*2` }, { t: 'Hands one person shakes (not themselves, not their partner)', v: 2 * n - 2, x: `${n}*2-1-1` }, { t: `Counted from every person: ${2 * n} × ${2 * n - 2}`, v: 2 * n * (2 * n - 2), x: `${n}*2*(${n}*2-2)` }, { t: 'Halve: each handshake was counted twice', v: q.ans }];
     },
     draw(q) {
       if (q.kind === 'reverse') {
@@ -424,9 +434,9 @@ export const TRICKS = [
     },
     work(q) {
       return [
-        q.rock ? { t: 'Routes that arrive on the rock', v: 0 } : { t: 'Routes to any square on the bottom row or up the left side', v: 1 },
-        { t: 'Routes to the square just LEFT of the end', v: q.left },
-        { t: 'Routes to the square just BELOW the end', v: q.below },
+        q.rock ? { t: 'Routes that arrive on the rock', v: 0, x: walkX(q.rock[0], q.rock[1], q.rock) } : { t: 'Routes to any square on the bottom row or up the left side', v: 1, x: walkX(q.w - 1, 0, null) },
+        { t: 'Routes to the square just LEFT of the end', v: q.left, x: walkX(q.w - 2, q.h - 1, q.rock) },
+        { t: 'Routes to the square just BELOW the end', v: q.below, x: walkX(q.w - 1, q.h - 2, q.rock) },
         { t: 'Add them: every route comes in from the left or from below', v: q.ans },
       ];
     },
@@ -492,10 +502,11 @@ export const TRICKS = [
     work(q) {
       if (q.mode === 'three') {
         const s1 = q.A + q.B + q.C, s2 = s1 - q.AB - q.AC - q.BC, u = s2 + q.ABC;
-        return [{ t: 'Add the three clubs', v: s1 }, { t: 'Take away the three pair overlaps', v: s2 }, { t: 'Add back the all-three group (taken away once too often): children in a club', v: u }, { t: 'Take that from the whole group', v: q.ans }];
+        return [{ t: 'Add the three clubs', v: s1, x: `${q.A}+${q.B}+${q.C}` }, { t: 'Take away the three pair overlaps', v: s2, x: `${q.A}+${q.B}+${q.C}-${q.AB}-${q.AC}-${q.BC}` },
+          { t: 'Add back the all-three group (taken away once too often): children in a club', v: u, x: `${q.A}+${q.B}+${q.C}-${q.AB}-${q.AC}-${q.BC}+${q.ABC}` }, { t: 'Take that from the whole group', v: q.ans }];
       }
-      if (q.mode === 'both') return [{ t: `Add the two groups: ${q.A} + ${q.B}`, v: q.A + q.B }, { t: 'Add the children who do neither', v: q.A + q.B + q.z }, { t: `Take away the class of ${q.T}: the extra were counted twice`, v: q.ans }];
-      return [{ t: `Add the two groups: ${q.A} + ${q.B}`, v: q.A + q.B }, { t: 'Take away the overlap once, so nobody counts twice', v: q.A + q.B - q.x }, { t: `Take that from the class of ${q.T}`, v: q.ans }];
+      if (q.mode === 'both') return [{ t: `Add the two groups: ${q.A} + ${q.B}`, v: q.A + q.B, x: `${q.A}+${q.B}` }, { t: 'Add the children who do neither', v: q.A + q.B + q.z, x: `${q.A}+${q.B}+${q.z}` }, { t: `Take away the class of ${q.T}: the extra were counted twice`, v: q.ans }];
+      return [{ t: `Add the two groups: ${q.A} + ${q.B}`, v: q.A + q.B, x: `${q.A}+${q.B}` }, { t: 'Take away the overlap once, so nobody counts twice', v: q.A + q.B - q.x, x: `${q.A}+${q.B}-${q.x}` }, { t: `Take that from the class of ${q.T}`, v: q.ans }];
     },
     draw(q) {
       if (q.mode === 'three') return venn3(q.names);
@@ -555,9 +566,10 @@ export const TRICKS = [
         : `Each of the ${k} steps of this staircase is marked in cm. What is the perimeter of the whole shape, in cm?`, expr, ans: 2 * (o.W + o.H) };
     },
     work(q) {
-      if (q.kind === 'notch') return [{ t: 'Across pieces: top and bottom of the rectangle', v: 2 * q.W }, { t: 'Up-and-down pieces: the two sides', v: 2 * q.H }, { t: 'The slot\'s two walls', v: 2 * q.d }, { t: 'Perimeter', v: q.ans }];
-      if (q.kind === 'pieces') return [{ t: 'Add the step widths: as wide as the bottom', v: q.W }, { t: 'Add the step heights: as tall as the left side', v: q.H }, { t: 'Perimeter: 2 × (width + height)', v: q.ans }];
-      return [{ t: 'All the across pieces: the bottom, plus the steps that slide up to match it', v: 2 * q.W }, { t: 'All the up-and-down pieces', v: 2 * q.H }, { t: 'Perimeter', v: q.ans }];
+      const V = this.corners(q);
+      if (q.kind === 'notch') return [{ t: 'Across pieces: top and bottom of the rectangle', v: 2 * q.W, x: sideX(V, 0) }, { t: 'Up-and-down pieces: the two sides', v: 2 * q.H, x: `${q.H}+${q.H}` }, { t: 'The slot\'s two walls', v: 2 * q.d, x: `${sideX(V, 1)}-2*${q.H}` }, { t: 'Perimeter', v: q.ans }];
+      if (q.kind === 'pieces') return [{ t: 'Add the step widths: as wide as the bottom', v: q.W, x: `[${q.ws}].reduce((s,v)=>s+v,0)` }, { t: 'Add the step heights: as tall as the left side', v: q.H, x: `[${q.hs}].reduce((s,v)=>s+v,0)` }, { t: 'Perimeter: 2 × (width + height)', v: q.ans }];
+      return [{ t: 'All the across pieces: the bottom, plus the steps that slide up to match it', v: 2 * q.W, x: sideX(V, 0) }, { t: 'All the up-and-down pieces', v: 2 * q.H, x: sideX(V, 1) }, { t: 'Perimeter', v: q.ans }];
     },
     draw(q) {
       const V = this.corners(q), u = Math.min(30, Math.floor(Math.min(260 / q.W, 200 / q.H)));
@@ -627,8 +639,11 @@ export const TRICKS = [
         expr, ans: whole + half / 2 };
     },
     work(q) {
-      if (q.kind === 'tri') return [{ t: 'Area of the smallest rectangle round it (its box)', v: q.box }, { t: 'Add up the right-angled corner pieces of the box that are not shaded', v: q.corners }, { t: 'The triangle: box take away the corners', v: q.ans }];
-      return [{ t: 'Whole squares shaded', v: q.whole }, { t: 'Half squares shaded', v: q.half }, { t: 'Pair the halves: whole squares they make', v: q.half / 2 }, { t: 'Area altogether', v: q.ans }];
+      const S = this.pieces(q);
+      if (q.kind === 'tri') return [{ t: 'Area of the smallest rectangle round it (its box)', v: q.box, x: boxX(S[0]) }, { t: 'Add up the right-angled corner pieces of the box that are not shaded', v: q.corners, x: `${boxX(S[0])}-${shoeX(S[0])}` }, { t: 'The triangle: box take away the corners', v: q.ans }];
+      const sq = S.filter((P) => P.length === 4), hf = S.filter((P) => P.length === 3);   // pieces as drawn: a square has 4 corners, a half 3
+      return [{ t: 'Whole squares shaded', v: q.whole, x: `${JSON.stringify(sq)}.length` }, { t: 'Half squares shaded', v: q.half, x: `${JSON.stringify(hf)}.length` },
+        { t: 'Pair the halves: whole squares they make', v: q.half / 2, x: hf.map(shoeX).join('+') }, { t: 'Area altogether', v: q.ans }];
     },
     draw(q) {
       const gw = q.kind === 'tri' ? q.gw : q.W, gh = q.kind === 'tri' ? q.gh : q.H, u = Math.min(36, Math.floor(Math.min(270 / gw, 220 / gh))), o = 6;
@@ -682,10 +697,12 @@ export const TRICKS = [
     },
     work(q) {
       const n = q.tops.length, t = q.tops[n - 1];
-      if (q.mode === 'bottom') return [{ t: 'Opposite faces of a dice add up to', v: 7 }, { t: `The bottom: 7 − ${t}`, v: q.ans }];
-      const h = [{ t: 'Top and bottom of any one dice add up to', v: 7 }, { t: `Tops and bottoms of all ${n} dice`, v: 7 * n }, { t: 'Take away the top face you can see: hidden dots', v: 7 * n - t }];
+      const pair = `${t}+${JSON.stringify(OPP)}[${t}]`;   // a face and the one opposite it, from the dice's own table
+      if (q.mode === 'bottom') return [{ t: 'Opposite faces of a dice add up to', v: 7, x: pair }, { t: `The bottom: 7 − ${t}`, v: q.ans }];
+      const tb = `${JSON.stringify(q.tops)}.reduce((s,u)=>s+u+${JSON.stringify(OPP)}[u],0)`;
+      const h = [{ t: 'Top and bottom of any one dice add up to', v: 7, x: pair }, { t: `Tops and bottoms of all ${n} dice`, v: 7 * n, x: tb }, { t: 'Take away the top face you can see: hidden dots', v: 7 * n - t, x: `${tb}-${t}` }];
       if (q.mode === 'hidden') return h;
-      return [{ t: 'All six faces of one dice: 1 + 2 + 3 + 4 + 5 + 6', v: 21 }, { t: `All the faces of ${n} dice`, v: 21 * n }, h[2], { t: 'Dots you can see: all of them take away the hidden ones', v: q.ans }];
+      return [{ t: 'All six faces of one dice: 1 + 2 + 3 + 4 + 5 + 6', v: 21, x: '1+2+3+4+5+6' }, { t: `All the faces of ${n} dice`, v: 21 * n, x: `${n}*(1+2+3+4+5+6)` }, h[2], { t: 'Dots you can see: all of them take away the hidden ones', v: q.ans }];
     },
     draw(q) { return diceTower(q.tops, q.fronts); },
   },
@@ -764,16 +781,16 @@ export const TRICKS = [
     },
     work(q) {
       if (q.kind === 'line') {
-        const g = q.parts.filter((p) => p), s = [{ t: 'Angles on a straight line add up to', v: 180 }];
-        if (g.length > 1) s.push({ t: 'Add the angles you know', v: g[0] + g[1] });
+        const g = q.parts.filter((p) => p), s = [{ t: 'Angles on a straight line add up to', v: 180, x: '360/2' }];   // half a whole turn
+        if (g.length > 1) s.push({ t: 'Add the angles you know', v: g[0] + g[1], x: `${g[0]}+${g[1]}` });
         s.push({ t: 'Take that from 180', v: q.ans });
         return s;
       }
-      if (q.kind === 'exterior') return [{ t: `The third angle inside, at C: 180 − ${q.A} − ${q.B}`, v: 180 - q.A - q.B }, { t: 'Angle ACD is on a straight line with it: 180 − that', v: q.ans }];
-      if (q.kind === 'iso-base') return [{ t: `The two bottom angles share 180 − ${q.a}`, v: 180 - q.a }, { t: 'They are equal, so halve it', v: q.ans }];
-      if (q.kind === 'iso-apex') return [{ t: `The two equal bottom angles: ${q.b} × 2`, v: 2 * q.b }, { t: 'The top angle: 180 take away that', v: q.ans }];
+      if (q.kind === 'exterior') return [{ t: `The third angle inside, at C: 180 − ${q.A} − ${q.B}`, v: 180 - q.A - q.B, x: `180-${q.A}-${q.B}` }, { t: 'Angle ACD is on a straight line with it: 180 − that', v: q.ans }];
+      if (q.kind === 'iso-base') return [{ t: `The two bottom angles share 180 − ${q.a}`, v: 180 - q.a, x: `180-${q.a}` }, { t: 'They are equal, so halve it', v: q.ans }];
+      if (q.kind === 'iso-apex') return [{ t: `The two equal bottom angles: ${q.b} × 2`, v: 2 * q.b, x: `${q.b}+${q.b}` }, { t: 'The top angle: 180 take away that', v: q.ans }];
       const b = (180 - q.a) / 2;
-      return [{ t: `The two bottom angles share 180 − ${q.a}`, v: 180 - q.a }, { t: 'Each bottom angle (they are equal)', v: b }, { t: 'Angle ACD is on a straight line with angle C: 180 − that', v: q.ans }];
+      return [{ t: `The two bottom angles share 180 − ${q.a}`, v: 180 - q.a, x: `180-${q.a}` }, { t: 'Each bottom angle (they are equal)', v: b, x: `(180-${q.a})/2` }, { t: 'Angle ACD is on a straight line with angle C: 180 − that', v: q.ans }];
     },
     draw(q) {
       const S = this.shape(q);
@@ -841,16 +858,19 @@ export const TRICKS = [
     },
     work(q) {
       const { a, b, c, k, cube } = q, A = a - 2, B = b - 2, C = c - 2;
-      if (k === 3) return [{ t: 'Corners on the top face of the big block', v: 4 }, { t: 'Corners on the bottom face', v: 4 }, { t: 'Only corner cubes touch three faces', v: 8 }];
+      const faceCorners = (p, r) => `(()=>{let n=0;for(let x=0;x<${p};x++)for(let y=0;y<${r};y++)if((x===0||x===${p - 1})&&(y===0||y===${r - 1}))n++;return n;})()`;   // visit the face's little cubes
+      if (k === 3) return [{ t: 'Corners on the top face of the big block', v: 4, x: faceCorners(a, b) }, { t: 'Corners on the bottom face', v: 4, x: faceCorners(a, b) }, { t: 'Only corner cubes touch three faces', v: 8 }];
       if (cube) {
         const n = a, m = n - 2;
-        if (k === 2) return [{ t: `Little cubes on one edge, leaving out the 2 corners: ${n} − 2`, v: m }, { t: 'Edges on a cube', v: 12 }, { t: `${m} × 12`, v: q.ans }];
-        if (k === 1) return [{ t: `Away from the edges, one side of a face is ${n} − 2 long`, v: m }, { t: 'One-face cubes on one face', v: m * m }, { t: 'Faces on a cube', v: 6 }, { t: `${m * m} × 6`, v: q.ans }];
-        return [{ t: `Peel a layer off every side: the inside cube is ${n} − 2 long`, v: m }, { t: `${m} × ${m} × ${m}`, v: q.ans }];
+        // a cube's 8 corners are the numbers 0–7 in binary; an edge joins two that differ in one place
+        const edges = '(()=>{let e=0;for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){const d=i^j;if((d&(d-1))===0)e++;}return e;})()';
+        if (k === 2) return [{ t: `Little cubes on one edge, leaving out the 2 corners: ${n} − 2`, v: m, x: `${n}-2` }, { t: 'Edges on a cube', v: 12, x: edges }, { t: `${m} × 12`, v: q.ans }];
+        if (k === 1) return [{ t: `Away from the edges, one side of a face is ${n} − 2 long`, v: m, x: `${n}-2` }, { t: 'One-face cubes on one face', v: m * m, x: `(${n}-2)*(${n}-2)` }, { t: 'Faces on a cube', v: 6, x: '3*2' }, { t: `${m * m} × 6`, v: q.ans }];
+        return [{ t: `Peel a layer off every side: the inside cube is ${n} − 2 long`, v: m, x: `${n}-2` }, { t: `${m} × ${m} × ${m}`, v: q.ans }];
       }
-      if (k === 2) return [{ t: `4 edges are ${a} long: 4 × (${a} − 2)`, v: 4 * A }, { t: `4 edges are ${b} long: 4 × (${b} − 2)`, v: 4 * B }, { t: `4 edges are ${c} long: 4 × (${c} − 2)`, v: 4 * C }, { t: 'All the two-face cubes', v: q.ans }];
-      if (k === 1) return [{ t: `Two faces ${a} by ${b}: 2 × ${A} × ${B}`, v: 2 * A * B }, { t: `Two faces ${b} by ${c}: 2 × ${B} × ${C}`, v: 2 * B * C }, { t: `Two faces ${a} by ${c}: 2 × ${A} × ${C}`, v: 2 * A * C }, { t: 'All the one-face cubes', v: q.ans }];
-      return [{ t: `Peel a layer off: the inside block's bottom is ${A} by ${B}`, v: A * B }, { t: `Its height is ${c} − 2, so the inside block holds`, v: q.ans }];
+      if (k === 2) return [{ t: `4 edges are ${a} long: 4 × (${a} − 2)`, v: 4 * A, x: `4*(${a}-2)` }, { t: `4 edges are ${b} long: 4 × (${b} − 2)`, v: 4 * B, x: `4*(${b}-2)` }, { t: `4 edges are ${c} long: 4 × (${c} − 2)`, v: 4 * C, x: `4*(${c}-2)` }, { t: 'All the two-face cubes', v: q.ans }];
+      if (k === 1) return [{ t: `Two faces ${a} by ${b}: 2 × ${A} × ${B}`, v: 2 * A * B, x: `2*(${a}-2)*(${b}-2)` }, { t: `Two faces ${b} by ${c}: 2 × ${B} × ${C}`, v: 2 * B * C, x: `2*(${b}-2)*(${c}-2)` }, { t: `Two faces ${a} by ${c}: 2 × ${A} × ${C}`, v: 2 * A * C, x: `2*(${a}-2)*(${c}-2)` }, { t: 'All the one-face cubes', v: q.ans }];
+      return [{ t: `Peel a layer off: the inside block's bottom is ${A} by ${B}`, v: A * B, x: `(${a}-2)*(${b}-2)` }, { t: `Its height is ${c} − 2, so the inside block holds`, v: q.ans }];
     },
     draw(q) { return ruledBlock(q.a, q.b, q.c); },
   },

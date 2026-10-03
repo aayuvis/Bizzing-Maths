@@ -82,9 +82,12 @@ export const TRICKS = [
     },
     work(o) {
       const ch = ['Yes', 'No'];
-      if (o.kind === 'mult') return [{ t: `Remainder when ${o.x} ÷ ${o.k}`, v: o.x % o.k }, { t: 'No remainder means it passes the rule', v: o.ans, choices: ch }];
-      if (o.kind === 'sq') { const n = Math.floor(Math.sqrt(o.x)); return [{ t: `The biggest whole number whose square is not over ${o.x}`, v: n }, { t: `${n}²`, v: n * n }, { t: `Is that exactly ${o.x}?`, v: o.ans, choices: ch }]; }
-      return [{ t: `Remainder when ${o.N} ÷ ${o.x}`, v: o.N % o.x }, { t: 'No remainder means it is a factor', v: o.ans, choices: ch }];
+      if (o.kind === 'mult') return [{ t: `Remainder when ${o.x} ÷ ${o.k}`, v: o.x % o.k, x: `${o.x}-Math.floor(${o.x}/${o.k})*${o.k}` }, { t: 'No remainder means it passes the rule', v: o.ans, choices: ch }];
+      if (o.kind === 'sq') {
+        const n = Math.floor(Math.sqrt(o.x)), up = `Array.from({length:${o.x}+1},(_,i)=>i).filter((i)=>i*i<=${o.x}).length-1`;   // count up the squares, not √
+        return [{ t: `The biggest whole number whose square is not over ${o.x}`, v: n, x: up }, { t: `${n}²`, v: n * n, x: `(${up})*(${up})` }, { t: `Is that exactly ${o.x}?`, v: o.ans, choices: ch }];
+      }
+      return [{ t: `Remainder when ${o.N} ÷ ${o.x}`, v: o.N % o.x, x: `${o.N}-Math.floor(${o.N}/${o.x})*${o.x}` }, { t: 'No remainder means it is a factor', v: o.ans, choices: ch }];
     },
     draw(o) {
       const rule = o.kind === 'mult' ? (o.k === 2 ? 'even numbers' : `multiples of ${o.k}`) : o.kind === 'sq' ? 'square numbers' : `factors of ${o.N}`;
@@ -130,10 +133,11 @@ export const TRICKS = [
       return { ...o, text: `A = {multiples of ${o.k} from ${o.a} to ${o.b}}. n(A)?`, say: `how many multiples of ${o.k} from ${o.a} to ${o.b}`, expr: range(o.a, o.b, `i%${o.k}===0`), ans: Math.floor(o.b / o.k) - Math.floor((o.a - 1) / o.k) };
     },
     work(o) {
-      if (o.kind === 'range') return [{ t: `${o.b} − ${o.a}`, v: o.b - o.a }, { t: 'Add one for the first number', v: o.ans }];
-      if (o.kind === 'mult') { const c = Math.floor(o.N / o.k); return [{ t: `The last multiple of ${o.k} not over ${o.N}`, v: c * o.k }, { t: `${c * o.k} ÷ ${o.k}`, v: c }]; }
+      if (o.kind === 'range') return [{ t: `${o.b} − ${o.a}`, v: o.b - o.a, x: `${o.b}-${o.a}` }, { t: 'Add one for the first number', v: o.ans }];
+      if (o.kind === 'mult') { const c = Math.floor(o.N / o.k); return [{ t: `The last multiple of ${o.k} not over ${o.N}`, v: c * o.k, x: `${o.N}-${o.N}%${o.k}` }, { t: `${c * o.k} ÷ ${o.k}`, v: c }]; }
       const hi = Math.floor(o.b / o.k), lo = Math.floor((o.a - 1) / o.k);
-      return [{ t: `Multiples of ${o.k} up to ${o.b}`, v: hi }, { t: `Multiples of ${o.k} below ${o.a}`, v: lo }, { t: `${hi} − ${lo}${hi === lo ? ' — the empty set' : ''}`, v: hi - lo }];
+      const upTo = (n) => `Array.from({length:${n}},(_,i)=>i+1).filter((i)=>i%${o.k}===0).length`;
+      return [{ t: `Multiples of ${o.k} up to ${o.b}`, v: hi, x: upTo(o.b) }, { t: `Multiples of ${o.k} below ${o.a}`, v: lo, x: upTo(o.a - 1) }, { t: `${hi} − ${lo}${hi === lo ? ' — the empty set' : ''}`, v: hi - lo }];
     },
     draw(o) {
       const rule = o.kind === 'range' ? `whole numbers ${o.a} to ${o.b}` : o.kind === 'mult' ? `multiples of ${o.k}` : `multiples of ${o.k}`;
@@ -185,14 +189,15 @@ export const TRICKS = [
     work(o) {
       if (o.kind === 'list') {
         const both = o.A.filter((x) => o.B.includes(x)).length;
-        const s = [{ t: 'How many are in both A and B?', v: both }];
-        if (o.op === '∪') s.push({ t: `n(A) + n(B) = ${o.A.length} + ${o.B.length}`, v: o.A.length + o.B.length }, { t: `Take the shared ones once: − ${both}`, v: o.A.length + o.B.length - both });
+        const s = [{ t: 'How many are in both A and B?', v: both, x: `[${o.A}].filter((x)=>[${o.B}].indexOf(x)>=0).length` }];
+        if (o.op === '∪') s.push({ t: `n(A) + n(B) = ${o.A.length} + ${o.B.length}`, v: o.A.length + o.B.length, x: `[${o.A}].length+[${o.B}].length` }, { t: `Take the shared ones once: − ${both}`, v: o.A.length + o.B.length - both });
         else s.push({ t: 'So n(A ∩ B)', v: both });
         return s;
       }
       const L = (o.a * o.b) / gcd(o.a, o.b), nA = Math.floor(o.N / o.a), nB = Math.floor(o.N / o.b), nI = Math.floor(o.N / L);
-      const s = [{ t: `In both means a multiple of ${o.a} AND ${o.b}: the smallest is`, v: L }, { t: `How many multiples of ${L} up to ${o.N}?`, v: nI }];
-      if (o.op === '∪') s.push({ t: `n(A) + n(B) = ${nA} + ${nB}`, v: nA + nB }, { t: `− ${nI}, counted twice`, v: nA + nB - nI });
+      const s = [{ t: `In both means a multiple of ${o.a} AND ${o.b}: the smallest is`, v: L, x: `Array.from({length:${o.a * o.b}},(_,i)=>i+1).find((m)=>m%${o.a}===0&&m%${o.b}===0)` },
+        { t: `How many multiples of ${L} up to ${o.N}?`, v: nI, x: `Array.from({length:${o.N}},(_,i)=>i+1).filter((i)=>i%${o.a}===0&&i%${o.b}===0).length` }];
+      if (o.op === '∪') s.push({ t: `n(A) + n(B) = ${nA} + ${nB}`, v: nA + nB, x: `Math.floor(${o.N}/${o.a})+Math.floor(${o.N}/${o.b})` }, { t: `− ${nI}, counted twice`, v: nA + nB - nI });
       return s;
     },
     draw(o) { return o.op === '∪' ? kit.venn('A', 'B', '?', '?', '?') : kit.venn('A', 'B', '', '?', ''); },
@@ -235,9 +240,9 @@ export const TRICKS = [
     },
     work(o) {
       const U = o.A + o.B - o.I;
-      if (o.kind === 'regions') return [{ t: `${o.A - o.I} + ${o.I}`, v: o.A }, { t: `+ ${o.B - o.I}`, v: U }];
-      if (o.kind === 'union') return [{ t: `${o.A} + ${o.B}`, v: o.A + o.B }, { t: `Take the overlap once: − ${o.I}`, v: U }];
-      return [{ t: `In the circles: ${o.T} − ${o.out}`, v: U }, { t: `${o.A} + ${o.B}`, v: o.A + o.B }, { t: `Counted twice: ${o.A + o.B} − ${U}`, v: o.I }];
+      if (o.kind === 'regions') return [{ t: `${o.A - o.I} + ${o.I}`, v: o.A, x: `${o.A - o.I}+${o.I}` }, { t: `+ ${o.B - o.I}`, v: U }];
+      if (o.kind === 'union') return [{ t: `${o.A} + ${o.B}`, v: o.A + o.B, x: `${o.A}+${o.B}` }, { t: `Take the overlap once: − ${o.I}`, v: U }];
+      return [{ t: `In the circles: ${o.T} − ${o.out}`, v: U, x: `${o.T}-${o.out}` }, { t: `${o.A} + ${o.B}`, v: o.A + o.B, x: `${o.A}+${o.B}` }, { t: `Counted twice: ${o.A + o.B} − ${U}`, v: o.I }];
     },
     draw(o) {
       if (o.kind === 'regions') return kit.venn(o.la, o.lb, o.A - o.I, o.I, o.B - o.I);
@@ -290,10 +295,10 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, b, n } = o;
-      if (kind === 'lin') return [{ t: `${a} × ${M(n)}`, v: a * n }, { t: `${b < 0 ? 'Take' : 'Add'} ${Math.abs(b)}`, v: a * n + b }];
-      if (kind === 'bra') return [{ t: `Brackets first: ${n} − ${b}`, v: n - b }, { t: `${a} × ${n - b}`, v: a * (n - b) }];
-      if (kind === 'sq') return [{ t: `n² = ${M(n)} × ${M(n)}`, v: n * n }, ...(a === 1 ? [] : [{ t: `${a} × ${n * n}`, v: a * n * n }]), { t: `${b < 0 ? 'Take' : 'Add'} ${Math.abs(b)}`, v: a * n * n + b }];
-      return [{ t: `${o.a} × ${o.x}`, v: o.a * o.x }, { t: `${o.c} × ${M(o.y)}`, v: o.c * o.y }, { t: 'Add them', v: o.a * o.x + o.c * o.y }];
+      if (kind === 'lin') return [{ t: `${a} × ${M(n)}`, v: a * n, x: `${a}*${js(n)}` }, { t: `${b < 0 ? 'Take' : 'Add'} ${Math.abs(b)}`, v: a * n + b }];
+      if (kind === 'bra') return [{ t: `Brackets first: ${n} − ${b}`, v: n - b, x: `${n}-${b}` }, { t: `${a} × ${n - b}`, v: a * (n - b) }];
+      if (kind === 'sq') return [{ t: `n² = ${M(n)} × ${M(n)}`, v: n * n, x: `${js(n)}**2` }, ...(a === 1 ? [] : [{ t: `${a} × ${n * n}`, v: a * n * n, x: `${a}*${js(n)}**2` }]), { t: `${b < 0 ? 'Take' : 'Add'} ${Math.abs(b)}`, v: a * n * n + b }];
+      return [{ t: `${o.a} × ${o.x}`, v: o.a * o.x, x: `${o.a}*${o.x}` }, { t: `${o.c} × ${M(o.y)}`, v: o.c * o.y, x: `${o.c}*${js(o.y)}` }, { t: 'Add them', v: o.a * o.x + o.c * o.y }];
     },
   },
   {
@@ -329,8 +334,9 @@ export const TRICKS = [
       return { kind, n, text: `How many subsets of ${S} contain a?`, expr: `${count}.filter((m)=>m%2===1).length`, ans: 2 ** (n - 1) };
     },
     work({ kind, n }) {
-      if (kind === 'with') return [{ t: 'a is fixed in. How many members still to decide?', v: n - 1 }, { t: `2 choices each: ${Array(n - 1).fill(2).join(' × ') || '1'}`, v: 2 ** (n - 1) }];
-      const s = [{ t: 'How many members?', v: n }, { t: `In or out for each: ${Array(n).fill(2).join(' × ')}`, v: 2 ** n }];
+      const S = 'abcdefgh'.slice(0, n);   // the members as listed: the x count them
+      if (kind === 'with') return [{ t: 'a is fixed in. How many members still to decide?', v: n - 1, x: `'${S}'.replace('a','').length` }, { t: `2 choices each: ${Array(n - 1).fill(2).join(' × ') || '1'}`, v: 2 ** (n - 1) }];
+      const s = [{ t: 'How many members?', v: n, x: `'${S}'.length` }, { t: `In or out for each: ${Array(n).fill(2).join(' × ')}`, v: 2 ** n, ...(kind === 'nonempty' ? { x: `${Array(n).fill(2).join('*')}` } : {}) }];
       if (kind === 'nonempty') s.push({ t: 'Leave out the empty set', v: 2 ** n - 1 });
       return s;
     },
@@ -382,9 +388,9 @@ export const TRICKS = [
       return { ...o, text: `${term(a, 'x')} + ${p} − ${term(c, 'x')} + ${q}. The number in front of x?`, say: `${a}x plus ${p} minus ${c}x plus ${q}: what number goes in front of x`, expr: `${a}-${c}`, ans: a - c };
     },
     work(o) {
-      if (o.kind === 'coef') { const [p, q, s] = o.cs; return [{ t: `${p} + ${q}`, v: p + q }, { t: `+ ${s}`, v: p + q + s }]; }
-      if (o.kind === 'pick') return [{ t: `The x's: ${o.a} + ${o.c}`, v: o.a + o.c }, { t: `The y's: ${o.b} + ${o.d}`, v: o.b + o.d }, { t: 'So the short form is', v: o.ans, choices: o.choices }];
-      return [{ t: `The plain numbers: ${o.p} + ${o.q}`, v: o.p + o.q }, { t: `The x's: ${o.a} − ${o.c}`, v: o.a - o.c }];
+      if (o.kind === 'coef') { const [p, q, s] = o.cs; return [{ t: `${p} + ${q}`, v: p + q, x: `${p}+${q}` }, { t: `+ ${s}`, v: p + q + s }]; }
+      if (o.kind === 'pick') return [{ t: `The x's: ${o.a} + ${o.c}`, v: o.a + o.c, x: `${o.a}+${o.c}` }, { t: `The y's: ${o.b} + ${o.d}`, v: o.b + o.d, x: `${o.b}+${o.d}` }, { t: 'So the short form is', v: o.ans, choices: o.choices }];
+      return [{ t: `The plain numbers: ${o.p} + ${o.q}`, v: o.p + o.q, x: `${o.p}+${o.q}` }, { t: `The x's: ${o.a} − ${o.c}`, v: o.a - o.c }];
     },
   },
   {
@@ -428,11 +434,11 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, b, x } = o;
-      if (kind === 'add') return [{ t: 'What has been added to x?', v: b }, { t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
-      if (kind === 'mul') return [{ t: 'How many x\'s on the left?', v: a }, { t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
+      if (kind === 'add') return [{ t: 'What has been added to x?', v: b, x: `${b}-0` }, { t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
+      if (kind === 'mul') return [{ t: 'How many x\'s on the left?', v: a, x: `${a}-0` }, { t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
       const c = a * x + b, s = [];
-      if (kind === 'words') s.push({ t: `As an equation: ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} = ${M(c)}. What does ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} equal?`, v: c });
-      s.push({ t: b < 0 ? `Add ${-b} to both sides` : `Take ${b} off both sides`, v: c - b });
+      if (kind === 'words') s.push({ t: `As an equation: ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} = ${M(c)}. What does ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} equal?`, v: c, x: `${c}-0` });
+      s.push({ t: b < 0 ? `Add ${-b} to both sides` : `Take ${b} off both sides`, v: c - b, x: `${c}-${js(b)}` });
       s.push({ t: `Share both sides into ${a}`, v: x });
       return s;
     },
@@ -480,10 +486,10 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, d } = o;
-      if (kind === 'kth') return [{ t: 'The step', v: d }, { t: `Steps from the 1st to the ${ORD(o.k)}`, v: o.k - 1 }, { t: `${o.k - 1} × ${d}`, v: (o.k - 1) * d }, { t: `+ the first term, ${a}`, v: a + (o.k - 1) * d }];
-      if (kind === 'rule') return [{ t: 'The step', v: d }, { t: `${d}n when n = 1`, v: d }, { t: `First term − ${d}: what fixes it?`, v: a - d }];
+      if (kind === 'kth') return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `Steps from the 1st to the ${ORD(o.k)}`, v: o.k - 1, x: `${o.k}-1` }, { t: `${o.k - 1} × ${d}`, v: (o.k - 1) * d, x: `(${o.k}-1)*(${a + d}-${a})` }, { t: `+ the first term, ${a}`, v: a + (o.k - 1) * d }];
+      if (kind === 'rule') return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `${d}n when n = 1`, v: d, x: `${d}*1` }, { t: `First term − ${d}: what fixes it?`, v: a - d }];
       const v = a + (o.k - 1) * d;
-      return [{ t: 'The step', v: d }, { t: `Distance from the first term: ${v} − ${a}`, v: v - a }, { t: `Steps: ${v - a} ÷ ${d}`, v: o.k - 1 }, { t: 'Plus one for the first term', v: o.k }];
+      return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `Distance from the first term: ${v} − ${a}`, v: v - a, x: `${v}-${a}` }, { t: `Steps: ${v - a} ÷ ${d}`, v: o.k - 1, x: `(${v}-${a})/(${a + d}-${a})` }, { t: 'Plus one for the first term', v: o.k }];
     },
     draw(o) { const v = [0, 1, 2, 3].map((i) => o.a + i * o.d); return kit.barChart(['1st', '2nd', '3rd', '4th'], v, Math.max(2, Math.ceil(Math.max(...v) / 5)), 'The first four terms'); },
   },
@@ -522,9 +528,9 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, m, c } = o;
-      if (kind === 'y') return [{ t: `${m} × ${o.x}`, v: m * o.x }, { t: c < 0 ? `Take ${-c}` : `Add ${c}`, v: m * o.x + c }];
+      if (kind === 'y') return [{ t: `${m} × ${o.x}`, v: m * o.x, x: `${m}*${o.x}` }, { t: c < 0 ? `Take ${-c}` : `Add ${c}`, v: m * o.x + c }];
       const y1 = m * o.x1 + c, y2 = m * o.x2 + c;
-      return [{ t: `The climb: ${y2} − ${y1}`, v: y2 - y1 }, { t: `The steps across: ${o.x2} − ${o.x1}`, v: o.x2 - o.x1 }, { t: 'Climb ÷ steps', v: m }];
+      return [{ t: `The climb: ${y2} − ${y1}`, v: y2 - y1, x: `${y2}-${js(y1)}` }, { t: `The steps across: ${o.x2} − ${o.x1}`, v: o.x2 - o.x1, x: `${o.x2}-${o.x1}` }, { t: 'Climb ÷ steps', v: m }];
     },
     draw(o) {
       const pts = {};

@@ -203,6 +203,13 @@ function incentreFig(A, B, C) {
 const HERON = '((a,b,c)=>{const s=(a+b+c)/2;return s*(s-a)*(s-b)*(s-c);})';
 const pt = ([x, y]) => `(${x}, ${y})`;
 const sq = (P, Q) => (P[0] - Q[0]) ** 2 + (P[1] - Q[1]) ** 2;
+/* For a step's `x`: the i-th number written in the question, read back from its own text. */
+const said = (text, i = 0) => `Number(${JSON.stringify(text)}.match(/\\d+(\\.\\d+)?/g)[${i}])`;
+/* For a step's `x`: fold the drawn corners in every candidate line and count the folds that land,
+   keeping those that do (thr = true) or do not (thr = false) pass through a corner. */
+const foldX = (pts, thr) => `((P)=>{const n=P.length,cx=P.reduce((a,p)=>a+p[0],0)/n,cy=P.reduce((a,p)=>a+p[1],0)/n,seen=[];let c=0;P.forEach((p,i)=>{const q=P[(i+1)%n];for(const [x,y] of [p,[(p[0]+q[0])/2,(p[1]+q[1])/2]]){const th=((Math.atan2(y-cy,x-cx)%Math.PI)+Math.PI)%Math.PI;if(seen.some((f)=>Math.abs(f-th)<1e-3||Math.abs(Math.abs(f-th)-Math.PI)<1e-3))continue;seen.push(th);const C=Math.cos(2*th),S=Math.sin(2*th);if(!P.every(([X,Y])=>{const u=X-cx,v=Y-cy;return P.some((r)=>Math.hypot(r[0]-(C*u+S*v+cx),r[1]-(S*u-C*v+cy))<0.05);}))continue;if(P.some((r)=>Math.abs((r[0]-cx)*Math.sin(th)-(r[1]-cy)*Math.cos(th))<0.05)===${thr})c++;}});return c;})(${JSON.stringify(pts)})`;
+/* For a step's `x`: the four sides of a drawn four-sided shape, as vectors. */
+const sidesX = (pts) => `${JSON.stringify(pts)}.map((p,i,P)=>[P[(i+1)%4][0]-p[0],P[(i+1)%4][1]-p[1]])`;
 
 /* ------------------------------------------------------------ names */
 
@@ -214,7 +221,7 @@ const QF = {
     say: 'All four sides are the same length, and every corner is a right angle.' },
   rectangle: { E: 0, R: 1, P: 2, pts: [[0, 0], [170, 0], [170, 90], [0, 90]],
     say: 'Every corner is a right angle, and opposite sides are equal — but the sides are not all the same length.' },
-  rhombus: { E: 1, R: 0, P: 2, pts: [[0, 0], [110, 0], [160, 98], [50, 98]],
+  rhombus: { E: 1, R: 0, P: 2, pts: [[0, 0], [110, 0], [176, 88], [66, 88]],
     say: 'All four sides are the same length, but none of its corners is a right angle.' },
   parallelogram: { E: 0, R: 0, P: 2, pts: [[0, 0], [150, 0], [195, 90], [45, 90]],
     say: 'Two pairs of parallel sides, opposite sides equal, no right angles, and not all sides the same.' },
@@ -281,7 +288,8 @@ export const TRICKS = [
       return { n, ask, opts, text: `How many ${ask} does this shape have?`, expr: `${(n - 2) * 180}/180+2`, ans: n };
     },
     work({ n, ask, opts }) {
-      const s = [{ t: 'Count the sides', v: n }, { t: 'Count the corners', v: n }];
+      const P = JSON.stringify(regular(n));   // the drawn shape: count its edges, and its corners
+      const s = [{ t: 'Count the sides', v: n, x: `${P}.map((p,i,A)=>[p,A[(i+1)%A.length]]).filter(([a,b])=>a[0]!==b[0]||a[1]!==b[1]).length` }, { t: 'Count the corners', v: n, x: `${P}.length` }];
       if (ask === 'name') s.push({ t: 'A shape with that many sides is a…', v: POLY[n - 3], choices: opts });
       else if (ask === 'sides') s.reverse();
       return s;
@@ -327,8 +335,8 @@ export const TRICKS = [
     work({ k }) {
       const S = SYM[k];
       return [
-        { t: 'Fold lines that pass through a corner', v: S.c },
-        { t: 'Fold lines that pass through no corner (middle of a side to middle of a side)', v: S.o },
+        { t: 'Fold lines that pass through a corner', v: S.c, x: foldX(S.pts, true) },
+        { t: 'Fold lines that pass through no corner (middle of a side to middle of a side)', v: S.o, x: foldX(S.pts, false) },
         { t: 'Lines of symmetry altogether', v: S.c + S.o },
       ];
     },
@@ -391,10 +399,10 @@ export const TRICKS = [
       const { mode, s, opts } = q;
       if (mode === 'angles') {
         const [a, b] = s, c = 180 - a - b;
-        return [{ t: `The third angle: 180 − ${a} − ${b}`, v: c }, { t: 'The biggest of the three angles', v: Math.max(a, b, c) }, { t: 'So the triangle is', v: q.ans, choices: opts }];
+        return [{ t: `The third angle: 180 − ${a} − ${b}`, v: c, x: `180-${a}-${b}` }, { t: 'The biggest of the three angles', v: Math.max(a, b, c), x: `Math.max(${a},${b},180-${a}-${b})` }, { t: 'So the triangle is', v: q.ans, choices: opts }];
       }
       const eq = new Set(s).size === 1 ? 3 : new Set(s).size === 2 ? 2 : 0;
-      return [{ t: 'How many sides share a length with another side?', v: eq }, { t: 'So the triangle is', v: q.ans, choices: opts }];
+      return [{ t: 'How many sides share a length with another side?', v: eq, x: `[${s}].filter((x,i,A)=>A.indexOf(x)!==A.lastIndexOf(x)).length` }, { t: 'So the triangle is', v: q.ans, choices: opts }];
     },
     draw({ mode, s }) {
       if (mode === 'angles') { const [a, b, c] = s; return figure(triFromAngles(a, b, c), [], [`${a}°`, `${b}°`, '?']); }
@@ -440,9 +448,10 @@ export const TRICKS = [
     work({ k, opts }) {
       const { E, R, P } = QF[k], yn = ['Yes', 'No'];
       return [
-        { t: 'How many pairs of parallel sides?', v: P },
-        { t: 'Are all four sides the same length?', v: E ? 'Yes' : 'No', choices: yn },
-        { t: 'Are the corners right angles?', v: R ? 'Yes' : 'No', choices: yn },
+        // x measures the drawn corners: opposite sides parallel, side lengths, corner dot products
+        { t: 'How many pairs of parallel sides?', v: P, x: `((v)=>[[0,2],[1,3]].filter(([i,j])=>Math.abs(v[i][0]*v[j][1]-v[i][1]*v[j][0])<1e-9).length)(${sidesX(QF[k].pts)})` },
+        { t: 'Are all four sides the same length?', v: E ? 'Yes' : 'No', choices: yn, x: `((v)=>v.every((u)=>Math.abs(Math.hypot(...u)-Math.hypot(...v[0]))<1e-9)?'Yes':'No')(${sidesX(QF[k].pts)})` },
+        { t: 'Are the corners right angles?', v: R ? 'Yes' : 'No', choices: yn, x: `((v)=>v.every((u,i)=>Math.abs(u[0]*v[(i+1)%4][0]+u[1]*v[(i+1)%4][1])<1e-9)?'Yes':'No')(${sidesX(QF[k].pts)})` },
         { t: 'So it is a…', v: k, choices: opts },
       ];
     },
@@ -494,15 +503,18 @@ export const TRICKS = [
     },
     work({ name, kind, n, ask }) {
       const S = name ? SOLIDS[name] : { kind, n }, C = count(S.kind, S.n), m = S.n;
-      if (ask === 'euler') return [{ t: `Faces + vertices: ${C.F} + ${C.V}`, v: C.F + C.V }, { t: 'Edges are 2 fewer than that', v: C.E }];
+      if (ask === 'euler') return [{ t: `Faces + vertices: ${C.F} + ${C.V}`, v: C.F + C.V, x: `${C.F}+${C.V}` }, { t: 'Edges are 2 fewer than that', v: C.E }];
+      // x: the sides of the end shape, read from the solid's own name (a cube and a cuboid have square ends)
+      const end = /^cub/.test(name) ? 'square' : name.split(/[ -]/)[0];
+      const mx = `['triangular','square','pentagonal','hexagonal','heptagonal','octagonal'].indexOf('${end}')+3`;
       if (S.kind === 'prism') {
-        if (ask === 'faces') return [{ t: 'The two ends', v: 2 }, { t: 'One flat side for each side of an end', v: m }, { t: 'Faces altogether', v: C.F }];
-        if (ask === 'edges') return [{ t: 'Edges round the front end', v: m }, { t: 'Round the back end', v: m }, { t: 'Running from end to end', v: m }, { t: 'Edges altogether', v: C.E }];
-        return [{ t: 'Corners on one end', v: m }, { t: 'Corners on both ends', v: C.V }];
+        if (ask === 'faces') return [{ t: 'The two ends', v: 2, x: "['front','back'].length" }, { t: 'One flat side for each side of an end', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
+        if (ask === 'edges') return [{ t: 'Edges round the front end', v: m, x: mx }, { t: 'Round the back end', v: m, x: mx }, { t: 'Running from end to end', v: m, x: mx }, { t: 'Edges altogether', v: C.E }];
+        return [{ t: 'Corners on one end', v: m, x: mx }, { t: 'Corners on both ends', v: C.V }];
       }
-      if (ask === 'faces') return [{ t: 'The base', v: 1 }, { t: 'One triangle for each side of the base', v: m }, { t: 'Faces altogether', v: C.F }];
-      if (ask === 'edges') return [{ t: 'Edges round the base', v: m }, { t: 'Edges up to the tip', v: m }, { t: 'Edges altogether', v: C.E }];
-      return [{ t: 'Corners of the base', v: m }, { t: 'Add the tip', v: C.V }];
+      if (ask === 'faces') return [{ t: 'The base', v: 1, x: "['base'].length" }, { t: 'One triangle for each side of the base', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
+      if (ask === 'edges') return [{ t: 'Edges round the base', v: m, x: mx }, { t: 'Edges up to the tip', v: m, x: mx }, { t: 'Edges altogether', v: C.E }];
+      return [{ t: 'Corners of the base', v: m, x: mx }, { t: 'Add the tip', v: C.V }];
     },
     draw({ name, kind, n }) {
       const S = name ? SOLIDS[name] : { kind, n, w: 70, h: 100 };
@@ -545,8 +557,8 @@ export const TRICKS = [
     work({ d, opts }) {
       const c = d < 90 ? 'smaller' : d === 90 ? 'the same' : 'bigger';
       return [
-        { t: 'Against a square corner (90°), is it smaller, the same or bigger?', v: c, choices: ['smaller', 'the same', 'bigger'] },
-        { t: 'Has it gone past a straight line (180°)?', v: d > 180 ? 'Yes' : 'No', choices: ['Yes', 'No'] },
+        { t: 'Against a square corner (90°), is it smaller, the same or bigger?', v: c, choices: ['smaller', 'the same', 'bigger'], x: `['smaller','the same','bigger'][Math.sign(${d}-90)+1]` },
+        { t: 'Has it gone past a straight line (180°)?', v: d > 180 ? 'Yes' : 'No', choices: ['Yes', 'No'], x: `${d}-180>0?'Yes':'No'` },
         { t: 'So it is', v: d < 90 ? 'acute' : d === 90 ? 'right' : d < 180 ? 'obtuse' : 'reflex', choices: opts },
       ];
     },
@@ -598,14 +610,16 @@ export const TRICKS = [
         expr: ask === 'x' ? `${x}+(${dx})` : `${y}+(${dy})`, ans: ask === 'x' ? x + dx : y + dy };
     },
     work({ lv, x, y, dx, dy, ask }) {
+      // x reads the drawn point A = [x, y] (across first), and B as A moved by [dx, dy]
+      const A = `[${x},${y}]`, B = `[${x}+(${dx}),${y}+(${dy})]`;
       if (lv === 1) return ask === 'x'
-        ? [{ t: 'Across the bottom first: how many squares to get under A?', v: x }, { t: 'The x-coordinate is the across number', v: x }]
-        : [{ t: 'Across the bottom first: how many squares to get under A?', v: x }, { t: 'Then up: how many squares to reach A?', v: y }];
+        ? [{ t: 'Across the bottom first: how many squares to get under A?', v: x, x: `${A}[0]` }, { t: 'The x-coordinate is the across number', v: x }]
+        : [{ t: 'Across the bottom first: how many squares to get under A?', v: x, x: `${A}[0]` }, { t: 'Then up: how many squares to reach A?', v: y }];
       if (lv === 3) return ask === 'right'
-        ? [{ t: 'The x-coordinate of B', v: x + dx }, { t: 'The x-coordinate of A', v: x }, { t: 'The gap between them', v: Math.abs(dx) }]
-        : [{ t: 'The y-coordinate of B', v: y + dy }, { t: 'The y-coordinate of A', v: y }, { t: 'The gap between them', v: Math.abs(dy) }];
+        ? [{ t: 'The x-coordinate of B', v: x + dx, x: `${B}[0]` }, { t: 'The x-coordinate of A', v: x, x: `${A}[0]` }, { t: 'The gap between them', v: Math.abs(dx) }]
+        : [{ t: 'The y-coordinate of B', v: y + dy, x: `${B}[1]` }, { t: 'The y-coordinate of A', v: y, x: `${A}[1]` }, { t: 'The gap between them', v: Math.abs(dy) }];
       const h = ask === 'x', v = h ? dx : dy, s0 = h ? x : y;
-      return [{ t: `A starts with ${ask} =`, v: s0 }, { t: v === 0 ? `It does not move ${h ? 'sideways' : 'up or down'}, so ${ask} stays` : `${v > 0 ? 'Add' : 'Take away'} ${Math.abs(v)}`, v: s0 + v }];
+      return [{ t: `A starts with ${ask} =`, v: s0, x: `${A}[${h ? 0 : 1}]` }, { t: v === 0 ? `It does not move ${h ? 'sideways' : 'up or down'}, so ${ask} stays` : `${v > 0 ? 'Add' : 'Take away'} ${Math.abs(v)}`, v: s0 + v }];
     },
     draw({ lv, x, y, dx, dy }) { return coords(10, lv === 3 ? { A: [x, y], B: [x + dx, y + dy] } : { A: [x, y] }); },
   },
@@ -648,8 +662,8 @@ export const TRICKS = [
     work({ full, known }) {
       const total = full ? 360 : 180, sum = known.reduce((a, b) => a + b, 0);
       return [
-        { t: full ? 'All the way round a point makes' : 'Angles on a straight line make', v: total },
-        { t: known.length > 1 ? 'Add the angles you know' : 'The angle you know', v: sum },
+        { t: full ? 'All the way round a point makes' : 'Angles on a straight line make', v: total, x: full ? '4*90' : '2*90' },
+        { t: known.length > 1 ? 'Add the angles you know' : 'The angle you know', v: sum, x: `[${known}].reduce((a,b)=>a+b,0)` },
         { t: `${total} − ${sum}`, v: total - sum },
       ];
     },
@@ -698,11 +712,11 @@ export const TRICKS = [
         expr: `${total}-${known.join('-')}`, ans: angles[hide] };
     },
     work({ kind, angles, hide, apex }) {
-      if (kind === 'iso') return [{ t: 'Angles in a triangle add up to', v: 180 }, { t: `180 − ${apex}`, v: 180 - apex }, { t: 'Shared between the two equal angles', v: (180 - apex) / 2 }];
+      if (kind === 'iso') return [{ t: 'Angles in a triangle add up to', v: 180, x: '2*90' }, { t: `180 − ${apex}`, v: 180 - apex, x: `180-${apex}` }, { t: 'Shared between the two equal angles', v: (180 - apex) / 2 }];
       const total = kind === 'quad' ? 360 : 180, sum = angles.reduce((a, b, i) => (i === hide ? a : a + b), 0);
       return [
-        { t: kind === 'quad' ? 'Angles in a four-sided shape add up to' : 'Angles in a triangle add up to', v: total },
-        { t: `Add the ${kind === 'quad' ? 'three' : 'two'} you know`, v: sum },
+        { t: kind === 'quad' ? 'Angles in a four-sided shape add up to' : 'Angles in a triangle add up to', v: total, x: kind === 'quad' ? '2*180' : '2*90' },
+        { t: `Add the ${kind === 'quad' ? 'three' : 'two'} you know`, v: sum, x: `[${angles.filter((_, i) => i !== hide)}].reduce((a,b)=>a+b,0)` },
         { t: `${total} − ${sum}`, v: total - sum },
       ];
     },
@@ -749,12 +763,12 @@ export const TRICKS = [
         : `A circle has a diameter of ${v} cm. Using π ≈ 3.14, how far is it round the edge, in cm?`,
       expr: `3.14*${d}`, ans: C };
     },
-    work({ ask, v }) {
-      if (ask === 'diam') return [{ t: 'The radius', v }, { t: 'Two radii end to end', v: 2 * v }];
-      if (ask === 'rad') return [{ t: 'The diameter', v }, { t: 'Half of it', v: v / 2 }];
-      const d = ask === 'circ-r' ? 2 * v : v, s = [];
-      if (ask === 'circ-r') s.push({ t: `The diameter: 2 × ${v}`, v: d });
-      s.push({ t: `3 × ${d}`, v: 3 * d }, { t: `0.14 × ${d}`, v: Math.round(14 * d) / 100 }, { t: 'Add them', v: Math.round(314 * d) / 100 });
+    work({ ask, v, text }) {
+      if (ask === 'diam') return [{ t: 'The radius', v, x: said(text) }, { t: 'Two radii end to end', v: 2 * v }];
+      if (ask === 'rad') return [{ t: 'The diameter', v, x: said(text) }, { t: 'Half of it', v: v / 2 }];
+      const d = ask === 'circ-r' ? 2 * v : v, s = [], dx = ask === 'circ-r' ? `(${v}+${v})` : `${v}`;
+      if (ask === 'circ-r') s.push({ t: `The diameter: 2 × ${v}`, v: d, x: `${v}+${v}` });
+      s.push({ t: `3 × ${d}`, v: 3 * d, x: `${dx}+${dx}+${dx}` }, { t: `0.14 × ${d}`, v: Math.round(14 * d) / 100, x: `14*${dx}/100` }, { t: 'Add them', v: Math.round(314 * d) / 100 });
       return s;
     },
     draw({ ask, v }) {
@@ -817,15 +831,15 @@ export const TRICKS = [
       if (mode === 'can') {
         const t = [...s].sort((u, v) => u - v);
         return [
-          { t: 'The longest side — draw it as the base', v: t[2] },
-          { t: 'Add the other two sides', v: t[0] + t[1] },
+          { t: 'The longest side — draw it as the base', v: t[2], x: `Math.max(${s})` },
+          { t: 'Add the other two sides', v: t[0] + t[1], x: `${s.join('+')}-Math.max(${s})` },
           { t: `The arcs cross only if that is MORE than ${t[2]}. Can the triangle be built?`, v: ans, choices: opts },
         ];
       }
       const [p, q] = s;
-      if (mode === 'max') return [{ t: `The two sides end to end: ${p} + ${q}`, v: p + q }, { t: 'The third side must be shorter than that. The longest whole number it can be', v: p + q - 1 }];
+      if (mode === 'max') return [{ t: `The two sides end to end: ${p} + ${q}`, v: p + q, x: `${p}+${q}` }, { t: 'The third side must be shorter than that. The longest whole number it can be', v: p + q - 1 }];
       const hi = Math.max(p, q), lo = Math.min(p, q);
-      return [{ t: `The gap the short side cannot close: ${hi} − ${lo}`, v: hi - lo }, { t: 'The third side must be longer than that. The shortest whole number it can be', v: hi - lo + 1 }];
+      return [{ t: `The gap the short side cannot close: ${hi} − ${lo}`, v: hi - lo, x: `Math.abs(${p}-${q})` }, { t: 'The third side must be longer than that. The shortest whole number it can be', v: hi - lo + 1 }];
     },
     draw({ mode, s }) {
       if (mode === 'can') { const t = [...s].sort((u, v) => u - v); return baseFig(`${t[2]} cm`, `${t[0]} cm`, `${t[1]} cm`); }
@@ -896,11 +910,11 @@ export const TRICKS = [
     work({ mode, A, B, opts, ans }) {
       const [ax, ay] = A, [bx, by] = B, mx = (ax + bx) / 2, my = (ay + by) / 2;
       if (mode === 'line') return ay === by
-        ? [{ t: `Halfway across from x = ${ax} to x = ${bx}: (${ax} + ${bx}) ÷ 2`, v: mx }, { t: 'AB runs across, so the bisector runs straight up through its middle: x =', v: mx }]
-        : [{ t: `Halfway up from y = ${ay} to y = ${by}: (${ay} + ${by}) ÷ 2`, v: my }, { t: 'AB runs up, so the bisector runs straight across through its middle: y =', v: my }];
+        ? [{ t: `Halfway across from x = ${ax} to x = ${bx}: (${ax} + ${bx}) ÷ 2`, v: mx, x: `${ax}+(${bx}-${ax})/2` }, { t: 'AB runs across, so the bisector runs straight up through its middle: x =', v: mx }]
+        : [{ t: `Halfway up from y = ${ay} to y = ${by}: (${ay} + ${by}) ÷ 2`, v: my, x: `${ay}+(${by}-${ay})/2` }, { t: 'AB runs up, so the bisector runs straight across through its middle: y =', v: my }];
       return [
-        { t: `The middle of AB — its x: (${ax} + ${bx}) ÷ 2`, v: mx },
-        { t: `Its y: (${ay} + ${by}) ÷ 2`, v: my },
+        { t: `The middle of AB — its x: (${ax} + ${bx}) ÷ 2`, v: mx, x: `${ax}+(${bx}-${ax})/2` },
+        { t: `Its y: (${ay} + ${by}) ÷ 2`, v: my, x: `${ay}+(${by}-${ay})/2` },
         { t: 'The bisector goes through that middle, square to AB. Which point is on it? (Check: across² + up² to A and to B must match.)', v: ans, choices: opts },
       ];
     },
@@ -941,12 +955,12 @@ export const TRICKS = [
       return { mode, B, C, text: `In triangle ABC, angle B is ${B}° and angle C is ${C}°. The bisectors of angles B and C meet at I. How big is angle BIC, in degrees?`,
         expr: `90+(180-${B}-${C})/2`, ans: 180 - B / 2 - C / 2 };
     },
-    work({ mode, d, h, B, C }) {
-      if (mode === 'half') return [{ t: 'The whole angle', v: d }, { t: `Two equal halves: ${d} ÷ 2`, v: d / 2 }];
-      if (mode === 'whole') return [{ t: 'One half', v: h }, { t: 'The other half is the same size', v: h }, { t: 'Both halves together', v: 2 * h }];
+    work({ mode, d, h, B, C, text }) {
+      if (mode === 'half') return [{ t: 'The whole angle', v: d, x: said(text) }, { t: `Two equal halves: ${d} ÷ 2`, v: d / 2 }];
+      if (mode === 'whole') return [{ t: 'One half', v: h, x: said(text) }, { t: 'The other half is the same size', v: h, x: said(text) }, { t: 'Both halves together', v: 2 * h }];
       return [
-        { t: `The bisector halves angle B: ${B} ÷ 2`, v: B / 2 },
-        { t: `And angle C: ${C} ÷ 2`, v: C / 2 },
+        { t: `The bisector halves angle B: ${B} ÷ 2`, v: B / 2, x: `${B}/2` },
+        { t: `And angle C: ${C} ÷ 2`, v: C / 2, x: `${C}/2` },
         { t: `Triangle IBC has 180° altogether: 180 − ${B / 2} − ${C / 2}`, v: 180 - B / 2 - C / 2 },
       ];
     },

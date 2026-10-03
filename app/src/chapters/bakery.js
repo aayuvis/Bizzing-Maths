@@ -9,6 +9,10 @@ import { fracBar, pie, numberLine, grid, svg, text } from './kit.js';
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 const lcm = (a, b) => (a / gcd(a, b)) * b;
 const F = (n, d) => `${n}/${d}`;
+/* Plain-arithmetic routes for the steps' x (test/lib/steps.mjs): the highest common factor and the
+   lowest common multiple found by search, not by the trick's own gcd/lcm. */
+const hcfX = (a, b) => `Math.max(...[...Array(${Math.min(a, b)})].map((_,i)=>i+1).filter(d=>${a}%d===0&&${b}%d===0))`;
+const lcmX = (a, b) => `[...Array(${a * b})].map((_,i)=>i+1).find(m=>m%${a}===0&&m%${b}===0)`;
 /* A proper fraction in lowest terms, bottom from lo to hi: [top, bottom]. */
 function proper(r, lo, hi, minTop = 1) { let a, b; do { b = int(lo, hi, r); a = int(minTop, Math.max(minTop, b - 1), r); } while (a >= b || gcd(a, b) !== 1); return [a, b]; }
 
@@ -69,8 +73,8 @@ export const TRICKS = [
     },
     work({ n, k }) {
       return [
-        { t: 'How many equal pieces altogether?', v: n },
-        { t: 'How many are shaded?', v: k },
+        { t: 'How many equal pieces altogether?', v: n, x: `${k}+${n - k}` },
+        { t: 'How many are shaded?', v: k, x: `${n}-${n - k}` },
         { t: 'Shaded over altogether', v: F(k, n) },
       ];
     },
@@ -103,8 +107,8 @@ export const TRICKS = [
     },
     q({ a, b, n }) { return { a, b, n, share: a === 1 ? 'one' : 'several', text: `${a}/${b} of ${n}`, expr: `${n}*${a}/${b}`, ans: (n / b) * a }; },
     work({ a, b, n }) {
-      if (a === 1) return [{ t: 'How many equal shares?', v: b }, { t: `${n} ÷ ${b}`, v: n / b }];
-      return [{ t: `One share: ${n} ÷ ${b}`, v: n / b }, { t: `${a} shares: × ${a}`, v: (n / b) * a }];
+      if (a === 1) return [{ t: 'How many equal shares?', v: b, x: `1/(1/${b})` }, { t: `${n} ÷ ${b}`, v: n / b }];
+      return [{ t: `One share: ${n} ÷ ${b}`, v: n / b, x: `${n}/${b}` }, { t: `${a} shares: × ${a}`, v: (n / b) * a }];
     },
     draw: ({ a, b }) => fracBar(b, a),
   },
@@ -140,9 +144,9 @@ export const TRICKS = [
       return { a, b, m, miss, text: `${a}/${b} = ?/${b * m}`, expr: `${b * m}*${a}/${b}`, ans: a * m };
     },
     work({ a, b, m, miss }) {
-      if (miss === 'bottom') return [{ t: `${a} × what makes ${a * m}?`, v: m }, { t: `Same to the bottom: ${b} × ${m}`, v: b * m }];
-      if (miss === 'down') return [{ t: `${b * m} ÷ what makes ${b}?`, v: m }, { t: `Same to the top: ${a * m} ÷ ${m}`, v: a }];
-      return [{ t: `${b} × what makes ${b * m}?`, v: m }, { t: `Same to the top: ${a} × ${m}`, v: a * m }];
+      if (miss === 'bottom') return [{ t: `${a} × what makes ${a * m}?`, v: m, x: `${a * m}/${a}` }, { t: `Same to the bottom: ${b} × ${m}`, v: b * m }];
+      if (miss === 'down') return [{ t: `${b * m} ÷ what makes ${b}?`, v: m, x: `${b * m}/${b}` }, { t: `Same to the top: ${a * m} ÷ ${m}`, v: a }];
+      return [{ t: `${b} × what makes ${b * m}?`, v: m, x: `${b * m}/${b}` }, { t: `Same to the top: ${a} × ${m}`, v: a * m }];
     },
     draw: ({ a, b, m, miss }) => (miss === 'down' ? fracBar(b * m, a * m) : fracBar(b, a)),
   },
@@ -170,9 +174,9 @@ export const TRICKS = [
     work({ a, b }) {
       const g = gcd(a, b);
       return [
-        { t: `The biggest number that divides ${a} and ${b}`, v: g },
-        { t: `${a} ÷ ${g}`, v: a / g },
-        { t: `${b} ÷ ${g}`, v: b / g },
+        { t: `The biggest number that divides ${a} and ${b}`, v: g, x: hcfX(a, b) },
+        { t: `${a} ÷ ${g}`, v: a / g, x: `${a}/(${hcfX(a, b)})` },
+        { t: `${b} ÷ ${g}`, v: b / g, x: `${b}/(${hcfX(a, b)})` },
         { t: 'The simplest form', v: F(a / g, b / g) },
       ];
     },
@@ -219,9 +223,9 @@ export const TRICKS = [
     },
     work(q) {
       const { a, b, c, d } = q, C = ['<', '=', '>'];
-      if (b === d) return [{ t: `Same-size pieces. How many on the left?`, v: a }, { t: '…and on the right?', v: c }, { t: 'Compare', v: q.ans, choices: C }];
-      if (a === c) return [{ t: `Same number of pieces. Which cut makes bigger pieces: ${b} or ${d}?`, v: Math.min(b, d) }, { t: 'Compare', v: q.ans, choices: C }];
-      return [{ t: `${a} × ${d}`, v: a * d }, { t: `${c} × ${b}`, v: c * b }, { t: 'Compare', v: q.ans, choices: C }];
+      if (b === d) return [{ t: `Same-size pieces. How many on the left?`, v: a, x: `${a}/${b}*${b}` }, { t: '…and on the right?', v: c, x: `${c}/${d}*${d}` }, { t: 'Compare', v: q.ans, choices: C }];
+      if (a === c) return [{ t: `Same number of pieces. Which cut makes bigger pieces: ${b} or ${d}?`, v: Math.min(b, d), x: `1/${b}>1/${d}?${b}:${d}` }, { t: 'Compare', v: q.ans, choices: C }];
+      return [{ t: `${a} × ${d}`, v: a * d, x: `${a}*${d}` }, { t: `${c} × ${b}`, v: c * b, x: `${c}*${b}` }, { t: 'Compare', v: q.ans, choices: C }];
     },
     draw: ({ a, b, c, d }) => bars([[b, a], [d, c]]),
   },
@@ -263,7 +267,7 @@ export const TRICKS = [
     work({ a, c, b, op }) {
       const top = op === '+' ? a + c : a - c;
       return [
-        { t: op === '+' ? `Add the tops: ${a} + ${c}` : `Take the tops: ${a} − ${c}`, v: top },
+        { t: op === '+' ? `Add the tops: ${a} + ${c}` : `Take the tops: ${a} − ${c}`, v: top, x: `(${a}/${b}${op === '+' ? '+' : '-'}${c}/${b})*${b}` },
         { t: 'Keep the bottom — the pieces are the same size', v: F(top, b) },
       ];
     },
@@ -303,9 +307,9 @@ export const TRICKS = [
     },
     work({ w, a, b, dir }) {
       const n = w * b + a;
-      if (dir === 'wholes') return [{ t: 'How many pieces make one whole?', v: b }, { t: `How many whole ${b}s fit in ${n}?`, v: w }];
-      if (dir === 'left') return [{ t: `${w} wholes use ${w} × ${b} pieces`, v: w * b }, { t: `Pieces left over from ${n}`, v: a }];
-      return [{ t: `Pieces in the wholes: ${w} × ${b}`, v: w * b }, { t: `Add the ${a} extra`, v: n }, { t: `Over ${b}`, v: F(n, b) }];
+      if (dir === 'wholes') return [{ t: 'How many pieces make one whole?', v: b, x: `1/(1/${b})` }, { t: `How many whole ${b}s fit in ${n}?`, v: w }];
+      if (dir === 'left') return [{ t: `${w} wholes use ${w} × ${b} pieces`, v: w * b, x: `${n}-${n}%${b}` }, { t: `Pieces left over from ${n}`, v: a }];
+      return [{ t: `Pieces in the wholes: ${w} × ${b}`, v: w * b, x: `${w}*${b}` }, { t: `Add the ${a} extra`, v: n, x: `(${w}+${a}/${b})*${b}` }, { t: `Over ${b}`, v: F(n, b) }];
     },
     draw: ({ w, a, b, dir }) => (dir === 'up' ? pies([...Array(w).fill([b, b]), [b, a]], w > 4 ? 24 : 34) : pie(b, 0, 50)),
   },
@@ -352,9 +356,9 @@ export const TRICKS = [
     work({ a, b, c, d, op }) {
       const L = lcm(b, d), A = (a * L) / b, C = (c * L) / d;
       return [
-        { t: `A bottom that both ${b} and ${d} go into`, v: L },
-        { t: `${a}/${b} = ?/${L}`, v: A },
-        { t: `${c}/${d} = ?/${L}`, v: C },
+        { t: `A bottom that both ${b} and ${d} go into`, v: L, x: lcmX(b, d) },
+        { t: `${a}/${b} = ?/${L}`, v: A, x: `${a}/${b}*(${lcmX(b, d)})` },
+        { t: `${c}/${d} = ?/${L}`, v: C, x: `${c}/${d}*(${lcmX(b, d)})` },
         { t: op === '+' ? 'Add the tops, keep the bottom' : 'Take the tops, keep the bottom', v: F(op === '+' ? A + C : A - C, L) },
       ];
     },
@@ -391,8 +395,8 @@ export const TRICKS = [
       return { a, b, c, d, kind: 'frac', frac: true, text: `${a}/${b} × ${c}/${d}`, expr: `(${a}/${b})*(${c}/${d})`, ans: F(a * c, b * d) };
     },
     work({ w, a, b, c, d }) {
-      if (w) return [{ t: `Tops: ${w} × ${a}`, v: w * a }, { t: 'The pieces are the same size — keep the bottom', v: F(w * a, b) }];
-      return [{ t: `Tops: ${a} × ${c}`, v: a * c }, { t: `Bottoms: ${b} × ${d}`, v: b * d }, { t: 'Top over bottom', v: F(a * c, b * d) }];
+      if (w) return [{ t: `Tops: ${w} × ${a}`, v: w * a, x: `${w}*${a}` }, { t: 'The pieces are the same size — keep the bottom', v: F(w * a, b) }];
+      return [{ t: `Tops: ${a} × ${c}`, v: a * c, x: `${a}*${c}` }, { t: `Bottoms: ${b} × ${d}`, v: b * d, x: `${b}*${d}` }, { t: 'Top over bottom', v: F(a * c, b * d) }];
     },
     draw: ({ w, a, b, d }) => {
       if (w) return fracBar(b, a);
@@ -439,12 +443,12 @@ export const TRICKS = [
       return { a, b, c, d, kind, frac: true, text: `${a}/${b} ÷ ${c}/${d}`, expr: `(${a}/${b})/(${c}/${d})`, ans: F(a * d, b * c) };
     },
     work({ w, a, b, c, d, kind }) {
-      if (kind === 'unit') return [{ t: `How many 1/${d}s fit in one whole?`, v: d }, { t: `In ${w} wholes: ${w} × ${d}`, v: w * d }];
-      if (kind === 'whole') return [{ t: `Pieces: ${w} × ${d}`, v: w * d }, { t: `Helpings of ${c} pieces: ÷ ${c}`, v: (w * d) / c }];
+      if (kind === 'unit') return [{ t: `How many 1/${d}s fit in one whole?`, v: d, x: `1/(1/${d})` }, { t: `In ${w} wholes: ${w} × ${d}`, v: w * d }];
+      if (kind === 'whole') return [{ t: `Pieces: ${w} × ${d}`, v: w * d, x: `${w}*${d}` }, { t: `Helpings of ${c} pieces: ÷ ${c}`, v: (w * d) / c }];
       return [
-        { t: `Keep ${a}/${b}, change ÷ to ×, flip ${c}/${d}`, v: F(d, c) },
-        { t: `Tops: ${a} × ${d}`, v: a * d },
-        { t: `Bottoms: ${b} × ${c}`, v: b * c },
+        { t: `Keep ${a}/${b}, change ÷ to ×, flip ${c}/${d}`, v: F(d, c), x: `1/(${c}/${d})` },
+        { t: `Tops: ${a} × ${d}`, v: a * d, x: `${a}*${d}` },
+        { t: `Bottoms: ${b} × ${c}`, v: b * c, x: `${b}*${c}` },
         { t: 'Top over bottom', v: F(a * d, b * c) },
       ];
     },

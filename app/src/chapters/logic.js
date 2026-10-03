@@ -101,14 +101,14 @@ const parity = {
       choices: YN, ans: par(S) === par(o.T) && Math.abs(o.T) <= S ? 'Yes' : 'No', expr: frogExpr(o.n, o.T, true) };
   },
   work(o) {
-    if (o.kind === 'sum') return [{ t: 'How many of the numbers are odd?', v: o.xs.filter((x) => x % 2).length },
+    if (o.kind === 'sum') return [{ t: 'How many of the numbers are odd?', v: o.xs.filter((x) => x % 2).length, x: o.xs.map((x) => `${x}%2`).join('+') },
       { t: 'An even count of odd numbers makes even; an odd count makes odd. So the total is', v: o.ans, choices: OE }];
-    if (o.kind === 'frog1') return [{ t: `Each jump flips odd ↔ even, starting on 0 (even). After ${o.n} jumps the frog is on a number that is`, v: par(o.n), choices: OE },
-      { t: `${M(o.T)} is`, v: par(o.T), choices: OE }, { t: 'Do they match — can it end there?', v: o.ans, choices: YN }];
+    if (o.kind === 'frog1') return [{ t: `Each jump flips odd ↔ even, starting on 0 (even). After ${o.n} jumps the frog is on a number that is`, v: par(o.n), choices: OE, x: `${o.n}%2===1?'Odd':'Even'` },
+      { t: `${M(o.T)} is`, v: par(o.T), choices: OE, x: `Math.abs(${o.T})%2===1?'Odd':'Even'` }, { t: 'Do they match — can it end there?', v: o.ans, choices: YN }];
     const S = (o.n * (o.n + 1)) / 2;
-    return [{ t: `If every jump went right: 1 + 2 + … + ${o.n}`, v: S },
-      { t: 'Turning a jump round moves the spot by an even number, so the spot is always', v: par(S), choices: OE },
-      { t: `${M(o.T)} is`, v: par(o.T), choices: OE }, { t: 'So can it end there?', v: o.ans, choices: YN }];
+    return [{ t: `If every jump went right: 1 + 2 + … + ${o.n}`, v: S, x: Array.from({ length: o.n }, (_, i) => i + 1).join('+') },
+      { t: 'Turning a jump round moves the spot by an even number, so the spot is always', v: par(S), choices: OE, x: `(${Array.from({ length: o.n }, (_, i) => i + 1).join('+')})%2===1?'Odd':'Even'` },
+      { t: `${M(o.T)} is`, v: par(o.T), choices: OE, x: `Math.abs(${o.T})%2===1?'Odd':'Even'` }, { t: 'So can it end there?', v: o.ans, choices: YN }];
   },
   draw(o) {
     if (o.kind === 'sum') {
@@ -181,14 +181,14 @@ const worstCase = {
   },
   work(o) {
     const { cs } = o, c = cs.length, tot = sum(cs);
-    if (o.kind === 'pair') return [{ t: 'Worst luck: one of each colour first. How many is that?', v: c }, { t: 'The next one must match one of them', v: c + 1 }];
+    if (o.kind === 'pair') return [{ t: 'Worst luck: one of each colour first. How many is that?', v: c, x: cs.map((x) => `Math.min(${x},1)`).join('+') }, { t: 'The next one must match one of them', v: c + 1 }];
     if (o.kind === 'ksame') {
       const w = sum(cs.map((x) => Math.min(x, o.k - 1)));
-      return [{ t: `Worst luck: ${o.k - 1} of each colour — but a pile with fewer gives only what it has. How many altogether?`, v: w }, { t: 'One more must make it', v: w + 1 }];
+      return [{ t: `Worst luck: ${o.k - 1} of each colour — but a pile with fewer gives only what it has. How many altogether?`, v: w, x: cs.map((x) => `Math.min(${x},${o.k}-1)`).join('+') }, { t: 'One more must make it', v: w + 1 }];
     }
-    if (o.kind === 'colour') return [{ t: `Worst luck: every marble that is not ${COLS[o.j]} comes out first. How many is that?`, v: tot - cs[o.j] }, { t: `Then ${o.k} ${COLS[o.j]}`, v: o.ans }];
+    if (o.kind === 'colour') return [{ t: `Worst luck: every marble that is not ${COLS[o.j]} comes out first. How many is that?`, v: tot - cs[o.j], x: `${cs.join('+')}-${cs[o.j]}` }, { t: `Then ${o.k} ${COLS[o.j]}`, v: o.ans }];
     const mn = Math.min(...cs);
-    return [{ t: 'Which pile is smallest? How many marbles are in it?', v: mn }, { t: 'Worst luck: every other marble comes out first', v: tot - mn }, { t: 'The next one has to be the missing colour', v: tot - mn + 1 }];
+    return [{ t: 'Which pile is smallest? How many marbles are in it?', v: mn, x: `Math.min(${cs})` }, { t: 'Worst luck: every other marble comes out first', v: tot - mn, x: `${cs.join('+')}-Math.min(${cs})` }, { t: 'The next one has to be the missing colour', v: tot - mn + 1 }];
   },
   draw(o) {
     const u = 15; let s = '';
@@ -204,11 +204,11 @@ const worstCase = {
 /* ================================================================== pigeonhole */
 
 const HOLE = [
-  { k: 7, what: 'were born on the same day of the week', who: 'children', labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] },
-  { k: 12, what: 'have birthdays in the same month', who: 'people', labels: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
-  { k: 6, what: 'rolled the same number on one ordinary dice', who: 'players', labels: ['1', '2', '3', '4', '5', '6'] },
-  { k: 10, what: 'have house numbers ending in the same digit', who: 'friends', labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] },
-  { k: 26, what: 'have first names starting with the same letter (A to Z)', who: 'pupils', labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] },
+  { k: 7, xk: "['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].length", what: 'were born on the same day of the week', who: 'children', labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] },
+  { k: 12, xk: "['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].length", what: 'have birthdays in the same month', who: 'people', labels: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
+  { k: 6, xk: "[1,2,3,4,5,6].length", what: 'rolled the same number on one ordinary dice', who: 'players', labels: ['1', '2', '3', '4', '5', '6'] },
+  { k: 10, xk: "'0123456789'.length", what: 'have house numbers ending in the same digit', who: 'friends', labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] },
+  { k: 26, xk: "'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.length", what: 'have first names starting with the same letter (A to Z)', who: 'pupils', labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] },
 ];
 const SHARE = [['apples', 'baskets', 'basket'], ['pupils', 'classrooms', 'classroom'], ['pigeons', 'holes', 'hole'], ['letters', 'postboxes', 'postbox'], ['books', 'shelves', 'shelf']];
 
@@ -254,9 +254,9 @@ const pigeonhole = {
   work(o) {
     if (o.kind === 'sure') {
       const H = HOLE[o.h];
-      return [{ t: 'How many boxes are there (different ways to fall)?', v: H.k }, { t: `Worst luck: ${o.m - 1} in every box and still not ${o.m}. How many is that?`, v: H.k * (o.m - 1) }, { t: 'One more forces it', v: o.ans }];
+      return [{ t: 'How many boxes are there (different ways to fall)?', v: H.k, x: H.xk }, { t: `Worst luck: ${o.m - 1} in every box and still not ${o.m}. How many is that?`, v: H.k * (o.m - 1), x: `(${H.xk})*(${o.m}-1)` }, { t: 'One more forces it', v: o.ans }];
     }
-    return [{ t: `${o.n} ÷ ${o.k}: the even share`, v: Math.floor(o.n / o.k) }, { t: 'How many are left over?', v: o.n % o.k }, { t: 'A leftover has to go in some box, so some box has at least', v: o.ans }];
+    return [{ t: `${o.n} ÷ ${o.k}: the even share`, v: Math.floor(o.n / o.k), x: `Math.floor(${o.n}/${o.k})` }, { t: 'How many are left over?', v: o.n % o.k, x: `${o.n}-${o.k}*Math.floor(${o.n}/${o.k})` }, { t: 'A leftover has to go in some box, so some box has at least', v: o.ans }];
   },
   draw(o) {
     if (o.kind === 'sure') { const H = HOLE[o.h]; return holes(H.k, H.labels); }
@@ -330,12 +330,13 @@ const calendar = {
       expr: `['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(${o.d}+${dayExpr})%7]` };
   },
   work(o) {
-    if (o.kind === 'later' || o.kind === 'before') return [{ t: `${o.n} ÷ 7 — what is the remainder?`, v: o.n % 7 },
+    if (o.kind === 'later' || o.kind === 'before') return [{ t: `${o.n} ÷ 7 — what is the remainder?`, v: o.n % 7, x: `${o.n}-7*Math.floor(${o.n}/7)` },
       { t: `Whole weeks change nothing. Count ${o.kind === 'later' ? 'on' : 'back'} ${o.n % 7} from ${DAYS[o.d]}`, v: o.ans, choices: o.choices }];
-    const doy = doyOf(o.m, o.day, o.leap), before = doy - o.day;
-    if (o.kind === 'doy') return [{ t: `Days in the months before ${MONTHS[o.m]}`, v: before }, { t: `+ ${o.day}`, v: doy }];
-    return [{ t: `Day number of ${o.day} ${MONTHS[o.m]}`, v: doy }, { t: 'So how many days after 1 January?', v: doy - 1 },
-      { t: `${doy - 1} ÷ 7 — the remainder`, v: (doy - 1) % 7 }, { t: `Count on from ${DAYS[o.d]}`, v: o.ans, choices: o.choices }];
+    const doy = doyOf(o.m, o.day, o.leap), before = doy - o.day, Y = o.leap ? 2024 : 2023;
+    const gap = (m, d) => `Math.round((new Date(${Y},${m},${d},12)-new Date(${Y},0,1,12))/864e5)`;   // the calendar itself
+    if (o.kind === 'doy') return [{ t: `Days in the months before ${MONTHS[o.m]}`, v: before, x: gap(o.m, 1) }, { t: `+ ${o.day}`, v: doy }];
+    return [{ t: `Day number of ${o.day} ${MONTHS[o.m]}`, v: doy, x: `${gap(o.m, o.day)}+1` }, { t: 'So how many days after 1 January?', v: doy - 1, x: gap(o.m, o.day) },
+      { t: `${doy - 1} ÷ 7 — the remainder`, v: (doy - 1) % 7, x: `${gap(o.m, o.day)}%7` }, { t: `Count on from ${DAYS[o.d]}`, v: o.ans, choices: o.choices }];
   },
   draw(o) {
     let s = '';
@@ -397,18 +398,21 @@ const missingDigit = {
   },
   work(o) {
     const seen = sum(o.ds.filter((d) => d !== null)), first = o.ds[0] === null;
-    if (o.kind === 'nine') { let m = Math.ceil((seen + (first ? 1 : 0)) / 9) * 9; return [{ t: 'Add the digits you can see', v: seen }, { t: 'The next multiple of 9 a single digit can reach', v: m }, { t: `${m} − ${seen}`, v: m - seen }]; }
+    const seenX = o.ds.filter((d) => d !== null).join('+'), i0 = o.ds.indexOf(null), pre = o.ds.slice(0, i0).join(''), post = o.ds.slice(i0 + 1).join('');
+    const num = (d) => `Number('${pre}'+${d}+'${post}')`;   // the whole number with d in the box
+    if (o.kind === 'nine') { let m = Math.ceil((seen + (first ? 1 : 0)) / 9) * 9; return [{ t: 'Add the digits you can see', v: seen, x: seenX }, { t: 'The next multiple of 9 a single digit can reach', v: m, x: `(function(){for(let d=${first ? 1 : 0};d<=9;d++)if(${num('d')}%9===0)return ${seenX}+d})()` }, { t: `${m} − ${seen}`, v: m - seen }]; }
     if (o.kind === 'count3') {
       let d0 = first ? 1 : 0; while ((seen + d0) % 3) d0++;
-      return [{ t: 'Add the digits you can see', v: seen }, { t: `The smallest digit${first ? ' (not 0 — it is the first digit)' : ''} that makes a multiple of 3`, v: d0 }, { t: 'Every third digit after it works too, up to 9. How many digits altogether?', v: Math.floor((9 - d0) / 3) + 1 }];
+      return [{ t: 'Add the digits you can see', v: seen, x: seenX }, { t: `The smallest digit${first ? ' (not 0 — it is the first digit)' : ''} that makes a multiple of 3`, v: d0, x: `(function(){for(let d=${first ? 1 : 0};d<=9;d++)if(${num('d')}%3===0)return d})()` }, { t: 'Every third digit after it works too, up to 9. How many digits altogether?', v: Math.floor((9 - d0) / 3) + 1 }];
     }
     if (o.kind === 'six') {
       const c3 = []; for (let d = 0; d <= 9; d++) if ((seen + d) % 3 === 0) c3.push(d);
-      return [{ t: 'Add the digits you can see', v: seen }, { t: 'How many digits make the digit sum a multiple of 3?', v: c3.length }, { t: 'It must also be even (the last digit). Which one is it?', v: c3.filter((d) => d % 2 === 0)[0] }];
+      return [{ t: 'Add the digits you can see', v: seen, x: seenX }, { t: 'How many digits make the digit sum a multiple of 3?', v: c3.length, x: `[0,1,2,3,4,5,6,7,8,9].filter((d)=>${num('d')}%3===0).length` }, { t: 'It must also be even (the last digit). Which one is it?', v: c3.filter((d) => d % 2 === 0)[0] }];
     }
     const L = o.ds.length, pos = L - o.ds.indexOf(null);           // place counted from the right, 1 = ones
     let A = 0, B = 0; o.ds.forEach((d, i) => { if (d === null) return; if ((L - i) % 2) A += d; else B += d; });
-    return [{ t: 'Add the digits in the 1st, 3rd, 5th… places from the right (the box counts as 0)', v: A }, { t: 'Add the digits in the 2nd, 4th… places', v: B },
+    const alt = (n) => `(function(n){let s=0;for(;n>0;n=Math.floor(n/100))s+=n%10;return s})(${n})`;   // every other digit, from the ones
+    return [{ t: 'Add the digits in the 1st, 3rd, 5th… places from the right (the box counts as 0)', v: A, x: alt(num(0)) }, { t: 'Add the digits in the 2nd, 4th… places', v: B, x: alt(`Math.floor(${num(0)}/10)`) },
       { t: `The box is in the ${pos % 2 ? 'odd' : 'even'} places. Which digit makes the two sums differ by a multiple of 11?`, v: pos % 2 ? (((B - A) % 11) + 11) % 11 : (((A - B) % 11) + 11) % 11 }];
   },
   draw(o) { return cards(o.ds, `The number ${numStr(o.ds)} with one digit missing`); },
@@ -459,13 +463,14 @@ const listSys = {
       expr: `(()=>{let c=0;for(let a=0;a<=${o.N};a++)for(let b=0;2*b<=${o.N};b++)for(let e=0;5*e<=${o.N};e++)if(a+2*b+5*e===${o.N})c++;return c;})()` };
   },
   work(o) {
-    if (o.kind === 'two') { const lo = Math.max(1, o.s - 9), hi = Math.min(9, o.s); return [{ t: 'The smallest first digit that works (the last digit is at most 9)', v: lo }, { t: 'The biggest first digit that works', v: hi }, { t: 'Each first digit gives exactly one number. Count from smallest to biggest', v: hi - lo + 1 }]; }
-    if (o.kind === 'three') return [{ t: `First digit 1: the last two digits add to ${o.s - 1}. How many ways (like 0${o.s - 1})?`, v: o.s },
-      { t: `First digit 2: they add to ${o.s - 2}. How many ways?`, v: o.s - 1 }, { t: `Each row is one fewer, down to 1 (first digit ${o.s}). Add every row`, v: o.ans }];
-    if (o.kind === 'distinct') return [{ t: 'Groups of three different digits from 1 to 9 that add up to it', v: o.g0 }, { t: 'Groups that use a 0', v: o.g1 },
+    if (o.kind === 'two') { const lo = Math.max(1, o.s - 9), hi = Math.min(9, o.s); return [{ t: 'The smallest first digit that works (the last digit is at most 9)', v: lo, x: `[1,2,3,4,5,6,7,8,9].find((a)=>${o.s}-a>=0&&${o.s}-a<=9)` }, { t: 'The biggest first digit that works', v: hi, x: `[9,8,7,6,5,4,3,2,1].find((a)=>${o.s}-a>=0&&${o.s}-a<=9)` }, { t: 'Each first digit gives exactly one number. Count from smallest to biggest', v: hi - lo + 1 }]; }
+    if (o.kind === 'three') return [{ t: `First digit 1: the last two digits add to ${o.s - 1}. How many ways (like 0${o.s - 1})?`, v: o.s, x: `(function(){let c=0;for(let n=0;n<=99;n++)if(Math.floor(n/10)+n%10===${o.s}-1)c++;return c})()` },
+      { t: `First digit 2: they add to ${o.s - 2}. How many ways?`, v: o.s - 1, x: `(function(){let c=0;for(let n=0;n<=99;n++)if(Math.floor(n/10)+n%10===${o.s}-2)c++;return c})()` }, { t: `Each row is one fewer, down to 1 (first digit ${o.s}). Add every row`, v: o.ans }];
+    const dn = (zero) => `(function(){let c=0;for(let n=100;n<=999;n++){const d=String(n).split('').map(Number);if(d[0]+d[1]+d[2]===${o.s}&&new Set(d).size===3&&d.includes(0)===${zero})c++;}return c})()`;   // count the numbers, then the orders
+    if (o.kind === 'distinct') return [{ t: 'Groups of three different digits from 1 to 9 that add up to it', v: o.g0, x: `${dn(false)}/6` }, { t: 'Groups that use a 0', v: o.g1, x: `${dn(true)}/4` },
       { t: `A group without 0 makes 6 numbers, a group with 0 makes 4: ${o.g0} × 6 + ${o.g1} × 4`, v: o.ans }];
     const F = Math.floor(o.N / 5);
-    return [{ t: 'The most 5s you can use', v: F }, { t: 'Using no 5s: how many ways with 2s and 1s (count the 2s: 0, 1, 2, …)?', v: Math.floor(o.N / 2) + 1 },
+    return [{ t: 'The most 5s you can use', v: F, x: `Math.floor(${o.N}/5)` }, { t: 'Using no 5s: how many ways with 2s and 1s (count the 2s: 0, 1, 2, …)?', v: Math.floor(o.N / 2) + 1, x: `(function(){let c=0;for(let b=0;2*b<=${o.N};b++)c++;return c})()` },
       { t: `Do the same row for each number of 5s, from 0 up to ${F}, and add the rows`, v: o.ans }];
   },
 };
@@ -539,8 +544,10 @@ const truthTellers = {
       expr: `(()=>{${search}return S.length===1?S[0].reduce((s,v)=>s+v,0):NaN;})()` };
   },
   work(o) {
-    const sol = solve(o.sts), can = (kn) => (sol.some((a) => a[0] === kn) ? 'Yes' : 'No');
-    const s = [{ t: `Suppose ${NAMES[0]} is a knight. Can everything fit?`, v: can(true), choices: YN }, { t: `Suppose ${NAMES[0]} is a liar. Can everything fit?`, v: can(false), choices: YN }];
+    const sol = solve(o.sts), can = (kn) => (sol.some((a) => a[0] === kn) ? 'Yes' : 'No'), n = o.sts.length;
+    const conds = o.sts.map((st, i) => `((${code(st, i)})===(a[${i}]===1))`).join('&&');
+    const fitX = (kn) => `(()=>{for(let m=0;m<${1 << n};m++){const a=[${Array.from({ length: n }, (_, i) => `(m>>${i})&1`)}];if(a[0]===${kn}&&${conds})return 'Yes';}return 'No';})()`;
+    const s = [{ t: `Suppose ${NAMES[0]} is a knight. Can everything fit?`, v: can(true), choices: YN, x: fitX(1) }, { t: `Suppose ${NAMES[0]} is a liar. Can everything fit?`, v: can(false), choices: YN, x: fitX(0) }];
     if (o.kind === 'who') s.push({ t: `So ${NAMES[o.ask]} is a`, v: o.ans, choices: ['Knight', 'Liar'] });
     else s.push({ t: 'In the only way that fits, how many are knights?', v: o.ans });
     return s;
@@ -614,12 +621,14 @@ const digitPuzzles = {
       expr: `(()=>{const S=[];for(let m=0;m<${10 ** o.nl};m++){const d=[${Array.from({ length: o.nl }, (_, i) => `Math.floor(m/${10 ** i})%10`)}];const f=(w)=>w.replace(/[ABC]/g,(x)=>d['ABC'.indexOf(x)]);const a=f('${o.a}'),b=f('${o.b}'),c=f('${o.c}');if(/^0./.test(a)||/^0./.test(b)||/^0./.test(c))continue;if(${jsop})S.push(d[${o.ask}]);}return S.length===1?S[0]:NaN;})()` };
   },
   work(o) {
-    if (o.kind === 'times') return [{ t: `Ones column: how many digits A make A × ${o.b} end in ${o.c.at(-1)}?`, v: this.cands(o) }, { t: 'Try each one in the whole multiplication. Which A fits every digit you can see?', v: o.ans }];
+    if (o.kind === 'times') return [{ t: `Ones column: how many digits A make A × ${o.b} end in ${o.c.at(-1)}?`, v: this.cands(o), x: `[0,1,2,3,4,5,6,7,8,9].filter((d)=>String(d*${o.b}).endsWith('${o.c.at(-1)}')).length` }, { t: 'Try each one in the whole multiplication. Which A fits every digit you can see?', v: o.ans }];
     const sol = digitSolutions(o)[0], W = Math.max(o.a.length, o.b.length, o.c.length), dig = (s, p) => (p < s.length ? s[s.length - 1 - p] : '0');
     const steps = [];
     for (let p = 0; p < W; p++) {
       const here = [o.a, o.b, o.c].map((s) => dig(s, p)).find((ch) => LET.includes(ch));
-      if (here) steps.push({ t: `${PLACE[p]} column (with any carry): ${here} = ?`, v: sol[LET.indexOf(here)] });
+      // x: try every digit for every letter in the whole sum, and read off this letter
+      if (here) steps.push({ t: `${PLACE[p]} column (with any carry): ${here} = ?`, v: sol[LET.indexOf(here)],
+        x: `(()=>{for(let m=0;m<${10 ** o.nl};m++){const d=[${Array.from({ length: o.nl }, (_, i) => `Math.floor(m/${10 ** i})%10`)}];const f=(w)=>w.replace(/[ABC]/g,(x)=>d['ABC'.indexOf(x)]);const a=f('${o.a}'),b=f('${o.b}'),c=f('${o.c}');if(/^0./.test(a)||/^0./.test(b)||/^0./.test(c))continue;if(+a+ +b===+c)return d[${LET.indexOf(here)}];}})()` });
     }
     return steps;
   },
@@ -686,16 +695,17 @@ const remainders = {
     return { ...o, text: `A number leaves ${listAnd(o.ds.map((d, i) => `remainder ${o.rs[i]} when divided by ${d}`))}. What is the smallest such number?`, ans: n, expr: hunt(1, o.rs) };
   },
   work(o) {
-    const L = lcmAll(o.ds);
-    if (o.kind === 'same') return [{ t: `Take the ${o.r} away: the rest shares exactly into ${listAnd(o.ds.map((d) => `${d}s`))}. The smallest number they all go into`, v: L }, { t: `Put the ${o.r} back`, v: L + o.r }];
-    if (o.kind === 'short') return [{ t: 'One more would share out exactly every time. The smallest number they all go into', v: L }, { t: 'Take the one back off', v: L - 1 }];
+    const L = lcmAll(o.ds), Lx = `(()=>{for(let n=1;;n++)if(${o.ds.map((d) => `n%${d}===0`).join('&&')})return n;})()`;   // count up until all go in
+    if (o.kind === 'same') return [{ t: `Take the ${o.r} away: the rest shares exactly into ${listAnd(o.ds.map((d) => `${d}s`))}. The smallest number they all go into`, v: L, x: Lx }, { t: `Put the ${o.r} back`, v: L + o.r }];
+    if (o.kind === 'short') return [{ t: 'One more would share out exactly every time. The smallest number they all go into', v: L, x: Lx }, { t: 'Take the one back off', v: L - 1 }];
     const idx = o.ds.map((_, i) => i).sort((a, b) => o.ds[b] - o.ds[a]);   // biggest divisor first
     const big = idx[0], first = o.rs[big] || o.ds[big];
-    const steps = [{ t: `The first number that leaves ${o.rs[big]} when divided by ${o.ds[big]}`, v: first }];
+    const hunt = (js) => `(()=>{for(let n=1;;n++)if(${js.map((j) => `n%${o.ds[j]}===${o.rs[j]}`).join('&&')})return n;})()`;   // the smallest that passes these tests
+    const steps = [{ t: `The first number that leaves ${o.rs[big]} when divided by ${o.ds[big]}`, v: first, x: hunt([big]) }];
     let x = first, stepBy = o.ds[big];
-    for (const j of idx.slice(1)) {
+    for (const [k, j] of idx.slice(1).entries()) {
       while (x % o.ds[j] !== o.rs[j]) x += stepBy;
-      steps.push({ t: `Add ${stepBy} each time until it also leaves ${o.rs[j]} when divided by ${o.ds[j]}`, v: x });
+      steps.push({ t: `Add ${stepBy} each time until it also leaves ${o.rs[j]} when divided by ${o.ds[j]}`, v: x, x: hunt(idx.slice(0, k + 2)) });
       stepBy = lcm(stepBy, o.ds[j]);
     }
     return steps;
@@ -753,13 +763,15 @@ const invariants = {
       ans: S + o.n - 1, expr: `(()=>{let b=Array.from({length:${o.n}},(_,i)=>i+1);while(b.length>1){const p=b.pop(),q=b.shift();b.push(p+q+1);}return b[0];})()` };
   },
   work(o) {
-    if (o.kind === 'flip') return [{ t: 'A move changes the number of heads by 2 or by 0. Right now, is the number of heads odd or even?', v: par(o.h), choices: OE },
+    if (o.kind === 'flip') return [{ t: 'A move changes the number of heads by 2 or by 0. Right now, is the number of heads odd or even?', v: par(o.h), choices: OE, x: `${o.h}%2===1?'Odd':'Even'` },
       { t: 'All tails means 0 heads, which is even. Can you get there?', v: o.ans, choices: YN }];
-    if (o.kind === 'steps') { const g = gcd(o.a, o.b); return [{ t: `The biggest number that divides both ${o.a} and ${o.b}`, v: g }, { t: `Every move keeps the remainder ÷ ${g}. What does ${o.s} leave?`, v: o.s % g },
-      { t: `What does ${o.N} leave?`, v: o.N % g }, { t: 'Do they match — can you reach it?', v: o.ans, choices: YN }]; }
+    if (o.kind === 'steps') { const g = gcd(o.a, o.b), gx = `[...Array(${Math.min(o.a, o.b)})].map((_,i)=>i+1).filter((d)=>${o.a}%d===0&&${o.b}%d===0).pop()`;
+      return [{ t: `The biggest number that divides both ${o.a} and ${o.b}`, v: g, x: gx }, { t: `Every move keeps the remainder ÷ ${g}. What does ${o.s} leave?`, v: o.s % g, x: `${o.s}%${gx}` },
+      { t: `What does ${o.N} leave?`, v: o.N % g, x: `${o.N}%${gx}` }, { t: 'Do they match — can you reach it?', v: o.ans, choices: YN }]; }
     const S = (o.n * (o.n + 1)) / 2;
-    if (o.kind === 'diff') return [{ t: `The total to start: 1 + 2 + … + ${o.n}`, v: S }, { t: 'Each move lowers the total by an even amount, so its parity never changes. The last number is', v: o.ans, choices: OE }];
-    return [{ t: `The total to start: 1 + 2 + … + ${o.n}`, v: S }, { t: 'Each move turns two numbers into one. How many moves until one is left?', v: o.n - 1 }, { t: 'Each move adds exactly 1 to the total', v: o.ans }];
+    const Sx = Array.from({ length: o.n }, (_, i) => i + 1).join('+');
+    if (o.kind === 'diff') return [{ t: `The total to start: 1 + 2 + … + ${o.n}`, v: S, x: Sx }, { t: 'Each move lowers the total by an even amount, so its parity never changes. The last number is', v: o.ans, choices: OE }];
+    return [{ t: `The total to start: 1 + 2 + … + ${o.n}`, v: S, x: Sx }, { t: 'Each move turns two numbers into one. How many moves until one is left?', v: o.n - 1, x: `${o.n}-1` }, { t: 'Each move adds exactly 1 to the total', v: o.ans }];
   },
   draw(o) {
     if (o.kind === 'flip') {
