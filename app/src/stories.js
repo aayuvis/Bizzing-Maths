@@ -23,7 +23,7 @@
 
 /* The stories load on first need (story-data.js is its own chunk). STORIES is a live
    binding: {} until loadStories() resolves, then every story. A screen that tells one
-   asks for them in render(); openStop waits for them so a first visit opens on its story. */
+   asks for them in render(); a first visit to a stop opens on its Story tab, which fills in when they arrive. */
 export let STORIES = {};
 let loading = null, ready = false;
 export const storiesReady = () => ready;
