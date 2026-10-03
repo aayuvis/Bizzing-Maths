@@ -931,6 +931,7 @@ div.jcard{cursor:default}
 .ob-stats b{font:800 24px var(--display);color:var(--action)}.ob-stats span{font-size:12px;color:var(--muted)}
 .ob-promise{list-style:none;padding:0;margin:4px 0;text-align:left;display:flex;flex-direction:column;gap:8px}
 .ob-promise li{padding:10px 14px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);font-size:14px}
+.ob-grown{margin:6px 0 0;font-size:var(--fs-label);color:var(--muted)}
 .ob-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:0 0 14px}
 .ob-dots{display:flex;gap:8px}.ob-dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.ob-dots i.on{background:var(--action);transform:scale(1.25)}.ob-dots i.done{background:var(--mastered)}
 .ob-say{display:flex;gap:12px;align-items:flex-end;margin:0 0 14px}

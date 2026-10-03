@@ -159,16 +159,16 @@ export function viewWelcome() {
       <div class="ob-mark">${octo('wave', 140, '', 'Octo the octopus')}</div>
       <p class="kicker">Bizzing Maths</p>
       <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
-      <p class="lead">For ages 6 to 15+. Ten levels, each one road through painted lands; every trick shown with the reason it works.</p>
+      <p class="lead">For ages 6 to 14. Ten levels, each one road through painted lands; every trick shown with the reason it works.</p>
       ${btn('Start →', 'obStart', '', 'primary big')}
       <a class="ob-try" href="./?demo=try">Try a trick first — nothing is saved</a>
-      <div class="ob-stats">${[[TRICKS.length, 'lessons, each with a story'], [WORLDS.length, 'painted places'], [10, 'levels, age 6 to 15+'], [9, 'tools in the Library']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+      <div class="ob-stats">${[[TRICKS.length, 'lessons, each with a story'], [WORLDS.length, 'painted places'], [10, 'levels, maths age 6 to 15+'], [9, 'tools in the Library']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
       <ul class="ob-promise">
         <li><b>Nothing leaves this device.</b> A first name and an age band — no email, no photo, no tracking.</li>
         <li><b>No ads, no streaks, no loot.</b> A day off costs nothing.</li>
         <li><b>Every trick has its reason.</b> A picture, the algebra, and the child doing the working.</li>
       </ul>
-      <p class="fam">Part of the Bizzing family, with <a href="https://www.bizzingbee.com/">Bizzing Bee</a>, <a href="https://aayuvis.github.io/bizzingindia.com/">Bizzing India</a> and <a href="https://aayuvis.github.io/bizzingfinance/">Bizzing Finance</a>.</p>
+      <p class="ob-grown">For grown-ups: a report card of what your child has learned — not minutes played — sits behind a PIN on the Grown-ups page.</p>
     </section>`;
   const dots = `<div class="ob-dots" aria-label="Step ${step + 1} of ${OB_STEPS.length}">${OB_STEPS.map((_, i) => `<i class="${i < step ? 'done' : i === step ? 'on' : ''}"></i>`).join('')}</div>`;
   const back = step > 0 ? btn('← Back', 'obBack', '', 'small') : !first ? btn('Cancel', 'nav', 'home', 'small') : btn('← Back', 'obLand', '', 'small');
