@@ -89,8 +89,9 @@ export const TRICKS = [
     },
     work({ n }) {
       const T = n - (n % 10), u = n % 10, a = this.greedy(T, [50, 20, 10]), b = this.greedy(u, [5, 2, 1]), s = [];
-      if (T) s.push({ t: `Fewest big coins (50, 20, 10) to make ${T}`, v: a });
-      if (u) s.push({ t: `Fewest small coins (5, 2, 1) to make ${u}`, v: b });
+      const dp = (m, cs) => `(()=>{const d=[0];for(let i=1;i<=${m};i++){d[i]=1e9;for(const c of [${cs}])if(c<=i)d[i]=Math.min(d[i],d[i-c]+1);}return d[${m}]})()`;
+      if (T) s.push({ t: `Fewest big coins (50, 20, 10) to make ${T}`, v: a, x: dp(`${n}-${n}%10`, [10, 20, 50]) });
+      if (u) s.push({ t: `Fewest small coins (5, 2, 1) to make ${u}`, v: b, x: dp(`${n}%10`, [1, 2, 5]) });
       if (T && u) s.push({ t: 'Add them: the fewest coins', v: a + b });
       return s;
     },
@@ -126,7 +127,7 @@ export const TRICKS = [
     },
     work({ start, spends }) {
       const tot = spends.reduce((a, b) => a + b, 0);
-      return [{ t: `Everything spent: ${spends.join(' + ')}`, v: tot }, { t: `Left: ${start} − ${tot}`, v: start - tot }];
+      return [{ t: `Everything spent: ${spends.join(' + ')}`, v: tot, x: spends.join('+') }, { t: `Left: ${start} − ${tot}`, v: start - tot }];
     },
     draw: ({ start, spends }) => barModel(start, [...spends.map((v) => ({ v, label: v })), { v: Math.max(1, start - spends.reduce((a, b) => a + b, 0)), label: '?', ask: true }], `${start}`),
   },
@@ -166,9 +167,9 @@ export const TRICKS = [
     },
     work({ goal, per, have }) {
       const need = goal - have, whole = Math.floor(need / per), s = [];
-      if (have) s.push({ t: `Still to save: ${goal} − ${have}`, v: need });
+      if (have) s.push({ t: `Still to save: ${goal} − ${have}`, v: need, x: `${goal}-${have}` });
       if (need % per === 0) { s.push({ t: `How many ${per}s make ${need}?`, v: whole }); return s; }
-      s.push({ t: `Whole ${per}s that fit in ${need} (not enough yet)`, v: whole });
+      s.push({ t: `Whole ${per}s that fit in ${need} (not enough yet)`, v: whole, x: `Math.floor((${goal}-${have})/${per})` });
       s.push({ t: 'A bit is left, so one more week', v: whole + 1 });
       return s;
     },
@@ -212,11 +213,11 @@ export const TRICKS = [
         expr: `${p1}/${n1}<${p2}/${n2}?'Pack A':'Pack B'`, ans: p1 * n2 < p2 * n1 ? 'Pack A' : 'Pack B' };
     },
     work({ n1, p1, n2, p2, choices, ans }) {
-      if (p1 % n1 === 0 && p2 % n2 === 0) return [{ t: `One from A: ${p1} ÷ ${n1}`, v: p1 / n1 }, { t: `One from B: ${p2} ÷ ${n2}`, v: p2 / n2 }, { t: 'Which is cheaper each?', v: ans, choices }];
+      if (p1 % n1 === 0 && p2 % n2 === 0) return [{ t: `One from A: ${p1} ÷ ${n1}`, v: p1 / n1, x: `${p1}/${n1}` }, { t: `One from B: ${p2} ÷ ${n2}`, v: p2 / n2, x: `${p2}/${n2}` }, { t: 'Which is cheaper each?', v: ans, choices }];
       const L = lcm(n1, n2);
       return [
-        { t: `${L} from A: ${p1} × ${L / n1}`, v: (p1 * L) / n1 },
-        { t: `${L} from B: ${p2} × ${L / n2}`, v: (p2 * L) / n2 },
+        { t: `${L} from A: ${p1} × ${L / n1}`, v: (p1 * L) / n1, x: `${p1}*${n2}/${gcd(n1, n2)}` },
+        { t: `${L} from B: ${p2} × ${L / n2}`, v: (p2 * L) / n2, x: `${p2}*${n1}/${gcd(n1, n2)}` },
         { t: 'Which is cheaper each?', v: ans, choices },
       ];
     },
@@ -253,8 +254,8 @@ export const TRICKS = [
       return { N, k, d, thing, off: k === 1 ? 'one' : 'several', text: `${/^(8|11|18)$|^8\d$/.test(String(N)) ? 'An' : 'A'} ${N}-coin ${thing} has ${k}/${d} off in the sale. What does it cost now?`, expr: `${N}*(${d}-${k})/${d}`, ans: N - (N / d) * k };
     },
     work({ N, k, d }) {
-      const one = N / d, s = [{ t: `1/${d} of ${N}: ${N} ÷ ${d}`, v: one }];
-      if (k > 1) s.push({ t: `${k}/${d} off: ${one} × ${k}`, v: one * k });
+      const one = N / d, s = [{ t: `1/${d} of ${N}: ${N} ÷ ${d}`, v: one, x: `${N}/${d}` }];
+      if (k > 1) s.push({ t: `${k}/${d} off: ${one} × ${k}`, v: one * k, x: `${N}*${k}/${d}` });
       s.push({ t: `Take it off: ${N} − ${one * k}`, v: N - one * k });
       return s;
     },
@@ -300,8 +301,8 @@ export const TRICKS = [
       return { n, p, C, fee, stall, kind: !fee ? 'profit' : P > 0 ? 'profit-fee' : P < 0 ? 'loss' : 'even', text, expr: `${n}*${p}-(${C}+${fee})`, ans: n * p - C - fee };
     },
     work({ n, p, C, fee }) {
-      const s = [{ t: `Takings: ${n} × ${p}`, v: n * p }];
-      if (fee) s.push({ t: `Everything spent: ${C} + ${fee}`, v: C + fee });
+      const s = [{ t: `Takings: ${n} × ${p}`, v: n * p, x: `${n}*${p}` }];
+      if (fee) s.push({ t: `Everything spent: ${C} + ${fee}`, v: C + fee, x: `${C}+${fee}` });
       s.push({ t: `Profit: ${n * p} − ${C + fee}`, v: n * p - C - fee });
       return s;
     },
@@ -342,7 +343,7 @@ export const TRICKS = [
       return { name, P, rate, t, total, text, expr: `${P}*${rate}/100*${t}${total ? `+${P}` : ''}`, ans: (P * rate * t) / 100 + (total ? P : 0) };
     },
     work({ P, rate, t, total }) {
-      const y = (P * rate) / 100, s = [{ t: `One year: ${rate}% of ${P}`, v: y }, { t: `${t} years: ${y} × ${t}`, v: y * t }];
+      const y = (P * rate) / 100, s = [{ t: `One year: ${rate}% of ${P}`, v: y, x: `${P}*${rate}/100` }, { t: `${t} years: ${y} × ${t}`, v: y * t, x: `${P}*${rate}*${t}/100` }];
       if (total) s.push({ t: `Add it to the ${P} put in`, v: P + y * t });
       return s;
     },
@@ -390,12 +391,12 @@ export const TRICKS = [
       const v = this.years(P, rate, n);
       if (gap) {
         return [
-          { t: `Compound: ${P} → year 1 → year 2`, v: v[2] / 100 },
-          { t: `Simple: ${P} + 2 × ${rate}% of ${P}`, v: (P * (100 + 2 * rate)) / 100 },
+          { t: `Compound: ${P} → year 1 → year 2`, v: v[2] / 100, x: `${P}*(100+${rate})*(100+${rate})/10000` },
+          { t: `Simple: ${P} + 2 × ${rate}% of ${P}`, v: (P * (100 + 2 * rate)) / 100, x: `${P}+2*${P}*${rate}/100` },
           { t: 'The difference: interest on interest', v: (v[2] - P * (100 + 2 * rate)) / 100 },
         ];
       }
-      return v.slice(1).map((x, i) => ({ t: `After year ${i + 1}: add ${rate}% of ${v[i] / 100}`, v: x / 100 }));
+      return v.slice(1).map((x, i) => ({ t: `After year ${i + 1}: add ${rate}% of ${v[i] / 100}`, v: x / 100, x: `Math.round(${P}*(100+${rate})**${i + 1}/100**${i})/100` }));
     },
     draw: ({ P, rate, n }) => {
       const v = [P]; for (let i = 0; i < n; i++) v.push(v[i] * (1 + rate / 100));
@@ -434,8 +435,8 @@ export const TRICKS = [
     work({ items, p, k }) {
       const tot = items.reduce((a, b) => a + b, 0);
       return [
-        { t: `The bill: ${items.join(' + ')}`, v: tot },
-        { t: `With ${p}% added: ${tot} × ${(100 + p) / 100}`, v: (tot * (100 + p)) / 100 },
+        { t: `The bill: ${items.join(' + ')}`, v: tot, x: items.join('+') },
+        { t: `With ${p}% added: ${tot} × ${(100 + p) / 100}`, v: (tot * (100 + p)) / 100, x: `(${items.join('+')})+(${items.join('+')})*${p}/100` },
         { t: `Each of ${k}: ÷ ${k}`, v: (tot * (100 + p)) / k / 100 },
       ];
     },
@@ -475,7 +476,7 @@ export const TRICKS = [
       return { name, B, k, m, pct, text, expr: pct ? `(${k}*${m}/${B}-1)*100` : `${k}*${m}-${B}`, ans: pct ? ((k * m - B) * 100) / B : k * m - B };
     },
     work({ B, k, m, pct }) {
-      const s = [{ t: `Paid back: ${k} × ${m}`, v: k * m }, { t: `Extra: ${k * m} − ${B}`, v: k * m - B }];
+      const s = [{ t: `Paid back: ${k} × ${m}`, v: k * m, x: `${k}*${m}` }, { t: `Extra: ${k * m} − ${B}`, v: k * m - B, x: `${k}*${m}-${B}` }];
       if (pct) s.push({ t: `As a percentage: ${k * m - B} ÷ ${B} × 100`, v: ((k * m - B) * 100) / B });
       return s;
     },

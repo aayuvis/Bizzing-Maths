@@ -85,7 +85,7 @@ function busStop(a, d) {
   String(a).split('').forEach((ch, i, arr) => {
     const cur = rem * 10 + Number(ch), qd = Math.floor(cur / d);
     rem = cur % d; lastCur = cur; lastQ = qd;
-    if (started || qd > 0 || i === arr.length - 1) { steps.push({ t: `${cur} ÷ ${d} — how many ${d}s fit?`, v: qd }); top += qd; started = true; }
+    if (started || qd > 0 || i === arr.length - 1) { steps.push({ t: `${cur} ÷ ${d} — how many ${d}s fit?`, v: qd, x: `Math.floor(${a}/(${d}*${10 ** (arr.length - 1 - i)}))%10` }); top += qd; started = true; }
   });
   return { steps, quot: Number(top), rem, lastCur, lastQ };
 }
@@ -95,31 +95,31 @@ function busStop(a, d) {
 const OPS = {
   'add-mul': { lv: 1, rule: 'mul', make: (r) => [int(2, 20, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c]) => `${a} + ${b} × ${c}`,
-    steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c }, { t: `${a} + ${b * c}`, v: a + b * c }] },
+    steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c, x: `${b}*${c}` }, { t: `${a} + ${b * c}`, v: a + b * c }] },
   'sub-mul': { lv: 1, rule: 'mul', make: (r) => [int(30, 60, r), int(2, 6, r), int(2, 5, r)], ok: ([a, b, c]) => a > b * c,
     text: ([a, b, c]) => `${a} − ${b} × ${c}`,
-    steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c }, { t: `${a} − ${b * c}`, v: a - b * c }] },
+    steps: ([a, b, c]) => [{ t: `Multiply first: ${b} × ${c}`, v: b * c, x: `${b}*${c}` }, { t: `${a} − ${b * c}`, v: a - b * c }] },
   'add-div': { lv: 1, rule: 'mul', make: (r) => { const c = int(2, 9, r); return [int(2, 30, r), c * int(2, 9, r), c]; }, ok: () => true,
     text: ([a, b, c]) => `${a} + ${b} ÷ ${c}`,
-    steps: ([a, b, c]) => [{ t: `Divide first: ${b} ÷ ${c}`, v: b / c }, { t: `${a} + ${b / c}`, v: a + b / c }] },
+    steps: ([a, b, c]) => [{ t: `Divide first: ${b} ÷ ${c}`, v: b / c, x: `${b}/${c}` }, { t: `${a} + ${b / c}`, v: a + b / c }] },
   'brk-mul': { lv: 2, rule: 'brackets', make: (r) => [int(2, 12, r), int(2, 12, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c]) => `(${a} + ${b}) × ${c}`,
-    steps: ([a, b, c]) => [{ t: `Brackets first: ${a} + ${b}`, v: a + b }, { t: `${a + b} × ${c}`, v: (a + b) * c }] },
+    steps: ([a, b, c]) => [{ t: `Brackets first: ${a} + ${b}`, v: a + b, x: `${a}+${b}` }, { t: `${a + b} × ${c}`, v: (a + b) * c }] },
   'mul-brk': { lv: 2, rule: 'brackets', make: (r) => { const c = int(2, 9, r); return [int(2, 9, r), c + int(2, 9, r), c]; }, ok: () => true,
     text: ([a, b, c]) => `${a} × (${b} − ${c})`,
-    steps: ([a, b, c]) => [{ t: `Brackets first: ${b} − ${c}`, v: b - c }, { t: `${a} × ${b - c}`, v: a * (b - c) }] },
+    steps: ([a, b, c]) => [{ t: `Brackets first: ${b} − ${c}`, v: b - c, x: `${b}-${c}` }, { t: `${a} × ${b - c}`, v: a * (b - c) }] },
   'mul-add-mul': { lv: 2, rule: 'mul', make: (r) => [int(2, 9, r), int(2, 9, r), int(2, 9, r), int(2, 9, r)], ok: () => true,
     text: ([a, b, c, d]) => `${a} × ${b} + ${c} × ${d}`,
-    steps: ([a, b, c, d]) => [{ t: `${a} × ${b}`, v: a * b }, { t: `${c} × ${d}`, v: c * d }, { t: `${a * b} + ${c * d}`, v: a * b + c * d }] },
+    steps: ([a, b, c, d]) => [{ t: `${a} × ${b}`, v: a * b, x: `${a}*${b}` }, { t: `${c} × ${d}`, v: c * d, x: `${c}*${d}` }, { t: `${a * b} + ${c * d}`, v: a * b + c * d }] },
   'brk-mul-sub': { lv: 3, rule: 'brackets', make: (r) => { const b = int(2, 9, r); return [b + int(2, 9, r), b, int(3, 9, r), int(2, 15, r)]; }, ok: ([a, b, c, d]) => (a - b) * c > d,
     text: ([a, b, c, d]) => `(${a} − ${b}) × ${c} − ${d}`,
-    steps: ([a, b, c, d]) => [{ t: `Brackets first: ${a} − ${b}`, v: a - b }, { t: `${a - b} × ${c}`, v: (a - b) * c }, { t: `${(a - b) * c} − ${d}`, v: (a - b) * c - d }] },
+    steps: ([a, b, c, d]) => [{ t: `Brackets first: ${a} − ${b}`, v: a - b, x: `${a}-${b}` }, { t: `${a - b} × ${c}`, v: (a - b) * c, x: `(${a}-${b})*${c}` }, { t: `${(a - b) * c} − ${d}`, v: (a - b) * c - d }] },
   'long': { lv: 3, rule: 'left to right', make: (r) => { const c = int(2, 6, r); return [int(20, 60, r), c * int(2, 9, r), c, int(2, 9, r), int(2, 9, r)]; }, ok: ([a, b, c]) => a > b / c,
     text: ([a, b, c, d, e]) => `${a} − ${b} ÷ ${c} + ${d} × ${e}`,
-    steps: ([a, b, c, d, e]) => [{ t: `${b} ÷ ${c}`, v: b / c }, { t: `${d} × ${e}`, v: d * e }, { t: `Now left to right: ${a} − ${b / c}`, v: a - b / c }, { t: `${a - b / c} + ${d * e}`, v: a - b / c + d * e }] },
+    steps: ([a, b, c, d, e]) => [{ t: `${b} ÷ ${c}`, v: b / c, x: `${b}/${c}` }, { t: `${d} × ${e}`, v: d * e, x: `${d}*${e}` }, { t: `Now left to right: ${a} − ${b / c}`, v: a - b / c, x: `${a}-${b}/${c}` }, { t: `${a - b / c} + ${d * e}`, v: a - b / c + d * e }] },
   'pow': { lv: 3, rule: 'powers', make: (r) => [int(2, 30, r), int(2, 6, r), int(2, 5, r)], ok: () => true,
     text: ([a, b, c]) => `${a} + ${b}² × ${c}`,
-    steps: ([a, b, c]) => [{ t: `Powers first: ${b}²`, v: b * b }, { t: `${b * b} × ${c}`, v: b * b * c }, { t: `${a} + ${b * b * c}`, v: a + b * b * c }] },
+    steps: ([a, b, c]) => [{ t: `Powers first: ${b}²`, v: b * b, x: `${b}**2` }, { t: `${b * b} × ${c}`, v: b * b * c, x: `${b}**2*${c}` }, { t: `${a} + ${b * b * c}`, v: a + b * b * c }] },
 };
 const toJs = (s) => s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/(\d+)²/g, '($1**2)');
 
@@ -165,11 +165,12 @@ export const TRICKS = [
       const d = digitAt(n, p);
       if (kind === 'expand') {
         const known = n - d * 10 ** p;
-        return [{ t: 'Add up the parts you can see', v: known }, { t: `${n} − ${known}`, v: d * 10 ** p }];
+        const seen = String(n).split('').map((ch, i, all) => ch + '0'.repeat(all.length - 1 - i)).filter((_, i, all) => i !== all.length - 1 - p);
+        return [{ t: 'Add up the parts you can see', v: known, x: seen.map(Number).join('+') }, { t: `${n} − ${known}`, v: d * 10 ** p }];
       }
       return [
-        { t: `Count the places to the ${d}, from the right — the ones are place 1`, v: p + 1 },
-        { t: `That is the ${PLACES[p]} place. One of those is worth`, v: 10 ** p },
+        { t: `Count the places to the ${d}, from the right — the ones are place 1`, v: p + 1, x: `${p}+1` },
+        { t: `That is the ${PLACES[p]} place. One of those is worth`, v: 10 ** p, x: `Math.pow(10,${p})` },
         { t: `${d} × ${10 ** p}`, v: d * 10 ** p },
       ];
     },
@@ -222,15 +223,15 @@ export const TRICKS = [
       const sa = String(a), sb = String(b), C = ['<', '=', '>'];
       const ans = a > b ? '>' : a < b ? '<' : '=';
       if (sa.length !== sb.length) return [
-        { t: `How many digits in ${fmt(a)}?`, v: sa.length },
-        { t: `How many digits in ${fmt(b)}?`, v: sb.length },
+        { t: `How many digits in ${fmt(a)}?`, v: sa.length, x: `Math.floor(Math.log10(${a}))+1` },
+        { t: `How many digits in ${fmt(b)}?`, v: sb.length, x: `Math.floor(Math.log10(${b}))+1` },
         { t: 'More digits means a bigger number', v: ans, choices: C },
       ];
       const i = [...sa].findIndex((d, k) => d !== sb[k]);
-      if (i < 0) return [{ t: 'How many digits in each?', v: sa.length }, { t: 'Every place matches', v: '=', choices: C }];
+      if (i < 0) return [{ t: 'How many digits in each?', v: sa.length, x: `Math.floor(Math.log10(${a}))+1` }, { t: 'Every place matches', v: '=', choices: C }];
       return [
-        { t: `Both have ${sa.length} digits. Going from the left, the first place they differ — the digit in ${fmt(a)}`, v: Number(sa[i]) },
-        { t: `…and in ${fmt(b)}`, v: Number(sb[i]) },
+        { t: `Both have ${sa.length} digits. Going from the left, the first place they differ — the digit in ${fmt(a)}`, v: Number(sa[i]), x: `Math.floor(${a}/10**${sa.length - 1 - i})%10` },
+        { t: `…and in ${fmt(b)}`, v: Number(sb[i]), x: `Math.floor(${b}/10**${sb.length - 1 - i})%10` },
         { t: 'The bigger digit wins', v: ans, choices: C },
       ];
     },
@@ -272,9 +273,9 @@ export const TRICKS = [
     work({ n, to }) {
       const lower = n - (n % to);
       return [
-        { t: `The multiple of ${to} just below ${fmt(n)}`, v: lower },
-        { t: 'The one just above', v: lower + to },
-        { t: 'Halfway between them', v: lower + to / 2 },
+        { t: `The multiple of ${to} just below ${fmt(n)}`, v: lower, x: `Math.floor(${n}/${to})*${to}` },
+        { t: 'The one just above', v: lower + to, x: `(Math.floor(${n}/${to})+1)*${to}` },
+        { t: 'Halfway between them', v: lower + to / 2, x: `(Math.floor(${n}/${to})+0.5)*${to}` },
         { t: `Is ${fmt(n)} below halfway (round down), or at or past it (round up)?`, v: n % to >= to / 2 ? lower + to : lower },
       ];
     },
@@ -319,7 +320,8 @@ export const TRICKS = [
       for (let i = 0; i < Math.max(len(a), len(b)); i++) {
         const da = digitAt(a, i), db = digitAt(b, i), s = da + db + c;
         const parts = [i < len(a) ? da : null, i < len(b) ? db : null].filter((x) => x !== null);
-        steps.push({ t: `${COLS[i]}: ${parts.join(' + ')}${c ? ' + 1 carried' : ''}`, v: s });
+        const P = 10 ** i;
+        steps.push({ t: `${COLS[i]}: ${parts.join(' + ')}${c ? ' + 1 carried' : ''}`, v: s, x: `Math.floor(${a}/${P})%10+Math.floor(${b}/${P})%10+(${a}%${P}+${b}%${P}>=${P}?1:0)` });
         c = s >= 10 ? 1 : 0;
       }
       steps.push({ t: 'Keep the last digit of each column, carry the tens — read the answer', v: a + b });
@@ -375,7 +377,7 @@ export const TRICKS = [
         if (top < 0) { t = `${COLS[i]}: this 0 had to exchange from its left too, so it is now 9. 9 − ${tb}`; v = 9 - tb; br = 1; }
         else if (top < tb) { t = `${COLS[i]}: ${top} is less than ${tb} — exchange 1 from the left. ${top + 10} − ${tb}`; v = top + 10 - tb; br = 1; }
         else { t = `${COLS[i]}: ${top}${br ? ' (after lending 1)' : ''} − ${tb}`; v = top - tb; br = 0; }
-        steps.push({ t, v });
+        steps.push({ t, v, x: `Math.floor((${a}-${b})/${10 ** i})%10` });
       }
       steps.push({ t: 'Read the answer', v: a - b });
       return steps;
@@ -433,15 +435,15 @@ export const TRICKS = [
     },
     work({ s, c, kind }) {
       if (kind === 'gap') {
-        if (c <= 0) return [{ t: `How far is ${deg(s)} below zero?`, v: -s }, { t: `And ${deg(c)}?`, v: -c }, { t: `The gap: ${-s} − ${-c}`, v: c - s }];
-        return [{ t: `From ${deg(s)} up to 0`, v: -s }, { t: `From 0 up to ${c}`, v: c }, { t: 'Add the two jumps', v: c - s }];
+        if (c <= 0) return [{ t: `How far is ${deg(s)} below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `And ${deg(c)}?`, v: -c, x: `Math.abs(${c})` }, { t: `The gap: ${-s} − ${-c}`, v: c - s }];
+        return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-(${s})` }, { t: `From 0 up to ${c}`, v: c, x: `(${c})-0` }, { t: 'Add the two jumps', v: c - s }];
       }
       if (kind === 'rise') {
-        if (s + c >= 0) return [{ t: `From ${deg(s)} up to 0`, v: -s }, { t: `Degrees still to rise after 0: ${c} − ${-s}`, v: c + s }, { t: 'So the temperature is', v: s + c }];
-        return [{ t: `${deg(s)} is how far below zero?`, v: -s }, { t: `Warmer by ${c} brings it closer to zero: ${-s} − ${c}`, v: -s - c }, { t: 'Still below zero, so it is', v: s + c }];
+        if (s + c >= 0) return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-(${s})` }, { t: `Degrees still to rise after 0: ${c} − ${-s}`, v: c + s, x: `${c}-Math.abs(${s})` }, { t: 'So the temperature is', v: s + c }];
+        return [{ t: `${deg(s)} is how far below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `Warmer by ${c} brings it closer to zero: ${-s} − ${c}`, v: -s - c, x: `Math.abs((${s})+(${c}))` }, { t: 'Still below zero, so it is', v: s + c }];
       }
-      if (s > 0) return [{ t: `From ${s} down to 0`, v: s }, { t: `Degrees still to fall below 0: ${c} − ${s}`, v: c - s }, { t: 'Below zero, so it is', v: s - c }];
-      return [{ t: `${deg(s)} is how far below zero?`, v: -s }, { t: `Colder by ${c} takes it further: ${-s} + ${c}`, v: c - s }, { t: 'Below zero, so it is', v: s - c }];
+      if (s > 0) return [{ t: `From ${s} down to 0`, v: s, x: `(${s})-0` }, { t: `Degrees still to fall below 0: ${c} − ${s}`, v: c - s, x: `Math.abs((${s})-(${c}))` }, { t: 'Below zero, so it is', v: s - c }];
+      return [{ t: `${deg(s)} is how far below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `Colder by ${c} takes it further: ${-s} + ${c}`, v: c - s, x: `Math.abs((${s})-(${c}))` }, { t: 'Below zero, so it is', v: s - c }];
     },
     draw({ s, c, kind }) {
       const ends = kind === 'gap' ? [s, c] : [s, kind === 'rise' ? s + c : s - c];
@@ -486,12 +488,12 @@ export const TRICKS = [
     work({ n, kind }) {
       const parts = placeParts(n);
       if (kind === 'write') {
-        const s = parts.map((p, i) => ({ t: i === 0 ? `Split ${n} by place — the biggest part` : 'The next part', v: p }));
+        const s = parts.map((p, i) => { const P = 10 ** Math.floor(Math.log10(p)); return { t: i === 0 ? `Split ${n} by place — the biggest part` : 'The next part', v: p, x: `Math.floor(${n}/${P})%${P === 1000 ? 100 : 10}*${P}` }; });
         s.push({ t: 'Write each part as a numeral, biggest first', v: roman(n), choices: romanChoices(n) });
         return s;
       }
-      if (parts.length === 1) { const f = roman(n)[0]; return [{ t: `What is ${f} worth?`, v: RVAL[f] }, { t: `So ${roman(n)} is`, v: n }]; }
-      const s = parts.map((p) => ({ t: `Split by place: ${roman(p)} is`, v: p }));
+      if (parts.length === 1) { const f = roman(n)[0]; return [{ t: `What is ${f} worth?`, v: RVAL[f], x: readExpr(f) }, { t: `So ${roman(n)} is`, v: n }]; }
+      const s = parts.map((p) => ({ t: `Split by place: ${roman(p)} is`, v: p, x: readExpr(roman(p)) }));
       s.push({ t: 'Add the parts', v: n });
       return s;
     },
@@ -534,14 +536,14 @@ export const TRICKS = [
     work({ a, b }) {
       const bt = b - (b % 10), bo = b % 10;
       if (a >= 100) return [
-        { t: `First row: ${a} × ${bo}`, v: a * bo },
-        { t: `Second row: ${a} × ${bt} (write a 0, then × ${bt / 10})`, v: a * bt },
+        { t: `First row: ${a} × ${bo}`, v: a * bo, x: `${a}*(${b}%10)` },
+        { t: `Second row: ${a} × ${bt} (write a 0, then × ${bt / 10})`, v: a * bt, x: `${a}*(${b}-${b}%10)` },
         { t: 'Add the two rows', v: a * b },
       ];
       const at = a - (a % 10), ao = a % 10;
       return [
-        { t: `${at} × ${bt}`, v: at * bt }, { t: `${at} × ${bo}`, v: at * bo },
-        { t: `${ao} × ${bt}`, v: ao * bt }, { t: `${ao} × ${bo}`, v: ao * bo },
+        { t: `${at} × ${bt}`, v: at * bt, x: `(${a}-${a}%10)*(${b}-${b}%10)` }, { t: `${at} × ${bo}`, v: at * bo, x: `(${a}-${a}%10)*(${b}%10)` },
+        { t: `${ao} × ${bt}`, v: ao * bt, x: `(${a}%10)*(${b}-${b}%10)` }, { t: `${ao} × ${bo}`, v: ao * bo, x: `(${a}%10)*(${b}%10)` },
         { t: 'Add all four boxes', v: a * b },
       ];
     },

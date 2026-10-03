@@ -20,6 +20,8 @@ const sum = (a) => a.reduce((x, y) => x + y, 0);
 /* The test's leaked-answer rule, applied before a question leaves gen(). */
 const leaks = (q) => !q.choices && String(q.ans).length > 1 && q.text.split(/[^0-9./]/).map((w) => w.replace(/\.$/, '')).includes(String(q.ans));
 function fresh(make) { let q; for (let i = 0; i < 400; i++) { q = make(); if (!leaks(q)) return q; } return q; }
+/* x for a step that reads a given: the k-th number in the prompt the child sees. */
+const said = (text, k) => `+(${JSON.stringify(text)}.match(/\\d+/g)[${k}])`;
 const list = (a) => a.length < 2 ? String(a[0]) : `${a.slice(0, -1).join(', ')} and ${a.at(-1)}`;
 
 /* A row of number cards, in the order given — the data, nothing more. */
@@ -105,32 +107,32 @@ const PLAN = {
   left: ({ T, n, p }) => ({
     text: `You have ${T} tokens. You go on ${n} rides at ${p} tokens each. How many tokens are left?`,
     expr: `${T}` + Array(n).fill('-' + p).join(''), ans: T - n * p,
-    steps: [{ t: `Spent on rides: ${n} × ${p}`, v: n * p }, { t: `${T} − ${n * p}`, v: T - n * p }] }),
+    steps: [{ t: `Spent on rides: ${n} × ${p}`, v: n * p, x: `${n}*${p}` }, { t: `${T} − ${n * p}`, v: T - n * p }] }),
   /* a snacks at p and b drinks at c: total? */
   total: ({ a, p, b, c }) => ({
     text: `Popcorn costs ${p} tokens and a drink costs ${c}. You buy ${a} popcorn and ${b} drinks. How many tokens altogether?`,
     expr: Array(a).fill(p).concat(Array(b).fill(c)).join('+'), ans: a * p + b * c,
-    steps: [{ t: `${a} × ${p}`, v: a * p }, { t: `${b} × ${c}`, v: b * c }, { t: `${a * p} + ${b * c}`, v: a * p + b * c }] }),
+    steps: [{ t: `${a} × ${p}`, v: a * p, x: `${a}*${p}` }, { t: `${b} × ${c}`, v: b * c, x: `${b}*${c}` }, { t: `${a * p} + ${b * c}`, v: a * p + b * c }] }),
   /* pay T for a at p and b at c: change? */
   change: ({ T, a, p, b, c }) => ({
     text: `Candy floss costs ${p} tokens and a lolly costs ${c}. You buy ${a} candy floss and ${b} lollies, and pay with ${T} tokens. What is your change?`,
     expr: `${T}` + Array(a).fill('-' + p).join('') + Array(b).fill('-' + c).join(''), ans: T - a * p - b * c,
-    steps: [{ t: `${a} × ${p}`, v: a * p }, { t: `${b} × ${c}`, v: b * c }, { t: `Total: ${a * p} + ${b * c}`, v: a * p + b * c }, { t: `${T} − ${a * p + b * c}`, v: T - a * p - b * c }] }),
+    steps: [{ t: `${a} × ${p}`, v: a * p, x: `${a}*${p}` }, { t: `${b} × ${c}`, v: b * c, x: `${b}*${c}` }, { t: `Total: ${a * p} + ${b * c}`, v: a * p + b * c, x: `${a}*${p}+${b}*${c}` }, { t: `${T} − ${a * p + b * c}`, v: T - a * p - b * c }] }),
   /* k shows of m minutes with g-minute breaks between them: how long? */
   shows: ({ k, m, g }) => ({
     text: `There are ${k} puppet shows in a row. Each lasts ${m} minutes, with a ${g}-minute break between shows. How many minutes from the start of the first to the end of the last?`,
     expr: Array(k).fill(m).join('+') + Array(k - 1).fill('+' + g).join(''), ans: k * m + (k - 1) * g,
-    steps: [{ t: `Show time: ${k} × ${m}`, v: k * m }, { t: `Breaks: there are ${k - 1}, so ${k - 1} × ${g}`, v: (k - 1) * g }, { t: `${k * m} + ${(k - 1) * g}`, v: k * m + (k - 1) * g }] }),
+    steps: [{ t: `Show time: ${k} × ${m}`, v: k * m, x: `${k}*${m}` }, { t: `Breaks: there are ${k - 1}, so ${k - 1} × ${g}`, v: (k - 1) * g, x: `(${k}-1)*${g}` }, { t: `${k * m} + ${(k - 1) * g}`, v: k * m + (k - 1) * g }] }),
   /* N children queue, s ride at once, each ride t minutes: how long? */
   queue: ({ N, s, t }) => ({
     text: `${N} children are queuing for the dodgems. ${s} can ride at once, and each ride lasts ${t} minutes. How many minutes until everyone has had a go?`,
     expr: `Math.ceil(${N}/${s})*${t}`, ans: (N / s) * t,
-    steps: [{ t: `How many rides? ${N} ÷ ${s}`, v: N / s }, { t: `${N / s} × ${t}`, v: (N / s) * t }] }),
+    steps: [{ t: `How many rides? ${N} ÷ ${s}`, v: N / s, x: `Math.ceil(${N}/${s})` }, { t: `${N / s} × ${t}`, v: (N / s) * t }] }),
   /* n packs of c sweets shared between k friends */
   share: ({ n, c, k }) => ({
     text: `${k} friends buy ${n} packs of sweets with ${c} in each pack. They share them equally. How many does each friend get?`,
     expr: `(${Array(n).fill(c).join('+')})/${k}`, ans: (n * c) / k,
-    steps: [{ t: `All the sweets: ${n} × ${c}`, v: n * c }, { t: `${n * c} ÷ ${k}`, v: (n * c) / k }] }),
+    steps: [{ t: `All the sweets: ${n} × ${c}`, v: n * c, x: `${n}*${c}` }, { t: `${n * c} ÷ ${k}`, v: (n * c) / k }] }),
 };
 function planArgs(kind, r, lv) {
   const big = lv === 3;
@@ -269,8 +271,8 @@ export const TRICKS = [
     work({ counts, per, ask, labels }) {
       const rows = ask < 0 ? counts : [counts[ask]];
       const F = sum(rows.map((c) => Math.floor(c / per))), H = sum(rows.map((c) => (c % per ? 1 : 0)));
-      const s = [{ t: ask < 0 ? 'Count every whole ★' : `Count the whole ★ at ${labels[ask]}`, v: F }, { t: `${F} × ${per}`, v: F * per }];
-      if (H) { s.push({ t: 'How many half ★?', v: H }); s.push({ t: `Add ${H} × ${per / 2}`, v: F * per + H * (per / 2) }); }
+      const s = [{ t: ask < 0 ? 'Count every whole ★' : `Count the whole ★ at ${labels[ask]}`, v: F, x: `[${rows}].reduce((a,c)=>a+(c-c%${per})/${per},0)` }, { t: `${F} × ${per}`, v: F * per, x: `[${rows}].reduce((a,c)=>a+c-c%${per},0)` }];
+      if (H) { s.push({ t: 'How many half ★?', v: H, x: `[${rows}].filter((c)=>c%${per}!==0).length` }); s.push({ t: `Add ${H} × ${per / 2}`, v: F * per + H * (per / 2) }); }
       return s;
     },
     draw({ labels, counts, per }) { return pictogram(labels, counts, per, '★'); },
@@ -307,7 +309,7 @@ export const TRICKS = [
       return { labels, values, step, a, b, text: `Votes for the best ride. How many more voted for ${labels[a]} than ${labels[b]}?`, expr: `${values[a]}-${values[b]}`, ans: values[a] - values[b] };
     },
     work({ labels, values, a, b }) {
-      return [{ t: `Read the ${labels[a]} bar`, v: values[a] }, { t: `Read the ${labels[b]} bar`, v: values[b] }, { t: `${values[a]} − ${values[b]}`, v: values[a] - values[b] }];
+      return [{ t: `Read the ${labels[a]} bar`, v: values[a], x: `[${values}][${a}]` }, { t: `Read the ${labels[b]} bar`, v: values[b], x: `[${values}][${b}]` }, { t: `${values[a]} − ${values[b]}`, v: values[a] - values[b] }];
     },
     draw({ labels, values, step }) { return barChart(labels, values, step, 'Votes'); },
   },
@@ -363,8 +365,8 @@ export const TRICKS = [
     },
     work(q) {
       const n = q.kind === 'dice' ? 6 : q.bag.length, k = q.kind === 'dice' ? diceCount(DICE[q.ev][1]) : q.bag.filter((x) => x === q.want).length;
-      return [{ t: q.kind === 'dice' ? `How many faces give ${DICE[q.ev][0]}?` : `How many ${q.want} counters?`, v: k },
-        { t: q.kind === 'dice' ? 'How many faces altogether?' : 'How many counters altogether?', v: n },
+      return [{ t: q.kind === 'dice' ? `How many faces give ${DICE[q.ev][0]}?` : `How many ${q.want} counters?`, v: k, x: q.kind === 'dice' ? `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` : `${JSON.stringify(q.bag)}.filter((c)=>c==='${q.want}').length` },
+        { t: q.kind === 'dice' ? 'How many faces altogether?' : 'How many counters altogether?', v: n, x: q.kind === 'dice' ? '[1,2,3,4,5,6].length' : `${JSON.stringify(q.bag)}.length` },
         { t: `${k} out of ${n}, so it is…`, v: q.ans, choices: q.choices }];
     },
     draw(q) { return q.kind === 'dice' ? dieFaces() : bag(q.bag); },
@@ -410,9 +412,9 @@ export const TRICKS = [
       return { temps, ask, i, j, text, expr, ans };
     },
     work({ temps, ask, i, j }) {
-      if (ask === 'at') { const lab = Math.floor(temps[i] / 4) * 4; return [{ t: 'The numbered line at or just below the dot', v: lab }, { t: `Add 2 for each small gap above ${lab}`, v: temps[i] }]; }
-      if (ask === 'diff') return [{ t: `At ${HOURS[i][0]}`, v: temps[i] }, { t: `At ${HOURS[j][0]}`, v: temps[j] }, { t: `${temps[i]} − ${temps[j]}`, v: temps[i] - temps[j] }];
-      return [{ t: `At ${HOURS[i][0]}`, v: temps[i] }, { t: `At ${HOURS[j][0]}`, v: temps[j] }, { t: `Halfway: (${temps[i]} + ${temps[j]}) ÷ 2`, v: (temps[i] + temps[j]) / 2 }];
+      if (ask === 'at') { const lab = Math.floor(temps[i] / 4) * 4; return [{ t: 'The numbered line at or just below the dot', v: lab, x: `Math.floor([${temps}][${i}]/4)*4` }, { t: `Add 2 for each small gap above ${lab}`, v: temps[i] }]; }
+      if (ask === 'diff') return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: `[${temps}][${i}]` }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: `[${temps}][${j}]` }, { t: `${temps[i]} − ${temps[j]}`, v: temps[i] - temps[j] }];
+      return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: `[${temps}][${i}]` }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: `[${temps}][${j}]` }, { t: `Halfway: (${temps[i]} + ${temps[j]}) ÷ 2`, v: (temps[i] + temps[j]) / 2 }];
     },
     draw({ temps }) { return lineChart(temps); },
   },
@@ -440,7 +442,7 @@ export const TRICKS = [
     q({ vals }) { return { vals, text: `The mean of ${vals.join(', ')}`, say: `the mean of ${list(vals)}`, expr: `(${vals.join('+')})/${vals.length}`, ans: sum(vals) / vals.length }; },
     work({ vals }) {
       const s = sum(vals);
-      return [{ t: 'Add them all up', v: s }, { t: 'How many numbers?', v: vals.length }, { t: `${s} ÷ ${vals.length}`, v: s / vals.length }];
+      return [{ t: 'Add them all up', v: s, x: vals.join('+') }, { t: 'How many numbers?', v: vals.length, x: `[${vals}].length` }, { t: `${s} ÷ ${vals.length}`, v: s / vals.length }];
     },
     draw({ vals }) { const m = Math.max(...vals); return barChart(vals.map((_, i) => String.fromCharCode(65 + i)), vals, m <= 10 ? 1 : m <= 20 ? 2 : 10); },
   },
@@ -487,9 +489,9 @@ export const TRICKS = [
     },
     work({ vals, stat, ans }) {
       const s = [...vals].sort((a, b) => a - b), n = vals.length;
-      if (stat === 'mode') return [{ t: 'How many times does the most common number appear?', v: vals.filter((v) => v === ans).length }, { t: 'Which number is it?', v: ans }];
-      if (n % 2) return [{ t: 'How many numbers?', v: n }, { t: 'Which place in the line is the middle?', v: (n + 1) / 2 }, { t: 'Put them in order and read that one', v: ans }];
-      return [{ t: 'In order, the first of the two middle numbers', v: s[n / 2 - 1] }, { t: 'and the second', v: s[n / 2] }, { t: 'Halfway between them', v: ans }];
+      if (stat === 'mode') return [{ t: 'How many times does the most common number appear?', v: vals.filter((v) => v === ans).length, x: `Math.max(...[${vals}].map((v,_,a)=>a.filter((w)=>w===v).length))` }, { t: 'Which number is it?', v: ans }];
+      if (n % 2) return [{ t: 'How many numbers?', v: n, x: `[${vals}].length` }, { t: 'Which place in the line is the middle?', v: (n + 1) / 2, x: `([${vals}].length+1)/2` }, { t: 'Put them in order and read that one', v: ans }];
+      return [{ t: 'In order, the first of the two middle numbers', v: s[n / 2 - 1], x: `[${vals}].slice().sort((a,b)=>a-b)[${n}/2-1]` }, { t: 'and the second', v: s[n / 2], x: `[${vals}].slice().sort((a,b)=>a-b)[${n}/2]` }, { t: 'Halfway between them', v: ans }];
     },
     draw({ vals }) { return cards(vals); },
   },
@@ -514,7 +516,7 @@ export const TRICKS = [
     q({ vals }) { return { vals, text: `The range of ${vals.join(', ')}`, say: `the range of ${list(vals)}`, expr: `Math.max(${vals})-Math.min(${vals})`, ans: Math.max(...vals) - Math.min(...vals) }; },
     work({ vals }) {
       const a = [...vals].sort((x, y) => x - y), lo = a[0], hi = a.at(-1);
-      return [{ t: 'The largest', v: hi }, { t: 'The smallest', v: lo }, { t: `${hi} − ${lo}`, v: hi - lo }];
+      return [{ t: 'The largest', v: hi, x: `Math.max(${vals})` }, { t: 'The smallest', v: lo, x: `Math.min(${vals})` }, { t: `${hi} − ${lo}`, v: hi - lo }];
     },
     draw({ vals }) { return cards(vals); },
   },
@@ -561,9 +563,9 @@ export const TRICKS = [
       return { ...a, ask: a.not ? 'not' : 'is', text, expr, ans: `${k}/${n}`, frac: true };
     },
     work(q) {
-      if (q.kind === 'dice') { const k = diceCount(DICE[q.ev][1]); return [{ t: `How many faces give ${DICE[q.ev][0]}?`, v: k }, { t: 'How many faces altogether?', v: 6 }, { t: 'The chance, as a fraction', v: `${k}/6` }]; }
+      if (q.kind === 'dice') { const k = diceCount(DICE[q.ev][1]); return [{ t: `How many faces give ${DICE[q.ev][0]}?`, v: k, x: `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` }, { t: 'How many faces altogether?', v: 6, x: '[1,2,3,4,5,6].length' }, { t: 'The chance, as a fraction', v: `${k}/6` }]; }
       const n = q.slices.length, has = q.slices.filter((x) => x === q.want).length, k = q.not ? n - has : has;
-      return [{ t: q.not ? `How many are NOT ${q.want}?` : `How many are ${q.want}?`, v: k }, { t: q.kind === 'spin' ? 'How many equal parts altogether?' : 'How many counters altogether?', v: n }, { t: 'The chance, as a fraction', v: `${k}/${n}` }];
+      return [{ t: q.not ? `How many are NOT ${q.want}?` : `How many are ${q.want}?`, v: k, x: `${JSON.stringify(q.slices)}.filter((c)=>(c==='${q.want}')!==${!!q.not}).length` }, { t: q.kind === 'spin' ? 'How many equal parts altogether?' : 'How many counters altogether?', v: n, x: `${JSON.stringify(q.slices)}.length` }, { t: 'The chance, as a fraction', v: `${k}/${n}` }];
     },
     draw(q) { return q.kind === 'dice' ? dieFaces() : q.kind === 'spin' ? spinner(q.slices) : bag(q.slices); },
   },
@@ -607,12 +609,15 @@ export const TRICKS = [
       const ans = kind === 'hands' ? (a * (a - 1)) / 2 : kind === 'three' ? a * b * c : a * b;
       return { kind, a, b, c, idea: kind === 'hands' ? 'pairs' : kind === 'three' ? 'three' : 'two', text: T[0], expr: T[1], ans };
     },
-    work({ kind, a, b, c }) {
-      if (kind === 'hands') return [{ t: 'How many hands does each person shake?', v: a - 1 }, { t: `${a} × ${a - 1}`, v: a * (a - 1) }, { t: 'Each handshake was counted twice — halve it', v: (a * (a - 1)) / 2 }];
-      if (kind === 'three') return [{ t: `Hats and masks: ${a} × ${b}`, v: a * b }, { t: `With every one of those, ${c} capes: ${a * b} × ${c}`, v: a * b * c }];
+    work({ kind, a, b, c, text }) {
+      if (kind === 'hands') return [{ t: 'How many hands does each person shake?', v: a - 1, x: `${a}-1` }, { t: `${a} × ${a - 1}`, v: a * (a - 1), x: `${a}*(${a}-1)` }, { t: 'Each handshake was counted twice — halve it', v: (a * (a - 1)) / 2 }];
+      if (kind === 'three') return [{ t: `Hats and masks: ${a} × ${b}`, v: a * b, x: `${a}*${b}` }, { t: `With every one of those, ${c} capes: ${a * b} × ${c}`, v: a * b * c }];
       const first = { coins: 'the first coin', coindie: 'the coin', coinspin: 'the coin', wear: 'tops', cone: 'flavours' }[kind];
       const second = { coins: 'the second coin', coindie: 'the dice', coinspin: 'the spinner', wear: 'skirts', cone: 'toppings' }[kind];
-      return [{ t: kind === 'wear' || kind === 'cone' ? `How many ${first}?` : `Ways ${first} can land`, v: a }, { t: kind === 'wear' || kind === 'cone' ? `How many ${second} go with each?` : `Ways for ${second}`, v: b }, { t: `${a} × ${b}`, v: a * b }];
+      const HT = "['heads','tails'].length", FACES = '[1,2,3,4,5,6].length';
+      const xa = kind === 'wear' || kind === 'cone' ? said(text, 0) : HT;
+      const xb = kind === 'wear' || kind === 'cone' ? said(text, 1) : kind === 'coins' ? HT : kind === 'coindie' ? FACES : said(text, 0);
+      return [{ t: kind === 'wear' || kind === 'cone' ? `How many ${first}?` : `Ways ${first} can land`, v: a, x: xa }, { t: kind === 'wear' || kind === 'cone' ? `How many ${second} go with each?` : `Ways for ${second}`, v: b, x: xb }, { t: `${a} × ${b}`, v: a * b }];
     },
     draw({ kind, a, b }) {
       if (kind !== 'hands') return grid(b, a);
@@ -657,9 +662,11 @@ export const TRICKS = [
     },
     work({ x, ops }) {
       let v = ops.reduce(apply, x); const s = [];
+      let back = `${v}`; // the plain sum, built from the output and the machine's own numbers
       for (const [o, n] of [...ops].reverse()) {
         const inv = { '×': '÷', '÷': '×', '+': '−', '−': '+' }[o], nv = apply(v, [inv, n]);
-        s.push({ t: `Undo ${o} ${n}: ${v} ${inv} ${n}`, v: nv }); v = nv;
+        back = `(${back}${{ '×': '/', '÷': '*', '+': '-', '−': '+' }[o]}${n})`;
+        s.push({ t: `Undo ${o} ${n}: ${v} ${inv} ${n}`, v: nv, x: back }); v = nv;
       }
       return s;
     },
@@ -751,7 +758,7 @@ export const TRICKS = [
     },
     work({ names, items, clues, ask }) {
       const n = names.length, s = eliminate(n, clues), upto = s.order.slice(0, s.order.indexOf(ask) + 1).slice(-5);
-      return upto.map((p) => ({ t: `${p === ask ? 'So' : 'First:'} which prize must ${names[p]} have?`, v: items[s.got[p]], choices: items }));
+      return upto.map((p) => ({ t: `${p === ask ? 'So' : 'First:'} which prize must ${names[p]} have?`, v: items[s.got[p]], choices: items, x: `(${BRUTE})(${n},${JSON.stringify(clues)},${p},${JSON.stringify(items)})` }));
     },
     draw({ names, items, clues }) {
       const cw = 70, rh = 30, x0 = 70, y0 = 30; let s = '';
@@ -801,15 +808,15 @@ export const TRICKS = [
       return { kind, n, text: `Work out ${n}! + 0!`, say: `${n} factorial plus 0 factorial`, expr: `${FACT_JS(n)}+${FACT_JS(0)}`, ans: fact(n) + 1 };
     },
     work({ kind, n, m }) {
-      const up = (to) => { const s = to > 5 ? [{ t: '5! = 5 × 4 × 3 × 2 × 1', v: 120 }] : [];
-        for (let k = to > 5 ? 6 : 2; k <= to; k++) s.push({ t: k === 2 ? '2! = 2 × 1' : `${k}! = ${k} × ${k - 1}!`, v: fact(k) }); return s; };
+      const up = (to) => { const s = to > 5 ? [{ t: '5! = 5 × 4 × 3 × 2 × 1', v: 120, x: '5*4*3*2*1' }] : [];
+        for (let k = to > 5 ? 6 : 2; k <= to; k++) s.push({ t: k === 2 ? '2! = 2 × 1' : `${k}! = ${k} × ${k - 1}!`, v: fact(k), x: FACT_JS(k) }); return s; };
       if (kind === 'fact') return up(n);
       if (kind === 'ratio') {
-        const f = downFrom(n, n - m), s = [{ t: `${m}! cancels. How many numbers are left, counting down from ${n}?`, v: n - m }, { t: `${f[0]} × ${f[1]}`, v: f[0] * f[1] }];
-        if (f.length > 2) s.push({ t: `${f[0] * f[1]} × ${f[2]}`, v: fall(n, 3) });
+        const f = downFrom(n, n - m), s = [{ t: `${m}! cancels. How many numbers are left, counting down from ${n}?`, v: n - m, x: `${n}-${m}` }, { t: `${f[0]} × ${f[1]}`, v: f[0] * f[1], x: `${FACT_JS(n)}/${FACT_JS(n - 2)}` }];
+        if (f.length > 2) s.push({ t: `${f[0] * f[1]} × ${f[2]}`, v: fall(n, 3), x: `${FACT_JS(n)}/${FACT_JS(n - 3)}` });
         return s;
       }
-      return [...up(n).slice(-2), { t: '0! — walk the pattern down to it', v: 1 }, { t: `${fact(n)} + 1`, v: fact(n) + 1 }];
+      return [...up(n).slice(-2), { t: '0! — walk the pattern down to it', v: 1, x: `${FACT_JS(1)}/1` }, { t: `${fact(n)} + 1`, v: fact(n) + 1 }];
     },
     draw({ kind, n, m }) {
       if (kind === 'zero') return ladder();
@@ -852,10 +859,10 @@ export const TRICKS = [
         : [`${n} friends queue for the dodgems, and Pip must be at the front. In how many different orders can they stand?`, `${n} different prizes go in a row on the shelf, and the teddy must go at the left end. How many different orders?`, `${n} different flags hang in a line, and the red one must be first. How many different orders?`];
       return { kind, n, c, text: T[c], expr: kind === 'all' ? FACT_JS(n) : `${FACT_JS(n)}/${n}`, ans: kind === 'all' ? fact(n) : fact(n - 1) };
     },
-    work({ kind, n, k }) {
-      if (kind === 'fixed') return [{ t: 'The first place is decided. How many are left to arrange?', v: n - 1 }, { t: `Arrange them all: ${n - 1}! = ${downFrom(n - 1, n - 1).join(' × ')}`, v: fact(n - 1) }];
-      if (kind === 'first') return [{ t: 'How many could run first?', v: k }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1) }, { t: `${k} × ${fact(n - 1)}`, v: k * fact(n - 1) }];
-      return [{ t: 'Choices for the first place', v: n }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1) }, { t: `${n} × ${fact(n - 1)}`, v: fact(n) }];
+    work({ kind, n, k, text }) {
+      if (kind === 'fixed') return [{ t: 'The first place is decided. How many are left to arrange?', v: n - 1, x: `${said(text, 0)}-1` }, { t: `Arrange them all: ${n - 1}! = ${downFrom(n - 1, n - 1).join(' × ')}`, v: fact(n - 1) }];
+      if (kind === 'first') return [{ t: 'How many could run first?', v: k, x: said(text, 1) }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1), x: `${FACT_JS(n)}/${n}` }, { t: `${k} × ${fact(n - 1)}`, v: k * fact(n - 1) }];
+      return [{ t: 'Choices for the first place', v: n, x: said(text, 0) }, { t: `The other ${n - 1} in any order: ${n - 1}!`, v: fact(n - 1), x: `${FACT_JS(n)}/${n}` }, { t: `${n} × ${fact(n - 1)}`, v: fact(n) }];
     },
     draw({ kind, n, k }) { return lineup(n, { fixed: kind === 'fixed', first: kind === 'first' ? k : 0 }); },
   },
@@ -906,11 +913,11 @@ export const TRICKS = [
         `A ${r}-digit code uses only the digits 1 to ${n}, and no digit is used twice. How many codes are there?`];
       return { kind, n, r, c, text: T[c], expr: `${FACT_JS(n)}/${FACT_JS(n - r)}`, ans: fall(n, r) };
     },
-    work({ kind, n, r, c }) {
-      if (kind === 'repeat') return [{ t: 'Choices for each place — and a repeat is allowed', v: n }, { t: 'How many places?', v: r }, { t: `${Array(r).fill(n).join(' × ')}`, v: n ** r }];
+    work({ kind, n, r, c, text }) {
+      if (kind === 'repeat') return [{ t: 'Choices for each place — and a repeat is allowed', v: n, x: c === 1 ? `${JSON.stringify(text)}.match(/letters ([A-F, ]+)\./)[1].split(', ').length` : `${said(text, 2)}-${said(text, 1)}+1` }, { t: 'How many places?', v: r, x: said(text, 0) }, { t: `${Array(r).fill(n).join(' × ')}`, v: n ** r }];
       const names = kind === 'order' && c === 0 ? ['captain', 'vice-captain'] : kind === 'order' && c === 1 ? ['gold', 'silver', 'bronze'] : PLACE.map((p) => `the ${p} place`);
-      const s = [{ t: `Choices for ${names[0]}`, v: n }];
-      for (let i = 1; i < r; i++) s.push({ t: `Then ${names[i]}: one fewer to choose from`, v: n - i });
+      const s = [{ t: `Choices for ${names[0]}`, v: n, x: `${FACT_JS(n)}/${FACT_JS(n - 1)}` }];
+      for (let i = 1; i < r; i++) s.push({ t: `Then ${names[i]}: one fewer to choose from`, v: n - i, x: `${n}-${i}` });
       s.push({ t: downFrom(n, r).join(' × '), v: fall(n, r) });
       return s;
     },
@@ -973,12 +980,12 @@ export const TRICKS = [
     },
     work({ kind, n, r, y, b }) {
       if (kind === 'prob') { const N = y + b, want = fall(y, 2) / 2, all = fall(N, 2) / 2;
-        return [{ t: `Pairs of yellow socks: ${y} × ${y - 1} ÷ 2`, v: want }, { t: `All the pairs: ${N} × ${N - 1} ÷ 2`, v: all }, { t: 'The chance, as a fraction', v: `${want}/${all}` }]; }
-      if (kind === 'pairs') return [{ t: `In order: ${n} × ${n - 1}`, v: fall(n, 2) }, { t: 'Each pair was counted twice — halve it', v: fall(n, 2) / 2 }];
+        return [{ t: `Pairs of yellow socks: ${y} × ${y - 1} ÷ 2`, v: want, x: PASCAL_JS(y, 2) }, { t: `All the pairs: ${N} × ${N - 1} ÷ 2`, v: all, x: PASCAL_JS(y + b, 2) }, { t: 'The chance, as a fraction', v: `${want}/${all}` }]; }
+      if (kind === 'pairs') return [{ t: `In order: ${n} × ${n - 1}`, v: fall(n, 2), x: `${n}*(${n}-1)` }, { t: 'Each pair was counted twice — halve it', v: fall(n, 2) / 2 }];
       const k = kind === 'leave' ? n - r : r, s = [];
-      if (kind === 'leave') s.push({ t: `Choosing ${r} to play is choosing who sits out. How many sit out?`, v: k });
-      s.push({ t: `Pick ${k} in order: ${downFrom(n, k).join(' × ')}`, v: fall(n, k) });
-      s.push({ t: `Orders of one group of ${k}: ${k}!`, v: fact(k) });
+      if (kind === 'leave') s.push({ t: `Choosing ${r} to play is choosing who sits out. How many sit out?`, v: k, x: `${n}-${r}` });
+      s.push({ t: `Pick ${k} in order: ${downFrom(n, k).join(' × ')}`, v: fall(n, k), x: `${FACT_JS(n)}/${FACT_JS(n - k)}` });
+      s.push({ t: `Orders of one group of ${k}: ${k}!`, v: fact(k), x: FACT_JS(k) });
       s.push({ t: `${fall(n, k)} ÷ ${fact(k)}`, v: fall(n, k) / fact(k) });
       return s;
     },

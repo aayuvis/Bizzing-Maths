@@ -102,7 +102,7 @@ export const TRICKS = [
     gen(r, lv = 1) { return this.q({ n: lv === 1 ? int(2, 10, r) : lv === 2 ? int(6, 15, r) : int(11, 20, r) }); },
     q({ n }) { return { n, text: `${n}²`, say: `${n} squared`, expr: `${n}*${n}`, ans: n ** 2 }; },
     work({ n }) {
-      return [{ t: 'Dots in each row', v: n }, { t: 'How many rows?', v: n }, { t: `${n} rows of ${n}`, v: n * n }];
+      return [{ t: 'Dots in each row', v: n, x: `Math.sqrt(${n}*${n})` }, { t: 'How many rows?', v: n, x: `${n}*${n}/${n}` }, { t: `${n} rows of ${n}`, v: n * n }];
     },
     draw({ n }) { return kit.dots(n, n, null, n > 14 ? 13 : 16); },
   },
@@ -137,8 +137,8 @@ export const TRICKS = [
       return { kind, n, form: n <= 5 ? 'listed' : 'long', text, say: `the odd numbers from 1 to ${last}, added`, expr: `Array.from({length:${n}},(_,i)=>2*i+1).reduce((a,b)=>a+b,0)`, ans: n * n };
     },
     work({ kind, n }) {
-      if (kind === 'gap') return [{ t: `A row of ${n} and a column of ${n}`, v: 2 * n }, { t: 'And one for the corner', v: 2 * n + 1 }];
-      return [{ t: `How many odd numbers? (${2 * n - 1} + 1) ÷ 2`, v: n }, { t: `${n}²`, v: n * n }];
+      if (kind === 'gap') return [{ t: `A row of ${n} and a column of ${n}`, v: 2 * n, x: `${n}+${n}` }, { t: 'And one for the corner', v: 2 * n + 1 }];
+      return [{ t: `How many odd numbers? (${2 * n - 1} + 1) ÷ 2`, v: n, x: `Array.from({length:${2 * n - 1}},(_,i)=>i+1).filter((k)=>k%2===1).length` }, { t: `${n}²`, v: n * n }];
     },
     draw({ kind, n }) { const m = kind === 'gap' ? n + 1 : n; return kit.dots(m, m, (r, c) => Math.max(r, c) % 2 === 0, m > 14 ? 12 : 16); },
   },
@@ -162,9 +162,9 @@ export const TRICKS = [
     work({ a }) {
       const t = a - (a % 10), b = a % 10;
       return [
-        { t: `The big square: ${t}²`, v: t * t },
-        { t: `Two strips: 2 × ${t} × ${b}`, v: 2 * t * b },
-        { t: `The corner: ${b}²`, v: b * b },
+        { t: `The big square: ${t}²`, v: t * t, x: `(${a}-${a}%10)**2` },
+        { t: `Two strips: 2 × ${t} × ${b}`, v: 2 * t * b, x: `2*(${a}-${a}%10)*(${a}%10)` },
+        { t: `The corner: ${b}²`, v: b * b, x: `(${a}%10)**2` },
         { t: `${t * t} + ${2 * t * b} + ${b * b}`, v: a * a },
       ];
     },
@@ -212,13 +212,13 @@ export const TRICKS = [
     work(a) {
       if (a.kind === 'last') {
         const u = a.n % 10;
-        return [{ t: `The last digit of ${a.n}`, v: u }, { t: `${u} × ${u}`, v: u * u }, { t: 'Its last digit', v: (u * u) % 10 }];
+        return [{ t: `The last digit of ${a.n}`, v: u, x: `${a.n}-Math.floor(${a.n}/10)*10` }, { t: `${u} × ${u}`, v: u * u, x: `(${a.n}%10)*(${a.n}%10)` }, { t: 'Its last digit', v: (u * u) % 10 }];
       }
       if (a.kind === 'can') {
-        return [{ t: 'How many of the ten digits can end a square? (0, 1, 4, 5, 6, 9)', v: 6 },
+        return [{ t: 'How many of the ten digits can end a square? (0, 1, 4, 5, 6, 9)', v: 6, x: 'new Set(Array.from({length:10},(_,i)=>i*i%10)).size' },
           { t: `Is ${a.d} one of them?`, v: a.ans, choices: ['Yes', 'No'] }];
       }
-      return [{ t: 'How many of them end in 2, 3, 7 or 8?', v: a.opts.filter((x) => [2, 3, 7, 8].includes(+x % 10)).length },
+      return [{ t: 'How many of them end in 2, 3, 7 or 8?', v: a.opts.filter((x) => [2, 3, 7, 8].includes(+x % 10)).length, x: `[${a.opts}].filter((v)=>!Number.isInteger(Math.sqrt(v))).length` },
         { t: 'The one left over', v: a.sq, choices: a.opts }];
     },
     draw(a) {
@@ -258,10 +258,10 @@ export const TRICKS = [
     },
     work({ kind, x }) {
       const n = Math.floor(Math.sqrt(x));
-      if (kind === 'between') return [{ t: `The biggest square not over ${x}`, v: n * n }, { t: 'Its root', v: n }];
+      if (kind === 'between') return [{ t: `The biggest square not over ${x}`, v: n * n, x: `(()=>{let k=0;while((k+1)*(k+1)<=${x})k++;return k*k})()` }, { t: 'Its root', v: n }];
       return [
-        { t: 'Tens digit of the root (10² = 100, 20² = 400)', v: Math.floor(n / 10) },
-        { t: `Ones digit of the root: which digit, squared, ends in ${x % 10}? (then check)`, v: n % 10 },
+        { t: 'Tens digit of the root (10² = 100, 20² = 400)', v: Math.floor(n / 10), x: `Math.floor(Math.sqrt(${x})/10)` },
+        { t: `Ones digit of the root: which digit, squared, ends in ${x % 10}? (then check)`, v: n % 10, x: `Math.sqrt(${x})%10` },
         { t: `So √${x}`, v: n },
       ];
     },
@@ -298,11 +298,11 @@ export const TRICKS = [
       return { a, e, grow, way: grow ? 'double' : e <= 5 ? 'along' : 'halve', text, say: grow ? text : `${a} to the power ${e}`, expr: `Math.pow(${a},${e})`, ans: a ** e };
     },
     work({ a, e }) {
-      const s = [{ t: `How many ${a}s are multiplied?`, v: e }];
-      if (e <= 5) { for (let k = 2; k <= e; k++) s.push({ t: `${a ** (k - 1)} × ${a}`, v: a ** k }); return s; }
+      const s = [{ t: `How many ${a}s are multiplied?`, v: e, x: `Math.round(Math.log(Math.pow(${a},${e}))/Math.log(${a}))` }];
+      if (e <= 5) { for (let k = 2; k <= e; k++) s.push({ t: `${a ** (k - 1)} × ${a}`, v: a ** k, x: `Math.pow(${a},${k})` }); return s; }
       const h = Math.floor(e / 2);
-      s.push({ t: `Half the index: ${a}${sup(h)}`, v: a ** h });
-      s.push({ t: `${a ** h} × ${a ** h}`, v: a ** (2 * h) });
+      s.push({ t: `Half the index: ${a}${sup(h)}`, v: a ** h, x: `Math.pow(${a},Math.floor(${e}/2))` });
+      s.push({ t: `${a ** h} × ${a ** h}`, v: a ** (2 * h), x: `Math.pow(${a},${e}-${e}%2)` });
       if (e % 2) s.push({ t: `One more × ${a}`, v: a ** e });
       return s;
     },
@@ -338,14 +338,15 @@ export const TRICKS = [
       return { kind, x, way: Math.round(Math.cbrt(x)) <= 10 ? 'small root' : 'big root', text: `∛${fmt(x)}`, say: `the cube root of ${x}`, expr: `Math.round(Math.cbrt(${x}))`, ans: Math.round(Math.cbrt(x)) };
     },
     work({ kind, n, x }) {
-      if (kind === 'cube') return [{ t: `${n} × ${n}`, v: n * n }, { t: `${n * n} × ${n}`, v: n ** 3 }];
+      if (kind === 'cube') return [{ t: `${n} × ${n}`, v: n * n, x: `${n}**2` }, { t: `${n * n} × ${n}`, v: n ** 3 }];
       const root = Math.round(Math.cbrt(x)), last = x % 10, u = root % 10;
-      if (root < 10 || root === 10) return [{ t: `The last digit of ${fmt(x)}`, v: last }, { t: 'So the root ends in', v: u }, { t: `∛${fmt(x)}`, v: root }];
+      const LX = `${x}-Math.floor(${x}/10)*10`, UX = `[0,1,2,3,4,5,6,7,8,9].find((d)=>d**3%10===${x}%10)`;
+      if (root < 10 || root === 10) return [{ t: `The last digit of ${fmt(x)}`, v: last, x: LX }, { t: 'So the root ends in', v: u, x: UX }, { t: `∛${fmt(x)}`, v: root }];
       return [
-        { t: `Drop the last three digits of ${fmt(x)}`, v: Math.floor(x / 1000) },
-        { t: 'Tens digit: the biggest cube not over that — its root', v: Math.floor(root / 10) },
-        { t: `The last digit of ${fmt(x)}`, v: last },
-        { t: 'So the root ends in', v: u },
+        { t: `Drop the last three digits of ${fmt(x)}`, v: Math.floor(x / 1000), x: `(${x}-${x}%1000)/1000` },
+        { t: 'Tens digit: the biggest cube not over that — its root', v: Math.floor(root / 10), x: `(()=>{let k=0;while((k+1)**3<=Math.floor(${x}/1000))k++;return k})()` },
+        { t: `The last digit of ${fmt(x)}`, v: last, x: LX },
+        { t: 'So the root ends in', v: u, x: UX },
         { t: `∛${fmt(x)}`, v: root },
       ];
     },
@@ -374,9 +375,9 @@ export const TRICKS = [
     work({ a }) {
       const T = Math.ceil(a / 10) * 10, d = T - a;
       return [
-        { t: `The round square: ${T}²`, v: T * T },
-        { t: `Two strips: 2 × ${T} × ${d}`, v: 2 * T * d },
-        { t: `The corner: ${d}²`, v: d * d },
+        { t: `The round square: ${T}²`, v: T * T, x: `(Math.ceil(${a}/10)*10)**2` },
+        { t: `Two strips: 2 × ${T} × ${d}`, v: 2 * T * d, x: `2*Math.ceil(${a}/10)*10*(Math.ceil(${a}/10)*10-${a})` },
+        { t: `The corner: ${d}²`, v: d * d, x: `(Math.ceil(${a}/10)*10-${a})**2` },
         { t: `${T * T} − ${2 * T * d} + ${d * d}`, v: a * a },
       ];
     },
@@ -408,9 +409,9 @@ export const TRICKS = [
     work({ a }) {
       const d = Math.abs(a - 50), up = a > 50;
       return [
-        { t: `How far from 50?${up ? ' (above)' : ' (below)'}`, v: d },
-        { t: `The two strips: 100 × ${d}`, v: 100 * d },
-        { t: `The corner: ${d}²`, v: d * d },
+        { t: `How far from 50?${up ? ' (above)' : ' (below)'}`, v: d, x: `Math.abs(${a}-50)` },
+        { t: `The two strips: 100 × ${d}`, v: 100 * d, x: `2*50*Math.abs(${a}-50)` },
+        { t: `The corner: ${d}²`, v: d * d, x: `(${a}-50)**2` },
         { t: `2500 ${up ? '+' : '−'} ${100 * d} + ${d * d}`, v: a * a },
       ];
     },
@@ -439,10 +440,10 @@ export const TRICKS = [
     work({ a, b }) {
       const m = (a + b) / 2, d = Math.abs(a - b) / 2;
       return [
-        { t: 'The middle number', v: m },
-        { t: 'How far each is from it', v: d },
-        { t: `${m}²`, v: m * m },
-        { t: `${d}²`, v: d * d },
+        { t: 'The middle number', v: m, x: `(${a}+${b})/2` },
+        { t: 'How far each is from it', v: d, x: `Math.abs(${a}-${b})/2` },
+        { t: `${m}²`, v: m * m, x: `((${a}+${b})/2)**2` },
+        { t: `${d}²`, v: d * d, x: `((${a}-${b})/2)**2` },
         { t: `${m * m} − ${d * d}`, v: a * b },
       ];
     },
@@ -494,11 +495,11 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, m, n } = o;
-      if (kind === 'mul') return [{ t: `How many ${a}s in ${a}${sup(m)}?`, v: m }, { t: `And in ${a}${sup(n)}?`, v: n }, { t: `${m} + ${n}`, v: m + n }];
-      if (kind === 'div') return [{ t: `${a}s on top`, v: m }, { t: `${a}s underneath, to cancel`, v: n }, { t: `${m} − ${n}`, v: m - n }];
-      if (kind === 'std') { const L = String(o.N).length; return [{ t: `How many digits in ${fmt(o.N)}?`, v: L }, { t: 'The point moves one fewer places', v: L - 1 }]; }
+      if (kind === 'mul') return [{ t: `How many ${a}s in ${a}${sup(m)}?`, v: m, x: `Math.round(Math.log(Math.pow(${a},${m}))/Math.log(${a}))` }, { t: `And in ${a}${sup(n)}?`, v: n, x: `Math.round(Math.log(Math.pow(${a},${n}))/Math.log(${a}))` }, { t: `${m} + ${n}`, v: m + n }];
+      if (kind === 'div') return [{ t: `${a}s on top`, v: m, x: `Math.round(Math.log(Math.pow(${a},${m}))/Math.log(${a}))` }, { t: `${a}s underneath, to cancel`, v: n, x: `Math.round(Math.log(Math.pow(${a},${n}))/Math.log(${a}))` }, { t: `${m} − ${n}`, v: m - n }];
+      if (kind === 'std') { const L = String(o.N).length; return [{ t: `How many digits in ${fmt(o.N)}?`, v: L, x: `Math.floor(Math.log10(${o.N}))+1` }, { t: 'The point moves one fewer places', v: L - 1 }]; }
       const pq = o.p * o.q;
-      return [{ t: `${o.p} × ${o.q}`, v: pq }, { t: `${m} + ${n}`, v: m + n },
+      return [{ t: `${o.p} × ${o.q}`, v: pq, x: `${o.p}*${o.q}` }, { t: `${m} + ${n}`, v: m + n, x: `${m}+${n}` },
         { t: pq >= 10 ? `${pq} is ${pq / 10} × 10 — one more power` : `${pq} is under 10 — the index stays`, v: m + n + (pq >= 10 ? 1 : 0) }];
     },
     draw(o) {
