@@ -35,7 +35,7 @@ const back = (act, label = 'Back', arg = '') =>
    its own 0–100 space (x and y). Regenerating the map means re-measuring. */
 export const MAP_PINS = {
   gardens: { x: 20, y: 66 }, market: { x: 31, y: 42 }, workshop: { x: 51, y: 50 },
-  observatory: { x: 63, y: 25 }, harbour: { x: 83, y: 34 },
+  observatory: { x: 63, y: 25 }, harbour: { x: 83, y: 34 }, ladder: { x: 67, y: 66 },
 };
 /* The Far Isles — measured against atlas2.webp the same way. */
 export const MAP2_PINS = {

@@ -11,7 +11,7 @@ export function icon(name, size = 24, cls = 'ico') {
 
 /* The emoji a data file uses as a picture, and the icon drawn in its place. */
 export const GLYPH = {
-  '🌱': 'sprout', '🧺': 'basket', '🛠': 'tools', '🛠️': 'tools', '🔭': 'telescope', '⚓': 'anchor', '📚': 'book', '📖': 'book',
+  '🌱': 'sprout', '🧺': 'basket', '🛠': 'tools', '🛠️': 'tools', '🔭': 'telescope', '🪜': 'ladder', '⚓': 'anchor', '📚': 'book', '📖': 'book',
   '🕰': 'clock', '🕰️': 'clock', '⏰': 'clock', '🥧': 'pie', '🔺': 'triangle', '🌳': 'tree', '🌲': 'tree', '👑': 'crown',
   '🛳': 'ship', '🛳️': 'ship', '⭕': 'circle', '🎪': 'tent', '🪨': 'rock', '⛏': 'pick', '⛏️': 'pick', '🗼': 'lighthouse',
   '🪙': 'coin', '⚡': 'bolt', '🧠': 'brain', '📐': 'ruler', '💡': 'bulb', '🧭': 'compass', '🧩': 'puzzle', '🏆': 'trophy',
