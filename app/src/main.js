@@ -15,7 +15,7 @@ function loadHall() {
   return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
 }
 const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
-import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, say, hush } from './ui.js';
+import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
 import * as F from './facts.js';
@@ -330,6 +330,7 @@ document.addEventListener('visibilitychange', () => document.documentElement.tog
    wrong answer that flashes past teaches nothing. */
 
 function startRun(kind, title, items, extra = {}) {
+  clearConfetti();   // never over a question
   R.run = { kind, title, items, i: 0, input: '', fb: null, results: [], missed: [], t0: 0, over: false, ...extra };
   go('run');
   ask();
@@ -634,7 +635,7 @@ function guidedNext() {
 /* ------------------------------------------------------------- contest */
 
 function startContest() {
-  const k = kid(R.h);
+  const k = kid(R.h); clearConfetti();
   R.contest = { c: newContest(k.band), phase: 'ask', input: '', last: null };
   k.contest.runs++; save();
   cAsk();
@@ -768,7 +769,7 @@ function paperKey(e) {
 /* ------------------------------------------------------------- games */
 
 function play(id) {
-  const k = kid(R.h);
+  const k = kid(R.h); clearConfetti();
   const rec = k.games[id] || (k.games[id] = { best: null, plays: 0 });
   const onEnd = (score) => { rec.plays++; if (typeof score === 'number' && (rec.best == null || score > rec.best)) rec.best = score; save(); render(); };
   if (id === 'rush') G.numberRush(k, { onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); tick(k, right, 1); save(); }, onEnd });

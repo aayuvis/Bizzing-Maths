@@ -13,6 +13,7 @@
    code that drew it (factor pairs multiply back, Roman numerals read back, a
    divisibility claim agrees with n % d, a word form reads back to its number). */
 
+import { icon } from '../icons.js';
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { META } from './shelf.js';
@@ -333,8 +334,8 @@ export function view(ctx) {
       </div>
       <div class="t-explorer-chips">
         ${QUICK.map((q) => `<button class="chip t-explorer-jump${q === p.n ? ' on' : ''}" data-act="lib" data-arg="set|${q}">${group(q)}</button>`).join('')}
-        <button class="chip t-explorer-jump" data-act="lib" data-arg="random|">🎲 Random</button>
-        <button class="chip t-explorer-jump t-explorer-gold" data-act="lib" data-arg="surprise|">✨ Surprise me</button>
+        <button class="chip t-explorer-jump" data-act="lib" data-arg="random|">${icon('dice', 18)} Random</button>
+        <button class="chip t-explorer-jump t-explorer-gold" data-act="lib" data-arg="surprise|">${icon('sparkle', 18)} Surprise me</button>
       </div>
     </div>
     ${body}

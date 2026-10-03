@@ -27,6 +27,7 @@
    a construction steps with ← → and its points are tapped, then nudged with
    the arrows or the on-screen pad. */
 
+import { icon } from '../icons.js';
 import * as kit from '../chapters/kit.js';
 import { byId } from '../tricks.js';
 import { fold } from '../puzzles.js';
@@ -71,8 +72,8 @@ const LINKS = {
 };
 
 const BENCHES = [
-  ['protractor', '📐 Protractor'], ['polygon', '⬡ Polygons'], ['area', '▦ Area'],
-  ['circle', '◯ Circle'], ['solids', '🧊 3D & nets'], ['moves', '↔ Moves'], ['construct', '⌒ Construct'],
+  ['protractor', 'Protractor', 'protractor'], ['polygon', 'Polygons', 'hex'], ['area', 'Area', 'grid'],
+  ['circle', 'Circle', 'circle'], ['solids', '3D & nets', 'cube'], ['moves', 'Moves', 'moves'], ['construct', 'Construct', 'construct'],
 ];
 
 /* =================================================== 1. the protractor */
@@ -1264,7 +1265,7 @@ const KEYS = { protractor: keyProtractor, polygon: keyPolygon, area: keyArea, ci
 
 export function view(ctx) {
   const b = bench(ctx);
-  const seg = `<div class="seg t-shapes-seg" role="tablist">${BENCHES.map(([id, l]) => `<button role="tab" aria-selected="${id === b}" class="${id === b ? 'on' : ''}" data-act="lib" data-arg="bench|${id}">${l}</button>`).join('')}</div>`;
+  const seg = `<div class="seg t-shapes-seg" role="tablist">${BENCHES.map(([id, l, ic]) => `<button role="tab" aria-selected="${id === b}" class="${id === b ? 'on' : ''}" data-act="lib" data-arg="bench|${id}">${icon(ic, 16)} ${l}</button>`).join('')}</div>`;
   const ln = b === 'construct' ? CLINKS[kState(ctx).id] : LINKS[b];
   return `<div class="t-shapes">${seg}${VIEWS[b](ctx)}${links(ln)}</div>`;
 }

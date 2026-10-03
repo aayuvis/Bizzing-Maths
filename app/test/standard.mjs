@@ -150,6 +150,57 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await ctx.close();
 }
 
+/* emoji in the Library's tools and the grown-ups report (§9). The route sweep above saw only each tool's
+   first screen, and 45 emoji sat a tab or a click away (Number Explorer, Shape Studio, Formula Book, the report's
+   strands). So: every tool, every tab it shows (and the tabs those open), one opened item of each kind, and the
+   report — any emoji in a control fails. A control is a button, a link, a role=button/tab/radio/switch/option,
+   a chip, a <label>, a <select> or a <summary>. Watched to fail on 🎲 Random before it was trusted. */
+const TOOLS = ['explorer', 'working', 'tables', 'shapes', 'graphs', 'dictionary', 'formulas', 'vedic', 'chinese'];
+const CTRL = 'button, a, [role=button], [role=tab], [role=radio], [role=switch], [role=option], .chip, label, select, summary';
+async function ctrlEmoji(p) {
+  return p.evaluate(([src, sel]) => { const re = new RegExp(src, 'u'), out = [];
+    for (const el of document.querySelectorAll(sel)) {
+      if (!el.offsetParent || el.closest('[data-bz=bar], [data-bz=tabbar], [data-bz=drawer], .bz-foot')) continue;
+      const t = (el.innerText || el.textContent || '') + ' ' + (el.tagName === 'SELECT' ? [...el.options].map((o) => o.text).join(' ') : '');
+      if (re.test(t)) out.push(t.trim().replace(/\s+/g, ' ').slice(0, 28));
+    }
+    return out; }, [EMOJI.source, CTRL]);
+}
+const TABSEL = 'main [role=tab], main [data-act=lib][data-arg^="tab|"], main [data-act=lib][data-arg^="mode|"]';
+const OPENERS = ['open|', 'card|', 'set|', 'solid|', 'letter|', 'ex|'];
+for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, height: 844 }, 'phone']]) {
+  const { p, ctx } = await open(vp, seeded({ plan: 'family' }));
+  await p.waitForSelector('.home2');
+  const found = [];
+  const scan = async (where) => { for (const e of await ctrlEmoji(p)) found.push(`${where}: ${e}`); };
+  const goTool = async (t) => { await p.evaluate((x) => { location.hash = '#/home'; location.hash = '#/lib/' + x; }, t); await p.waitForTimeout(450); };
+  const clickKey = (key) => p.evaluate(([sel, k]) => { const el = [...document.querySelectorAll(sel)].find((e) => e.offsetParent && ((e.dataset.arg || '') + '#' + e.textContent.trim()) === k); if (el) el.click(); return !!el; }, [TABSEL, key]);
+  let views = 0;
+  for (const t of TOOLS) {
+    await goTool(t); await scan(t); views++;
+    const seen = new Set();
+    for (let round = 0; round < 3; round++) {
+      const keys = await p.$$eval(TABSEL, (els) => els.filter((e) => e.offsetParent).map((e) => (e.dataset.arg || '') + '#' + e.textContent.trim()));
+      const fresh = keys.filter((k) => !seen.has(k)); if (!fresh.length) break;
+      for (const k of fresh) { seen.add(k); if (await clickKey(k)) { await p.waitForTimeout(160); await scan(`${t} › ${k.split('#')[1].slice(0, 20)}`); views++; } }
+    }
+    for (const o of OPENERS) {
+      await goTool(t);
+      const hit = await p.evaluate((pre) => { const el = [...document.querySelectorAll(`main [data-arg^="${pre}"]`)].find((e) => e.offsetParent); if (el) el.click(); return !!el; }, o);
+      if (hit) { await p.waitForTimeout(250); await scan(`${t} › ${o}`); views++; }
+    }
+  }
+  await p.evaluate(() => { location.hash = '#/grownups'; }); await p.waitForTimeout(250);
+  for (const ch of '1234') await p.keyboard.press(ch);
+  await p.waitForSelector('.rc'); await scan('grown-ups');
+  const rcEmoji = await p.$$eval('.rc', (r, src) => r.flatMap((x) => (x.innerText.match(new RegExp(src, 'gu')) || [])), EMOJI.source.replace('/u', ''));
+  ok(views >= 30, `${tag}: the emoji sweep opened every tool's tabs and items (${views} views)`);
+  ok(found.length === 0, `${tag}: zero emoji in a control on any Library tool or the grown-ups report (got ${found.length}: ${found.slice(0, 6).join(' | ')})`);
+  ok(rcEmoji.length === 0, `${tag}: the grown-ups report draws its strands as icons, not emoji (got ${rcEmoji.join(' ')})`);
+  if (process.env.EMOJI_LIST) console.log(tag, found.length, '\n  ' + found.join('\n  '), '\n  report:', rcEmoji.join(' '));
+  await ctx.close();
+}
+
 /* checkShell: Home with a child, desktop and phone, light and dark — must be [] */
 for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, height: 844 }, 'phone']]) for (const mode of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: vp, colorScheme: mode, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
@@ -221,6 +272,113 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const p = await ctx.newPage(); await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
   await p.goto(BASE); await p.waitForSelector('.home2');
   ok(await p.$$eval('.wstage, .wstage *', (els) => els.every((e) => getComputedStyle(e).animationName === 'none')), 'reduced motion freezes the world to its still');
+  await ctx.close();
+}
+
+/* the owner's visual audit (3 Oct 2026), each note turned into a measurement, desktop and phone, light and dark.
+   All of these were run against the build before the fixes and failed there first. */
+// colours come back from the page through a canvas, so color-mix()'s color(srgb …) reads as rgb like any other
+const NORM = 'window.__rgb = (c) => { const x = document.createElement("canvas").getContext("2d"); x.fillStyle = "#000"; x.fillStyle = c; return x.fillStyle; };';
+const rgba = (c) => { c = String(c); if (/^#[\da-f]{6}$/i.test(c)) return { r: parseInt(c.slice(1, 3), 16), g: parseInt(c.slice(3, 5), 16), b: parseInt(c.slice(5, 7), 16), a: 1 };
+  const m = c.match(/[\d.]+/g) || [0, 0, 0, 0], k = /^color\(srgb/.test(c) ? 255 : 1;
+  return { r: Math.round(m[0] * k), g: Math.round(m[1] * k), b: Math.round(m[2] * k), a: m[3] == null ? 1 : +m[3] }; };
+const rgbStr = (c) => { const x = rgba(c); return `rgb(${x.r}, ${x.g}, ${x.b})`; };
+const chroma = (c) => { const x = rgba(c); return Math.max(x.r, x.g, x.b) - Math.min(x.r, x.g, x.b); };
+for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, height: 844 }, 'phone']]) for (const mode of ['light', 'dark']) {
+  const T = `${tag} ${mode}`;
+  const ctx = await browser.newContext({ viewport: vp, colorScheme: mode, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
+  const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
+  await p.addInitScript(NORM);
+  await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded({ plan: 'family', tester: true }));
+  await p.goto(BASE); await p.waitForSelector('.home2');
+  const to = async (h, ms = 300) => { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(ms); };
+  /* 1 · Play: a hero tile's picture never sits on its words, and no tile is white on white */
+  await to('#/play');
+  const heroes = await p.$$eval('.hero-t', (ts) => ts.map((t) => {
+    const after = getComputedStyle(t, '::after').content, ic = t.querySelector('.hero-ic'), cs = getComputedStyle(t);
+    const icR = ic && ic.getBoundingClientRect(); let over = 0;
+    const w = document.createTreeWalker(t, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) { if (!n.textContent.trim() || (ic && ic.contains(n))) continue; const rg = document.createRange(); rg.selectNodeContents(n);
+      for (const r of rg.getClientRects()) if (icR && r.right > icR.left + 1 && r.left < icR.right - 1 && r.bottom > icR.top + 1 && r.top < icR.bottom - 1) over++; }
+    return { id: t.className, raster: after && after !== 'none' && after !== 'normal', over, bg: cs.backgroundImage, bgc: __rgb(cs.backgroundColor), ink: __rgb(cs.color) };
+  }));
+  heroes.forEach((h) => { h.bgc = rgbStr(h.bgc); h.ink = rgbStr(h.ink); });
+  ok(heroes.length === 4 && heroes.every((h) => !h.raster && h.over === 0), `${T}: no Play hero picture covers its text (${heroes.filter((h) => h.raster || h.over).map((h) => h.id).join(', ')})`);
+  ok(heroes.every((h) => h.bg !== 'none' || contrast(h.ink, h.bgc) >= 3), `${T}: every Play hero tile has a ground under its words (${heroes.filter((h) => h.bg === 'none' && contrast(h.ink, h.bgc) < 3).map((h) => h.id).join(', ')})`);
+  /* 2 · a page subtitle wraps; it is never cut with an ellipsis */
+  for (const r of ['puzzles', 'library', 'medals', 'atlas', 'contest', 'goals']) {
+    await to('#/' + r, 220);
+    const cut = await p.$$eval('.phead-t p', (ps) => ps.filter((x) => x.offsetParent).filter((x) => { const c = getComputedStyle(x); return c.textOverflow === 'ellipsis' || c.whiteSpace === 'nowrap' || x.scrollWidth > x.clientWidth + 1; }).map((x) => x.textContent.slice(0, 24)));
+    ok(cut.length === 0, `${T}: #/${r}'s subtitle wraps, never cut (${cut.join(' | ')})`);
+  }
+  /* 3 · world-board road badges are pills over the pin, never a disc across it */
+  await to('#/world/carnival');
+  const lv = await p.$$eval('.board .bpin .lvb', (b) => b.map((x) => Math.round(x.getBoundingClientRect().height)));
+  ok(lv.length > 0 && lv.every((h) => h <= 24), `${T}: the Data Carnival's road badges are pills (heights ${[...new Set(lv)].join(',')})`);
+  /* 4 · the Continue card's title is a title in every world (orbit's h3 once fell to body size) */
+  await to('#/home');
+  for (const w of WORLDS6) {
+    await p.evaluate((id) => window.__bzm.fire('theme', id), w); await p.waitForTimeout(120);
+    const fs = await p.$eval('.bz-jbody h3', (h) => parseFloat(getComputedStyle(h).fontSize)).catch(() => 0);
+    ok(fs >= 18, `${T}: ${w}'s Continue card title is a title (${fs}px)`);
+  }
+  await p.evaluate(() => window.__bzm.fire('theme', 'graph'));
+  /* 5 · progress tracks show their empty part on the card they sit on */
+  for (const tool of ['formulas', 'vedic', 'chinese', 'tables']) {
+    await to('#/lib/' + tool, 650);
+    const tr = await p.$$eval('[role=progressbar]', (bs) => bs.filter((b) => b.offsetParent).map((b) => {
+      const own = __rgb(getComputedStyle(b).backgroundColor); let e = b.parentElement, under = null;
+      while (e) { const c = __rgb(getComputedStyle(e).backgroundColor); const a = +(c.match(/[\d.]+/g) || [])[3]; if (c !== 'rgba(0, 0, 0, 0)' && (isNaN(a) || a > 0.5)) { under = c; break; } e = e.parentElement; }
+      return { own, under: under || __rgb(getComputedStyle(document.body).backgroundColor) };
+    }));
+    const flat = tr.map(({ own, under }) => { const o = rgba(own), u = rgba(under); const mix = (k) => Math.round(o[k] * o.a + u[k] * (1 - o.a)); return contrast(`rgb(${mix('r')},${mix('g')},${mix('b')})`, rgbStr(under)); });
+    // (the Formula Book's count drops its bar on a phone; elsewhere a track must be there)
+    ok((tr.length > 0 || (tool === 'formulas' && tag === 'phone')) && flat.every((c) => c >= 1.25), `${T}: ${tool}'s progress track is visible on its ground (contrast ${flat.map((c) => c.toFixed(2)).join(', ')})`);
+  }
+  /* C · the Formula Book's pictures are in colour, in the world's colours, locked or collected */
+  await to('#/lib/formulas', 650);
+  const lockedFill = await p.$eval('.t-formulas-tile.locked .t-formulas-tpic .dg-fill1', (e) => [__rgb(getComputedStyle(e).fill), getComputedStyle(e.closest('svg')).opacity, getComputedStyle(e.closest('svg')).filter]);
+  ok(chroma(lockedFill[0]) >= 18 && +lockedFill[1] >= 0.5 && lockedFill[2] === 'none', `${T}: a locked formula card is a coloured silhouette, not grey (${lockedFill.join(' / ')})`);
+  await p.evaluate(() => { const b = document.querySelector('[data-arg="open|area-trapezium"]'); if (b) b.click(); }); await p.waitForTimeout(250);
+  const fills = await p.$$eval('.t-formulas-pic .dg-fill1, .t-formulas-pic .dg-fill2', (es) => [...new Set(es.map((e) => __rgb(getComputedStyle(e).fill)))]);
+  ok(fills.length === 2 && fills.every((f) => chroma(f) >= 18), `${T}: the trapezium's two copies are two colours (${fills.join(' / ')})`);
+  await p.evaluate(() => window.__bzm.fire('theme', 'rangoli')); await p.waitForTimeout(150);
+  const fillsR = await p.$$eval('.t-formulas-pic .dg-fill1', (es) => __rgb(getComputedStyle(es[0]).fill)).catch(() => '');
+  ok(fillsR && fillsR !== fills[0], `${T}: the Formula Book's colours come from the world (graph ${fills[0]}, rangoli ${fillsR})`);
+  await p.evaluate(() => window.__bzm.fire('theme', 'graph'));
+  /* 6 · certificates: the child's name and the line after it are two things */
+  await to('#/grownups');
+  for (const ch of '1234') await p.keyboard.press(ch);
+  await p.waitForSelector('.certs');
+  const gap = await p.$$eval('.cert-row', (rs) => rs.map((r) => { const b = r.querySelector('b'), n = b && b.nextElementSibling; if (!n) return 99; const x = b.getBoundingClientRect(), y = n.getBoundingClientRect(); return y.top >= x.bottom - 1 ? 99 : Math.round(y.left - x.right); }));
+  ok(gap.length > 0 && gap.every((g) => g >= 6), `${T}: a certificate row keeps the name apart from its line (gaps ${gap.join(',')})`);
+  /* 8 · on a dark page, every painted daylight plate is dimmed to dusk */
+  if (mode === 'dark') for (const r of ['atlas', 'library', 'journey', 'play', 'puzzles', 'feed', 'world/bakery', 'home']) {
+    await to('#/' + r, 500);
+    const lit = await p.evaluate(() => { const out = [];
+      for (const e of document.querySelectorAll('main *, [data-bz] *')) {
+        if (!e.offsetParent && e.tagName !== 'IMG') continue;
+        const cs = getComputedStyle(e), u = e.tagName === 'IMG' ? (e.currentSrc || e.src) : cs.backgroundImage;
+        if (!/\/art\/(s|w|q|g|lib|j)-|\/art\/atlas/.test(u || '') || e.getBoundingClientRect().width < 60) continue;
+        let b = 1; for (let x = e; x && x !== document.documentElement; x = x.parentElement) { const m = getComputedStyle(x).filter.match(/brightness\(([\d.]+)\)/); if (m) b *= +m[1]; }
+        if (b > 0.6) out.push(u.split('/').pop().slice(0, 20) + ':' + b);
+      }
+      return out; });
+    ok(lit.length === 0, `${T}: #/${r} has no daylight plate left bright on the dark page (${lit.slice(0, 4).join(' | ')})`);
+  }
+  await ctx.close();
+}
+/* 7 · confetti never falls over a question: a new child's celebration is cleared when the placement starts */
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
+  await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
+  await p.goto(BASE); await p.waitForSelector('.home2');
+  await p.evaluate(() => { const R = window.__bzm.R; R.ui.draft = { name: 'Asha', band: '8-10', avatar: 'hexbee' }; window.__bzm.fire('createKid'); });
+  await p.waitForTimeout(150);
+  const before = await p.locator('.conf').count();
+  await p.evaluate(() => window.__bzm.fire('startPlace')); await p.waitForTimeout(150);
+  ok(before === 1 && await p.locator('.conf').count() === 0 && await p.evaluate(() => window.__bzm.R.ui.nav) === 'run', `the new child's confetti is cleared when the first question shows (before ${before}, after ${await p.locator('.conf').count()})`);
   await ctx.close();
 }
 

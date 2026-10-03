@@ -6,6 +6,7 @@
    it, and the Atlas stops that teach it. Search as you type, prefix matches
    first; A–Z and topics to browse; a word of the day that is the same word in
    every house on the same date. */
+import { icon } from '../icons.js';
 import * as kit from '../chapters/kit.js';
 import { TRICKS } from '../tricks.js';
 import { seeded, dayKey } from '../rand.js';
@@ -501,7 +502,7 @@ function entryCard(e) {
     ${e.see.length ? `<div class="t-dictionary-see"><span class="kicker">See also</span><div class="t-dictionary-chips">${e.see.map((w) =>
       `<button class="chip t-dictionary-chip" data-act="lib" data-arg="open|${esc(w)}">${esc(w)}</button>`).join('')}</div></div>` : ''}
     ${e.stops.length ? `<div class="t-dictionary-stops"><span class="kicker">Learn it in the Atlas</span><div class="t-dictionary-chips">${e.stops.map((s) =>
-      `<button class="btn small" data-act="lib" data-arg="stop|${esc(s)}">📍 ${esc(stopTitle[s] || s)}</button>`).join('')}</div></div>` : ''}
+      `<button class="btn small" data-act="lib" data-arg="stop|${esc(s)}">${icon('pin', 16)} ${esc(stopTitle[s] || s)}</button>`).join('')}</div></div>` : ''}
     ${e.sources ? `<details class="t-dictionary-src"><summary>Sources</summary><ul>${e.sources.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></details>` : ''}
   </article>`;
 }

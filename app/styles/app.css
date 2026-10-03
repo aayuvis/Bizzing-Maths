@@ -322,9 +322,14 @@ details summary{cursor:pointer;font-weight:650;color:var(--action);margin-top:6p
 .hero-t b{font-family:var(--display);font-size:30px}
 .hero-t .kicker{color:rgb(255 255 255 / .8)}
 .contest-t{background:linear-gradient(135deg,#1E43A8,#2D5BD8 55%,#6C4FE0)}
-.contest-t::after{content:"🏆";position:absolute;right:20px;bottom:6px;font-size:84px;opacity:.9;transform:rotate(-8deg)}
 .daily-t{background:linear-gradient(135deg,#C2410C,#E0673A 60%,#F0B429)}
-.daily-t::after{content:"🎯";position:absolute;right:18px;bottom:8px;font-size:70px;opacity:.9}
+/* the Contest Hall's tile shares a class name with the hall's own title (hall.css .hall-t): give it
+   its colour and give the type back, or it is white text on a white card */
+.hero-t.hall-t{background:linear-gradient(135deg,#7A2E8E,#A8459C 55%,#D9677A);font:inherit;margin:0}
+/* each hero's picture is an SVG in its own corner; the text keeps clear of it (it once sat on a raster emoji) */
+.hero-t{padding-right:92px}
+.hero-ic{position:absolute;top:18px;right:18px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;background:rgb(255 255 255 / .16);color:#fff}
+.hero-ic .ico{width:40px;height:40px}
 .gtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media (max-width:820px){.hero-tiles,.gtiles{grid-template-columns:1fr}}
 .gtile{display:flex;flex-direction:column;border:0;border-radius:var(--r-lg);overflow:hidden;background:var(--surface);box-shadow:var(--sh-raised);cursor:pointer;text-align:left;padding:0;transition:transform .15s}
@@ -554,7 +559,7 @@ button.hcard:hover,.journey:hover,.tile2:hover{transform:translateY(-3px);box-sh
 .board-scroll{overflow-x:auto;border-radius:var(--r-xl);box-shadow:var(--sh-raised);margin-bottom:16px;scrollbar-width:thin}
 .board{position:relative;min-width:980px;aspect-ratio:1920/815}
 .board > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .rd-edge{fill:none;stroke:rgb(60 40 20 / .35);stroke-width:3.2;vector-effect:non-scaling-stroke;stroke-width:16px;stroke-linecap:round}
 .rd{fill:none;stroke:#FFF6E2;stroke-width:10px;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-dasharray:2 16}
 .rd-walk{fill:none;stroke:var(--treasure);stroke-width:6px;vector-effect:non-scaling-stroke;stroke-linecap:round;filter:drop-shadow(0 1px 2px rgb(0 0 0 / .4))}
@@ -881,14 +886,16 @@ div.jcard{cursor:default}
 .t-vedic-prog,.t-chinese-prog{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:140px}
 .t-vedic-prog b,.t-chinese-prog b{font-size:22px}
 .t-vedic-lv,.t-chinese-lv{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px}
-.t-vedic-prog .t-vedic-bar,.t-chinese-prog .t-chinese-bar{width:140px;height:8px;border-radius:8px;background:var(--surface2);overflow:hidden;flex:none}
+/* the empty track is drawn from the ink, so it shows on any card in any world, light or dark */
+.t-vedic-prog .t-vedic-bar,.t-chinese-prog .t-chinese-bar{width:140px;height:8px;border-radius:8px;background:color-mix(in srgb,var(--ink) 15%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent);overflow:hidden;flex:none}
 .t-vedic-prog .t-vedic-bar i,.t-chinese-prog .t-chinese-bar i{display:block;height:100%;background:var(--action);border-radius:8px}
 
 /* ---- above the fold: a page head is one compact row; the thing itself comes first */
 .content{padding-top:14px}
 .phead{margin-bottom:10px;gap:10px}
 .phead-t h1{font-size:clamp(20px,2.4vw,26px)}
-.phead-t p{font-size:14px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62ch}
+/* a subtitle wraps; it is never cut with an ellipsis ("Clear a fl…" said nothing) */
+.phead-t p{font-size:14px;margin:2px auto 0;max-width:72ch;text-wrap:balance}
 @media (max-width:620px){.phead{grid-template-columns:auto 1fr auto;text-align:left;gap:8px}.phead-t{text-align:left}.phead-t p{display:none}.phead-r{justify-self:end}.phead .back{justify-self:start}}
 .case-bar{margin:0 0 10px}
 .case-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
@@ -972,3 +979,7 @@ div.jcard{cursor:default}
 .og-say{margin:0;max-width:13em;padding:7px 11px;border-radius:12px 12px 12px 3px;background:var(--surface,#fff);color:var(--ink);font-size:var(--fs-small,.88rem);font-weight:600;box-shadow:0 4px 14px rgb(0 0 0 / .2)}
 @media (prefers-reduced-motion:no-preference){.octo-gate.first .octo{animation:og-hop .9s ease-out 1}}
 @keyframes og-hop{0%{transform:translateY(12px);opacity:0}60%{transform:translateY(-4px);opacity:1}100%{transform:none}}
+
+/* grown-ups: certificates — the child's name and what follows are two things, never one run-on word */
+.cert-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 0}
+.cert-row > b{min-width:5ch}
