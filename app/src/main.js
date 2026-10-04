@@ -8,6 +8,7 @@ import { award, medalById } from './medals.js';
 import { buy } from './shop.js';
 import { applySkin } from './extras-actions.js';
 import { ownsMode } from './extras.js';
+import * as CH from './challenge.js';
 import { snapshot } from './report.js';
 /* The Contest Hall and its problem banks load on the hall's own route — 133 proved
    templates are not part of a first screen (the family budget, standard §11). */
@@ -405,7 +406,7 @@ function submit(given) {
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
 
-const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes', 'warmup', 'mix'];
+const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes', 'warmup', 'mix', 'challenge'];
 
 function nextQ() {
   const run = R.run; if (!run) return;
@@ -471,6 +472,18 @@ function finishRun() {
     s.head = `${right} of ${n} right`;
     s.lines.push(right === n ? '<b>Every one — that is today done.</b>' : 'Facts that slipped come back after a gap; nothing is lost for a miss.');
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="home">Home</button>');
+    if (right >= n - 1) confetti(40);
+  }
+  if (run.kind === 'challenge') {
+    // today's challenge (challenge.js): every question answered, at any score, pays the fixed bonus once a day
+    const paid = CH.finish(k, run.ch, run.results, (ev, note) => earn(k, ev, note));
+    s.head = `${right} of ${n} right`;
+    s.lines.push(`<b>${escapeHtml(run.title)} — finished.</b>`);
+    s.lines.push(paid ? `${paid} coins for finishing today’s challenge, on top of a coin for each right answer.`
+      : run.paidBefore ? 'Played again, for practice — today’s bonus is already in your wallet.'
+        : 'Finished. Today’s coins from Maths are all earned, so the bonus is nothing extra today.');
+    if (right < n) s.lines.push('The ones that slipped are in your mistakes deck, ready after a gap.');
+    s.buttons.push('<button class="btn primary" data-act="nav" data-arg="play">Back to Play</button>');
     if (right >= n - 1) confetti(40);
   }
   if (run.kind === 'check') {
@@ -998,6 +1011,12 @@ on('searchOpen', (a) => {
 });
 /* Today's five minutes (audit F1): a few facts picked for you, mistakes that are due, the
    next stop on your road and one pattern puzzle — one short mixed session from Home. */
+/* Today's challenge (challenge.js): the band's named set for the day, from stops this child has opened. */
+on('challenge', () => {
+  const k = kid(R.h); if (!k) return;
+  const ch = CH.challengeOf(k), was = CH.doneToday(k, ch.day);
+  startRun('challenge', ch.name, ch.items.map((q) => ({ ...q })), { ch, paidBefore: !!(was && was.paid), sub: ch.pool === 'start' ? 'Today’s challenge · ten questions from the first stops on the road' : 'Today’s challenge · ten questions from stops you have opened' });
+});
 on('dailyMix', () => {
   const k = kid(R.h), items = [];
   for (const f of F.session(k.facts, k.prefs.op, { band: k.band }).slice(0, 6)) items.push({ text: F.text(f), say: V.spoken(F.text(f)), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, fresh: f.fresh, why: F.why(f) });

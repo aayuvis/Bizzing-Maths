@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 11, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
+export function newHousehold() { return { v: 12, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -108,7 +108,7 @@ export function newKid(name, band, avatar) {
     papers: { best: {}, log: [] },   // papers/engine.js: contest-style papers sat
     paperDraft: null,     // the paper in progress: { band, no, i, answers, endsAt }
     weeks: {},            // week (Monday's day key) → what the child could do that week — report.js
-    shop: { owned: [], worn: { skin: null }, avatars: [], worlds: [], skins: [], modes: [] },   // bought with Bizzing coins: frames (Extras), avatars, worlds 3–6, road skins and game modes (extras.js) — the coins live in the family wallet
+    shop: { owned: [], worn: { skin: null, paper: null }, avatars: [], worlds: [], skins: [], modes: [], paperSkins: [] },   // bought with Bizzing coins: frames (Extras), avatars, worlds 3–6, road skins, paper skins and game modes (extras.js) — the coins live in the family wallet
     mistakes: {},         // the mistakes deck: missed questions that come back after a gap (mistakes.js)
     feed: { seen: {}, paid: {} },   // My Feed: card id → day seen (this week sinks), card id → paid once (feed.js)
     coinNotes: {},        // ledger time → what this app paid it for, so the wallet history can say it in words

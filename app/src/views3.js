@@ -14,7 +14,7 @@ import { CATALOGUE, PACKS, byAvatar, avatarCtx, problems } from './avatars.js';
 import { stateOf, TIERS, WORLD_PRICE } from './integration/bizzing-avatars.js';
 import { THEMES, byTheme, themeOf, worldIsOpen, plate } from './themes.js';
 import { FRAMES, owns, worn } from './shop.js';
-import { shopSkins, shopModes } from './extras-view.js';
+import { shopSkins, shopPapers, shopModes } from './extras-view.js';
 import { ledgerWords } from './extras.js';
 import { medalStates } from './medals.js';
 import { worldOf } from './tricks.js';
@@ -222,7 +222,7 @@ function shopExtras(k, coins) {
       <span class="frame fr-${f.id}"><img class="av" src="avatars/${esc(k.avatar)}.webp" width="56" height="56" alt=""></span><b>${esc(f.name)}</b>
       ${have ? `<button class="btn small" data-act="wearFrame" data-arg="${on === f.id ? '' : f.id}">${on === f.id ? 'Take it off' : 'Wear'}</button>` : `<button class="btn small" data-act="buyFrame" data-arg="${f.id}" ${coins < f.price ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)} ${f.price}</button>`}
     </div>`; }).join('')}</div>
-    ${shopSkins(k, coins)}${shopModes(k, coins)}`;
+    ${shopSkins(k, coins)}${shopPapers(k, coins)}${shopModes(k, coins)}`;
 }
 
 /* ------------------------------------------------------------------ Settings (§5) */

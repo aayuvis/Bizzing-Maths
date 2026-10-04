@@ -171,6 +171,150 @@ const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboar
   await ctx.close();
 }
 
+/* ------------------------------------------------ today's challenge (audit v4 B4): a card on Play, a fixed bonus once a day */
+for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'chal-desk'], [{ width: 390, height: 844 }, 'chal-phone']]) {
+  const { p, ctx, G, shot } = await open(vp, tag);
+  await nav(p, G, 'play', '.chal');
+  const card = await p.locator('.chal').innerText();
+  const name = await G(() => window.__bzm.R.ui && document.querySelector('.chal-t b').textContent);
+  ok(/Today’s challenge/i.test(card) && name && /Finish it for 5 coins, once today/.test(card), `${tag}: the Play tab names today's challenge and its fixed bonus (${name})`);
+  const order = await G(() => { const y = (s) => document.querySelector(s).getBoundingClientRect().top; return [y('.hero-tiles'), y('.chal'), y('.gtiles')]; });
+  ok(order[0] < order[1] && order[1] < order[2], `${tag}: the card sits at the top of the games, under the heroes (${order})`);
+  ok(!/streak|in a row|tomorrow|come back/i.test(card), `${tag}: the card asks nobody back (${card.replace(/\s+/g, ' ')})`);
+  await p.locator('.chal').scrollIntoViewIfNeeded(); await shot('card');
+  if (tag === 'chal-phone') { await ctx.close(); continue; }
+  // play it through: right answers by keyboard, one in three wrong — a finish at any score pays
+  const s0 = await st(G);
+  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('.run, #ans, .choice-row');
+  const run = await G(() => ({ kind: window.__bzm.R.run.kind, title: window.__bzm.R.run.title, n: window.__bzm.R.run.items.length }));
+  ok(run.kind === 'challenge' && run.title === name && run.n === 10, `the card starts the named set of ten (${JSON.stringify(run)})`);
+  let rights = 0;
+  for (let i = 0; i < run.n; i++) {
+    const q = await G(() => { const r = window.__bzm.R.run; return { i: r.i, ans: String(r.items[r.i].ans), ch: r.items[r.i].choices || null }; });
+    if (i % 3 === 1) { await G((c) => window.__bzm.fire('choose', c), q.ch ? q.ch.find((c) => c !== q.ans) : '99999'); await p.waitForTimeout(80); await G(() => window.__bzm.fire('nextQ')); }
+    else { rights++; if (q.ch) await G((c) => window.__bzm.fire('choose', c), q.ans); else for (const c of q.ans) await p.keyboard.press(c); await p.waitForFunction((n) => !window.__bzm.R.run || window.__bzm.R.run.i > n || window.__bzm.R.run.over, q.i, { timeout: 4000 }); }
+    await p.waitForTimeout(60);
+  }
+  await p.waitForFunction(() => window.__bzm.R.run && window.__bzm.R.run.over, null, { timeout: 4000 });
+  const s1 = await st(G), end = await p.locator('main').innerText();
+  ok(s1.coins - s0.coins === rights + 5, `finished at ${rights} of 10: a coin a right answer and the 5-coin bonus (got ${s1.coins - s0.coins})`);
+  ok(/5 coins for finishing today’s challenge/.test(end) && !/tomorrow|streak|come back/i.test(end), `the finish says what it paid, and asks nobody back (${end.replace(/\s+/g, ' ').slice(0, 300)})`);
+  ok(s1.xp - s0.xp === rights * 2, `xp moves only for right answers, as any practice (${s1.xp - s0.xp})`);
+  await shot('finished');
+  await G(() => window.__bzm.fire('wallet')); await p.waitForSelector('.sheet.wallet');
+  const wal = await p.locator('.sheet.wallet').innerText();
+  ok(wal.includes('finished today’s challenge') && wal.includes(name), `the wallet history says it in words (${wal.split('\n').find((l) => /challenge/.test(l))})`);
+  await shot('wallet');
+  await G(() => window.__bzm.fire('wallet'));
+  // again the same day: practice, no second bonus
+  await nav(p, G, 'play', '.chal.done');
+  ok(/Finished today · \d+ of 10 right · bonus paid/.test(await p.locator('.chal').innerText()), 'the card says it is done today, with its score');
+  await p.locator('.chal').scrollIntoViewIfNeeded(); await shot('card-done');
+  const s2 = await st(G);
+  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('#ans, .choice-row');
+  for (let i = 0; i < 10; i++) { await G(() => window.__bzm.fire('choose', 'nope')); await p.waitForTimeout(40); await G(() => window.__bzm.fire('nextQ')); await p.waitForTimeout(40); }
+  await p.waitForFunction(() => window.__bzm.R.run && window.__bzm.R.run.over, null, { timeout: 4000 });
+  const s3 = await st(G);
+  ok(s3.coins === s2.coins && /already in your wallet/.test(await p.locator('main').innerText()), `a second finish the same day pays nothing more (${s3.coins - s2.coins})`);
+  await ctx.close();
+}
+
+/* ------------------------------------------------ paper skins (audit v4 K6): bought, worn, persisted, taken off; the paper unchanged */
+const dismiss = async (p) => { for (let i = 0; i < 6 && await p.locator('.cel .btn').count(); i++) { await p.click('.cel .btn'); await p.waitForTimeout(200); } };
+const sitPaper = async (p, G, wrongEvery = 3) => {
+  await nav(p, G, 'hall', '.paper-grid'); await p.click('[data-act=pband][data-arg=g34]');
+  await p.click('[data-act=paperStart][data-arg="g34|2"]'); await p.waitForSelector('.pq-choices');
+  const t0 = Date.now();
+  const info = await G(() => { const P = window.__bzm.R.paper; return { mins: P.p.mins, left: P.endsAt - Date.now(), items: P.p.items.map((q) => [q.text, q.ans, q.choices.join('|'), q.pts]) }; });
+  const look = await G(() => { const g = (s, k) => getComputedStyle(document.querySelector(s))[k]; return { desk: g('.paper', 'backgroundColor'), band: g('.paper-bar', 'backgroundColor'), q: g('.paper-q', 'backgroundColor'), tex: g('.paper-q', 'backgroundImage'), time: g('#ptime', 'boxShadow'), ink: g('.pq-text', 'color') }; });
+  return { info, look, t0, finish: async () => {
+    await G((w) => { const P = window.__bzm.R.paper; P.p.items.forEach((q, j) => { window.__bzm.fire('paperGo', String(j)); window.__bzm.fire('paperPick', j % w ? q.ans : q.choices.find((c) => c !== q.ans)); }); }, wrongEvery);
+    await p.waitForTimeout(450); await G(() => { window.__bzm.fire('paperFinish'); window.__bzm.fire('paperFinish'); }); await p.waitForSelector('.pe-score');
+    const sc = await G(() => window.__bzm.R.paper.sc);
+    await dismiss(p);   // a medal's ceremony (a first paper) is not what is under test here
+    return sc;
+  } };
+};
+{
+  const { p, ctx, G, shot } = await open({ width: 1280, height: 800 }, 'paper');
+  // the plain paper first: what it looks like, and what the same answers score
+  const plain = await sitPaper(p, G); await shot('paper-plain'); const scPlain = await plain.finish();
+  await nav(p, G, 'shop', '.shop-tabs'); await p.click('[data-act=shopTab][data-arg=extras]'); await p.waitForSelector('.papers-sk');
+  ok(await p.locator('[data-paper-card]').count() === 5 && await p.locator('.sk-item').count() === 6, 'the Extras tab has a Paper skins section of five, beside the six road skins');
+  const printed = await p.$$eval('[data-paper-card] [data-act=buyPaper]', (bs) => bs.map((b) => +b.textContent.trim()));
+  ok(printed.length === 5 && printed.every((n) => Number.isInteger(n) && n >= 25 && n <= 60), `every paper skin has its price printed on it (${printed})`);
+  await p.locator('.papers-sk').scrollIntoViewIfNeeded(); await shot('shop-papers');
+  const s0 = await st(G);
+  await p.click('[data-act=buyPaper][data-arg=exam]'); await p.waitForTimeout(200);
+  const s1 = await st(G);
+  ok(s0.coins - s1.coins === 25 && s1.shop.paperSkins.includes('exam') && s1.shop.worn.paper === 'exam' && s1.xp === s0.xp, `buying Exam Hall spends exactly 25, wears it, and moves no xp (spent ${s0.coins - s1.coins})`);
+  ok(await G(() => document.documentElement.getAttribute('data-paper')) === 'exam', 'the root wears the paper skin');
+  const exam = await sitPaper(p, G);
+  ok(exam.look.desk !== plain.look.desk && exam.look.band !== plain.look.band && exam.look.q !== plain.look.q && /gradient/.test(exam.look.tex) && exam.look.time !== plain.look.time,
+    `worn: the paper, its header band, its texture and the clock all change (${JSON.stringify(plain.look)} → ${JSON.stringify(exam.look)})`);
+  ok(JSON.stringify(exam.info.items) === JSON.stringify(plain.info.items) && exam.info.mins === plain.info.mins && Math.abs(exam.info.left - plain.info.left) < 5000,
+    `the same paper: the same questions, choices, marks and time (${exam.info.mins} min)`);
+  await shot('paper-exam');
+  const scExam = await exam.finish();
+  ok(JSON.stringify(scExam) === JSON.stringify(scPlain), `the same answers score exactly the same on the skin (${scPlain.points} = ${scExam.points})`);
+  // persists across a reload, still worn
+  await G(() => location.reload()); await p.waitForSelector('#app main'); await p.waitForTimeout(300); await dismiss(p);
+  const s2 = await st(G);
+  ok(s2.shop.paperSkins.includes('exam') && s2.shop.worn.paper === 'exam' && await G(() => document.documentElement.getAttribute('data-paper')) === 'exam', 'after a reload the skin is still owned and still worn');
+  // take it off: the plain paper is back, exactly
+  await nav(p, G, 'shop', '.shop-tabs'); await p.click('[data-act=shopTab][data-arg=extras]'); await p.click('[data-paper-card=exam] [data-act=wearPaper]'); await p.waitForTimeout(150);
+  ok((await st(G)).shop.worn.paper === null && await G(() => document.documentElement.getAttribute('data-paper')) === null, 'taking it off clears it');
+  const off = await sitPaper(p, G);
+  ok(JSON.stringify(off.look) === JSON.stringify(plain.look), `and the paper looks exactly as it did before (${JSON.stringify(off.look)})`);
+  const scOff = await off.finish();
+  ok(JSON.stringify(scOff) === JSON.stringify(scPlain), 'and scores the same');
+  await ctx.close();
+}
+/* every word on every paper skin — and on the Shop's previews — is AA, in light and dark */
+const worstIn = ([sel, hidden]) => {
+  const rgba = (c) => { const m = c.match(/[\d.]+(e-?\d+)?/g).map(Number), k = /^color\(srgb/.test(c) ? 255 : 1; if (/^color\(/.test(c) && !/^color\(srgb /.test(c)) throw new Error('unparsed colour ' + c); return [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1]; };
+  const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const L = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const over = (top, bot) => [0, 1, 2].map((i) => top[i] * top[3] + bot[i] * (1 - top[3])).concat(1);
+  const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const out = [];
+  for (const box of document.querySelectorAll(sel)) for (const el of box.querySelectorAll('*')) {
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (!own || !el.offsetParent || el.closest('svg') || (!hidden && el.closest('[aria-hidden=true]'))) continue;
+    const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || +cs.opacity === 0 || (el.closest('button') && el.closest('button').disabled)) continue;
+    const layers = []; for (let a = el; a; a = a.parentElement) { const b = rgba(getComputedStyle(a).backgroundColor); if (b[3] > 0) layers.unshift(b); if (b[3] >= 1) break; }
+    let min = 99;
+    for (const px of [[0, 0, 0, 1], [255, 255, 255, 1]]) { let bg = px; for (const l of layers) bg = over(l, bg); min = Math.min(min, cr(over(rgba(cs.color), bg), bg)); }
+    const size = parseFloat(cs.fontSize), big = size >= 24 || (size >= 18.66 && +cs.fontWeight >= 700);
+    out.push({ t: el.textContent.trim().slice(0, 24), min: +min.toFixed(2), need: big ? 3 : 4.5 });
+  }
+  return out;
+};
+for (const dark of [false, true]) {
+  const tag = dark ? 'dark' : 'light';
+  const { p, ctx, G, shot } = await open({ width: 1280, height: 800 }, 'pp-' + tag, { dark });
+  if (dark) await G(() => { document.documentElement.setAttribute('data-mode', 'dark'); });
+  const ids = await G(() => { const k = window.__bzm.R.h.kids[0]; k.shop.paperSkins = ['exam', 'chalk', 'blueprint', 'night', 'graph']; return k.shop.paperSkins; });
+  await nav(p, G, 'shop', '.shop-tabs'); await p.click('[data-act=shopTab][data-arg=extras]'); await p.waitForSelector('.papers-sk');
+  const prev = (await G(worstIn, ['.pp-prev', true])), prevBad = prev.filter((x) => x.min < x.need);
+  ok(prev.length >= 20 && !prevBad.length, `${tag}: every word on the Shop's paper previews is AA (${prev.length} checked; failing ${JSON.stringify(prevBad.slice(0, 4))})`);
+  await p.locator('.papers-sk').scrollIntoViewIfNeeded(); await shot('shop-papers');
+  for (const id of [null, ...ids]) {
+    await G((x) => { const k = window.__bzm.R.h.kids[0]; k.shop.worn.paper = x; window.__bzm.render(); }, id);
+    await nav(p, G, 'hall', '.paper-grid'); await p.click('[data-act=pband][data-arg=g56]');
+    await p.click('[data-act=paperStart][data-arg="g56|3"]'); await p.waitForSelector('.pq-choices');
+    await G(() => { const P = window.__bzm.R.paper; window.__bzm.fire('paperPick', P.p.items[0].choices[1]); window.__bzm.fire('paperGo', '0'); });
+    await p.waitForTimeout(450);
+    const rows = await G(worstIn, ['.paper', false]), bad = rows.filter((x) => x.min < x.need);
+    ok(rows.length >= 12 && !bad.length, `${id || 'plain'} ${tag}: every word on the paper is AA over any pixel (${rows.length} checked; failing ${JSON.stringify(bad.slice(0, 4))})`);
+    if (id && (await G(() => document.documentElement.getAttribute('data-paper'))) !== id) ok(false, `${id} ${tag}: worn on the root`);
+    if (['chalk', 'night', 'exam', 'graph'].includes(id)) await shot('paper-' + id);
+    await G(() => window.__bzm.fire('paperQuit')); await p.waitForTimeout(100);
+    await G(() => { const k = window.__bzm.R.h.kids[0]; k.paperDraft = null; });
+  }
+  await ctx.close();
+}
+
 /* ------------------------------------------------ the plates: painted, and the words on them AA */
 const worst = () => {
   // computed colours come back as rgb()/rgba() (0–255) or, from color-mix, as color(srgb r g b / a) (0–1)
@@ -219,5 +363,5 @@ for (const dark of [false, true]) {
 
 ok(!errors.length, `no page errors (${errors.slice(0, 3).join(' | ')})`);
 await close();
-console.log(`${fails() ? 'FAIL' : 'ok'} extras-ui — skins dress every road, modes locked then played by keys and taps at the standard wage, Back closes a game, plates painted and AA`);
+console.log(`${fails() ? 'FAIL' : 'ok'} extras-ui — skins dress every road, today's challenge pays its bonus once, paper skins dress the paper and change no mark, modes locked then played by keys and taps at the standard wage, Back closes a game, plates painted and AA`);
 if (fails()) process.exit(1);

@@ -597,7 +597,7 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) 
     pop(g, f.body.querySelector('.mt'), x, y);
     if (daily) {
       onEnd(true);
-      setTimeout(() => current === g && resultCard(g, { title: "Today's puzzle — solved", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made }, lines: ['Come back tomorrow for the next one. Everybody in your house gets the same puzzle.'], stars: 3, again: () => g.quit(), done: () => g.quit() }), 1100);
+      setTimeout(() => current === g && resultCard(g, { title: "Today's puzzle — solved", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made }, lines: ['Tomorrow brings a new one. Everybody in your house gets the same puzzle.'], stars: 3, again: () => g.quit(), done: () => g.quit() }), 1100);
       return;
     }
     setTimeout(() => current === g && (round < ROUNDS ? next() : finish()), 1100);

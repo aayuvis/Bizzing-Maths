@@ -26,6 +26,7 @@ import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
 import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
 import * as MD from './mistakes.js';
 import { HEROES, GAMES } from './arcade.js';
+import { challengeOf, doneToday, BONUS_EVENT } from './challenge.js';
 import { ownsAvatar, byAvatar } from './avatars.js';
 import { TIERS } from './integration/bizzing-avatars.js';
 
@@ -578,11 +579,26 @@ export function viewArcade() {
     <div class="hero-tiles">
       ${HEROES.map((x) => `<button class="card hero-t ${x.id}-t" data-act="${x.act}"${x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : x.arg ? ` data-arg="${x.arg}"` : ''}><span class="hero-ic" aria-hidden="true">${icon(HERO_ICON[x.id] || 'sparkle', 52)}</span><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
     </div>
+    ${challengeCard(k)}
     <div class="gtiles">
       ${GAMES.map((x) => tile(x.id, esc(x.title), esc(x.blurb), x.art, esc(x.keys))).join('')}
     </div>
     ${arcadeModes(k)}
   </section>`;
+}
+
+/* Today's challenge (challenge.js): a card at the top of the games, never a Home row (rule 17).
+   It names the set and its fixed bonus; it never counts days and never asks anyone back. */
+function challengeCard(k) {
+  const ch = challengeOf(k), done = doneToday(k, ch.day), coins = Family.EARN[BONUS_EVENT];
+  const from = ch.pool === 'start' ? 'the first stops on the road' : 'stops you have opened';
+  return `<div class="card chal${done ? ' done' : ''}" data-challenge="${esc(ch.day)}">
+    <span class="chal-ic" aria-hidden="true">${icon('flag', 34)}</span>
+    <span class="chal-t"><span class="kicker">Today’s challenge</span><b>${esc(ch.name)}</b>
+      <span class="muted">${ch.items.length} questions from ${from}. Everyone aged ${esc(k.band.replace('-', '–'))} plays ${esc(ch.name)} today.</span>
+      <span class="chal-pay">${done ? `${icon('check', 16)} Finished today · ${done.right} of ${done.n} right${done.paid ? ' · bonus paid' : ''}` : `${icon('coin', 16)} Finish it for ${coins} coins, once today — any score counts.`}</span></span>
+    <button class="btn${done ? '' : ' primary'}" data-act="challenge">${done ? 'Play it again' : 'Start'}</button>
+  </div>`;
 }
 
 /* ------------------------------------------------------------- contest */

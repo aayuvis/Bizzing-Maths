@@ -47,9 +47,9 @@
 .ex-h{display:flex;align-items:center;gap:8px;font-size:18px;margin:22px 0 4px}
 .shop-body .ex-h:first-child{margin-top:4px}
 .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0}
-.sk-item,.md-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:14px;border:1px solid var(--line-soft,var(--line));text-align:center;min-width:0}
-.sk-item.on{border-color:var(--action);box-shadow:0 0 0 2px var(--action) inset}
-.sk-item b,.md-item b{font-size:14px}
+.sk-item,.md-item,.pp-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:14px;border:1px solid var(--line-soft,var(--line));text-align:center;min-width:0}
+.sk-item.on,.pp-item.on{border-color:var(--action);box-shadow:0 0 0 2px var(--action) inset}
+.sk-item b,.md-item b,.pp-item b{font-size:14px}
 .sk-prev{position:relative;display:block;width:100%;height:76px;border-radius:10px;overflow:hidden;background:linear-gradient(170deg,#bfe3b4,#7fb77a 70%,#5e9a5c)}
 .sk-prev .road{position:absolute;inset:0;width:100%;height:100%}
 .sk-prev .bpin{width:26px;height:26px;border-width:2px;font-size:11px;cursor:default;display:grid;place-items:center}
@@ -66,3 +66,74 @@
 .am-row > b{min-width:130px}
 .am-shut{opacity:.85}
 @media (max-width:560px){.am-row > b{min-width:100%}}
+
+/* ---- paper skins (extras.js PAPERS): the Contest Hall's paper while it is sat.
+   Worn on the root (:root[data-paper]) and scoped to .paper, so nothing else in the app
+   changes. A skin sets the paper's own palette — the same tokens every part of the paper
+   already reads — plus its desk, header band, texture and clock. Light-paper skins carry a
+   dark-mode version; the dark-paper skins are dark in both. test/extras-ui.mjs measures every
+   word on the paper for AA in light and dark. The Shop's preview (.pp-prev[data-pp]) is drawn
+   by these same rules. */
+:root[data-paper=exam] .paper,.pp-prev[data-pp=exam]{
+  --pp-desk:#E9E2D0; --surface:#FFFDF6; --surface2:#F3EEDF; --ink:#1F2433; --muted:#545A69; --line:#CFC5AA;
+  --action:#1F4FA8; --action-ink:#FFFFFF; --action-deep:#173C82; --pp-band:#233A6B; --pp-band-ink:#FFFFFF;
+  --pp-tex:linear-gradient(90deg,transparent 8px,rgb(196 69 60 / .45) 8px,rgb(196 69 60 / .45) 10px,transparent 10px),repeating-linear-gradient(transparent 0 29px,rgb(31 79 168 / .12) 29px 30px);
+  --pp-time-bg:#FFFFFF; --pp-time-ink:#233A6B; --pp-time-ring:0 0 0 2px #233A6B; --pp-time-r:4px;
+}
+:root[data-mode=dark][data-paper=exam] .paper,:root[data-mode=dark] .pp-prev[data-pp=exam]{
+  --pp-desk:#15130F; --surface:#26221A; --surface2:#322C22; --ink:#F1EAD8; --muted:#C2B8A0; --line:#4E4636;
+  --action:#A9C0FA; --action-ink:#10183A; --action-deep:#C9D7FB; --pp-band:#14213F; --pp-band-ink:#F1EAD8;
+  --pp-tex:linear-gradient(90deg,transparent 8px,rgb(236 139 129 / .35) 8px,rgb(236 139 129 / .35) 10px,transparent 10px),repeating-linear-gradient(transparent 0 29px,rgb(169 192 250 / .08) 29px 30px);
+  --pp-time-bg:#14213F; --pp-time-ink:#F1EAD8; --pp-time-ring:0 0 0 2px #A9C0FA;
+}
+:root[data-paper=chalk] .paper,.pp-prev[data-pp=chalk]{
+  --pp-desk:#4A3321; --surface:#22372E; --surface2:#2B4439; --ink:#F4F1E6; --muted:#C6D0C2; --line:#58715F;
+  --action:#F5D76E; --action-ink:#1E2E27; --action-deep:#F8E39B; --pp-band:#5E4128; --pp-band-ink:#FFF6E3;
+  --pp-tex:radial-gradient(ellipse at 30% 20%,rgb(255 255 255 / .05),transparent 60%),radial-gradient(ellipse at 80% 90%,rgb(255 255 255 / .04),transparent 50%);
+  --pp-time-bg:#22372E; --pp-time-ink:#F5D76E; --pp-time-ring:0 0 0 2px #F4F1E6; --pp-time-r:999px; --pp-time-dash:dashed;
+}
+:root[data-paper=blueprint] .paper,.pp-prev[data-pp=blueprint]{
+  --pp-desk:#0C2449; --surface:#134A8E; --surface2:#1A579E; --ink:#FFFFFF; --muted:#D4E4FA; --line:#5A88C6;
+  --action:#FFD54A; --action-ink:#10233F; --action-deep:#FFE288; --pp-band:#0A1F40; --pp-band-ink:#FFFFFF;
+  --pp-tex:repeating-linear-gradient(0deg,transparent 0 19px,rgb(255 255 255 / .12) 19px 20px),repeating-linear-gradient(90deg,transparent 0 19px,rgb(255 255 255 / .12) 19px 20px);
+  --pp-time-bg:#0A1F40; --pp-time-ink:#FFFFFF; --pp-time-ring:0 0 0 2px #FFFFFF,0 0 0 5px #0A1F40,0 0 0 6px #FFFFFF; --pp-time-r:999px;
+}
+:root[data-paper=night] .paper,.pp-prev[data-pp=night]{
+  --pp-desk:#0A0D18; --surface:#161B2E; --surface2:#1F2640; --ink:#EDEFF8; --muted:#AEB5D0; --line:#323B5E;
+  --action:#FFB547; --action-ink:#1A1205; --action-deep:#FFC874; --pp-band:#251D38; --pp-band-ink:#FFE3B0;
+  --pp-tex:radial-gradient(circle at 12% 0%,rgb(255 181 71 / .14),transparent 55%);
+  --pp-time-bg:#1F2640; --pp-time-ink:#FFB547; --pp-time-ring:0 0 0 2px #FFB547,0 0 14px 2px rgb(255 181 71 / .45); --pp-time-r:999px;
+}
+:root[data-paper=graph] .paper,.pp-prev[data-pp=graph]{
+  --pp-desk:#D6E3DE; --surface:#FBFEFC; --surface2:#E8F2EE; --ink:#15322A; --muted:#48625B; --line:#B6CFC5;
+  --action:#0E6F53; --action-ink:#FFFFFF; --action-deep:#0A5641; --pp-band:#0E6F53; --pp-band-ink:#FFFFFF;
+  --pp-tex:repeating-linear-gradient(0deg,transparent 0 15px,rgb(14 111 83 / .12) 15px 16px),repeating-linear-gradient(90deg,transparent 0 15px,rgb(14 111 83 / .12) 15px 16px);
+  --pp-time-bg:#FFFFFF; --pp-time-ink:#0E6F53; --pp-time-ring:0 0 0 2px #0E6F53; --pp-time-r:8px;
+}
+:root[data-mode=dark][data-paper=graph] .paper,:root[data-mode=dark] .pp-prev[data-pp=graph]{
+  --pp-desk:#08130F; --surface:#12241F; --surface2:#183029; --ink:#E3F2EC; --muted:#A6C2B8; --line:#2F4D44;
+  --action:#5FD3A8; --action-ink:#062118; --action-deep:#8BE0C0; --pp-band:#0A3A2C; --pp-band-ink:#E3F2EC;
+  --pp-tex:repeating-linear-gradient(0deg,transparent 0 15px,rgb(95 211 168 / .09) 15px 16px),repeating-linear-gradient(90deg,transparent 0 15px,rgb(95 211 168 / .09) 15px 16px);
+  --pp-time-bg:#0A3A2C; --pp-time-ink:#E3F2EC; --pp-time-ring:0 0 0 2px #5FD3A8;
+}
+/* what every skin does with its palette */
+:root[data-paper] .paper{background:var(--pp-desk);color:var(--ink);padding:14px;border-radius:20px}
+:root[data-paper] .paper-bar{background:var(--pp-band);color:var(--pp-band-ink);padding:8px 12px;border-radius:14px}
+:root[data-paper] .paper-bar .play-x{color:var(--ink);background:var(--surface)}
+:root[data-paper] .paper .btn,:root[data-paper] .paper .chip{color:var(--ink)}
+:root[data-paper] .paper .btn.primary{color:var(--action-ink)}
+:root[data-paper] .paper-q{background-color:var(--surface);background-image:var(--pp-tex)}
+:root[data-paper] .paper-time{background:var(--pp-time-bg);color:var(--pp-time-ink);box-shadow:var(--pp-time-ring);border-radius:var(--pp-time-r,10px);outline:2px var(--pp-time-dash,none) var(--pp-time-ink);outline-offset:3px}
+:root[data-paper] .paper-time.low{background:#C4453C;color:#fff}
+/* the figures on a dark paper take the dark fills, whatever the app's mode */
+:root[data-paper=chalk] .paper .dg-fill1,:root[data-paper=blueprint] .paper .dg-fill1,:root[data-paper=night] .paper .dg-fill1{fill:#2B3F7A}
+:root[data-paper=chalk] .paper .dg-fill2,:root[data-paper=blueprint] .paper .dg-fill2,:root[data-paper=night] .paper .dg-fill2{fill:#5A4413}
+:root[data-paper=chalk] .paper .dg-fill3,:root[data-paper=blueprint] .paper .dg-fill3,:root[data-paper=night] .paper .dg-fill3{fill:#1F4A33}
+
+/* the Shop's little paper */
+.pp-prev{display:flex;flex-direction:column;gap:6px;width:100%;height:96px;padding:7px;border-radius:10px;background:var(--pp-desk);color:var(--ink);text-align:left;overflow:hidden}
+.pp-bar{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:3px 8px;border-radius:7px;background:var(--pp-band);color:var(--pp-band-ink);font-size:12px}
+.pp-time{font:800 11px var(--mono);padding:1px 6px;background:var(--pp-time-bg);color:var(--pp-time-ink);box-shadow:var(--pp-time-ring);border-radius:var(--pp-time-r,8px)}
+.pp-q{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4px 8px 4px 16px;border-radius:7px;background-color:var(--surface);background-image:var(--pp-tex)}
+.pp-k{font-size:10px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.pp-t{font:700 15px var(--mono);color:var(--ink)}

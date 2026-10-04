@@ -5,7 +5,7 @@ import { R } from './runtime.js';
 import { kid } from './model.js';
 import { Family, Store } from './store.js';
 import { on, sfx, toast } from './ui.js';
-import { buySkin, wearSkin, buyMode, modeById, skinOf } from './extras.js';
+import { buySkin, wearSkin, buyPaper, wearPaper, buyMode, modeById, skinOf, paperOf } from './extras.js';
 
 const save = () => Store.saveHousehold(R.h);
 const pay = (k) => (price, why) => Family.spend(k.name, price, why);
@@ -17,6 +17,13 @@ on('buySkin', (id) => {
   R.render();
 });
 on('wearSkin', (id) => { const k = kid(R.h); if (!k) return; if (wearSkin(k, id || null)) { save(); R.render(); } });
+on('buyPaper', (id) => {
+  const k = kid(R.h); if (!k) return;
+  if (buyPaper(k, id, pay(k))) { sfx.coin(); toast('Yours — the next paper you sit wears it.'); save(); }
+  else toast('Not enough coins yet — right answers earn them.');
+  R.render();
+});
+on('wearPaper', (id) => { const k = kid(R.h); if (!k) return; if (wearPaper(k, id || null)) { save(); R.render(); } });
 on('buyMode', (id) => {
   const k = kid(R.h); if (!k) return;
   const m = modeById[id];
@@ -29,6 +36,8 @@ on('buyMode', (id) => {
    .board's road and pins from it (board.js paintedRoad, and views2's world and level
    boards), so no board has to know about skins. */
 export function applySkin(k) {
-  const s = skinOf(k);
-  if (s) document.documentElement.setAttribute('data-skin', s); else document.documentElement.removeAttribute('data-skin');
+  const s = skinOf(k), p = paperOf(k), el = document.documentElement;
+  if (s) el.setAttribute('data-skin', s); else el.removeAttribute('data-skin');
+  // and the Contest Hall paper they wear: styles/extras.css dresses .paper from it, nothing else reads it
+  if (p) el.setAttribute('data-paper', p); else el.removeAttribute('data-paper');
 }

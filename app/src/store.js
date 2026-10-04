@@ -21,7 +21,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 11;
+export const SCHEMA = 12;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -104,6 +104,17 @@ const STEPS = {
       const shop = k.shop || (k.shop = { owned: [], worn: {} });
       shop.worn = shop.worn || {}; shop.skins = shop.skins || []; shop.modes = shop.modes || [];
       if (shop.worn.skin === undefined) shop.worn.skin = null;
+    }
+    return h;
+  },
+  // v12: paper skins for the Contest Hall (extras.js PAPERS), owned per child, and the one being
+  // worn. Everyone starts with none and the plain paper.
+  11: (h) => {
+    h.v = 12;
+    for (const k of h.kids) {
+      const shop = k.shop || (k.shop = { owned: [], worn: {} });
+      shop.worn = shop.worn || {}; shop.paperSkins = shop.paperSkins || [];
+      if (shop.worn.paper === undefined) shop.worn.paper = null;
     }
     return h;
   },
