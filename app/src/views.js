@@ -5,6 +5,8 @@ import { R } from './runtime.js';
 import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
+import { LEVELS } from './levels.js';
+import { tasterStop } from './demo.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
@@ -156,21 +158,7 @@ export const sayBtn = (line, label = 'Read it aloud') =>
 export function viewWelcome() {
   const d = R.ui.draft || (R.ui.draft = { name: '', band: '', avatar: STARTER_AVATARS[0], step: 0 });
   const first = !R.h.kids.length, step = d.step || 0;
-  if (first && !d.go) return `<section class="welcome ob-land">
-      <div class="ob-mark">${octo('wave', 140, '', 'Octo the octopus')}</div>
-      <p class="kicker">Bizzing Maths</p>
-      <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
-      <p class="lead">For ages 6 to 14. Ten levels, each one road through painted lands; every trick shown with the reason it works.</p>
-      ${btn('Start →', 'obStart', '', 'primary big')}
-      <a class="ob-try" href="./?demo=try">Try a trick first — nothing is saved</a>
-      <div class="ob-stats">${[[TRICKS.length, 'lessons, each with a story'], [WORLDS.length, 'painted places'], [10, 'levels, maths age 6 to 15+'], [9, 'tools in the Library']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
-      <ul class="ob-promise">
-        <li><b>Nothing leaves this device.</b> A first name and an age band — no email, no photo, no tracking.</li>
-        <li><b>No ads, no streaks, no loot.</b> A day off costs nothing.</li>
-        <li><b>Every trick has its reason.</b> A picture, the algebra, and the child doing the working.</li>
-      </ul>
-      <p class="ob-grown">For grown-ups: a report card of what your child has learned — not minutes played — sits behind a PIN on the Grown-ups page.</p>
-    </section>`;
+  if (first && !d.go) return landing();
   const dots = `<div class="ob-dots" aria-label="Step ${step + 1} of ${OB_STEPS.length}">${OB_STEPS.map((_, i) => `<i class="${i < step ? 'done' : i === step ? 'on' : ''}"></i>`).join('')}</div>`;
   const back = step > 0 ? btn('← Back', 'obBack', '', 'small') : !first ? btn('Cancel', 'nav', 'home', 'small') : btn('← Back', 'obLand', '', 'small');
   let body;
@@ -190,6 +178,43 @@ export function viewWelcome() {
   return `<section class="welcome ob">
     <div class="ob-top">${back}${dots}<span></span></div>
     ${body}
+  </section>`;
+}
+
+/* The first-visit landing, in Bizzing Bee's shape (owner, 4 Oct 2026: "landing page can have
+   screenshots... look at bizzingbee"). The hero renders at once — the promise, the age line,
+   Start and the two ways to look first — beside a trick worked by the app's own work(), the
+   same stop "Try a trick first" opens. Everything below it is landing.js, a lazy chunk, so
+   Home never downloads it. The numbers are counted from the code; nothing here is typed. */
+let LAND = null, landing0 = null;
+const AGE_MIN = parseInt(BANDS[0].id, 10), AGE_MAX = parseInt(BANDS[BANDS.length - 1].id.split('-').pop(), 10);
+export const PRIVACY_LINE = 'There are no accounts, no analytics, no advertising, no trackers and no third-party scripts.';
+function landTry() {
+  const t = byId[tasterStop()], q = example(t), steps = t.work(q);
+  return `<aside class="land-try" aria-label="A trick, worked">
+    <div class="land-try-top">${octo('wave', 56, '', '')}<span><span class="kicker">A trick, worked</span><b>${esc(t.title)}</b></span></div>
+    <p class="land-try-q" data-code="try">${esc(q.text)}</p>
+    <ol class="land-try-steps" data-code="try">${steps.map((s) => `<li><span>${esc(s.t)}</span><b>${esc(String(s.v))}</b></li>`).join('')}</ol>
+    <p class="land-try-why" data-code="try"><b>Why it works:</b> ${esc(t.why[0])}</p>
+    <a class="ob-try btn" href="./?demo=try">Try a trick first — nothing is saved</a>
+  </aside>`;
+}
+function landing() {
+  if (!LAND && !landing0) landing0 = import('./landing.js').then((m) => { LAND = m; if (!kid(R.h) && R.render) R.render(); });
+  const faces = AVATAR_PACKS.slice(0, 8).map((p) => p.avatars[0]).map((a) => `<span class="land-face sm" title="${esc(AVATAR_NAME[a] || a)}">${av(a, 40, '')}</span>`).join('');
+  return `<section class="ob-land land">
+    <div class="land-hero">
+      <div class="land-hero-t">
+        <p class="land-kick">Fact fluency · Mental maths · Vedic and Chinese methods</p>
+        <h1 class="display">Fast and fearless with numbers — <em>and knowing why the trick works.</em></h1>
+        <p class="lead land-age">For ages <b data-n="ageMin">${AGE_MIN}</b> to <b data-n="ageMax">${AGE_MAX}</b>. <b data-n="levels">${LEVELS.length}</b> levels, each one road through painted lands; every trick shown with the reason it works.</p>
+        <div class="land-ctas">${btn('Start →', 'obStart', '', 'primary big')}<a class="btn big land-sample" href="./?demo">See a sample child</a></div>
+        <p class="ob-grown">For grown-ups: a report card of what your child has learned — not minutes played — sits behind a PIN on the Grown-ups page.</p>
+        <div class="land-hero-faces">${faces}</div>
+      </div>
+      ${landTry()}
+    </div>
+    ${LAND ? LAND.landingRest({ privacy: PRIVACY_LINE, face: (id, name) => av(id, 64, name) }) : ''}
   </section>`;
 }
 
@@ -858,7 +883,7 @@ export function viewPrivacy() {
     ${pageHead('Privacy', 'The short version: nothing leaves this device.', back('nav', 'Back', 'home'))}
     <div class="card prose">
       <p>Bizzing Maths keeps a child's first name, age band, chosen avatar and progress in this browser's local storage, on this device. That is all it stores.</p>
-      <p>There are no accounts, no analytics, no advertising, no trackers and no third-party scripts. The app makes no network requests about your child. The pages themselves are served by GitHub Pages, which, like any web host, sees the request for the page.</p>
+      <p>${PRIVACY_LINE} The app makes no network requests about your child. The pages themselves are served by GitHub Pages, which, like any web host, sees the request for the page.</p>
       <p>We never ask for a surname, a birthday, an email, a photo or a location. </p>
       <p>Read-aloud uses your device's own voice, on the device. Nothing is downloaded for it and nothing is sent.</p>
       <p>A grown-up can save a backup file, restore it, or delete a child's record at any time from the Grown-ups page.</p>

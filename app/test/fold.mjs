@@ -60,39 +60,44 @@ const SCREENS = [
 // the core must START in the top 35% of what the window shows under the top bar,
 // and at least 45% of the window (or the whole core, if smaller) must be core
 const START = 0.35, SHOW = 0.45;
+const LANDING = ['landing · hero', () => {}, '.land-hero', '.land-hero [data-act=obStart]'];
+async function check(page, tag, [name, go, sel, see, rule = {}]) {
+  await page.evaluate(`(${go.toString()})(window.__bzm)`); await page.waitForTimeout(250);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const m = await page.evaluate((sel) => {
+    const el = document.querySelector(sel); if (!el) return null;
+    // the chrome is the top bar AND, on a wide window, the family's tab row directly under it (standard v2 §4)
+    // the chrome is Bee's sticky header — the family bar AND its tab row (standard v2 §3–§4)
+    const top = document.querySelector('[data-bz=header]'); const bar = top ? top.getBoundingClientRect().bottom : 0;
+    const nav = document.querySelector('[data-bz=tabbar]'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight;
+    const r = el.getBoundingClientRect(), view = bottom - bar;
+    return { start: (r.top - bar) / view, shown: Math.max(0, Math.min(r.bottom, bottom) - Math.max(r.top, bar)) / Math.min(view, r.height), view };
+  }, sel);
+  // and anything named in `see` must be wholly in view, and the page must not scroll sideways
+  const vis = see ? await page.evaluate((see) => { const el = document.querySelector(see); if (!el) return false; const r = el.getBoundingClientRect(), nav = document.querySelector('[data-bz=tabbar]'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight; return r.top >= 0 && r.bottom <= bottom && r.left >= 0 && r.right <= innerWidth; }, see) : true;
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
+  const ok = (tag === 'laptop' && rule.laptop === 'bee' && !wide) || (m && m.start <= (rule.start || START) && m.shown >= SHOW && vis && !wide);
+  if (!ok) fails++;
+  rows.push(`${ok ? 'ok' : '✗ '} ${tag.padEnd(7)} ${name.padEnd(18)} ${m ? `starts ${Math.round(m.start * 100)}% down, ${Math.round(m.shown * 100)}% of it visible${see && !vis ? ` · ${see} not fully in view` : ''}${wide ? ' · the page scrolls sideways' : ''}` : 'core element not found: ' + sel}`);
+  if (!ok) await page.screenshot({ path: `${SHOTS}/fold-${tag}-${name.replace(/[^a-z]+/g, '-')}.png` });
+}
 let fails = 0; const rows = [];
 const browser = await chromium.launch();
 for (const [vp, tag] of [[{ width: 1000, height: 560 }, 'laptop'], [{ width: 390, height: 844 }, 'phone']]) {
   const page = await browser.newPage({ viewport: vp });
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
+  // the first-visit landing (owner, 4 Oct 2026): the hero is its core — the promise, the age line and
+  // Start — and Start must be wholly in view before any scrolling
+  await page.waitForSelector('.land-hero'); await check(page, tag, LANDING);
   await page.click('[data-act=obStart]'); await page.waitForSelector('#kname');
   await page.fill('#kname', 'Fold'); await page.press('#kname', 'Enter'); await page.click('[data-act=draftBand][data-arg="8-10"]');
   await page.click('[data-act=draftAv][data-arg="hexbee"]'); await page.click('[data-act=obTheme][data-arg="graph"]');
   await page.waitForSelector('[data-act=startLevel1]'); await page.click('[data-act=startLevel1]');
   await page.evaluate(() => { window.__bzm.R.h.parent.tester = true; });
-  for (const [name, go, sel, see, rule = {}] of SCREENS) {
-    await page.evaluate(`(${go.toString()})(window.__bzm)`); await page.waitForTimeout(250);
-    await page.evaluate(() => window.scrollTo(0, 0));
-    const m = await page.evaluate((sel) => {
-      const el = document.querySelector(sel); if (!el) return null;
-      // the chrome is the top bar AND, on a wide window, the family's tab row directly under it (standard v2 §4)
-      // the chrome is Bee's sticky header — the family bar AND its tab row (standard v2 §3–§4)
-      const top = document.querySelector('[data-bz=header]'); const bar = top ? top.getBoundingClientRect().bottom : 0;
-      const nav = document.querySelector('[data-bz=tabbar]'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight;
-      const r = el.getBoundingClientRect(), view = bottom - bar;
-      return { start: (r.top - bar) / view, shown: Math.max(0, Math.min(r.bottom, bottom) - Math.max(r.top, bar)) / Math.min(view, r.height), view };
-    }, sel);
-    // and anything named in `see` must be wholly in view, and the page must not scroll sideways
-    const vis = see ? await page.evaluate((see) => { const el = document.querySelector(see); if (!el) return false; const r = el.getBoundingClientRect(), nav = document.querySelector('[data-bz=tabbar]'); const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : innerHeight; return r.top >= 0 && r.bottom <= bottom && r.left >= 0 && r.right <= innerWidth; }, see) : true;
-    const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
-    const ok = (tag === 'laptop' && rule.laptop === 'bee' && !wide) || (m && m.start <= (rule.start || START) && m.shown >= SHOW && vis && !wide);
-    if (!ok) fails++;
-    rows.push(`${ok ? 'ok' : '✗ '} ${tag.padEnd(7)} ${name.padEnd(18)} ${m ? `starts ${Math.round(m.start * 100)}% down, ${Math.round(m.shown * 100)}% of it visible${see && !vis ? ` · ${see} not fully in view` : ''}${wide ? ' · the page scrolls sideways' : ''}` : 'core element not found: ' + sel}`);
-    if (!ok) await page.screenshot({ path: `${SHOTS}/fold-${tag}-${name.replace(/[^a-z]+/g, '-')}.png` });
-  }
+  for (const sc of SCREENS) await check(page, tag, sc);
   await page.close();
 }
 await browser.close(); srv.kill();
 console.log(rows.join('\n'));
-console.log(`${fails ? 'FAIL' : 'ok'} fold — ${SCREENS.length} screens × 2 windows, the core content above the fold`);
+console.log(`${fails ? 'FAIL' : 'ok'} fold — ${SCREENS.length + 1} screens × 2 windows, the core content above the fold`);
 if (fails) process.exit(1);

@@ -895,6 +895,11 @@ export const tricksIn = (wid) => TRICKS.filter((t) => t.world === wid);
 export const learnCases = (t) => (t.cases && t.cases.length
   ? t.cases.map((c) => ({ label: c.label, note: c.note || '', q: t.q(c.ex) }))
   : [{ label: '', note: '', q: t.q(t.ex) }]);
+/* How hard test/tricks.mjs leans on every stop: this many generated questions at each
+   difficulty, each checked three ways (the trick's steps, q.ans, plain arithmetic). One copy,
+   read by the test and by the landing page, so the number a parent reads is the number run. */
+export const CHECKED = { levels: [1, 2, 3], each: 700 };
+export const checkedPerStop = () => CHECKED.levels.length * CHECKED.each;
 export const example = (t) => learnCases(t)[0].q;
 export const caseSig = (t, q) => [].concat(t.caseKey || []).map((k) => String(q[k])).join('|');
 

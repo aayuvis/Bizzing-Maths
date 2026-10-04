@@ -929,15 +929,7 @@ div.jcard{cursor:default}
 .hook .case-note{margin:10px 0 0}
 
 /* ---- onboarding: one question per screen, Nova asking */
-.ob,.ob-land{max-width:620px;margin:0 auto}
-.ob-land{text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:2vh}
-.ob-land .display{font-size:clamp(26px,5vw,38px);line-height:1.1;margin:0}
-.ob-land .lead{margin:0;color:var(--muted)}
-.ob-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin-top:6px}
-.ob-stats div{display:flex;flex-direction:column;padding:10px 6px;border-radius:14px;background:var(--surface);box-shadow:var(--sh)}
-.ob-stats b{font:800 24px var(--display);color:var(--action)}.ob-stats span{font-size:12px;color:var(--muted)}
-.ob-promise{list-style:none;padding:0;margin:4px 0;text-align:left;display:flex;flex-direction:column;gap:8px}
-.ob-promise li{padding:10px 14px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);font-size:14px}
+.ob{max-width:620px;margin:0 auto}
 .ob-grown{margin:6px 0 0;font-size:var(--fs-label);color:var(--muted)}
 .ob-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:0 0 14px}
 .ob-dots{display:flex;gap:8px}.ob-dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.ob-dots i.on{background:var(--action);transform:scale(1.25)}.ob-dots i.done{background:var(--mastered)}
@@ -959,7 +951,7 @@ div.jcard{cursor:default}
 .ob-sw b{font-size:40px}.ob-sw i{font-style:normal;font-size:20px}
 .ob-w-graph .ob-sw{background:#fff linear-gradient(#dfe7fb 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,#dfe7fb 1px,transparent 1px) 0 0/16px 16px;color:#2D5BD8}
 .ob-w-orbit .ob-sw{background:radial-gradient(circle at 70% 40%,#3b2f7a,#120f2e 70%);color:#f3eaff}
-@media (max-width:520px){.ob-faces{grid-template-columns:repeat(3,1fr)}.ob-stats{grid-template-columns:repeat(2,1fr)}.ob-worlds{grid-template-columns:1fr}}
+@media (max-width:520px){.ob-faces{grid-template-columns:repeat(3,1fr)}.ob-worlds{grid-template-columns:1fr}}
 .ob-top > .btn{justify-self:start;width:auto}
 .ob-face .av{aspect-ratio:1}
 /* the 6–7 hint before a first wrong answer (audit E6), and Octo's first-answer cheer (A8) */

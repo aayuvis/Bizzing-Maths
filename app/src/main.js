@@ -302,6 +302,7 @@ function render() {
   applySkin(kid(R.h));                  // and the road skin they wear (extras.js)
   document.documentElement.toggleAttribute('data-bz-dark', document.documentElement.getAttribute('data-mode') === 'dark');   // the avatar glow (§8)
   root.innerHTML = V.shell(screen());
+  if (root.querySelector('img[data-lsrc]')) import('./landing.js').then((m) => m.wire(root));   // the landing's screenshots, as they scroll near
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
   syncMusic();

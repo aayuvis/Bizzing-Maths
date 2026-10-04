@@ -10,7 +10,7 @@
    Every assertion here was watched to fail once (see the commit that added it). */
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
-import { mkdirSync, existsSync, symlinkSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, symlinkSync, rmSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 const require = createRequire(import.meta.url);
@@ -243,19 +243,85 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await ctx.close();
 }
 
-/* a first visit offers the taster */
+/* a first visit: the landing, in Bizzing Bee's shape (owner, 4 Oct 2026: "landing page can have
+   screenshots... look at bizzingbee"). Every door leads into the app or down the page; every
+   picture is a real screen that exists; every number is the code's own count, recounted here;
+   no testimonial and no price; the privacy line is the privacy page's; the first screen stays
+   under the family budget, with no screenshot fetched before it scrolls near. */
 {
+  const T = await import('../src/tricks.js'), L = await import('../src/levels.js'), A = await import('../src/avatars.js');
+  const P = await import('../src/papers/engine.js'), Z = await import('../src/puzzles.js'), M = await import('../src/model.js');
+  const contestW = new Set(T.WORLDS.filter((w) => w.track === 'contest').map((w) => w.id));
+  const perStop = T.CHECKED.levels.length * T.CHECKED.each;
+  const WANT = {
+    stops: T.TRICKS.length, worlds: T.WORLDS.length, levels: L.LEVELS.length,
+    tools: (await import('../src/library/shelf.js')).ORDER.length, games: (await import('../src/arcade.js')).GAMES.length,
+    families: Z.FAMILIES.length, floors: Z.FLOORS, papers: P.BAND_IDS.length * P.FIXED, bands: P.BAND_IDS.length, fixed: P.FIXED,
+    strategies: T.TRICKS.filter((t) => contestW.has(t.world)).length,
+    avatars: A.CATALOGUE.length, packs: A.PACKS.length, commons: A.CATALOGUE.filter((a) => a.tier === 'common').length,
+    feed: (await import('../src/feed/index.js')).INDEX.length, perStop, checked: T.TRICKS.length * perStop,
+    rivals: (await import('../src/contest.js')).RIVALS.length,
+    ageBands: M.BANDS.length, ageMin: +M.BANDS[0].id.split('-')[0], ageMax: +M.BANDS.at(-1).id.split('-').pop(),
+  };
+  // what the page says in words, it must also be true of the code
+  const STORIES = (await import('../src/story-data.js')).STORIES;
+  ok(T.TRICKS.every((t) => STORIES[t.id]), 'the landing says "a story for every stop": every stop has one');
+  ok(T.TRICKS.every((t) => t.why.length >= 2 && t.alg), 'the landing says every stop carries two reasons and the algebra: it does');
+
   const { p, ctx } = await page({ width: 390, height: 844 }, 'first', { seed: false });
-  await p.goto(BASE); await p.waitForSelector('.ob-land');
+  const got = [];
+  p.on('response', async (r) => { try { const b = await r.body(); const t = r.headers()['content-type'] || ''; got.push({ u: r.url(), n: /javascript|css|html|json|svg/.test(t) ? gzipSync(b).length : b.length, js: /javascript/.test(t) }); } catch {} });
+  await p.goto(BASE); await p.waitForSelector('.ob-land .land-rest'); await p.waitForLoadState('networkidle');
+  const total = got.reduce((a, x) => a + x.n, 0), js = got.filter((x) => x.js).reduce((a, x) => a + x.n, 0);
+  ok(total <= 1.5 * 1024 * 1024, `the landing's first screen on a phone is ≤ 1.5 MB (got ${(total / 1048576).toFixed(2)} MB)`);
+  ok(js <= 400 * 1024, `the landing's initial JavaScript is ≤ 400 KB gzipped (got ${Math.round(js / 1024)} KB)`);
+  ok(!got.some((x) => /\/art\/shots\//.test(x.u)), `no screenshot is fetched for the first screen (got ${got.filter((x) => /\/art\/shots\//.test(x.u)).map((x) => x.u.split('/').pop())})`);
+
+  // the doors: Start, the taster, the sample — into the app, or down the page; nothing else
   ok(await p.locator('.ob-land a[href="./?demo=try"]').count() === 1, 'the landing offers "Try a trick first"');
-  // the landing is the app's own first screen (owner, A1): two doors into the app and nothing else
+  ok(await p.locator('.ob-land [data-act=obStart]').count() === 1, 'the landing has one Start');
   const doors = await p.$$eval('.ob-land a, .ob-land button', (els) => els.map((e) => e.dataset.act || e.getAttribute('href')));
-  ok(doors.length === 2 && doors.includes('obStart') && doors.includes('./?demo=try'), `every door on the landing leads into the app (got ${doors.join(', ')})`);
-  ok(await p.locator('.ob-land img').count() === 1, 'no screenshots on the landing — Octo only');
+  const bad = doors.filter((d) => !['obStart', './?demo=try', './?demo'].includes(d) && !/^#land-[a-z]+$/.test(d || ''));
+  ok(!bad.length && doors.includes('obStart') && doors.includes('./?demo=try'), `every button or link on the landing leads into the app or to an in-page anchor (stray: ${bad.join(', ')})`);
+  const primaries = await p.$$eval('.ob-land .btn.primary', (bs) => bs.map((b) => b.dataset.act));
+  ok(primaries.length === 1 && primaries[0] === 'obStart', `Start is the landing's one primary button (got ${primaries})`);
+
+  // the pictures: every screenshot named exists on disk and on the server, and every <img> loads
+  const refs = await p.$$eval('.ob-land img', (is) => is.map((i) => i.getAttribute('data-lsrc') || i.getAttribute('src')));
+  const shots = refs.filter((r) => /^art\/shots\//.test(r));
+  ok(shots.length >= 12, `the landing shows the real screens (got ${shots.length})`);
+  const capt = [...readFileSync(resolve(HERE, '../tools/shots.mjs'), 'utf8').matchAll(/^\s*\['([a-z]+)', async/gm)].map((m) => m[1]);
+  ok(shots.every((r) => capt.includes(r.split('/').pop().replace('.jpg', ''))), `every screenshot is one tools/shots.mjs captures, so it can be made again (${shots.filter((r) => !capt.includes(r.split('/').pop().replace('.jpg', '')))})`);
+  ok(shots.every((r) => existsSync(resolve(HERE, 'public', r))), `every screenshot file exists (missing: ${shots.filter((r) => !existsSync(resolve(HERE, 'public', r)))})`);
+  const status = await p.evaluate(async (rs) => Promise.all(rs.map(async (r) => { const x = await fetch(r); return [r, x.status, x.headers.get('content-type')]; })), [...new Set(refs)]);
+  ok(status.every(([, st, ct]) => st === 200 && /^image\//.test(ct || '')), `every <img> on the landing resolves (bad: ${status.filter(([, st, ct]) => st !== 200 || !/^image\//.test(ct || '')).map(([r, st]) => r + ' ' + st)})`);
+  for (let y = 0, H = await p.evaluate(() => document.documentElement.scrollHeight); y < H; y += 500) { await p.evaluate((y) => scrollTo(0, y), y); await p.waitForTimeout(60); }
+  await p.waitForLoadState('networkidle');
+  const broken = await p.$$eval('.ob-land img', (is) => is.filter((i) => !i.complete || !i.naturalWidth || i.hasAttribute('data-lsrc')).map((i) => i.getAttribute('src') || i.getAttribute('data-lsrc')));
+  ok(!broken.length, `every image on the landing has loaded once scrolled to (broken: ${broken.slice(0, 4)})`);
+
+  // the numbers: each one drawn from the code, and equal to the count made here
+  const shown = await p.$$eval('.ob-land [data-n]', (es) => es.map((e) => [e.dataset.n, e.textContent]));
+  const wrong = shown.filter(([k, t]) => !(k in WANT) || t.replace(/,/g, '') !== String(WANT[k]));
+  ok(shown.length >= 25 && !wrong.length, `every number on the landing equals the code's count (${shown.length} shown; wrong: ${wrong.map(([k, t]) => `${k}=${t} want ${WANT[k]}`).join(', ')})`);
+  // …and no other number is on it: outside a counted number, an example (7 × 8) or text quoted from the code, no digit
+  const loose = await p.evaluate(() => { const c = document.querySelector('.ob-land').cloneNode(true); c.querySelectorAll('[data-n],[data-eg],[data-code],img,svg').forEach((e) => e.remove()); return (c.textContent.match(/[^\s]*\d[^\s]*/g) || []); });
+  ok(!loose.length, `no number on the landing is typed by hand (found: ${loose.slice(0, 6).join(' | ')})`);
+
+  // nothing invented and nothing sold: no testimonial, no price
   const land = await p.textContent('.ob-land');
-  ok(/ages 6 to 14\b/.test(land) && !/ages 6 to 15/.test(land), 'the age line says 6 to 14, as the age bands do');
+  ok(!/testimonial|[$£€₹]\s?\d|\bper (month|year)\b|pricing|\bplans?\b|subscri|free trial/i.test(land) && await p.locator('.ob-land blockquote, .ob-land [class*=testimon], .ob-land [class*=pric], .ob-land [class*=plan]').count() === 0,
+    'no testimonial and no price section on the landing');
+  ok(/ages 6 to 14\b/.test(await p.textContent('.ob-land .land-age')), 'the age line says 6 to 14, as the age bands do');
   ok(!/Bizzing Bee|Bizzing India|Bizzing Finance/.test(land) && await p.locator('footer.foot').count() === 1, 'the family is named once, in the footer, not twice');
   ok(/grown-ups/i.test(await p.textContent('.ob-land .ob-grown')), 'one plain sentence for grown-ups');
+  ok(await p.evaluate(() => document.documentElement.scrollWidth) <= 390, 'the landing does not scroll sideways on a phone');
+
+  // the privacy line is the privacy page's own sentence
+  const priv = await p.$$eval('.ob-land .land-privacy', (es) => es.map((e) => e.textContent.trim()));
+  await p.goto(BASE + '#/privacy'); await p.waitForSelector('.prose');
+  const page2 = (await p.textContent('.prose')).replace(/\s+/g, ' ');
+  ok(priv.length >= 1 && priv.every((x) => page2.includes(x)), `the landing's privacy line is the privacy page's (${priv[0]})`);
   await ctx.close();
 }
 
