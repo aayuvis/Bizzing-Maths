@@ -29,7 +29,10 @@ const SETS = {
     ['carnival', 'pictogram-total', { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [10, 6, 8], per: 2, ask: 'which', a: 2 }],
   ],
 };
-const start = (p, kind) => p.evaluate(([set, kind]) => {
+// a child's first key or tap fetches the stops' code (rule 30); this test starts runs directly, so it presses
+// a key the same way and waits for the code — then the run it starts is a real one
+const start = async (p, kind) => { await p.keyboard.press('Shift'); await p.waitForFunction(() => window.__bzm.engineReady(), null, { timeout: 30000 }); return start0(p, kind); };
+const start0 = (p, kind) => p.evaluate(([set, kind]) => {
   const B = window.__bzm;
   const items = set.map(([w, id, ex]) => { const t = B.tricksIn(w).find((x) => x.id === id), q = t.q(ex);
     if (t.draw) q.html = t.draw(q); if (t.keys) q.keys = t.keys; if (q.input === 'chart') q.hits = t.hits(q); q.trick = id; return q; });

@@ -4,7 +4,7 @@
 import { R } from './runtime.js';
 import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
-import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot, correct } from './tricks.js';
+import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot, correct, engineReady } from './tricks.js';
 import * as W from './widgets.js';
 import { LEVELS } from './levels.js';
 import { TRY } from './landing-try.js';
@@ -12,7 +12,7 @@ import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, s
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
-import { keypad } from './games.js';
+import { keypad } from './keypad.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
 import { summary } from './objectives.js';
@@ -342,6 +342,8 @@ export function trickOfHour(k, at = new Date()) {
 /* One worked example of a trick, in a line: the chapter's own example run through its own steps,
    so the line is checked by the same tests as the trick (test/tricks.mjs). */
 export function workedLine(t, max = Infinity) {
+  // Home and My page draw before the stops' code arrives (rule 30): the example joins them when it does
+  if (!engineReady()) return '';
   const q = example(t), steps = t.work(q);
   if (max < Infinity) { const full = workedLine(t); if (full.length <= max) return full; return `For example — ${q.text}${/\?$/.test(q.text) ? '' : ' ='} ${q.ans}.`; }
   const say = (x) => (/^[\d\s+−\-×÷()., ]+$/.test(x.t) ? `${x.t} = ${x.v}.` : /\?$/.test(x.t) ? `${x.t} ${x.v}.` : `${x.t.replace(/[.:]\s*$/, '')}: ${x.v}.`);

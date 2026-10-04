@@ -26,7 +26,7 @@ async function open(vp, tag, { dark = false, coins = 600 } = {}) {
   const G = (fn, a) => p.evaluate(fn, a);
   return { p, ctx, G, shot: (n) => p.screenshot({ path: `${SHOTS}/extras-${tag}-${n}.png` }) };
 }
-const st = (G) => G(() => ({ nav: window.__bzm.R.ui.nav, hash: location.hash, game: !!window.__bzmGames.active(), overlay: document.querySelectorAll('.play').length, xp: window.__bzm.R.h.kids[0].xp, coins: JSON.parse(localStorage.getItem('bizzing.wallet')).kids.ahana.coins, shop: window.__bzm.R.h.kids[0].shop }));
+const st = (G) => G(() => ({ nav: window.__bzm.R.ui.nav, hash: location.hash, game: !!(window.__bzmGames && window.__bzmGames.active()), overlay: document.querySelectorAll('.play').length, xp: window.__bzm.R.h.kids[0].xp, coins: JSON.parse(localStorage.getItem('bizzing.wallet')).kids.ahana.coins, shop: window.__bzm.R.h.kids[0].shop }));
 const nav = async (p, G, to, sel) => { await G((a) => window.__bzm.go(a), to); if (sel) await p.waitForSelector(sel); };
 const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboard.press('Enter'); await p.waitForSelector('.g-intro', { state: 'detached' }); };
 
@@ -85,7 +85,7 @@ const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboar
   // the wage: one right answer in standard Rush, then in Squares — the same xp
   const rushRight = async (arg, tap) => {
     await nav(p, G, 'play', '.amodes'); await p.click(`[data-act=play][data-arg="${arg}"]`); await skip(p);
-    await p.waitForFunction(() => { const g = window.__bzmGames.active(); return g && g.probe.answers().length > 0; }, null, { timeout: 8000 });
+    await p.waitForFunction(() => { const g = window.__bzmGames && window.__bzmGames.active(); return g && g.probe.answers().length > 0; }, null, { timeout: 8000 });
     const a = await G(() => window.__bzmGames.active().probe.answers()[0]), x0 = (await st(G)).xp;
     for (const ch of a) { if (tap) await p.tap(`.pad [data-k="${ch}"]`); else await p.keyboard.press(ch); }
     await p.waitForTimeout(150);
@@ -325,7 +325,7 @@ for (const dark of [false, true]) {
   const tag = dark ? 'dark' : 'light';
   const { p, ctx, G, shot } = await open({ width: 390, height: 844 }, 'cubes-phone-' + tag, { dark });
   if (dark) await G(() => { document.documentElement.setAttribute('data-mode', 'dark'); });
-  const probe = (k) => G((k) => { const g = window.__bzmGames.active(); return g && g.probe[k](); }, k);
+  const probe = (k) => G((k) => { const g = window.__bzmGames && window.__bzmGames.active(); return g && g.probe[k](); }, k);
   const kidNow = () => G(() => ({ xp: window.__bzm.R.h.kids[0].xp, games: window.__bzm.R.h.kids[0].games }));
   await nav(p, G, 'play', '.gtiles');
   ok(await p.locator('.gtile[data-arg=cubes]').count() === 1, `${tag}: Cube Builder has a tile on Play`);
@@ -337,6 +337,8 @@ for (const dark of [false, true]) {
   await skip(p); await p.waitForSelector('.cb-grid');
   ok((await probe('level')) === 2, `${tag}: an 8–10 plays level 2`);
   // 44px targets on a phone: the squares, the height pad, up and down, the tools and Back
+  // measured at rest: a square's 'born' swell (cubes, 0.3 s) is a transform, and getBoundingClientRect sees it
+  await p.waitForFunction(() => document.getAnimations().every((x) => x.playState !== 'running' || (x.effect && x.effect.getTiming().iterations === Infinity)), null, { timeout: 5000 }).catch(() => {});
   const small = await G(() => [...document.querySelectorAll('.play .cb-cell, .play .cb-ctl button, .play .mt-tools button, .play .play-x, .play .play-m')].map((b) => { const r = b.getBoundingClientRect(); return [b.className, Math.round(r.width), Math.round(r.height)]; }).filter(([, w, h]) => w < 44 || h < 44));
   ok(small.length === 0, `${tag}: every Cube Builder control is at least 44px on a phone (${JSON.stringify(small.slice(0, 4))})`);
   const wide = await G(() => document.querySelector('.play-body').scrollWidth - document.querySelector('.play-body').clientWidth);
@@ -394,7 +396,7 @@ for (const dark of [false, true]) {
   await p.goBack(); await p.waitForTimeout(300);
   const s4 = await st(G);
   ok(!s4.game && s4.overlay === 0 && s4.nav === 'play', `${tag}: Back closes Cube Builder and lands on Play (nav ${s4.nav}, ${s4.hash})`);
-  ok(/Best 6/.test(await p.locator('.gtile[data-arg=cubes]').innerText()), `${tag}: the Play tile shows the best score`);
+  ok(/Best:? 6/.test(await p.locator('.gtile[data-arg=cubes]').innerText())   /* the house wording is "Best: 6" (audit v4 G2) */, `${tag}: the Play tile shows the best score`);
   // the Puzzle Tower offers it too, at all three levels, and search finds it
   await nav(p, G, 'puzzles', '[data-act=cubesPlay]');
   ok(await p.locator('[data-act=cubesPlay]').count() === 3, `${tag}: the Puzzle Tower offers Cube Builder at three levels`);

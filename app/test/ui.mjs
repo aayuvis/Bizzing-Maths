@@ -375,7 +375,7 @@ async function run(vp, tag) {
   await page.waitForTimeout(1800); await shot('17a-rush-intro');
   await page.waitForSelector('.rush-stage', { timeout: 30000 });
   ok(await music() === 'on', 'Rush: the music loop plays');
-  await page.waitForFunction(() => { const g = window.__bzmGames.active(); return g && g.probe.answers().length > 0; }, null, { timeout: 30000 });
+  await page.waitForFunction(() => { const g = window.__bzmGames && window.__bzmGames.active(); return g && g.probe.answers().length > 0; }, null, { timeout: 30000 });
   const ans = await G(() => window.__bzmGames.active().probe.answers()[0]);
   const j0 = await juice();
   await watch(['.rush-stage .gpop']);

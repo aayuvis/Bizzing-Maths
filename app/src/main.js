@@ -27,7 +27,11 @@ import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
 import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, payout, trickRec, raiseLevel, noteRun, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
-import * as G from './games.js';
+import { keypad } from './keypad.js';
+/* the games load when one opens (audit v4 R2: Home never downloads them); until then nothing is active */
+let G = null;
+const loadGames = () => (G ? Promise.resolve(G) : import('./games.js').then((m) => (G = m)));
+const gameOn = () => !!(G && G.active());
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
@@ -145,7 +149,7 @@ function libCtx(id) {
   return {
     id, kid: k, band: k.band, ui, data, save, render, toast, sfx, confetti, say,
     tester: !!R.h.parent.tester,   // tester mode opens every stone and road stop; it never writes the record
-    keypad: G.keypad, F,
+    keypad, F,
     tick: (right, xp = 1) => { tick(k, right, xp); save(); },
     record: (fact, right, ms) => { F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, ms, k.band); save(); },
     startRun: (title, items, extra = {}) => startRun('lib', title, items, { ...extra, lib: id }),
@@ -227,7 +231,7 @@ function go(nav, arg = null, fromHash = false) {
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
   // #/game/<id> is a game's own history entry (games.js): with a game up it is already handled;
   // without one (Forward, a reload) it opens the game from the Play room, as #/play/<id> does
-  if (nav === 'game') { if (G.active()) return; nav = 'play'; }
+  if (nav === 'game') { if (gameOn()) return; nav = 'play'; }
   if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
   // a game or a puzzle family named in the link starts it — the address then settles on its room
   if ((nav === 'play' || nav === 'puzzles') && arg) {
@@ -313,7 +317,7 @@ function screen() {
    screen says so instead of hanging (the service worker keeps it after one visit). */
 const LIGHT_SCREENS = ['home', 'welcome', 'start', 'grownups', 'privacy', 'help', 'me', 'shop', 'collection', 'medals', 'settings', 'who', 'wallet'];
 let ENGINE_FAIL = false, engineWait = false;
-const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { ENGINE_FAIL = true; throw e; });
+const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; if (LIGHT_SCREENS.includes(R.ui.nav) && kid(R.h)) render(); }, (e) => { ENGINE_FAIL = true; throw e; });   // Home's worked example fills in
 /* actions that only move between screens or change a setting: they never wait for the code */
 const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
   'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
@@ -349,7 +353,8 @@ function render() {
     sc.scrollLeft = Math.max(0, x);
   }
   walkOn();
-  routeIn();
+  // the "Opening…" placeholder is not the screen: the fade waits for the screen itself to draw
+  if (!root.querySelector('.engine-wait')) routeIn();
 }
 R.render = render;
 /* an avatar card's picture has arrived: drop its placeholder (shell.css .bz-av img.in). One capturing
@@ -406,7 +411,7 @@ function routeIn() {
    first load. */
 let gestured = false;
 function syncMusic() {
-  if (!gestured || G.active() || !kid(R.h)) return;
+  if (!gestured || gameOn() || !kid(R.h)) return;
   const want = R.ui.nav === 'home' ? 'home' : byTheme[themeOf(kid(R.h), R.h)].tune;
   if (music.wanted() !== want) music.start(want);
 }
@@ -972,6 +977,7 @@ function paperKey(e) {
 /* ------------------------------------------------------------- games */
 
 function play(arg, level = null) {
+  if (!G) return loadGames().then(() => play(arg, level), () => toast('This needs the internet once — then it works offline.'));
   const k = kid(R.h); clearConfetti();
   // a bonus mode (extras.js) is `<game>:<mode>`, locked until bought; it pays exactly what its game pays
   const [id, mode = null] = String(arg).split(':');
@@ -990,6 +996,7 @@ function play(arg, level = null) {
    fact to "fluent" on its own. Misses are recorded — they are real. */
 
 function daily() {
+  if (!G) return loadGames().then(daily, () => toast('This needs the internet once — then it works offline.'));
   const k = kid(R.h), d = dayKey();
   G.makeTarget(k, { daily: true, onSolve: () => { payout(k, 'daily', true); }, onEnd: (solved) => { (k.daily[d] || (k.daily[d] = {})).puzzle = !!solved || !!(k.daily[d] && k.daily[d].puzzle); save(); render(); } });
 }
@@ -1038,6 +1045,7 @@ const sdkDone = (k, n, lv, hints) => { const p = k.puzzles.sudoku || (k.puzzles.
 on('pickFloor', (f) => { R.ui.floor = +f; render(); });
 on('shutFloor', () => toast('Clear the floor below first.'));
 on('climb', (f) => {
+  if (!G) return loadGames().then(() => fire('climb', f), () => toast('This needs the internet once — then it works offline.'));
   f = +f; const k = kid(R.h); const lv = floorLevel(f, k.band);
   if (!k.quest) k.quest = {};
   if (isBoss(f)) {
@@ -1053,6 +1061,7 @@ on('practise', (a) => {
   startRun('puzzle', famOf(id).name, familySet(id, lv), { fam: id, lv, sub: ['', 'Easy', 'Medium', 'Hard'][lv] });
 });
 on('sudokuPlay', (l) => {
+  if (!G) return loadGames().then(() => fire('sudokuPlay', l), () => toast('This needs the internet once — then it works offline.'));
   const k = kid(R.h), lv = +l || 1, n = sudokuSize(k.band, lv);
   G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => { if (solved) sdkDone(k, n, lv, hints); save(); render(); } });
 });
@@ -1404,7 +1413,7 @@ function padKey(k) {
   if (R.ui.nav === 'run') return typeKey(k);
 }
 root.addEventListener('pointerdown', (e) => {
-  const b = e.target.closest('.pad [data-k]'); if (!b || G.active()) return;
+  const b = e.target.closest('.pad [data-k]'); if (!b || gameOn()) return;
   e.preventDefault(); b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 120);
   padKey(b.dataset.k);
 });
@@ -1425,7 +1434,7 @@ function avKey(e) {
   return true;
 }
 addEventListener('keydown', (e) => {
-  if (G.active()) { if (G.gameKey(e)) e.preventDefault(); return; }
+  if (gameOn()) { if (G.gameKey(e)) e.preventDefault(); return; }
   // the ☰ drawer is the shell's own (bindShell: Esc, focus, Tab); the wallet is ours
   { const d = document.querySelector('[data-bz=drawer]'); if (d && !d.hidden) return; }
   if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }

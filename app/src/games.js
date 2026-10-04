@@ -304,13 +304,8 @@ const uniq = (xs) => [...new Set(xs)];
 
 /* The on-screen keypad every game and drill shares. */
 /* `keys` adds the extra keys a question needs: '.', '−', '/'. */
-export function keypad(keys = []) {
-  const k = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'];
-  const name = { '⌫': 'Delete', '✓': 'Enter', '.': 'Point', '−': 'Minus', '/': 'Fraction bar' };
-  const extra = (Array.isArray(keys) ? keys : []).filter((x) => ['.', '−', '/'].includes(x));
-  return `<div class="pad" role="group" aria-label="Number pad">${extra.length ? `<div class="pad-x">${extra.map((x) => `<button class="pk alt" data-k="${x}" aria-label="${name[x]}">${x}</button>`).join('')}</div>` : ''}${k.map((x) =>
-    `<button class="pk${x === '✓' ? ' go' : x === '⌫' ? ' del' : ''}" data-k="${x}" aria-label="${name[x] || x}">${x}</button>`).join('')}</div>`;
-}
+import { keypad } from './keypad.js';
+export { keypad };   // the number pad lives on its own: the runner needs it, the games load later
 
 /* ============================================================ NUMBER RUSH */
 
