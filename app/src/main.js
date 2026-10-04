@@ -24,7 +24,7 @@ import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
-import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, raiseLevel, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
+import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, payout, trickRec, raiseLevel, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
@@ -778,16 +778,17 @@ function paperKey(e) {
 
 /* ------------------------------------------------------------- games */
 
-function play(arg) {
+function play(arg, level = null) {
   const k = kid(R.h); clearConfetti();
   // a bonus mode (extras.js) is `<game>:<mode>`, locked until bought; it pays exactly what its game pays
   const [id, mode = null] = String(arg).split(':');
   if (mode && !ownsMode(k, arg)) return go('shop');
   const rec = k.games[arg] || (k.games[arg] = { best: null, plays: 0 });
   const onEnd = (score) => { rec.plays++; if (typeof score === 'number' && (rec.best == null || score > rec.best)) rec.best = score; save(); render(); };
-  if (id === 'rush') G.numberRush(k, { mode, onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); tick(k, right, 1); save(); }, onEnd });
-  if (id === 'target') G.makeTarget(k, { mode, onSolve: () => { tick(k, true, 5); save(); }, onEnd });
-  if (id === 'line') G.numberLine(k, { mode, onTick: (right) => { tick(k, right, 1); save(); }, onEnd });
+  if (id === 'rush') G.numberRush(k, { mode, onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); payout(k, arg, right); save(); }, onEnd });
+  if (id === 'target') G.makeTarget(k, { mode, onSolve: () => { payout(k, arg, true); save(); }, onEnd });
+  if (id === 'line') G.numberLine(k, { mode, onTick: (right) => { payout(k, arg, right); save(); }, onEnd });
+  if (id === 'cubes') G.cubeBuilder(k, { level, onTick: (right) => { payout(k, arg, right); save(); }, onEnd });
 }
 
 /* A game's right answer counts for the rank, but a fact popped in Number
@@ -797,7 +798,7 @@ function play(arg) {
 
 function daily() {
   const k = kid(R.h), d = dayKey();
-  G.makeTarget(k, { daily: true, onSolve: () => { tick(k, true, 10); }, onEnd: (solved) => { (k.daily[d] || (k.daily[d] = {})).puzzle = !!solved || !!(k.daily[d] && k.daily[d].puzzle); save(); render(); } });
+  G.makeTarget(k, { daily: true, onSolve: () => { payout(k, 'daily', true); }, onEnd: (solved) => { (k.daily[d] || (k.daily[d] = {})).puzzle = !!solved || !!(k.daily[d] && k.daily[d].puzzle); save(); render(); } });
 }
 
 /* ------------------------------------------------------------- actions */
@@ -931,6 +932,7 @@ on('cNext', () => cNext());
 on('quitContest', () => { clearTimeout(timerT); R.contest = null; go('contest'); });
 
 on('play', (id) => play(id));
+on('cubesPlay', (l) => play('cubes', [1, 2, 3].includes(+l) ? +l : null));
 on('daily', () => daily());
 
 /* onboarding: one question per screen (views.js viewWelcome) */

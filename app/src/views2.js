@@ -18,6 +18,7 @@ import { TRICKS, WORLDS, byId, worldOf, tricksIn } from './tricks.js';
 import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen, onJourney, firstLevel } from './model.js';
 import { STORIES } from './stories.js';
 import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
+import { LEVELS as CUBE_LEVELS, bandLevel as cubeLevel } from './cubes.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
 import { av, starRow, starsInline, pageHead, sayBtn, trickOfDay, numberOfDay } from './views.js';
 import { octo, octoState } from './views3.js';
@@ -253,6 +254,8 @@ export function viewTower() {
     }).join('')}
       <div class="pz-card pz-logic"><span class="pz-g" aria-hidden="true">${icon('puzzle', 30)}</span><div><h3>Sudoku on its own</h3><p>Every row, column and box holds each number once. Pure logic, no guessing.</p></div>
         <div class="seg small">${[1, 2, 3].map((l) => `<button class="${l === bandLevel(k.band) ? 'on' : ''}" data-act="sudokuPlay" data-arg="${l}">${['', 'Easy', 'Medium', 'Hard'][l]} <span class="mono">${sudokuSize(k.band, l)}×${sudokuSize(k.band, l)}</span></button>`).join('')}</div></div>
+      <div class="pz-card pz-cubes"><span class="pz-g" aria-hidden="true">${icon('cube', 30)}</span><div><h3>Cube Builder</h3><p>Three views of a stack of cubes: build it, with the fewest cubes you can.</p></div>
+        <div class="seg small">${[1, 2, 3].map((l) => `<button class="${l === cubeLevel(k.band) ? 'on' : ''}" data-act="cubesPlay" data-arg="${l}">${CUBE_LEVELS[l].name}</button>`).join('')}</div></div>
     </div>
     <p class="muted small center-t">Keys: <kbd>1</kbd>–<kbd>4</kbd> to choose · digits and <kbd>Enter</kbd> to answer · in sudoku, arrows to move and digits to fill.</p>
   </section>`;

@@ -132,6 +132,17 @@ export function tick(k, right, xp = 1) {
   while (keys.length > 90) delete k.days[keys.shift()];
 }
 
+/* What play is worth, in ONE place (audit v4 G1): the xp a right answer in each Arcade game
+   pays. Every game reaches tick() through payout(), and a bonus mode (`<game>:<mode>`, extras.js)
+   pays exactly what its game pays because the mode is cut off before the table is read. Coins
+   never come from here — xp only, and only for right answers (tick). */
+export const WAGE = { rush: 1, target: 5, line: 1, daily: 10, cubes: 5 };
+export function payout(k, game, right) {
+  const w = WAGE[String(game).split(':')[0]];
+  if (!w) throw new Error('no wage for ' + game);
+  tick(k, right, w);
+}
+
 /* ---------------------------------------------------------------- the atlas */
 
 /* The route: every world's stops in order, then that world's checkpoint. */

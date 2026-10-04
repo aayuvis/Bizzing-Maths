@@ -1,6 +1,6 @@
 {
- "total": 4580,
- "agnostic": 593,
+ "total": 4581,
+ "agnostic": 594,
  "byLevel": {
   "1": 181,
   "2": 180,
@@ -40,7 +40,7 @@
   "rank": 9,
   "rival": 10,
   "tool": 11,
-  "game": 7,
+  "game": 8,
   "puzzle": 5,
   "pattern": 117,
   "magic": 27

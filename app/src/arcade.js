@@ -10,4 +10,5 @@ export const GAMES = [
   { id: 'rush', title: 'Number Rush', blurb: 'Facts fall. Type the answer to pop them before they land.', art: 'art-rush', keys: 'digits + Enter' },
   { id: 'target', title: 'Make the Target', blurb: 'Four numbers, one target, + − × ÷. Use every number.', art: 'art-target', keys: '1–4 and + − × ÷' },
   { id: 'line', title: 'Number Line', blurb: 'Where does 637 go between 0 and 1000? Estimation, the skill contests lean on.', art: 'art-line', keys: '← → and Enter' },
+  { id: 'cubes', title: 'Cube Builder', blurb: 'Front, side and top: three views of a stack. Build it, with the fewest cubes you can.', art: 'art-cubes', keys: 'arrows, + − and Enter' },
 ];

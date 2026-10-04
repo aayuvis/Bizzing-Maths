@@ -60,8 +60,10 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
    that grows with minutes played would lie about the child.
 8. **Every puzzle is proved before it is shown** (`src/puzzles.js`, `test/puzzles.mjs`). Cube
    nets by FOLDING — the rig reproduces the known result, 11 nets among 35 hexominoes — sudokus
-   by a solver that finds exactly one answer, balance scales by trying every weight. A puzzle
-   with two answers, or none, is a bug the child pays for.
+   by a solver that finds exactly one answer, balance scales by trying every weight, Cube Builder's
+   views by a solver that finds every stack they allow and the one stack with the fewest cubes, checked against a plain
+   brute force (`src/cubes.js`, `test/games.mjs`). A puzzle with two answers, or none, is a bug the
+   child pays for.
 9. **Every goal is measured from evidence** (`src/objectives.js`). "I can…" sentences in six
    strands; none is ticked for time spent or for visiting a screen. A goal for an older band
    shows as *coming later*, never as a failure. `test/objectives.mjs` proves each one moves.
@@ -194,7 +196,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 | `app/src/facts.js` | The fact bank (+ − × ÷), `tricky()`, `why()`, Leitner fluency, the 20-question session builder. |
 | `app/src/model.js` | Household, child, ranks, the Atlas route and frontier, stars, placement. |
 | `app/src/contest.js` | The Mock Contest — the Bee's same ten rivals, the Bee's elimination rules. |
-| `app/src/games.js` | Number Rush, Make the Target (with a solver), Number Line; the shared keypad. |
+| `app/src/games.js` | Number Rush, Make the Target (with a solver), Number Line, Cube Builder; the shared keypad. Every game is paid through `payout()` (model.js `WAGE`): one place decides what play is worth. |
+| `app/src/cubes.js` | Cube Builder's puzzles: views measured from a stack, every fitting stack and the fewest cubes found by search. |
 | `app/src/figs.js` | The pictures of *why*: number-line jumps, area splits, the crosswise grid. |
 | `app/src/views.js` · `main.js` | Every screen as `state → string`; routing, the runner, keys, `data-act`. |
 | `app/src/stories.js` | A story per stop, starring the Bee's rivals, with a checked notepad. |

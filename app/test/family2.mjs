@@ -42,6 +42,7 @@ ok(!MD.add(k, { text: 'big', ans: 1, html: 'x'.repeat(7000) }, t0), 'a question 
 const top = (s) => search(s)[0] || {};
 ok(top('bakery').title === 'The Fraction Bakery' && top('bakery').kind === 'Place', 'search: a place by name');
 ok(search('number rush').some((r) => r.kind === 'Play'), 'search: a game');
+ok(top('cube builder').title === 'Cube Builder' && top('cube builder').act === 'play' && top('cube builder').arg === 'cubes' && search('front side top views').some((r) => r.arg === 'cubes'), 'search: Cube Builder, by name and by what it practises');
 ok(search('explorer').some((r) => r.kind === 'Library'), 'search: a Library tool');
 ok(search('fractions').length >= 3 && search('fractions').some((r) => r.kind === 'Stop'), 'search: stops by their idea');
 ok(top('sudoku').act === 'sudokuPlay' && top('contest hall').arg === 'hall' && top('today mix').act === 'dailyMix', 'search: sudoku, the Contest Hall and today\'s mix');
