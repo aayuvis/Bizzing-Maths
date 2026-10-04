@@ -189,8 +189,8 @@
 .avd-nav:hover{background:var(--action-tint)}
 .avd-nav:focus-visible,.avd-bar button:focus-visible{outline:3px solid var(--treasure);outline-offset:2px}
 .avd-prev{left:0}.avd-next{right:0}
-.avd-bar{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
-.avd-count{font:700 13px var(--mono);letter-spacing:.04em;color:#fff;opacity:.92}
+.avd-bar{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:var(--surface);color:var(--ink);border-radius:18px;padding:8px 14px;box-shadow:0 8px 24px rgb(0 0 0 / .18)}   /* a solid strip: the count and buttons never sit on the dimmed page */
+.avd-count{font:700 13px var(--mono);letter-spacing:.04em;color:var(--muted)}
 .avd-wear,.avd-x{min-height:46px;padding:10px 22px;border-radius:999px;font:750 15px var(--ui);cursor:pointer;border:0}
 .avd-wear{background:var(--treasure);color:#2B2117;box-shadow:0 4px 0 #B8861A}
 .avd-wear:active{transform:translateY(2px);box-shadow:0 2px 0 #B8861A}
