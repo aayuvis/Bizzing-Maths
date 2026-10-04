@@ -42,7 +42,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 2. **Difficulty is trickiness, not size.** The Bee's founding idea, for numbers: 7 × 8 is
    harder than 12 × 12. `facts.js` `tricky()` is the ramp key and `why()` names the reason.
    Any new "hardest first" selection uses `tricky()`, never the size of the answer.
-3. **Never leak the answer** — not in a prompt, not in a hint chip, not in a trick step's
+3. **Hints stay as they are** (owner, 4 Oct 2026): one step for the 6–7 band, never the answer.
+   **Never leak the answer** — not in a prompt, not in a hint chip, not in a trick step's
    label. Both test suites check it; it caught `144 ÷ 12 → "what times 12?"` and the halves
    `28 − 14`. Right answers are accepted the moment they are typed; wrong ones wait for Enter,
    so a child is never told "wrong" halfway through typing 56.
@@ -103,7 +104,10 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     Legendary asks for a learning milestone first. A face may also be in a sibling's 96 (owner, 3 Oct 2026: the faces shared with Bee stay). Worlds 1–2 are free; 3–6 open with the family plan or 240 coins.
     The Extras are frames, road skins and bonus game modes (`extras.js`; bought once, at the printed price, never
     random). **Bonus modes stay paid** (owner, 3 Oct 2026): each is a new way to play a skill the Atlas already
-    teaches free — never sell the teaching itself. The wallet history says every line in words (`k.coinNotes`).
+    teaches free — never sell the teaching itself. Contest-paper SKINS are Extras too; a paid rival rematch is not
+    (owner, 4 Oct 2026). **The daily challenge** pays a small fixed bonus once a day through a standard event
+    (owner, 4 Oct 2026) — never a streak, never a nag, and a missed day costs nothing.
+    The wallet history says every line in words (`k.coinNotes`).
 19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
 20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
