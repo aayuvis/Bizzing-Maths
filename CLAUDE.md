@@ -159,6 +159,15 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     also carries `where` and `more`, cut from the corpus like its words. `test/feed.mjs` fails a generic link. `test/feed.mjs` and
     `test/feed-ui.mjs` hold it.
 
+29. **The landing is Bee's shape, with REAL screenshots** (owner, 4 Oct 2026): `viewWelcome` + `src/landing.js` (lazy).
+    Screenshots are captured from the built app by `tools/shots.mjs` — re-run it when a pictured screen changes —
+    and load as they scroll near. Every number on the page is counted from the code (`data-n`, re-counted by
+    `test/family-ui.mjs`). No testimonials (none exist; never invent one) and no prices until the owner sets them.
+    The browser tab shows `public/favicon.svg`, Octo with no background square; the installed app icon keeps its square.
+30. **The chapters load data-first** (audit v4 R2): the browser build gives `tricks.js` each chapter's data only
+    (`vite-light.mjs`); the code arrives in one chunk (`chapters/full.js`) with the first stop. A new chapter goes
+    in BOTH `full.js` and `tricks.js`; `test/light.mjs` holds them equal. Initial JS budget: `test/family-ui.mjs`.
+
 ### Art
 
 - **Painted plates, composited characters.** `tools/art/gen.py` paints places only — no
