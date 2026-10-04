@@ -317,7 +317,7 @@ function screen() {
    screen says so instead of hanging (the service worker keeps it after one visit). */
 const LIGHT_SCREENS = ['home', 'welcome', 'start', 'grownups', 'privacy', 'help', 'me', 'shop', 'collection', 'medals', 'settings', 'who', 'wallet'];
 let ENGINE_FAIL = false, engineWait = false;
-const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; if (LIGHT_SCREENS.includes(R.ui.nav) && kid(R.h)) render(); }, (e) => { ENGINE_FAIL = true; throw e; });   // Home's worked example fills in
+const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { ENGINE_FAIL = true; throw e; });   // Home's worked example joins it on its next draw — never a forced re-render, which would close a drawer the same tap opened
 /* actions that only move between screens or change a setting: they never wait for the code */
 const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
   'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
@@ -766,7 +766,7 @@ function finishRun() {
     s.lines.push(`Your journey is <b>Level ${L} — ${escapeHtml(lv.name)}</b>. ${escapeHtml(lv.blurb)}`);
     // why here (audit v4 A6): one real question from their own test, the hardest they got right
     const why = J.placedBecause(run.items, run.results, L);
-    s.lines.push(why ? `<span class="placed-why">You start at Level ${L} because you got <b class="mono">${escapeHtml(why.text)}${why.text.length > 22 ? '' : ` = ${escapeHtml(why.ans)}`}</b> right — a Level ${why.level} question. ${why.level === L ? 'So that road is yours.' : `Level ${L} is the next step up from there.`}</span>`
+    s.lines.push(why ? `<span class="placed-why">You start at Level ${L} because you got <b class="mono">${escapeHtml(why.said)}</b> right — a Level ${why.level} question. ${why.level === L ? 'So that road is yours.' : `Level ${L} is the next step up from there.`}</span>`
       : `<span class="placed-why">You start at Level 1, where every road begins — the first steps make the rest easy.</span>`);
     s.lines.push('<span class="muted">This is where to start, not a score. It is never shown in a report, and the journey moves you up as you finish it.</span>');
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="journey">Start my journey</button>');
@@ -1045,7 +1045,7 @@ const sdkDone = (k, n, lv, hints) => { const p = k.puzzles.sudoku || (k.puzzles.
 on('pickFloor', (f) => { R.ui.floor = +f; render(); });
 on('shutFloor', () => toast('Clear the floor below first.'));
 on('climb', (f) => {
-  if (!G) return loadGames().then(() => fire('climb', f), () => toast('This needs the internet once — then it works offline.'));
+  if (!G && isBoss(+f)) return loadGames().then(() => fire('climb', f), () => toast('This needs the internet once — then it works offline.'));   // only a sudoku floor is a game
   f = +f; const k = kid(R.h); const lv = floorLevel(f, k.band);
   if (!k.quest) k.quest = {};
   if (isBoss(f)) {

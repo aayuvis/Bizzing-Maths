@@ -165,5 +165,10 @@ ok(h5.v >= 5 && h5.kids[0].journey && h5.kids[0].journey.level === null, 'v4 →
   const its = J.levelTestItems(w), sc = J.levelTestDone(w, its, its.map(() => ({ right: true })));
   ok(sc.moved && sc.to === 3 && J.upsToSee(w).join() === '3', 'passing the Level 2 test owes the Level 3 scene, even on a record never read before');
   const u = J.upScene(4); ok(u.name === J.levelOf(4).name && u.world === J.landsOf(4)[0].world, 'the scene shows the level\'s name and its first land\'s plate'); }
+/* the placement sentence reads as English for every kind of question (a compare box once came out "45,059 ☐ 45,059 = =") */
+{ const { saidRight } = await import('../src/journey.js');
+  const cases = [[{ text: '45,059 ☐ 45,059', ans: '=' }, '45,059 = 45,059'], [{ text: 'What is 7 × 8?', ans: 56 }, 'What is 7 × 8? 56'], [{ text: '5 × 4', ans: 20 }, '5 × 4 = 20']];
+  for (const [q, want] of cases) { const got = saidRight(q); if (got !== want) { fails++; console.error(`  ✗ placement reads "${got}", want "${want}"`); } } }
+
 console.log(`${fails ? 'FAIL' : 'ok'} journey — the staircase places ${3 * 11} known children exactly, ${n} checks`);
 if (fails) process.exit(1);

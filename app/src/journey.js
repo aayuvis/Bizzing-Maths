@@ -258,7 +258,16 @@ export function placedBecause(items, results, level) {
   // a question short enough to read inside a sentence first; then the hardest; then the shortest
   const long = (q) => (String(q.text).length > 40 ? 1 : 0);
   const q = got.map((x) => x.q).sort((a, b) => long(a) - long(b) || b.tlevel - a.tlevel || String(a.text).length - String(b.text).length)[0];
-  return { text: String(q.text), ans: String(q.ans), level: q.tlevel };
+  return { text: String(q.text), ans: String(q.ans), level: q.tlevel, said: saidRight(q) };
+}
+/* How the right answer reads inside "because you got … right": a box in the question is filled with the
+   answer ("45,059 ☐ 45,059" → "45,059 = 45,059"), a question that asks takes it after ("What is 7 × 8? 56"),
+   a short sum takes "= answer", and a long question stands alone rather than run on. */
+export function saidRight(q) {
+  const t = String(q.text).trim(), a = String(q.ans);
+  if (/[☐□]/.test(t)) return t.replace(/[☐□]/, a);
+  if (/\?$/.test(t)) return `${t} ${a}`;
+  return t.length > 22 ? t : `${t} = ${a}`;
 }
 
 /* Put the child on the journey the test found. Steps they have already passed
