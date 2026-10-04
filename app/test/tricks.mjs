@@ -3,7 +3,7 @@
    and a plain evaluation of q.expr. Any disagreement fails the build. */
 import { TRICKS, WORLDS, example, correct, parseNum, learnCases, caseSig } from '../src/tricks.js';
 import { seeded } from '../src/rand.js';
-import { checkSteps } from './lib/steps.mjs';
+import { checkSteps, constReport, weakness, H } from './lib/steps.mjs';
 // STEPS_ONLY=world,world limits the middle-step check while a world is being given its x (never in CI)
 const STEPS_ONLY = process.env.STEPS_ONLY ? process.env.STEPS_ONLY.split(',') : null;
 
@@ -45,7 +45,7 @@ for (const t of TRICKS) {
     ok(w.length >= 1, `${t.id}: no steps`);
     const last = w.at(-1).v;
     ok(q.choices ? last === q.ans : Math.abs((typeof last === 'number' ? last : parseNum(last)) - want) < 1e-9, `${t.id}: ${q.text} trick ends on ${last}, answer is ${q.ans}`);
-    if (!STEPS_ONLY || STEPS_ONLY.includes(t.world)) checkSteps(t.id, q, w, ok);
+    if (!STEPS_ONLY || STEPS_ONLY.includes(t.world)) checkSteps(t.id, q, w, ok, t.draw ? t.draw(q) : (q.html || ''));
     for (const s of w) {
       const ok1 = s.choices ? s.choices.includes(s.v) : typeof s.v === 'string' ? Number.isFinite(parseNum(s.v)) : Number.isFinite(s.v) && (t.decimals || Number.isInteger(s.v));
       ok(s.v !== undefined && ok1, `${t.id}: ${q.text} step "${s.t}" has a value a child cannot type (${s.v})`);
@@ -66,6 +66,11 @@ for (const t of TRICKS) {
   probe([{ t: 'Which is bigger?', v: 'A', x: "6*7>40?'A':'B'", choices: ['A', 'B'] }, { t: 'add 1', v: 43 }]);
   probe([{ t: '6 × 7', v: 42, x: '6*7' }, { t: 'add 1', v: 43 }]);
   ok(seen.join() === '1,1,1,0,0', `the middle-step check itself is broken (${seen})`); }
+// …and the weak shapes are caught, while honest arithmetic, a TEXT read and a fact are not
+ok(['7-0', '(5)-0', '9*1', '6*4/6', 'Math.sqrt(8*8)', '1/(1/4)', "['heads','tails'].length"].every((x) => weakness(x))
+  && ['7-3', 'Math.floor(1234/1)%10', '6*4', 'H.n(TEXT,2)', "H.fact('straight-angle')"].every((x) => !weakness(x)), 'the weak-shape rule is broken');
+ok(H.n('In 674, what is the 6 worth?', 2) === 6 && H.n('−3 + 5', 1) === -3 && H.count('<circle/><circle/><rect/>', /<circle/) === 2, 'H cannot read what the child sees');
+constReport(ok);   // a step that is the same typed constant on every question is a fact typed by hand
 // band gating must mean something: every world has a stop open to the youngest band that world is for
 // every trig ratio a Lighthouse prompt GIVES must be the true value, rounded as shown
 ok((await import('../src/chapters/lighthouse.js')).RATIOS_ARE_TRUE(), 'lighthouse: a given trig ratio is not the true value');
