@@ -76,6 +76,8 @@ export const NEAR = 0.8;
 
 /* ---------------------------------------------------------------- the roads */
 export const WALKS = {};
+/* the first journey level that may show a stop's algebra (audit v4, V3: "The algebra behind…" reached Level 1) */
+export const ALGEBRA_FROM = 4;
 for (const L of LEVELS) for (const s of L.steps) (WALKS[s.stop] = WALKS[s.stop] || []).push({ level: L.n, lv: s.lv });
 const topicsOf = (id) => { const t = byId[id]; return [`stop:${id}`, `world:${t.world}`, `concept:${CONCEPT_OF[id]}`]; };
 
@@ -84,29 +86,98 @@ export const NEEDS_PICTURE = /\bthis\b|\bthese\b|clock show|shaded|graph shows|V
 export const leaks = (text, ans) => String(ans).length > 1 && plain(text).split(/[^0-9./]/).map((x) => x.replace(/^\.+|\.+$/g, '')).includes(String(ans));
 const asQ = (text) => `${text}${/[?.]$/.test(text) ? '' : ' = ?'}`;
 
-/* wrong options from the working itself (a step's value is the classic slip), then near misses */
-export function wrongs(q, steps, n = 2) {
-  const out = [], seen = new Set();
-  const isFrac = typeof q.ans === 'string' && /\//.test(q.ans);
-  const want = typeof q.ans === 'number' ? q.ans : parseNum(q.ans);
-  const dp = (x) => { const s = String(x); return s.includes('.') ? s.split('.')[1].length : 0; };
-  const fmt = (v) => (Number.isInteger(want) ? String(Math.round(v)) : Number(v).toFixed(Math.max(1, dp(want))));
-  const cand = [];
-  for (const s of steps) if (typeof s.v === 'number' || /^-?[\d.]+(\/\d+)?$/.test(String(s.v))) cand.push(String(s.v));
-  if (isFrac) {
-    const [a, b] = q.ans.split('/').map(Number);
-    cand.push(`${b}/${a}`, `${a + 1}/${b}`, `${a}/${b + 1}`, `${Math.max(1, a - 1)}/${b}`);
+/* ---------------------------------------------------------------- wrong options (audit v4, V7/E11)
+   A wrong option is a slip a child really makes, never a number nobody would write. The old cut
+   put the right answer in the MIDDLE of its three options in 61% of cards (facts 86%, formulas
+   98%) and a magic square's was always the smallest, so "pick the middle one" scored without
+   any maths. Now:
+     candidates   the working's own values (a step is the classic slip), the same sum with one
+                  sign changed (a wrong operation), a place slip (× 10, ÷ 10), two digits swapped,
+                  a slip in one column (± 10, ± 100), and, last, near misses at varied distances;
+     plausible    never 0, never negative, never under a tenth of the answer when the answer is
+                  positive (53² is never offered as 3 or 300; √25 never as 0), never the same
+                  value as the answer written another way;
+     rank         how many options sit below the answer is drawn from the card's own seed, so
+                  the answer is the smallest, the middle or the largest equally often.
+   The display slot is a separate matter, balanced across each kind at the end of the cut. */
+const dpOf = (x) => { const s = String(x); return s.includes('.') ? s.split('.')[1].length : 0; };
+const natural = (v) => String(+Number(v).toFixed(6));
+/* an answer's shape: whole, decimal (to its places) or a fraction a/b */
+function shape(ans) {
+  const s = String(ans).replace(/[−–]/g, '-');
+  if (/^-?\d+\/\d+$/.test(s)) { const [a, b] = s.split('/').map(Number); return { frac: [a, b], want: a / b }; }
+  const want = typeof ans === 'number' ? ans : parseNum(s);
+  return { want, int: Number.isInteger(want) && !s.includes('.'), dp: dpOf(s) };
+}
+export function plausible(v, want) {
+  if (!Number.isFinite(v) || Math.abs(v - want) < 1e-9) return false;
+  if (want > 0) return v > 0 && v >= want / 10 - 1e-9 && v <= Math.max(want * 10, want + 20) + 1e-9;
+  return true;
+}
+/* the same plain sum with one operation changed: + ↔ −, × → + (only a short sum of one or two
+   operations, never a function: in 2×2×2×2×2×2×2 a "wrong operation" is not a slip anyone makes) */
+export function opSlips(expr) {
+  const e = String(expr || '');
+  if (!/^[\d\s.+\-*/()]+$/.test(e) || e.includes('**') || (e.match(/[\d)]\s*[+\-*/]/g) || []).length > 2) return [];
+  const out = [], swap = { '+': ['-'], '-': ['+'], '*': ['+'] };
+  for (let i = 1; i < e.length; i++) {
+    const c = e[i]; if (!swap[c] || !/[\d)]/.test(e.slice(0, i).trimEnd().at(-1) || '')) continue;
+    for (const to of swap[c]) { try { const v = Function(`return (${e.slice(0, i)}${to}${e.slice(i + 1)})`)(); if (Number.isFinite(v)) out.push(v); } catch { /* not a sum */ } }
+  }
+  return out;
+}
+/* place, digit and column slips of a positive whole or decimal answer */
+function numberSlips(want, sh) {
+  const out = [];
+  const s = sh.int ? String(Math.abs(want)) : Math.abs(want).toFixed(sh.dp), sign = want < 0 ? -1 : 1;
+  if (!sh.int || Math.abs(want) >= 20) out.push(want * 10, want / 10);                 // a place slip (7 + 9 is never offered as 160)
+  const ds = s.replace('.', ''), at = s.indexOf('.');
+  for (let i = 0; i + 1 < ds.length; i++) if (ds[i] !== ds[i + 1] && !(i === 0 && (ds[0] === '0' || ds[1] === '0'))) {
+    const sw = ds.slice(0, i) + ds[i + 1] + ds[i] + ds.slice(i + 2);                 // two digits swapped
+    out.push(sign * Number(at < 0 ? sw : sw.slice(0, at) + '.' + sw.slice(at)));
+  }
+  const u = sh.int ? 1 : 10 ** -sh.dp;
+  for (const k of [10, 100]) if (Math.abs(want) >= k * u) out.push(want + k * u, want - k * u);   // one column out
+  return out;
+}
+const nearMisses = (want, u) => [1, 2, 3, 4, 5, 6].flatMap((d) => [want + d * u, want - d * u]);
+
+/* choose n wrong options from candidates [{s, tier}] so that the answer's rank is drawn from the seed */
+export function pick(ans, cands, n, seedKey, { check = () => true, keep = plausible } = {}) {
+  const sh = shape(ans), want = sh.want, r = seeded(`wrong:${seedKey}`), seen = new Set();
+  const ok = [];
+  for (const c of cands) {
+    const v = parseNum(c.s);
+    if (!Number.isFinite(v) || !keep(v, want) || seen.has(c.s) || ok.some((o) => Math.abs(o.v - v) < 1e-9) || !check(c.s)) continue;
+    seen.add(c.s); ok.push({ ...c, v, j: r() });
+  }
+  const side = (f) => ok.filter(f).sort((a, b) => a.tier - b.tier || a.j - b.j);
+  const lo = side((c) => c.v < want), hi = side((c) => c.v > want);
+  let below = Math.floor(r() * (n + 1));
+  below = Math.min(below, lo.length); below = Math.max(below, n - hi.length);
+  if (below < 0 || below > lo.length) return null;
+  return [...lo.slice(0, below), ...hi.slice(0, n - below)].map((c) => c.s);
+}
+
+/* wrong options for a question: from its working, its plain sum, then the shape of its answer */
+export function wrongs(q, steps, n = 2, seedKey = `${q.text}|${q.ans}`, extra = []) {
+  const sh = shape(q.ans), want = sh.want;
+  if (!Number.isFinite(want)) return null;
+  const cands = [], fmt = (v) => (sh.int ? String(Math.round(v)) : sh.frac ? null : Number.isInteger(v) ? String(v) : Number(v).toFixed(Math.max(1, sh.dp)));
+  const add = (v, tier) => { if (typeof v === 'string') cands.push({ s: v, tier }); else if (Number.isFinite(v) && (!sh.int || Number.isInteger(v))) { const s = sh.frac ? null : fmt(v); if (s != null) cands.push({ s, tier }); } };
+  for (const v of extra) add(v, 0);
+  for (const s of steps) if (typeof s.v === 'number' || /^-?[\d.]+(\/\d+)?$/.test(String(s.v))) add(String(s.v), 0);
+  for (const v of opSlips(q.expr)) add(v, 0);
+  if (sh.frac) {
+    const [a, b] = sh.frac;
+    for (const x of [`${b}/${a}`, `${a + 1}/${b}`, `${a}/${b + 1}`, `${a - 1}/${b}`, `${a}/${b - 1}`, `${a + 2}/${b}`, `${a}/${b + 2}`]) if (/^-?\d+\/[1-9]\d*$/.test(x)) add(x, 1);
   } else {
-    const d = Number.isInteger(want) ? 1 : 10 ** -Math.max(1, dp(want));
-    for (const v of [want + d, want - d, want + 10 * d, want - 10 * d, want * 2, want + 2 * d]) cand.push(fmt(v));
+    if (want < 0) add(-want, 0);                                                      // the sign slip
+    for (const v of numberSlips(want, sh)) add(sh.int || Number.isInteger(v) ? v : natural(v), 1);
+    for (const v of nearMisses(want, sh.int ? 1 : 10 ** -Math.max(1, sh.dp))) add(v, 2);
   }
-  for (const c of cand) {
-    if (out.length >= n) break;
-    const v = parseNum(c);
-    if (!Number.isFinite(v) || seen.has(c) || correct(q, c) || (want >= 0 && v < 0) || c === String(q.ans)) continue;
-    seen.add(c); out.push(c);
-  }
-  return out.length === n ? out : null;
+  const check = (c) => !correct(q, c) && c !== String(q.ans);
+  return pick(q.ans, cands, n, seedKey, { check });
 }
 
 /* one question from a generator — a stop's, a stone's — seeded, text-only, never leaking */
@@ -114,8 +185,12 @@ export function askFrom(t, seedKey, lv) {
   for (let i = 0; i < 40; i++) {
     const q = t.gen(seeded(`${seedKey}#${i}`), lv);
     if (!q || q.text == null || NEEDS_PICTURE.test(q.text) || (!t.echo && leaks(q.text, q.ans))) continue;
-    if (q.choices) { const w = q.choices.filter((c) => c !== q.ans).slice(0, 2); if (w.length < 1) continue; return { q, i, opts: [q.ans, ...w] }; }
-    const w = wrongs(q, t.work ? t.work(q) : []); if (!w) continue;
+    if (q.choices) {
+      const rest = q.choices.filter((c) => c !== q.ans), numeric = [q.ans, ...rest].every((c) => Number.isFinite(parseNum(c)));
+      const w = numeric && rest.length > 2 ? pick(q.ans, rest.map((s) => ({ s: String(s), tier: 0 })), 2, `${seedKey}#${i}`, { keep: (v, want) => Math.abs(v - want) > 1e-9 }) : rest.slice(0, 2);
+      if (!w || w.length < 1) continue; return { q, i, opts: [q.ans, ...w] };
+    }
+    const w = wrongs(q, t.work ? t.work(q) : [], 2, `${seedKey}#${i}`); if (!w) continue;
     return { q, i, opts: [String(q.ans), ...w] };
   }
   return null;
@@ -150,7 +225,9 @@ export function cut() {
     if (!walks.length) continue;
     const bands = bandsFrom(t.band), topics = topicsOf(t.id), route = `#/stop/${t.id}`;
     const A = [];
-    A.push({ kind: 'trick', src: `stop:${t.id}#idea`, title: t.title, body: `${t.idea} ${t.why[0]}`, more: `In algebra: ${t.alg}`, go: 'learn', cta: 'Learn the trick', first: true });
+    // its second line is the algebra only where the child first meets it at Level 4 or later; before that, the first worked idea's own note
+    const note = learnCases(t).find((c) => c.note), young = walks[0].level < ALGEBRA_FROM;
+    A.push({ kind: 'trick', src: `stop:${t.id}#idea`, title: t.title, body: `${t.idea} ${t.why[0]}`, more: young ? (note ? `For example: ${note.note}` : `The trick: ${t.idea}`) : `In algebra: ${t.alg}`, go: 'learn', cta: 'Learn the trick', first: true });
     const s = STORIES[t.id];
     if (s) {
       const open = s.beats.find((b) => b.who === null);
@@ -173,9 +250,12 @@ export function cut() {
       const last = s.beats.at(-1);
       if (last.who) A.push({ kind: 'moral', src: `story:${t.id}#beat${s.beats.length - 1}`, badge: { id: 'story', label: 'A story' }, title: `${NAME[last.who]}, in “${s.title}”`, body: last.say, more: `The trick in the story: ${t.idea}`, go: `story|${s.beats.length - 1}`, cta: 'Read the story' });
     }
-    const deal = walks.map(() => []);
+    /* the algebra waits for Level 4 (audit v4, V3): a road of Levels 1–3 deals the rest and never the algebra */
+    const deal = walks.map(() => []), late = walks.map((wk, wi) => (wk.level >= ALGEBRA_FROM ? wi : -1)).filter((wi) => wi >= 0);
     let r = walks.length > 1 ? 1 : 0;
-    for (const f of A) { if (f.first) deal[0].push(f); else { deal[r].push(f); r = (r + 1) % walks.length; } }
+    for (const f of A.filter((x) => x.kind !== 'algebra')) { if (f.first) deal[0].push(f); else { deal[r].push(f); r = (r + 1) % walks.length; } }
+    const alg = A.find((x) => x.kind === 'algebra');
+    if (late.length) deal[late.reduce((a, b) => (deal[b].length < deal[a].length ? b : a))].push(alg);
     walks.forEach((wk, wi) => {
       for (const f of deal[wi]) {
         const { first, go, ...card } = f; void first;
@@ -217,7 +297,7 @@ export function cut() {
   for (const c of FORM.CARDS) {
     const stops = c.stops.filter((s) => byId[s]), level = place(stops), bands = bandsFrom(c.band), topics = stops.flatMap(topicsOf), route = `#/lib/formulas|${c.id}`, cta = `${c.title} in the Formula Book`;
     const ex = c.example, card = { id: `formula-${c.id}`, kind: 'formula', src: `formula:${c.id}`, title: c.title, body: `${c.formula}. ${c.caption}`, ...taughtIn(stops), route, cta, bands, topics };
-    const w = wrongs({ ans: ex.ans }, []);
+    const w = wrongs({ ans: ex.ans, expr: ex.expr }, [], 2, `formula:${c.id}`);
     if (w && !leaks(`${c.title}: ${ex.q} ${card.body}`, ex.ans)) card.play = { q: `${c.title}: ${ex.q}`, opts: [String(ex.ans), ...w], after: ex.lines.join(' · ') };
     put(card, level);
     c.why.forEach((p, i) => put({ id: `formula-why-${c.id}-${i}`, kind: 'formula-why', src: `formula:${c.id}#why${i}`, title: `Why ${c.formula}`, body: p, more: `The card: ${c.title} — ${c.caption}`, route, cta, bands, topics }, place(stops)));
@@ -226,7 +306,7 @@ export function cut() {
         body: `${o.say} — with ${c.story.cast.map((x) => NAME[x]).join(' and ')}.`, art: `art/s-${c.story.scene}.webp`, route, cta, bands, topics }, place(stops)); }
     for (let i = 0; i < 40; i++) {
       const q = c.gen(seeded(`feed:formula:${c.id}#${i}`)); if (leaks(q.text, q.ans)) continue;
-      const w2 = wrongs(q, []); if (!w2) continue;
+      const w2 = wrongs(q, [], 2, `formula:${c.id}#${i}`); if (!w2) continue;
       put({ id: `formula-try-${c.id}`, kind: 'formula-try', src: `formula:${c.id}#gen${i}`, title: `${c.title} — your turn`, route, cta, bands, topics,
         play: { q: asQ(q.text), opts: [String(q.ans), ...w2], after: c.formula } }, place(stops));
       break;
@@ -259,8 +339,13 @@ export function cut() {
   const facts = F.OPS.flatMap((op) => F.BANK[op]).filter((f) => F.tricky(f) > 0.45).sort((x, y) => F.tricky(y) - F.tricky(x) || F.key(x).localeCompare(F.key(y)));
   for (const f of facts) {
     const ans = F.answer(f);
-    const near = f.op === '×' ? [f.a * (f.b + 1), (f.a + 1) * f.b, f.a * (f.b - 1)] : f.op === '÷' ? [ans + 1, ans - 1, ans + 2] : f.op === '²' ? [f.a * (f.a + 1), f.a * (f.a - 1), ans + 10] : [ans + 1, ans - 1, ans + 10];
-    const opts = [String(ans), ...[...new Set(near)].filter((v) => v >= 0 && v !== ans).slice(0, 2).map(String)];
+    /* the slips this fact invites: a neighbouring row or column of the table, the wrong operation, then the shape of the number */
+    const { a, b } = f, slips = f.op === '×' ? [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b] : f.op === '÷' ? [ans + 1, ans - 1, a / (b + 1), a / (b - 1)]
+      : f.op === '²' ? [a * (a + 1), a * (a - 1), (a + 1) ** 2, (a - 1) ** 2] : f.op === '+' ? [ans + 1, ans - 1, Math.abs(a - b)] : [ans + 1, ans - 1, a + b];
+    const wrongOp = f.op === '×' ? [a + b] : f.op === '²' ? [2 * a] : f.op === '+' ? [ans + 10, ans - 10] : f.op === '-' ? [ans + 10] : [];
+    const cands = [...slips.filter(Number.isInteger).map((v) => ({ s: String(v), tier: 0 })), ...wrongOp.map((v) => ({ s: String(v), tier: 1 })),
+      ...numberSlips(ans, { int: true, dp: 0 }).filter(Number.isInteger).map((v) => ({ s: String(v), tier: 1 })), ...nearMisses(ans, 1).map((v) => ({ s: String(v), tier: 2 }))];
+    const w = pick(ans, cands, 2, `fact:${F.key(f)}`), opts = w ? [String(ans), ...w] : [];
     if (opts.length < 3 || leaks(F.text(f), ans)) continue;
     agnostic.push({ id: `fact-${F.OP_WORD[f.op]}-${f.a}-${f.b}`, kind: 'fact', key: `fact:${F.key(f)}`, src: `fact:${F.key(f)}`, bands: factBands(f), topics: ['facts', `op:${f.op}`],
       title: F.OP_NAME[f.op], route: `#/facts/${f.op}|${F.key(f)}`, cta: `${F.text(f)} on the facts grid`, play: { q: `${F.text(f)} = ?`, opts, after: F.why(f) } });
@@ -278,8 +363,11 @@ export function cut() {
   for (const lv of [1, 2, 3]) for (let i = 0, n = 0; n < 40 && i < 400; i++) {
     const q = patternQuestion(lv, seeded(`feed:pattern:${lv}:${i}`));
     if (seenP.has(q.text)) continue; seenP.add(q.text);
-    const d = q.ans - Number(q.text.split(', ')[4]);
-    const opts = [String(q.ans), ...[...new Set([q.ans + 1, q.ans + d + 1, q.ans - 1])].filter((v) => v >= 0 && v !== q.ans).slice(0, 2).map(String)];
+    /* the slips: carry on by the last gap as if it were adding, one term too far, the first gap again, then near misses */
+    const t = q.text.replace(', …', '').split(', ').map(Number);
+    const cands = [...[2 * t[4] - t[3], q.ans + (q.ans - t[4]), t[4] + (t[1] - t[0])].map((v) => ({ s: String(v), tier: 0 })), ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))];
+    const w = pick(q.ans, cands, 2, `pattern:${lv}:${i}`, { check: (c) => !t.includes(+c) }); if (!w) continue;
+    const opts = [String(q.ans), ...w];
     agnostic.push({ id: `pattern-${lv}-${i}`, kind: 'pattern', src: `pattern:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:patterns'],
       title: 'What comes next?', route: '#/puzzles/patterns', cta: 'More pattern puzzles', play: { q: q.text, opts, after: q.explain } }); n++;
   }
@@ -287,12 +375,38 @@ export function cut() {
     const q = magicQuestion(lv, seeded(`feed:magic:${lv}:${i}`)); if (!magicSolvable(q)) continue;
     const rows = [0, 3, 6].map((j) => q.grid.slice(j, j + 3).map((v, x) => (j + x === q.blanks[0] ? '?' : q.blanks.includes(j + x) ? '·' : v)).join('  ')).join('  /  ');
     if (leaks(rows + q.text, q.ans)) continue;
+    /* the slips: the number for another blank (the wrong square), one step of the square's own spacing out, then near misses */
+    const step = lv === 3 ? Math.min(...q.grid.map((v, x) => Math.abs(v - q.grid[(x + 1) % 9])).filter((v) => v > 0)) : 1;
+    const w = pick(q.ans, [...q.blanks.slice(1).map((x) => ({ s: String(q.grid[x]), tier: 0 })), ...[q.ans + step, q.ans - step, q.ans + 2 * step, q.ans - 2 * step].map((v) => ({ s: String(v), tier: 1 })),
+      ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))], 2, `magic:${lv}:${i}`); if (!w) continue;
     agnostic.push({ id: `magic-${lv}-${i}`, kind: 'magic', src: `magic:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:logic'],
-      title: 'A magic square', body: rows, route: '#/puzzles/logic', cta: 'More logic puzzles', play: { q: q.text, opts: [String(q.ans), String(q.ans + 1), String(q.ans + 2)], after: q.explain } }); n++;
+      title: 'A magic square', body: rows, route: '#/puzzles/logic', cta: 'More logic puzzles', play: { q: q.text, opts: [String(q.ans), ...w], after: q.explain } }); n++;
   }
   for (const c of agnostic) add(c);
   const drop = new Set(nearDups(items, true).map(([, b]) => b));
-  return items.filter((c) => !drop.has(c.id));
+  return showSlots(items.filter((c) => !drop.has(c.id)));
+}
+
+/* WHERE the right option is shown (audit v4, V7): the family's card writes the options in an order
+   taken from the card id, and ids that look alike (fact-times-7-8, fact-times-7-9) skewed the
+   right one towards the first slot. So each kind's question cards are ordered by a hash of their
+   id and dealt the slots in turn — every slot within one card of every other, per kind and per
+   number of options — and the rest of each card's options shuffled from its id. feed.js
+   showOpts() lays the buttons out in this order; test/feed.mjs reads the slot off the card as
+   rendered. */
+export function showSlots(items) {
+  const groups = {};
+  for (const c of items) if (c.play) (groups[`${c.kind}/${c.play.opts.length}`] ||= []).push(c);
+  for (const g of Object.values(groups)) {
+    g.sort((a, b) => hash(`slot:${a.id}`) - hash(`slot:${b.id}`) || (a.id < b.id ? -1 : 1));
+    g.forEach((c, i) => {
+      const n = c.play.opts.length, r = seeded(`show:${c.id}`), rest = [...Array(n).keys()].slice(1);
+      for (let j = rest.length - 1; j > 0; j--) { const x = Math.floor(r() * (j + 1)); [rest[j], rest[x]] = [rest[x], rest[j]]; }
+      rest.splice(i % n, 0, 0);
+      c.play = { ...c.play, show: rest };
+    });
+  }
+  return items;
 }
 
 /* Pairs of cards whose words are ≥ 80% the same (Jaccard), found by prefix filtering: rare

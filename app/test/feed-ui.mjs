@@ -7,6 +7,9 @@
    time — it is …" until Continue; j/k step card to card; the grown-up's switch takes the tab, the
    ☰ row and the screen away; ?demo shows a feed and writes nothing. Run after `npm run build`. */
 import { site, kidRec, household, checker, SHOTS } from './lib/site.mjs';
+import { GROUPS } from '../../tools/build-feed.mjs';
+const BODY = {};
+for (const g of GROUPS) Object.assign(BODY, (await import(`../src/feed/g-${g}.js`)).BODY);
 
 const { ok, fails } = checker();
 const { BASE, browser, close } = await site('feed', +(process.env.PORT_BASE || 5200) + 5);
@@ -75,6 +78,10 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'keyboard'], [{ width: 3
   await p.goto(BASE); await p.waitForSelector('.home2'); await toFeed(p);
   const ids = await p.$$eval('.bzf-card[data-kind]', (cs) => cs.filter((c) => c.querySelector('.bzf-opt')).map((c) => c.dataset.id));
   ok(ids.length >= 2, `${tag}: at least two cards ask a question (${ids.length})`);
+  // the buttons are laid out as the card's play.show says (audit v4, V7), not in the family card's own order
+  const laid = await p.$$eval('.bzf-card[data-kind]', (cs) => cs.filter((c) => c.querySelector('.bzf-opt')).map((c) => [c.dataset.id, [...c.querySelectorAll('.bzf-opt')].map((b) => +b.dataset.o)]));
+  const off = laid.filter(([id, os]) => JSON.stringify(os) !== JSON.stringify(BODY[id].play.show));
+  ok(laid.length && !off.length, `${tag}: every question's options are shown in its play.show order (${off.map(([id, os]) => `${id} ${os.join('')} ≠ ${BODY[id].play.show.join('')}`).join(', ')})`);
   ok(!(await p.locator('.bzf-after').count()), `${tag}: no answer is on the page before it is given`);
   const before = await coins(p);
   const card = (id) => `.bzf-card[data-id="${id}"]`;

@@ -3,7 +3,7 @@
    an index and one group per level (src/feed/, built by tools/build-feed.mjs), so none of it is on the first screen. */
 import { R } from './runtime.js';
 import { feedCard, feedEnd, feedHead } from './integration/bizzing-feed.js';
-import { session, markSeen, dayNo, feedLevel, levelName } from './feed.js';
+import { session, markSeen, dayNo, feedLevel, levelName, showOpts } from './feed.js';
 import { kid } from './model.js';
 import { continueTarget } from './views.js';
 import { octoState } from './views3.js';
@@ -71,7 +71,7 @@ export function viewFeed(save) {
   const cards = list.map((x) => {
     let it = BODY[x.id] && { ...BODY[x.id], kind: x.kind }, st = P[x.id] || {};
     if (it && it.play && st.st === 'done') { it = { ...it, play: undefined }; st = {}; }
-    return withMore(feedCard(it, x, st), it);
+    return withMore(showOpts(feedCard(it, x, st), it && it.play && it.play.show), it);
   }).join('');
   return `<section class="feed-page">${head}<div class="bzf-list" data-feed="1">${cards}${feedEnd({ href: '#/continue', label: `${c.label}: ${c.title}`, alt: { href: '#/home', label: 'Home' } })}</div></section>`;
 }
