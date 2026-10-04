@@ -152,6 +152,31 @@ export function raiseLevel(k, id, lv, pct, fast) {
   return (r.lvNext = lv + 1);
 }
 
+/* The drill opens at a level picked from recent accuracy (audit v4 E7). The last two runs at
+   90% or better AND inside the time: one up from the last run's level. The last run under 60%:
+   one down. Otherwise the level of the last run. Never below Warm-up (1), never above Champion (3).
+   `recent` is a stop's last few runs, oldest first: [{ lv, pct, fast }]. */
+export function pickLevel(recent) {
+  const rs = (recent || []).filter((x) => x && x.lv), last = rs.at(-1);
+  if (!last) return 1;
+  const prev = rs.at(-2), clamp = (v) => Math.max(1, Math.min(3, v));
+  if (last.pct < 0.6) return clamp(last.lv - 1);
+  if (prev && [prev, last].every((x) => x.pct >= 0.9 && x.fast)) return clamp(last.lv + 1);
+  return clamp(last.lv);
+}
+/* Record a finished drill and set where the stop opens next time. raiseLevel's promise (three
+   stars at a level moves the start up once) still holds; a weak run can bring it back down.
+   Returns { lv, up } — the next opening level, and the step raiseLevel took (0 for none). */
+export function noteRun(k, id, lv, pct, fast) {
+  lv = lv || 1;
+  const r = trickRec(k, id);
+  r.recent = [...(r.recent || []), { lv, pct: Math.round(pct * 100) / 100, fast: !!fast }].slice(-4);
+  const was = r.lvNext || 1, up = raiseLevel(k, id, lv, pct, fast), pick = pickLevel(r.recent);
+  // only a weak run moves the start down; a good one never undoes a step already earned
+  r.lvNext = pct < 0.6 ? pick : Math.max(pick, up, was);
+  return { lv: r.lvNext, up };
+}
+
 export function nodeDone(k, node) {
   if (node.kind === 'check') return !!(k.checks[node.world] && k.checks[node.world].passed);
   const r = k.tricks[node.id]; return !!(r && r.stars >= 2);

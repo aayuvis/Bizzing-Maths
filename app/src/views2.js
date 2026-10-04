@@ -19,7 +19,7 @@ import { kid, ROUTE, isOpen, frontier, nodeDone, worldOpen, onJourney, firstLeve
 import { STORIES } from './stories.js';
 import { FAMILIES, FLOORS, isBoss, FLOOR_PASS, floorLevel, bandLevel, sudokuSize } from './puzzles.js';
 import { MISSION, goalsFor, summary, STATUS } from './objectives.js';
-import { av, starRow, starsInline, pageHead, sayBtn, trickOfDay, numberOfDay } from './views.js';
+import { av, starRow, starsInline, pageHead, sayBtn, trickOfHourCard, numberOfHour } from './views.js';
 import { octo, octoState } from './views3.js';
 import { bot } from './contest.js';
 import * as J from './journey.js';
@@ -294,8 +294,8 @@ export function viewLibrary(shelf) {
       <span class="lib-art" style="background-image:url(art/${t.art}.webp)"></span>
       <span class="lib-t"><b>${esc(t.name)}</b><span>${esc(t.blurb)}</span></span></button>`).join('')}</div>
     <div class="lib-today">
-      <div class="card trick-day"><span class="kick gold">Trick of the day</span>${av('aryabhatta', 56, 'Aryabhata')}<div>${trickOfDay(kid(R.h))}</div></div>
-      <div class="card nod-day"><span class="kick gold">Number of the day</span>${(() => { const n = numberOfDay(); return `<b class="nod-n mono">${n.n}</b><ul>${n.facts.map((f) => `<li>${f}</li>`).join('')}</ul>`; })()}</div>
+      <div class="card trick-day"><span class="kick gold">Trick of the hour</span>${av('aryabhatta', 56, 'Aryabhata')}<div>${trickOfHourCard(kid(R.h))}</div></div>
+      <div class="card nod-day"><span class="kick gold">Number of the hour</span>${(() => { const n = numberOfHour(); return `<b class="nod-n mono">${n.n}</b><ul>${n.facts.map((f) => `<li>${f}</li>`).join('')}</ul>`; })()}</div>
     </div>
   </section>`;
 }

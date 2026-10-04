@@ -188,10 +188,28 @@ export function levelTestDone(k, items, results) {
   if (!ready) return { ...sc, moved: false, from, to: from };
   j.tests[key] = { best: Math.max(was.best, sc.points), passed: was.passed || sc.pass, stars: Math.max(was.stars, sc.stars) };
   if (!sc.pass) return { ...sc, moved: false, from, to: from };
+  upsToSee(k);                             // the scenes already owed are counted before this one is added
   if (!j.finished.includes(from)) j.finished.push(from);
   if (j.level < TOP) j.level++;
   j.recap = null;                          // they climbed here: the level below is fresh
   return { ...sc, moved: j.level !== from, from, to: j.level };
+}
+
+/* The level-up scene (audit v4 L4) is owed for every level a child CLIMBED to — the level after
+   one they finished by passing its test — and is shown once: `seenUp` lists the ones shown. A
+   child placed by the level test climbed nothing, so they are owed nothing. The first time a
+   record is read, the climbs it already holds count as seen: nobody sits through a parade. */
+const climbed = (j) => (j.finished || []).map((f) => f + 1).filter((n) => n <= TOP && n <= (j.level || 0));
+export function upsToSee(k) {
+  const j = rec(k);
+  if (!Array.isArray(j.seenUp)) j.seenUp = climbed(j);
+  return climbed(j).filter((n) => !j.seenUp.includes(n));
+}
+export function sawUp(k, n) { const j = rec(k); upsToSee(k); if (!j.seenUp.includes(n)) j.seenUp.push(n); }
+/* What the scene shows: the new level's name and age, and the painted plate of its first land. */
+export function upScene(n) {
+  const L = levelOf(n), first = landsOf(n)[0];
+  return { n, name: L.name, age: ageOf(n), world: first ? first.world : 'gardens', land: first ? first.name : '' };
 }
 
 /* ------------------------------------------------------------- the level test */
@@ -230,6 +248,18 @@ export function answer(st, right) {
   st.L = down; return true;
 }
 function finish(st, level) { st.done = true; st.result = level; return false; }
+
+/* Why the test placed a child where it did (audit v4 A6): one REAL question from their own
+   test that they got right — one short enough to fit in a sentence, from the hardest level at or
+   below where they landed. Null when they got none right. */
+export function placedBecause(items, results, level) {
+  const got = items.map((q, i) => ({ q, ok: results[i] && results[i].right })).filter((x) => x.ok && x.q.tlevel && x.q.tlevel <= level);
+  if (!got.length) return null;
+  // a question short enough to read inside a sentence first; then the hardest; then the shortest
+  const long = (q) => (String(q.text).length > 40 ? 1 : 0);
+  const q = got.map((x) => x.q).sort((a, b) => long(a) - long(b) || b.tlevel - a.tlevel || String(a.text).length - String(b.text).length)[0];
+  return { text: String(q.text), ans: String(q.ans), level: q.tlevel };
+}
 
 /* Put the child on the journey the test found. Steps they have already passed
    elsewhere in the app stay passed. */

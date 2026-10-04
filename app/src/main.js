@@ -24,7 +24,7 @@ import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
-import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, raiseLevel, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
+import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, trickRec, noteRun, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import * as G from './games.js';
 import { dayKey, shuffle } from './rand.js';
@@ -115,6 +115,14 @@ function unseen(k) {
     const md = medalById[id];
     celebrate({ kind: 'medal', id, title: md.name, say: `${md.did || md.desc} It is on your shelf now.` });
   }
+  // a level climbed but its scene never shown (the tab closed on it): shown on the next visit, once
+  if (k && !k.sample) for (const n of J.upsToSee(k)) if (!R.ui.cels.some((c) => c.id === 'up' + n)) celebrate(levelUp(n));
+}
+/* A level-up scene, from the level's own record: its name, its age, its first land's plate. */
+function levelUp(n, extra = {}) {
+  const u = J.upScene(n);
+  return { kind: 'levelup', id: 'up' + n, n, title: `Level ${n} — ${u.name}`, plate: `art/w-${u.world}.webp`, age: u.age, land: u.land,
+    say: `You passed the Level ${n - 1} test. The ${u.name} road is open, and it starts in ${u.land}.`, ...extra };
 }
 function backfill() {
   for (const k of R.h.kids) if (!k.sample && !k.medalsFilled) {
@@ -400,7 +408,10 @@ function submit(given) {
   if (!right && readOn(k)) speakFeedback(q, run.fb);
   // a puzzle holds on a right answer too, so its rule can be read
   if (q.puzzle) { const p = k.puzzles[q.puzzle] || (k.puzzles[q.puzzle] = { right: 0, tries: 0, solved: {} }); p.tries++; if (right) p.right++; save(); }
-  if (right && !q.puzzle) setTimeout(() => { if (R.run === run && run.fb) nextQ(); }, fast ? 420 : 650);
+  // the auto-advance belongs to THIS answer: if the child moved on with Enter and has already
+  // answered the next question, a stale timer must not skip that one unseen
+  const fb = run.fb;
+  if (right && !q.puzzle) setTimeout(() => { if (R.run === run && run.fb === fb) nextQ(); }, fast ? 420 : 650);
   // placement stops after two misses in a row
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
@@ -432,6 +443,9 @@ function finishRun() {
     const budget = (4000 + 2500 * t.work(run.items[0]).length) * (k.band === '6-7' ? 1.5 : 1);
     const res = scoreRun(k, run.trick, right, n, avg <= budget);
     starToday(k, res.gained);
+    // where the drill opens next time comes from the last runs' accuracy (audit v4 E7)
+    const wasLv = trickRec(k, run.trick).lvNext || 1, nr = noteRun(k, run.trick, run.lv, res.pct, avg <= budget);
+    if (nr.lv < wasLv) s.lines.push(`<span class="muted">Next time this stop opens at ${['', 'Warm-up', 'Stretch', 'Champion'][nr.lv]} — a step back to make it stick.</span>`);
     s.stars = res.stars;
     if (res.pct >= 0.7) {
       s.lines.push(res.gained ? `<b>${res.stars === 3 ? 'Three stars — fast and fearless.' : 'Stop passed.'}</b>` : 'Passed again.');
@@ -441,7 +455,7 @@ function finishRun() {
       if (res.stars < 3) s.lines.push(res.pct >= 0.9 ? 'Nine or more right — do it a little quicker for the third star.' : 'Nine right at a good pace is the third star.');
       if (res.gained) { confetti(res.stars === 3 ? 60 : 36); sfx.level(); }
       // three stars at this difficulty: next time the stop starts one step harder (audit E7)
-      const up = raiseLevel(k, run.trick, run.lv, res.pct, avg <= budget);
+      const up = nr.up;
       if (up) s.lines.push(`<b>Three stars — next time this stop starts at ${['', 'Warm-up', 'Stretch', 'Champion'][up]}.</b>`);
       if (res.gained && res.stars - res.gained < 2) { earn(k, 'stop', t.title); mile(k, 'stop', t.title); }   // first pass of this stop
       k.last = { what: res.stars === 3 ? 'stars' : 'stop', title: t.title, at: Date.now() };
@@ -465,10 +479,14 @@ function finishRun() {
     s.head = right === n ? 'Three out of three!' : `${right} out of ${n} — a start`;
     s.lines.push(right ? `<b>You can already do these.</b> Now see why the trick works — and how far it goes.` : 'Every one showed its working. Now see the trick — it makes these easy.');
     s.buttons.push(`<button class="btn primary" data-act="openStepLearn" data-arg="${run.trick}">Learn why: ${escapeHtml(t.title)}</button>`);
+    // a visible win (audit v4 A8): a sticker made from what they did — one star per right answer,
+    // the questions themselves on it. Every child who answered gets one; nothing on it is random.
+    s.win = { title: t.title, right, n, done: run.items.slice(0, n).map((q, i) => ({ text: q.text, ans: q.ans, right: run.results[i].right })) };
     if (right) confetti(40);
   }
   if (run.kind === 'mix') {
     s.head = `${right} of ${n} right`;
+    s.parts = V.mixParts(run);
     s.lines.push(right === n ? '<b>Every one — that is today done.</b>' : 'Facts that slipped come back after a gap; nothing is lost for a miss.');
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="home">Home</button>');
     if (right >= n - 1) confetti(40);
@@ -537,7 +555,8 @@ function finishRun() {
         s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">See my new road</button>'); confetti(140); sfx.level();
         const coins = earn(k, 'mastery', `the Level ${sc.from} test`); mile(k, 'band', `Level ${sc.from} passed`);
         k.last = { what: 'level', title: `Level ${sc.to} — ${J.levelOf(sc.to).name}`, at: Date.now() };
-        celebrate({ kind: 'level', n: sc.to, coins, title: `Level ${sc.from} passed`, say: `${sc.core} of ${sc.N} on the Level ${sc.from} test. You are working at ${J.ageOf(sc.to)} now, and the ${J.levelOf(sc.to).name} road is yours.` });
+        // the level-up scene (audit v4 L4): owed by the pass, shown once (journey.seenUp)
+        for (const n of J.upsToSee(k)) celebrate(levelUp(n, n === sc.to ? { coins, say: `${sc.core} of ${sc.N} on the Level ${sc.from} test. You are working at ${J.ageOf(sc.to)} now, and the ${J.levelOf(sc.to).name} road is yours.` } : {}));
       } else if (lvl) {
         s.lines.push(sc.from === J.TOP ? '<b>Level 10 passed. You have walked all ten roads.</b>' : '<b>Passed.</b>');
         s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">My road</button>');
@@ -570,6 +589,10 @@ function finishRun() {
     const L = J.place(k, run.st.result), lv = J.levelOf(L);
     s.lines.push(`<span class="big-age">${escapeHtml(J.ageOf(L))}</span>`);
     s.lines.push(`Your journey is <b>Level ${L} — ${escapeHtml(lv.name)}</b>. ${escapeHtml(lv.blurb)}`);
+    // why here (audit v4 A6): one real question from their own test, the hardest they got right
+    const why = J.placedBecause(run.items, run.results, L);
+    s.lines.push(why ? `<span class="placed-why">You start at Level ${L} because you got <b class="mono">${escapeHtml(why.text)}${why.text.length > 22 ? '' : ` = ${escapeHtml(why.ans)}`}</b> right — a Level ${why.level} question. ${why.level === L ? 'So that road is yours.' : `Level ${L} is the next step up from there.`}</span>`
+      : `<span class="placed-why">You start at Level 1, where every road begins — the first steps make the rest easy.</span>`);
     s.lines.push('<span class="muted">This is where to start, not a score. It is never shown in a report, and the journey moves you up as you finish it.</span>');
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="journey">Start my journey</button>');
     confetti(40);
@@ -1000,11 +1023,12 @@ on('searchOpen', (a) => {
    next stop on your road and one pattern puzzle — one short mixed session from Home. */
 on('dailyMix', () => {
   const k = kid(R.h), items = [];
-  for (const f of F.session(k.facts, k.prefs.op, { band: k.band }).slice(0, 6)) items.push({ text: F.text(f), say: V.spoken(F.text(f)), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, fresh: f.fresh, why: F.why(f) });
-  for (const m of MD.due(k).slice(0, 2)) items.push({ ...m.q, mkey: m.key });
+  // every item carries its PART (audit v4 F1): the runner ticks facts · stop · puzzle as each is done
+  for (const f of F.session(k.facts, k.prefs.op, { band: k.band }).slice(0, 6)) items.push({ text: F.text(f), say: V.spoken(F.text(f)), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, fresh: f.fresh, why: F.why(f), part: 'facts' });
+  for (const m of MD.due(k).slice(0, 2)) items.push({ ...m.q, mkey: m.key, part: 'facts' });
   const p = J.progress(k), t = p && p.next ? byId[p.next.stop] : TRICKS.find((x) => (k.tricks[x.id] || {}).stars) || null;
-  if (t) items.push(...drill(t, 3, p && p.next ? Math.min(2, p.next.lv) : 1).map((q) => ({ ...q, trick: t.id })));
-  items.push(...familySet('patterns', bandLevel(k.band), 1));
+  if (t) items.push(...drill(t, 3, p && p.next ? Math.min(2, p.next.lv) : 1).map((q) => ({ ...q, trick: t.id, part: 'stop' })));
+  items.push(...familySet('patterns', bandLevel(k.band), 1).map((q) => ({ ...q, part: 'puzzle' })));
   startRun('mix', 'Today’s five minutes', items, { sub: 'Facts, a stop, a puzzle — about five minutes' });
 });
 on('openStepLearn', (id) => { fire('openStop', id); R.ui.tab = 'learn'; render(); });
@@ -1101,6 +1125,7 @@ on('sheet', () => { R.ui.sheet = !R.ui.sheet; render(); if (R.ui.sheet) { const 
 on('celDone', () => {
   const c = R.ui.cels.shift(), k = kid(R.h);
   if (c && c.kind === 'medal' && k && k.medals[c.id]) { k.medals[c.id].seen = true; save(); }
+  if (c && c.kind === 'levelup' && k) { J.sawUp(k, c.n); save(); }
   if (R.ui.cels.length) { sfx.bell(); }
   render();
 });

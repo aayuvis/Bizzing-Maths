@@ -138,5 +138,32 @@ const h4 = { v: 4, kids: [{ ...newKid('Old', '8-10', 'koi'), journey: undefined 
 const h5 = migrate(h4);
 ok(h5.v >= 5 && h5.kids[0].journey && h5.kids[0].journey.level === null, 'v4 → v5 adds an unplaced journey');
 
+// A6 (audit v4): the placement is explained with one real question from the child's own test
+{ const st = J.newTest('8-10'), r = seeded('a6'), items = [], results = [];
+  let q = J.question(st, r); items.push(q);
+  for (;;) { const right = q.tlevel <= 4; results.push({ right }); if (!J.answer(st, right)) break; q = J.question(st, r); items.push(q); }
+  const why = J.placedBecause(items, results, st.result);
+  ok(st.result === 5 && why && items.some((x, i) => results[i].right && String(x.text) === why.text && String(x.ans) === why.ans), `the example is a question from the test, answered right (${why && why.text})`);
+  const short = items.filter((x, i) => results[i].right && String(x.text).length <= 40);
+  ok(why && why.level === (short.length ? Math.max(...short.map((x) => x.tlevel)) : 4) && (!short.length || why.text.length <= 40), 'it is the hardest level they got right that reads in a sentence');
+  ok(J.placedBecause(items, results.map(() => ({ right: false })), 1) === null, 'nothing right: no example is made up'); }
+// L4 (audit v4): a level-up scene is owed for a level CLIMBED to, from the record, and shown once
+{ const k = newKid('U', '8-10'); J.place(k, 5);
+  ok(J.upsToSee(k).length === 0, 'a child PLACED at Level 5 climbed nothing, so no scene');
+  const old = newKid('O', '6-7'); Object.assign(J.rec(old), { level: 3, finished: [1, 2] });
+  ok(J.upsToSee(old).length === 0 && J.rec(old).seenUp.join() === '2,3', 'climbs already in an old record count as seen — no parade');
+  const j = J.rec(old); j.finished.push(3); j.level = 4;
+  ok(J.upsToSee(old).join() === '4', 'finishing Level 3 owes the Level 4 scene');
+  ok(J.upsToSee(old).join() === '4', '…until it is shown (reading it does not mark it seen)');
+  J.sawUp(old, 4); ok(J.upsToSee(old).length === 0, 'shown once, never again');
+  const top = newKid('T', '11-14'); Object.assign(J.rec(top), { level: 10, finished: [9], seenUp: [] });
+  ok(J.upsToSee(top).join() === '10', 'Level 10 is owed its scene'); top.journey.finished.push(10);
+  ok(J.upsToSee(top).join() === '10', 'finishing Level 10 opens no Level 11');
+  // the real path: a level test passed by a record that has never been read for scenes
+  const w = newKid('W', '6-7'); J.place(w, 2); const jw = J.rec(w); jw.tests = {};
+  for (const x of J.progress(w).nodes) { if (x.kind === 'stop') jw.done[`${x.stop}@${x.lv}`] = true; if (x.kind === 'landtest') jw.tests[`L2:${x.land.id}`] = { passed: true, best: 20, stars: 2 }; }
+  const its = J.levelTestItems(w), sc = J.levelTestDone(w, its, its.map(() => ({ right: true })));
+  ok(sc.moved && sc.to === 3 && J.upsToSee(w).join() === '3', 'passing the Level 2 test owes the Level 3 scene, even on a record never read before');
+  const u = J.upScene(4); ok(u.name === J.levelOf(4).name && u.world === J.landsOf(4)[0].world, 'the scene shows the level\'s name and its first land\'s plate'); }
 console.log(`${fails ? 'FAIL' : 'ok'} journey — the staircase places ${3 * 11} known children exactly, ${n} checks`);
 if (fails) process.exit(1);

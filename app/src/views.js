@@ -13,6 +13,7 @@ import { keypad } from './games.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
 import { summary } from './objectives.js';
+import { greetingLine } from './greeting.js';
 import { seeded, int, dayKey } from './rand.js';
 import { THEMES, themeOf, worldIsOpen, plate } from './themes.js';
 import { certsFor } from './cert.js';
@@ -212,7 +213,6 @@ export function viewStart() {
 
 /* ------------------------------------------------------------- home */
 
-export function numberOfDay() { return numberFacts(int(12, 999, seeded('nod:' + dayKey()))); }
 export function numberFacts(n) {
   const facts = [];
   const divs = []; for (let d = 1; d <= n; d++) if (n % d === 0) divs.push(d);
@@ -229,30 +229,8 @@ export function numberFacts(n) {
    1 the top bar · 2 a greeting from the child's own face, with today's ring ·
    3 ONE Continue — the only filled button on the screen · 4 Today's three,
    small and skippable · 5 at most six ways in · then, below the fold, the
-   number and the trick of the day and the honest progress panel. */
-const LINES = [
-  (n) => `Ready, ${n}? One stop, twenty facts and a puzzle — that is a great day.`,
-  (n) => `${n}, the road has a new trick waiting for you.`,
-  (n) => `Every right answer moves your rank, ${n}. Nothing else does.`,
-  (n) => `Let’s make a big sum small today, ${n}.`,
-];
-/* What the child did last, said back to them — the greeting is about them. */
-function lastLine(k) {
-  const L = k.last, n = esc(k.name);
-  if (!L) return LINES[Math.floor(seeded('line:' + dayKey() + k.id)() * LINES.length)](n);
-  const what = esc(L.title || '');
-  return {
-    stop: `Last time you passed <b>${what}</b>, ${n}. Shall we keep walking?`,
-    stars: `Three stars on <b>${what}</b> last time, ${n} — fast and fearless.`,
-    land: `You passed the <b>${what}</b> test last time, ${n}. A new land is open.`,
-    level: `Level up! You are on <b>${what}</b> now, ${n}.`,
-    facts: `Last time: twenty facts, <b>${what}</b> right. Some more today, ${n}?`,
-    floor: `You cleared <b>${what}</b> of the Puzzle Tower last time, ${n}.`,
-    tried: `Last time you had a go at <b>${what}</b>, ${n}. It gets easier every try.`,
-    paper: `You sat <b>${what}</b> last time, ${n}. The review shows which way in to practise.`,
-  }[L.what] || LINES[0](n);
-}
-
+   number and the trick of the hour and the honest progress panel. */
+/* What Octo says is about the child, from their own record (greeting.js, audit v4 B1/B5). */
 function ring(parts) {
   // concentric rings, one per part of today; each fills to its own goal
   const R0 = 46, W = 9;
@@ -309,7 +287,7 @@ export function viewHome() {
   return `<section class="home2">
     ${worldStage(themeOfKid(k), 'home-stage')}
     ${bzHome({
-      greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(lastLine(k)) },
+      greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(greetingLine(k)) },
       ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
         foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: p ? `#/journey/${p.level}` : '#/me' } },
       hour: { kicker: 'Five minutes', title: 'Today’s mix', sub: mk.due ? `Facts, a stop, a puzzle — and ${mk.due} mistake${mk.due > 1 ? 's' : ''} due.` : 'Facts picked for you, your next stop and a puzzle.', icon: 'bolt', href: '#/mix' },
@@ -318,16 +296,27 @@ export function viewHome() {
         href: '#/continue', cta: c.label, progress: p ? { pct: Math.round(100 * p.done / p.total), label: `${p.done} of ${p.total} stops on this road` } : null },
       second: mk.due ? { plate: 'art/lib-working.webp', icon: 'flag', chip: `${mk.due} ready`, kicker: 'My mistakes', title: `${mk.due} to try again`, sub: 'They come back after a gap — that is how they stick.', href: '#/mistakes', cta: 'Look again', ctaIcon: 'pen', progress: null }
         : { plate: 'art/q-tower.webp', icon: 'puzzle', chip: `floor ${Math.min(12, floors + 1)} of 12`, kicker: 'Your puzzle journey', title: 'The Puzzle Tower', sub: 'Twelve floors of thinking puzzles — the kind contests are made of.', href: '#/puzzles', cta: 'Climb', ctaIcon: 'puzzle', progress: { pct: Math.round(100 * floors / 12), label: `${floors} of 12 floors cleared` } },
-      tip: { kicker: 'Trick of the hour', text: `${tip.title}: ${tip.idea}`, href: `#/stop/${tip.id}|learn` },
+      tip: { kicker: 'Trick of the hour', text: `${tip.title}${/\?$/.test(tip.title) ? '' : ':'} ${tip.idea} ${workedLine(tip, 110)}`, href: `#/stop/${tip.id}|learn` },
       quote: { kicker: 'From the story of numbers', text: fact.why, who: '', href: '#/me' },
       foot: FOOT,
     })}
   </section>`;
 }
-function trickOfHour(k) {
+/* The daily cards have ONE cadence and one name everywhere (audit v4 B8): "… of the hour", the
+   family's own (Bee's "Quote of the hour"). Home, the Library and My page show the same trick and
+   the same number in the same hour. */
+export function trickOfHour(k, at = new Date()) {
   const learned = TRICKS.filter((t) => (k.tricks[t.id] || {}).stars);
   const pool = learned.length ? learned : TRICKS.slice(0, 3);
-  return pool[Math.floor(seeded('toh:' + dayKey() + new Date().getHours())() * pool.length)];
+  return pool[Math.floor(seeded('toh:' + dayKey(at) + at.getHours())() * pool.length)];
+}
+/* One worked example of a trick, in a line: the chapter's own example run through its own steps,
+   so the line is checked by the same tests as the trick (test/tricks.mjs). */
+export function workedLine(t, max = Infinity) {
+  const q = example(t), steps = t.work(q);
+  if (max < Infinity) { const full = workedLine(t); if (full.length <= max) return full; return `For example — ${q.text}${/\?$/.test(q.text) ? '' : ' ='} ${q.ans}.`; }
+  const say = (x) => (/^[\d\s+−\-×÷()., ]+$/.test(x.t) ? `${x.t} = ${x.v}.` : /\?$/.test(x.t) ? `${x.t} ${x.v}.` : `${x.t.replace(/[.:]\s*$/, '')}: ${x.v}.`);
+  return `For example — ${q.text}${/\?$/.test(q.text) ? '' : ':'} ${steps.map(say).join(' ')}`;
 }
 
 /* The number of the HOUR (standard §6 card 3): the same number in every house this hour. */
@@ -337,11 +326,9 @@ export function numberOfHour(at = new Date()) {
 }
 export const themeOfKid = (k) => themeOf(k, R.h);
 
-export function trickOfDay(k) {
-  const learned = TRICKS.filter((t) => (k.tricks[t.id] || {}).stars);
-  const pool = learned.length ? learned : TRICKS.slice(0, 3);
-  const t = pool[Math.floor(seeded('tod:' + dayKey())() * pool.length)];
-  return `<b>${esc(t.title)}</b><p>${esc(t.idea)}</p><button class="linkish" data-act="openStop" data-arg="${t.id}">${learned.length ? 'Practise it again' : 'Learn it'} →</button>`;
+export function trickOfHourCard(k) {
+  const t = trickOfHour(k), learned = TRICKS.some((x) => (k.tricks[x.id] || {}).stars);
+  return `<b>${esc(t.title)}</b><p>${esc(t.idea)}</p><p class="worked">${esc(workedLine(t))}</p><button class="linkish" data-act="openStop" data-arg="${t.id}">${learned ? 'Practise it again' : 'Learn it'} →</button>`;
 }
 
 function greet() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
@@ -461,6 +448,7 @@ function drillTab(t, rec, k) {
   return `${js ? `<p class="jstep-note">${icon('compass', 18)} Journey step: pass this drill at <b>${['', 'Warm-up', 'Stretch', 'Champion'][js.lv]}</b>${js.lv > 1 ? ' or harder' : ''} to tick it off.</p>` : ''}<div class="card center-card">
     <div class="drill-go">${btn('Start the drill — ten questions', 'startDrill', t.id, 'primary big')}
     <div class="seg small" role="radiogroup" aria-label="Level">${[1, 2, 3].map((l) => `<button role="radio" aria-checked="${lv === l}" class="${lv === l ? 'on' : ''}" data-act="level" data-arg="${l}">${['', 'Warm-up', 'Stretch', 'Champion'][l]}</button>`).join('')}</div></div>
+    ${rec.recent && rec.recent.length && lv === (rec.lvNext || 1) ? `<p class="muted small picked">${['', 'Warm-up', 'Stretch', 'Champion'][lv]} is picked from your last runs here — change it if you like.</p>` : ''}
     <p class="muted small">Seven right passes the stop. Nine right at a good pace is the third star. A wrong answer shows you the trick on that exact question.${rec.best ? ` Your best: ${rec.best}%.` : ''}</p>
     ${!rec.learned ? '<p class="hint">Tip: “Your turn” first, if you have not done the working yourself yet.</p>' : ''}
   </div>`;
@@ -475,6 +463,7 @@ export function viewRun() {
   const fb = run.fb;
   return `<section class="runner ${fb ? (fb.right ? 'is-right' : 'is-wrong') : ''}">
     ${pageHead(esc(run.title), esc(run.sub || ''), back('quitRun', 'Stop'))}
+    ${run.kind === 'mix' ? mixTicks(run) : ''}
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
@@ -514,6 +503,38 @@ function feedback(q, fb, run = {}) {
   return `<p class="fb bad">${fb.given === '' ? 'Out of time.' : 'Not this time.'} It is <b class="mono">${esc(q.ans)}</b>.</p>${work}`;
 }
 
+/* Today's mix, part by part (audit v4 F1): how many of each part were answered and right,
+   counted from the run's own results. A part with no items (no stop yet) is left out. */
+export function mixParts(run) {
+  const NAMES = { facts: 'Facts', stop: 'Your stop', puzzle: 'The puzzle' };
+  return ['facts', 'stop', 'puzzle'].map((id) => {
+    const idx = run.items.map((q, i) => (q.part === id ? i : -1)).filter((i) => i >= 0);
+    const done = idx.filter((i) => run.results[i]).length, ok = idx.filter((i) => run.results[i] && run.results[i].right).length;
+    return { id, name: NAMES[id], n: idx.length, done, ok, finished: idx.length > 0 && done === idx.length, title: id === 'stop' && idx.length ? (byId[run.items[idx[0]].trick] || {}).title : '' };
+  }).filter((x) => x.n);
+}
+/* Three ticks over the mix — facts · stop · puzzle — each filled when its part is done. */
+function mixTicks(run) {
+  const cur = (run.items[run.i] || {}).part;
+  return `<ol class="mix-ticks" aria-label="Today’s mix">${mixParts(run).map((p) => `<li class="${p.finished ? 'done' : p.id === cur ? 'now' : ''}" data-part="${p.id}"><span class="mt-box">${p.finished ? icon('check', 16) : ''}</span>${esc(p.name)}<small>${p.done}/${p.n}</small></li>`).join('')}</ol>`;
+}
+function mixSummary(parts) {
+  return `<div class="mix-sum" aria-label="Today’s mix, part by part">${parts.map((p) => `<div class="ms-part" data-part="${p.id}">
+    <span class="ms-n"><b>${p.ok}</b>/${p.n}</span><span class="ms-t"><b>${esc(p.name)}</b><small>${p.id === 'facts' ? (p.ok === p.n ? 'every fact right' : `${p.ok} right — the others come back after a gap`) : p.id === 'stop' ? `${esc(p.title || 'your next stop')} · ${p.ok} right` : p.ok ? 'solved' : 'its rule was shown — the next one will feel easier'}</small></span>
+  </div>`).join('')}</div>`;
+}
+
+/* The warm-up's sticker (audit v4 A8): built from the three answers — a gold star for each one
+   right, a hollow one for a try — so it always says exactly what happened. */
+function winCard(w) {
+  return `<div class="win-card" role="img" aria-label="Warm-up sticker: ${w.right} of ${w.n} right on ${esc(w.title)}">
+    <span class="win-seal">${icon('star', 34)}</span>
+    <span class="win-t"><small>Warm-up sticker</small><b>${esc(w.title)}</b>
+      <span class="win-stars">${w.done.map((d) => `<i class="${d.right ? 'on' : ''}" title="${esc(d.text)}">★</i>`).join('')}</span>
+      <span class="win-qs">${w.done.map((d) => `<span class="${d.right ? 'ok' : ''}">${esc(d.text)} = ${esc(d.ans)}</span>`).join('')}</span></span>
+  </div>`;
+}
+
 function viewRunEnd(run) {
   const right = run.results.filter((r) => r.right).length, n = run.results.length;
   const s = run.summary || {}, placing = run.kind === 'leveltest' || run.kind === 'place';   // finding a place is never scored
@@ -523,6 +544,8 @@ function viewRunEnd(run) {
     <div class="card end-card">
       ${octo(pose, 110, 'end-octo', '')}
       ${s.stars != null ? starRow(s.stars, 3, true) : ''}
+      ${s.win ? winCard(s.win) : ''}
+      ${s.parts ? mixSummary(s.parts) : ''}
       ${placing ? '' : `<h2>${s.head || `${right} of ${n} right`}</h2>`}
       ${(s.lines || []).map((l) => `<p>${l}</p>`).join('')}
       ${!placing && run.missed && run.missed.length ? `<div class="missed"><p class="kicker">Worth another look</p><ul>${run.missed.map((q) => `<li><b class="mono">${esc(q.text)} = ${esc(q.ans)}</b>${q.why ? ` <span class="why-chip">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul></div>` : ''}
@@ -572,7 +595,7 @@ export function viewArcade() {
   const puzzleDone = k.daily[dayKey()] && k.daily[dayKey()].puzzle;
   const tile = (id, title, blurb, art, keys) => `<button class="gtile" data-act="play" data-arg="${id}">
       <span class="gart ${art}" style="background-image:url(art/g-${id}.webp)" aria-hidden="true"></span>
-      <span class="gtxt"><b>${title}</b><span>${blurb}</span><span class="gmeta">${g(id).best != null ? `Best ${g(id).best} · ` : ''}${keys}</span></span></button>`;
+      <span class="gtxt"><b>${title}</b><span>${blurb}</span>${g(id).best != null ? `<span class="gbest" data-best="${g(id).best}">${icon('trophy', 14)} Best: ${g(id).best}</span>` : ''}<span class="gmeta">${keys}</span></span></button>`;
   return `<section>
     ${pageHead('Play')}
     <div class="hero-tiles">
@@ -695,7 +718,7 @@ export function viewMe() {
       </span>
       <span class="jgo2">See what you’re learning →</span>
     </button>
-    <div class="card trick-day"><span class="kick gold">Trick of the day</span>${av('aryabhatta', 56, 'Aryabhata')}${trickOfDay(k)}</div>
+    <div class="card trick-day"><span class="kick gold">Trick of the hour</span>${av('aryabhatta', 56, 'Aryabhata')}<div>${trickOfHourCard(k)}</div></div>
     <div class="two">
       <div class="card">
         <p class="kicker">Your rank — ${k.xp} right answers</p>
@@ -734,6 +757,21 @@ export function medalShelf(k) {
 export function celebration() {
   const c = (R.ui.cels || [])[0]; if (!c) return '';
   const k = kid(R.h);
+  // the level-up scene (audit v4 L4): its own stage — the new level's first land, painted, with
+  // its number and name, Octo cheering and the child's own face. Once per level (journey.seenUp).
+  if (c.kind === 'levelup') return `<div class="cel-back" aria-hidden="true"></div>
+  <div class="cel lvup" role="dialog" aria-modal="true" aria-labelledby="celh" data-level="${c.n}">
+    <div class="lvup-plate" style="background-image:url(${esc(c.plate)})">
+      <span class="lvup-n" aria-hidden="true"><small>Level</small>${c.n}</span>
+      <span class="lvup-octo">${octo('cheer', 132, '', 'Octo cheering')}</span>
+      <span class="lvup-kid">${mine(k, 84, '')}</span>
+    </div>
+    <p class="kicker">Level up · ${esc(c.age || '')}</p>
+    <h2 id="celh">${esc(c.title)}</h2>
+    <p class="cel-say"><b>Octo:</b> “${esc(c.say)}”</p>
+    ${c.coins ? `<p class="muted small cel-coins">${icon('coin', 18)} +${c.coins} Bizzing coins</p>` : ''}
+    <button class="btn primary big" data-act="celDone" autofocus>Onto my new road</button>
+  </div>`;
   const art = c.kind === 'medal' ? `<img class="cel-medal" src="art/medal-${c.id}.webp" alt="" width="180" height="180">`
     : `<span class="cel-badge" aria-hidden="true">${c.kind === 'level' ? c.n : icon('flag', 64)}</span>`;
   return `<div class="cel-back" aria-hidden="true"></div>
