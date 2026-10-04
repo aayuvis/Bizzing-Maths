@@ -507,12 +507,14 @@ export const TRICKS = [
       // x: the sides of the end shape, read from the solid's own name (a cube and a cuboid have square ends)
       const end = /^cub/.test(name) ? 'square' : name.split(/[ -]/)[0];
       const mx = `['triangular','square','pentagonal','hexagonal','heptagonal','octagonal'].indexOf('${end}')+3`;
+      // the faces that are not side faces, counted off the DRAWING: its edges and corners give its faces (Euler), less one side face per side
+      const ends = String.raw`(()=>{const L=[...SVG.matchAll(/<line x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)],P=new Set(L.flatMap((m)=>[m[1]+','+m[2],m[3]+','+m[4]]));return L.length-P.size+2})()-` + `(${mx})`;
       if (S.kind === 'prism') {
-        if (ask === 'faces') return [{ t: 'The two ends', v: 2, x: "['front','back'].length" }, { t: 'One flat side for each side of an end', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
+        if (ask === 'faces') return [{ t: 'The two ends', v: 2, x: ends }, { t: 'One flat side for each side of an end', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
         if (ask === 'edges') return [{ t: 'Edges round the front end', v: m, x: mx }, { t: 'Round the back end', v: m, x: mx }, { t: 'Running from end to end', v: m, x: mx }, { t: 'Edges altogether', v: C.E }];
         return [{ t: 'Corners on one end', v: m, x: mx }, { t: 'Corners on both ends', v: C.V }];
       }
-      if (ask === 'faces') return [{ t: 'The base', v: 1, x: "['base'].length" }, { t: 'One triangle for each side of the base', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
+      if (ask === 'faces') return [{ t: 'The base', v: 1, x: ends }, { t: 'One triangle for each side of the base', v: m, x: mx }, { t: 'Faces altogether', v: C.F }];
       if (ask === 'edges') return [{ t: 'Edges round the base', v: m, x: mx }, { t: 'Edges up to the tip', v: m, x: mx }, { t: 'Edges altogether', v: C.E }];
       return [{ t: 'Corners of the base', v: m, x: mx }, { t: 'Add the tip', v: C.V }];
     },
@@ -662,7 +664,7 @@ export const TRICKS = [
     work({ full, known }) {
       const total = full ? 360 : 180, sum = known.reduce((a, b) => a + b, 0);
       return [
-        { t: full ? 'All the way round a point makes' : 'Angles on a straight line make', v: total, x: full ? '4*90' : '2*90' },
+        { t: full ? 'All the way round a point makes' : 'Angles on a straight line make', v: total, x: full ? "H.fact('full-turn')" : "H.fact('straight-angle')" },
         { t: known.length > 1 ? 'Add the angles you know' : 'The angle you know', v: sum, x: `[${known}].reduce((a,b)=>a+b,0)` },
         { t: `${total} − ${sum}`, v: total - sum },
       ];
@@ -712,10 +714,10 @@ export const TRICKS = [
         expr: `${total}-${known.join('-')}`, ans: angles[hide] };
     },
     work({ kind, angles, hide, apex }) {
-      if (kind === 'iso') return [{ t: 'Angles in a triangle add up to', v: 180, x: '2*90' }, { t: `180 − ${apex}`, v: 180 - apex, x: `180-${apex}` }, { t: 'Shared between the two equal angles', v: (180 - apex) / 2 }];
+      if (kind === 'iso') return [{ t: 'Angles in a triangle add up to', v: 180, x: "H.fact('triangle-angles')" }, { t: `180 − ${apex}`, v: 180 - apex, x: `180-${apex}` }, { t: 'Shared between the two equal angles', v: (180 - apex) / 2 }];
       const total = kind === 'quad' ? 360 : 180, sum = angles.reduce((a, b, i) => (i === hide ? a : a + b), 0);
       return [
-        { t: kind === 'quad' ? 'Angles in a four-sided shape add up to' : 'Angles in a triangle add up to', v: total, x: kind === 'quad' ? '2*180' : '2*90' },
+        { t: kind === 'quad' ? 'Angles in a four-sided shape add up to' : 'Angles in a triangle add up to', v: total, x: kind === 'quad' ? "H.fact('quad-angles')" : "H.fact('triangle-angles')" },
         { t: `Add the ${kind === 'quad' ? 'three' : 'two'} you know`, v: sum, x: `[${angles.filter((_, i) => i !== hide)}].reduce((a,b)=>a+b,0)` },
         { t: `${total} − ${sum}`, v: total - sum },
       ];

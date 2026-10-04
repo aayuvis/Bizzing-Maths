@@ -84,8 +84,8 @@ const runEv = (x, evs) => evs.reduce((v, [k, n]) => EV[k].go(v, n), x);
 /* ================================================================ 6. heads and legs */
 
 const CREATURES = [
-  { lo: 'hens', hi: 'goats', a: 2, b: 4, whole: 'heads', part: 'legs', one: 'goat', where: 'A farm has hens and goats' },
-  { lo: 'bicycles', hi: 'cars', a: 2, b: 4, whole: 'vehicles', part: 'wheels', one: 'car', where: 'A car park holds bicycles and cars' },
+  { lo: 'hens', hi: 'goats', a: 2, b: 4, whole: 'heads', part: 'legs', one: 'goat', where: 'A farm has hens (2 legs each) and goats (4 legs each)' },
+  { lo: 'bicycles', hi: 'cars', a: 2, b: 4, whole: 'vehicles', part: 'wheels', one: 'car', where: 'A car park holds bicycles (2 wheels each) and cars (4 wheels each)' },
   { lo: 'beetles', hi: 'spiders', a: 6, b: 8, whole: 'creatures', part: 'legs', one: 'spider', where: 'A bug box holds beetles (6 legs each) and spiders (8 legs each)' },
 ];
 
@@ -449,7 +449,7 @@ export const TRICKS = [
         return [{ t: `If all ${n} were right: ${n} × ${a}`, v: n * a, x: `${n}*${a}` }, { t: `Points short: ${n * a} − ${s}`, v: n * a - s, x: `${n}*${a}-${s}` }, { t: `Each wrong answer costs ${a} + ${b}`, v: a + b, x: `${a}+${b}` }, { t: `Wrong answers: ${n * a - s} ÷ ${a + b}`, v: w, x: `(${n}*${a}-${s})/(${a}+${b})` }, { t: `Right answers: ${n} − ${w}`, v: n - w }]; }
       const [lo, hi, small, one, part] = o.kind === 'legs' ? [CREATURES[o.c].a, CREATURES[o.c].b, CREATURES[o.c].lo, CREATURES[o.c].one, ' ' + CREATURES[o.c].part] : [o.lo, o.hi, `${o.lo}s`, `${o.hi}`, ''];
       const tot = lo * (o.H - o.y) + hi * o.y, extra = tot - o.H * lo;
-      return [{ t: `If all ${o.H} were ${small}: ${o.H} × ${lo}`, v: o.H * lo, x: `${o.H}*${lo}` }, { t: `Still to explain: ${tot} − ${o.H * lo}`, v: extra, x: `${tot}-${o.H}*${lo}` }, { t: `Each swap to a ${one} adds ${hi} − ${lo}${part}`, v: hi - lo, x: `${hi}-${lo}` }, { t: `Swaps: ${extra} ÷ ${hi - lo}`, v: o.y }];
+      return [{ t: `If all ${o.H} were ${small}: ${o.H} × ${lo}`, v: o.H * lo, x: `${o.H}*${lo}` }, { t: `Still to explain: ${tot} − ${o.H * lo}`, v: extra, x: `${tot}-${o.H}*${lo}` }, { t: `Each swap to a ${one} adds ${hi} − ${lo}${part}`, v: hi - lo, x: o.kind === 'legs' ? 'H.n(TEXT,2)-H.n(TEXT,1)' : 'H.n(TEXT,3)-H.n(TEXT,2)' }, { t: `Swaps: ${extra} ÷ ${hi - lo}`, v: o.y }];   // each kind's worth, as the prompt states it
     },
   },
 
@@ -557,11 +557,13 @@ export const TRICKS = [
         expr: `Array.from({length:${o.N}},(_,i)=>String(i+1).length).reduce((a,b)=>a+b,0)`, ans: o.N < 100 ? 9 + 2 * (o.N - 9) : 189 + 3 * (o.N - 99) };
     },
     work(o) {
-      if (o.kind === 'posts') return [{ t: `Tiny fence first: ${2 * o.g} metres. How many posts?`, v: 3, x: `${2 * o.g}/${o.g}+1` }, { t: `So posts = gaps + 1. Gaps in the real fence: ${o.L} ÷ ${o.g}`, v: o.L / o.g, x: `${o.L}/${o.g}` }, { t: `Posts: ${o.L / o.g} + 1`, v: o.L / o.g + 1 }];
-      if (o.kind === 'cuts') return [{ t: 'Tiny case first: how many cuts make 3 pieces?', v: 2, x: `3-1` }, { t: `So cuts = pieces − 1. Cuts for ${o.n} pieces`, v: o.n - 1, x: `${o.n}-1` }, { t: `Minutes: ${o.n - 1} × ${o.t}`, v: (o.n - 1) * o.t }];
-      if (o.kind === 'ring') return [{ t: 'Tiny ring first: 3 gaps round a circle. How many trees?', v: 3, x: `${3 * o.g}/${o.g}` }, { t: `In a ring, trees = gaps. Gaps: ${o.P} ÷ ${o.g}`, v: o.P / o.g }];
-      if (o.N < 100) return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: `String(123456789).length` }, { t: `Pages 10 to ${o.N}: ${o.N - 9} pages × 2`, v: 2 * (o.N - 9), x: `(${o.N}-10+1)*2` }, { t: `Add: 9 + ${2 * (o.N - 9)}`, v: 9 + 2 * (o.N - 9) }];
-      return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: `String(123456789).length` }, { t: 'Pages 10 to 99: 90 pages × 2', v: 180, x: `(99-10+1)*2` }, { t: `Pages 100 to ${o.N}: ${o.N - 99} pages × 3`, v: 3 * (o.N - 99), x: `(${o.N}-100+1)*3` }, { t: `Add: 9 + 180 + ${3 * (o.N - 99)}`, v: 189 + 3 * (o.N - 99) }];
+      // the first band of pages, read off the drawing: last page − first page + 1
+      const PAGES1 = String.raw`(()=>{const m=SVG.match(/>(\d+) – (\d+)</);return m[2]-m[1]+1})()`;
+      if (o.kind === 'posts') return [{ t: `Tiny fence first: ${2 * o.g} metres. How many posts?`, v: 3, x: 'H.count(SVG,/<rect /)' }, { t: `So posts = gaps + 1. Gaps in the real fence: ${o.L} ÷ ${o.g}`, v: o.L / o.g, x: `${o.L}/${o.g}` }, { t: `Posts: ${o.L / o.g} + 1`, v: o.L / o.g + 1 }];
+      if (o.kind === 'cuts') return [{ t: 'Tiny case first: how many cuts make 3 pieces?', v: 2, x: 'H.count(SVG,/class="dg-hand2"/)' }, { t: `So cuts = pieces − 1. Cuts for ${o.n} pieces`, v: o.n - 1, x: `${o.n}-1` }, { t: `Minutes: ${o.n - 1} × ${o.t}`, v: (o.n - 1) * o.t }];
+      if (o.kind === 'ring') return [{ t: 'Tiny ring first: 3 gaps round a circle. How many trees?', v: 3, x: 'H.count(SVG,/<circle [^>]*class="dg-fill3"/)' }, { t: `In a ring, trees = gaps. Gaps: ${o.P} ÷ ${o.g}`, v: o.P / o.g }];
+      if (o.N < 100) return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: PAGES1 }, { t: `Pages 10 to ${o.N}: ${o.N - 9} pages × 2`, v: 2 * (o.N - 9), x: `(${o.N}-10+1)*2` }, { t: `Add: 9 + ${2 * (o.N - 9)}`, v: 9 + 2 * (o.N - 9) }];
+      return [{ t: 'Pages 1 to 9: one digit each', v: 9, x: PAGES1 }, { t: 'Pages 10 to 99: 90 pages × 2', v: 180, x: `(99-10+1)*2` }, { t: `Pages 100 to ${o.N}: ${o.N - 99} pages × 3`, v: 3 * (o.N - 99), x: `(${o.N}-100+1)*3` }, { t: `Add: 9 + 180 + ${3 * (o.N - 99)}`, v: 189 + 3 * (o.N - 99) }];
     },
     draw(o) {
       if (o.kind === 'posts') { let s = `<line x1="20" y1="44" x2="220" y2="44" class="dg-line"/>`;

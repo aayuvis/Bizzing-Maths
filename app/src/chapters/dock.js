@@ -336,7 +336,7 @@ export const TRICKS = [
     q({ p, n }) { return { p, n, build: p === 10 ? 'ten' : p === 5 ? 'five' : p % 10 === 0 ? 'tens' : 'tens and five', text: `${p}% of ${n}`, say: `${p} percent of ${n}`, expr: `${n}/100*${p}`, ans: (p * n) / 100 }; },
     work({ p, n }) {
       const tens = Math.floor(p / 10), five = p % 10 === 5, s = [];
-      if (p === 10) return [{ t: 'How many tenths make the whole?', v: 10, x: `100/${p}` }, { t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 }];
+      if (p === 10) return [{ t: 'How many tenths make the whole?', v: 10, x: 'H.count(SVG,/<rect /)/H.count(SVG,/class="dg-fill1"/)' }, { t: `10% of ${n}: ${n} ÷ 10`, v: n / 10 }];
       s.push({ t: `10% of ${n}: ${n} ÷ 10`, v: n / 10, x: `${n}*10/100` });
       if (tens > 1) s.push({ t: `${tens * 10}%: ${tens} lots of 10%`, v: (tens * n) / 10, x: `${n}*${p - (p % 10)}/100` });
       if (five) s.push({ t: '5%: half of 10%', v: n / 20, x: `${n}*5/100` });
@@ -504,9 +504,9 @@ export const TRICKS = [
     work(q) {
       const { kind, s, t } = q, d = s * t;
       if (kind === 'min') return [{ t: `How many ${q.mins}-minute pieces make an hour?`, v: 60 / q.mins, x: `60/${q.mins}` }, { t: `Km in ${q.mins} minutes: ${s} ÷ ${60 / q.mins}`, v: (s * q.mins) / 60 }];
-      if (kind === 's') return [{ t: 'Hours taken', v: t, x: `Number(${JSON.stringify(q.text)}.match(/in (\\d+) hours/)[1])` }, { t: `Km in one hour: ${d} ÷ ${t}`, v: s }];
-      if (kind === 't') return [{ t: 'Km in one hour', v: s, x: `Number(${JSON.stringify(q.text)}.match(/at (\\d+) km\\/h/)[1])` }, { t: `How many ${s}s make ${d}?`, v: t }];
-      return [{ t: 'Km in one hour', v: s, x: `Number(${JSON.stringify(q.text)}.match(/^(\\d+) km\\/h/)[1])` }, { t: `In ${t} hours: × ${t}`, v: d }];
+      if (kind === 's') return [{ t: 'Hours taken', v: t, x: String.raw`Number(TEXT.match(/in (\d+) hours/)[1])` }, { t: `Km in one hour: ${d} ÷ ${t}`, v: s }];
+      if (kind === 't') return [{ t: 'Km in one hour', v: s, x: String.raw`Number(TEXT.match(/at (\d+) km\/h/)[1])` }, { t: `How many ${s}s make ${d}?`, v: t }];
+      return [{ t: 'Km in one hour', v: s, x: String.raw`Number(TEXT.match(/^(\d+) km\/h/)[1])` }, { t: `In ${t} hours: × ${t}`, v: d }];
     },
   },
 ];

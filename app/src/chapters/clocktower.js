@@ -259,12 +259,12 @@ export const TRICKS = [
       const h = h12(H), pm = H >= 12, yn = ['Yes', 'No'];
       if (dir === 'to24') return [
         { t: 'Is it after midday (pm)?', v: pm ? 'Yes' : 'No', choices: yn, x: `${H}*60+${m}>=12*60?'Yes':'No'` },
-        { t: H === 12 ? 'Midday stays 12' : H === 0 ? '12 at night starts the day again: the hour is' : pm ? `${h} + 12` : 'Before midday the hour stays', v: H, x: `${h}%12+${pm ? 12 : 0}` },
+        { t: H === 12 ? 'Midday stays 12' : H === 0 ? '12 at night starts the day again: the hour is' : pm ? `${h} + 12` : 'Before midday the hour stays', v: H, x: "H.n(TEXT,1)%12+(/pm/.test(TEXT)?12:0)" },
         { t: 'So it is', v: `${pad(H)}:${pad(m)}`, choices: opts },
       ];
       return [
         { t: 'Is the hour 12 or more (pm)?', v: pm ? 'Yes' : 'No', choices: yn, x: `${H}>=12?'Yes':'No'` },
-        { t: H > 12 ? `${H} − 12` : H === 0 ? 'Hour 00 is 12 at night: the hour is' : 'The hour stays', v: h, x: `(${H}+11)%12+1` },
+        { t: H > 12 ? `${H} − 12` : H === 0 ? 'Hour 00 is 12 at night: the hour is' : 'The hour stays', v: h, x: '(H.n(TEXT,1)+11)%12+1' },
         { t: 'So it is', v: `${h}:${pad(m)} ${pm ? 'pm' : 'am'}`, choices: opts },
       ];
     },
@@ -312,7 +312,7 @@ export const TRICKS = [
       return { kind, u, x, y, form, text: `How many ${small} is ${x} ${big}?`, expr: `${x}*${f}`, ans: R3(x * f) };
     },
     work({ kind, u, x, y }) {
-      const { big, small, f } = UNITS[u], s = [{ t: `How many ${small} make 1 ${big}?`, v: f, x: `10**${Math.round(Math.log10(f))}` }];
+      const { big, small, f } = UNITS[u], s = [{ t: `How many ${small} make 1 ${big}?`, v: f, x: `H.fact('per','${small}','${big}')` }];
       if (kind === 'up') s.push({ t: `${x} ÷ ${f}`, v: x / f });
       else if (kind === 'mixed') s.push({ t: `${x} × ${f}`, v: x * f, x: `${x}*${f}` }, { t: `Add the ${y} ${small}`, v: x * f + y });
       else s.push({ t: `${x} × ${f}`, v: R3(x * f) });
@@ -396,7 +396,9 @@ export const TRICKS = [
     },
     work({ lv, W, H, c0 = 0, r0 = 0 }) {
       if (lv === 3) return [{ t: 'The area', v: W * H, x: `${W}*${H}` }, { t: `Rows of ${W}: ${W * H} ÷ ${W}`, v: H }];
-      return [{ t: 'Squares in one row', v: W, x: `${c0 + W}-${c0}` }, { t: 'Number of rows', v: H, x: `${r0 + H}-${r0}` }, { t: `${W} × ${H}`, v: W * H }];
+      // lv 1 counts the shaded squares drawn (distinct columns, distinct rows); lv 2 reads the sides printed
+      const shaded = (k) => `new Set([...SVG.matchAll(/<rect x="([\\d.]+)" y="([\\d.]+)"[^>]*class="dg-fill1"/g)].map((m)=>m[${k}])).size`;
+      return [{ t: 'Squares in one row', v: W, x: lv === 1 ? shaded(1) : 'H.n(TEXT,1)' }, { t: 'Number of rows', v: H, x: lv === 1 ? shaded(2) : 'H.n(TEXT,2)' }, { t: `${W} × ${H}`, v: W * H }];
     },
     draw({ lv, W, H, cols, rows, c0, r0 }) {
       if (lv === 1) { const s = new Set(); for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) s.add(`${r0 + i},${c0 + j}`); return grid(cols, rows, s); }
@@ -474,7 +476,7 @@ export const TRICKS = [
         expr: shoelace(pts), ans: kind === 'para' ? b * h : (b * h) / 2 };
     },
     work({ kind, b, h, o = 0 }) {
-      if (kind === 'para') return [{ t: 'Slide the end triangle across: a rectangle this wide', v: b, x: `${b + o}-${o}` }, { t: 'and this tall (straight up, not the slope)', v: h, x: `${h}-0` }, { t: `${b} × ${h}`, v: b * h }];
+      if (kind === 'para') return [{ t: 'Slide the end triangle across: a rectangle this wide', v: b, x: `${b + o}-${o}` }, { t: 'and this tall (straight up, not the slope)', v: h, x: 'H.n(TEXT,2)' }, { t: `${b} × ${h}`, v: b * h }];
       return [{ t: `The parallelogram (or rectangle) it is half of: ${b} × ${h}`, v: b * h, x: `${b}*${h}` }, { t: 'The triangle is half of that', v: (b * h) / 2 }];
     },
     draw({ kind, b, h, o, sl }) {
@@ -524,7 +526,7 @@ export const TRICKS = [
         { t: `The two ends: 2 × ${w} × ${h}`, v: 2 * w * h, x: `${w}*${h}+${w}*${h}` },
         { t: 'Add the six faces', v: 2 * (l * w + l * h + w * h) },
       ];
-      return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w, x: `${l}*${w}` }, { t: 'Number of layers', v: h, x: `${h}-0` }, { t: `${l * w} × ${h}`, v: l * w * h }];
+      return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w, x: `${l}*${w}` }, { t: 'Number of layers', v: h, x: 'H.n(TEXT,3)' }, { t: `${l * w} × ${h}`, v: l * w * h }];
     },
     draw({ l, w, h }) { return box(l, h, w); },
   },

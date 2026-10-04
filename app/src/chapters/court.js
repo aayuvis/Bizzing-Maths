@@ -490,7 +490,7 @@ export const TRICKS = [
       return { kind, a, c, h, A, text: `A trapezium-shaped bed has an area of ${A} m². It is ${h} m high and one of its parallel sides is ${a} m. How long is the other parallel side, in m?`, expr: `[...Array(400).keys()].find((x)=>(${a}+x)*${h}===2*${A})`, ans: c };
     },
     work({ kind, a, b, c, h, A }) {
-      if (kind === 'parallelogram') return [{ t: 'Slide the end triangle across: the rectangle is as tall as the height', v: h, x: `${b}*${h}/${b}` }, { t: 'and as wide as the base. Area = width × height', v: b * h }];
+      if (kind === 'parallelogram') return [{ t: 'Slide the end triangle across: the rectangle is as tall as the height', v: h, x: String.raw`(()=>{const p=SVG.match(/points="([^"]+)"/)[1].split(' ').map((q)=>q.split(',').map(Number)),l=SVG.match(/<line x1="[\d.]+" y1="([\d.]+)" x2="[\d.]+" y2="([\d.]+)"/);return Math.round((l[2]-l[1])/(p[1][0]-p[0][0])*H.n(TEXT,1)*1e6)/1e6})()` }, { t: 'and as wide as the base. Area = width × height', v: b * h }];
       if (kind === 'triangle') return [{ t: 'Cut across at half the height: the rectangle is this tall', v: h / 2, x: `${h}/2` }, { t: 'The pieces fill the corners, so it is as wide as the base. Area', v: (b * h) / 2 }];
       if (kind === 'trapezium') return [{ t: 'Turn the top half round beside the bottom: the two parallel sides end to end', v: a + c, x: `${a}+${c}` }, { t: 'It is now half as tall', v: h / 2, x: `${h}/2` }, { t: 'Area = length × height', v: ((a + c) * h) / 2 }];
       return [{ t: 'Double the area', v: 2 * A, x: `${A}+${A}` }, { t: `Divide by the height, ${h}: the two parallel sides together`, v: a + c, x: `2*${A}/${h}` }, { t: `Take away the side you know, ${a}`, v: c }];
@@ -819,7 +819,7 @@ export const TRICKS = [
       return { kind, A, B, order, choices, text: `Which is closer to π: ${A} or ${B}?`, expr: `Math.abs((${A})-Math.PI)<Math.abs((${B})-Math.PI)?'${A}':'${B}'`, ans: Math.abs(val(A) - PI4) < Math.abs(val(B) - PI4) ? A : B };
     },
     work(q) {
-      if (q.kind === 'hexagon') return [{ t: 'The angle at the centre of each of the six triangles, 360° ÷ 6', v: 60, x: '360/6' }, { t: 'Each triangle is equilateral, so one side of the hexagon is', v: q.r, x: `2*${q.r}*Math.sin(Math.PI/6)` }, { t: 'Six sides', v: 6 * q.r }];
+      if (q.kind === 'hexagon') return [{ t: 'The angle at the centre of each of the six triangles, 360° ÷ 6', v: 60, x: "H.fact('full-turn')/SVG.match(/<polygon points=\"([^\"]+)\"/)[1].split(' ').length" }, { t: 'Each triangle is equilateral, so one side of the hexagon is', v: q.r, x: `2*${q.r}*Math.sin(Math.PI/6)` }, { t: 'Six sides', v: 6 * q.r }];
       if (q.kind === 'double') {
         const w = doubleWork(q.r);
         const ap = `Math.round(${q.r}*Math.sqrt(3)/2*100)/100`;   // the apothem of a hexagon is r√3/2

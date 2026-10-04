@@ -102,7 +102,8 @@ export const TRICKS = [
     gen(r, lv = 1) { return this.q({ n: lv === 1 ? int(2, 10, r) : lv === 2 ? int(6, 15, r) : int(11, 20, r) }); },
     q({ n }) { return { n, text: `${n}²`, say: `${n} squared`, expr: `${n}*${n}`, ans: n ** 2 }; },
     work({ n }) {
-      return [{ t: 'Dots in each row', v: n, x: `Math.sqrt(${n}*${n})` }, { t: 'How many rows?', v: n, x: `${n}*${n}/${n}` }, { t: `${n} rows of ${n}`, v: n * n }];
+      // counted off the dots drawn: the dots on the first row's line, and how many different rows there are
+      return [{ t: 'Dots in each row', v: n, x: String.raw`H.count(SVG,'cy="'+SVG.match(/cy="([\d.]+)"/)[1]+'"')` }, { t: 'How many rows?', v: n, x: String.raw`new Set(SVG.match(/cy="[\d.]+"/g)).size` }, { t: `${n} rows of ${n}`, v: n * n }];
     },
     draw({ n }) { return kit.dots(n, n, null, n > 14 ? 13 : 16); },
   },

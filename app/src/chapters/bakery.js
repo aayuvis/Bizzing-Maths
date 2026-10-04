@@ -107,7 +107,7 @@ export const TRICKS = [
     },
     q({ a, b, n }) { return { a, b, n, share: a === 1 ? 'one' : 'several', text: `${a}/${b} of ${n}`, expr: `${n}*${a}/${b}`, ans: (n / b) * a }; },
     work({ a, b, n }) {
-      if (a === 1) return [{ t: 'How many equal shares?', v: b, x: `1/(1/${b})` }, { t: `${n} ÷ ${b}`, v: n / b }];
+      if (a === 1) return [{ t: 'How many equal shares?', v: b, x: 'H.count(SVG,/<rect /)' }, { t: `${n} ÷ ${b}`, v: n / b }];
       return [{ t: `One share: ${n} ÷ ${b}`, v: n / b, x: `${n}/${b}` }, { t: `${a} shares: × ${a}`, v: (n / b) * a }];
     },
     draw: ({ a, b }) => fracBar(b, a),
@@ -307,7 +307,7 @@ export const TRICKS = [
     },
     work({ w, a, b, dir }) {
       const n = w * b + a;
-      if (dir === 'wholes') return [{ t: 'How many pieces make one whole?', v: b, x: `1/(1/${b})` }, { t: `How many whole ${b}s fit in ${n}?`, v: w }];
+      if (dir === 'wholes') return [{ t: 'How many pieces make one whole?', v: b, x: 'H.count(SVG,/<path /)' }, { t: `How many whole ${b}s fit in ${n}?`, v: w }];
       if (dir === 'left') return [{ t: `${w} wholes use ${w} × ${b} pieces`, v: w * b, x: `${n}-${n}%${b}` }, { t: `Pieces left over from ${n}`, v: a }];
       return [{ t: `Pieces in the wholes: ${w} × ${b}`, v: w * b, x: `${w}*${b}` }, { t: `Add the ${a} extra`, v: n, x: `(${w}+${a}/${b})*${b}` }, { t: `Over ${b}`, v: F(n, b) }];
     },
@@ -443,10 +443,10 @@ export const TRICKS = [
       return { a, b, c, d, kind, frac: true, text: `${a}/${b} ÷ ${c}/${d}`, expr: `(${a}/${b})/(${c}/${d})`, ans: F(a * d, b * c) };
     },
     work({ w, a, b, c, d, kind }) {
-      if (kind === 'unit') return [{ t: `How many 1/${d}s fit in one whole?`, v: d, x: `1/(1/${d})` }, { t: `In ${w} wholes: ${w} × ${d}`, v: w * d }];
+      if (kind === 'unit') return [{ t: `How many 1/${d}s fit in one whole?`, v: d, x: '1/(H.n(TEXT,2)/H.n(TEXT,3))' }, { t: `In ${w} wholes: ${w} × ${d}`, v: w * d }];
       if (kind === 'whole') return [{ t: `Pieces: ${w} × ${d}`, v: w * d, x: `${w}*${d}` }, { t: `Helpings of ${c} pieces: ÷ ${c}`, v: (w * d) / c }];
       return [
-        { t: `Keep ${a}/${b}, change ÷ to ×, flip ${c}/${d}`, v: F(d, c), x: `1/(${c}/${d})` },
+        { t: `Keep ${a}/${b}, change ÷ to ×, flip ${c}/${d}`, v: F(d, c), x: '1/(H.n(TEXT,3)/H.n(TEXT,4))' },
         { t: `Tops: ${a} × ${d}`, v: a * d, x: `${a}*${d}` },
         { t: `Bottoms: ${b} × ${c}`, v: b * c, x: `${b}*${c}` },
         { t: 'Top over bottom', v: F(a * d, b * c) },

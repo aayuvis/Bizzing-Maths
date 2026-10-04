@@ -69,6 +69,10 @@ const additive = (n) => {           // the common slip: never subtracting (4 as 
 const placeParts = (n) => [1000, 100, 10, 1].map((p) => Math.floor(n / p) % (p === 1000 ? 100 : 10) * p).filter((v) => v > 0);
 const RVAL = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
 /* Two independent routes for expr: read a numeral right to left, and write one greedily. */
+/* x readers for test/lib/steps.mjs — what the child SEES. A dot on the number line is read against the
+   numbered ticks drawn; a Roman letter's value is read off the letter chart drawn beside the question. */
+const onLine = (label) => String.raw`(()=>{const t=[...SVG.matchAll(/<line x1="([\d.]+)" y1="33"[^>]*\/><text[^>]*>(-?[\d.]+)<\/text>/g)].map((m)=>[+m[1],+m[2]]),[x0,v0]=t[0],[x1,v1]=t[t.length-1],d=+SVG.match(/<circle cx="([\d.]+)"[^>]*\/><text[^>]*>${label}<\/text>/)[1];return Math.round((v0+(d-x0)*(v1-v0)/(x1-x0))*1e6)/1e6})()`;
+const readDrawn = (s) => String.raw`(function(s){const V=Object.fromEntries([...SVG.matchAll(/>([IVXLCDM])<\/text><text[^>]*>(\d+)</g)].map((m)=>[m[1],+m[2]]));let t=0,p=0;for(const c of s.split('').reverse()){const v=V[c];t+=v<p?-v:v;p=Math.max(p,v);}return t})('${s}')`;
 const readExpr = (s) => `(function(s){let t=0,p=0;for(const c of s.split('').reverse()){const v={I:1,V:5,X:10,L:50,C:100,D:500,M:1000}[c];t+=v<p?-v:v;p=Math.max(p,v);}return t})('${s}')`;
 const writeExpr = (n) => `(function(n){let s='';for(const [a,b] of [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']])while(n>=a){s+=b;n-=a;}return s})(${n})`;
 function romanChoices(n) {
@@ -169,8 +173,9 @@ export const TRICKS = [
         return [{ t: 'Add up the parts you can see', v: known, x: seen.map(Number).join('+') }, { t: `${n} − ${known}`, v: d * 10 ** p }];
       }
       return [
-        { t: `Count the places to the ${d}, from the right — the ones are place 1`, v: p + 1, x: `${p}+1` },
-        { t: `That is the ${PLACES[p]} place. One of those is worth`, v: 10 ** p, x: `Math.pow(10,${p})` },
+        // both read off the number printed (its digits are distinct): where the digit sits, and a 1 with a 0 for every digit after it
+        { t: `Count the places to the ${d}, from the right — the ones are place 1`, v: p + 1, x: '((n,d)=>n.length-n.indexOf(d))(String(H.n(TEXT,1)),String(H.n(TEXT,2)))' },
+        { t: `That is the ${PLACES[p]} place. One of those is worth`, v: 10 ** p, x: "((n,d)=>+('1'+n.slice(n.indexOf(d)+1).replace(/\\d/g,'0')))(String(H.n(TEXT,1)),String(H.n(TEXT,2)))" },
         { t: `${d} × ${10 ** p}`, v: d * 10 ** p },
       ];
     },
@@ -436,13 +441,13 @@ export const TRICKS = [
     work({ s, c, kind }) {
       if (kind === 'gap') {
         if (c <= 0) return [{ t: `How far is ${deg(s)} below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `And ${deg(c)}?`, v: -c, x: `Math.abs(${c})` }, { t: `The gap: ${-s} − ${-c}`, v: c - s }];
-        return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-(${s})` }, { t: `From 0 up to ${c}`, v: c, x: `(${c})-0` }, { t: 'Add the two jumps', v: c - s }];
+        return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-${onLine('night')}` }, { t: `From 0 up to ${c}`, v: c, x: onLine('day') }, { t: 'Add the two jumps', v: c - s }];
       }
       if (kind === 'rise') {
-        if (s + c >= 0) return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-(${s})` }, { t: `Degrees still to rise after 0: ${c} − ${-s}`, v: c + s, x: `${c}-Math.abs(${s})` }, { t: 'So the temperature is', v: s + c }];
+        if (s + c >= 0) return [{ t: `From ${deg(s)} up to 0`, v: -s, x: `0-${onLine('now')}` }, { t: `Degrees still to rise after 0: ${c} − ${-s}`, v: c + s, x: `${c}-Math.abs(${s})` }, { t: 'So the temperature is', v: s + c }];
         return [{ t: `${deg(s)} is how far below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `Warmer by ${c} brings it closer to zero: ${-s} − ${c}`, v: -s - c, x: `Math.abs((${s})+(${c}))` }, { t: 'Still below zero, so it is', v: s + c }];
       }
-      if (s > 0) return [{ t: `From ${s} down to 0`, v: s, x: `(${s})-0` }, { t: `Degrees still to fall below 0: ${c} − ${s}`, v: c - s, x: `Math.abs((${s})-(${c}))` }, { t: 'Below zero, so it is', v: s - c }];
+      if (s > 0) return [{ t: `From ${s} down to 0`, v: s, x: onLine('now') }, { t: `Degrees still to fall below 0: ${c} − ${s}`, v: c - s, x: `Math.abs((${s})-(${c}))` }, { t: 'Below zero, so it is', v: s - c }];
       return [{ t: `${deg(s)} is how far below zero?`, v: -s, x: `Math.abs(${s})` }, { t: `Colder by ${c} takes it further: ${-s} + ${c}`, v: c - s, x: `Math.abs((${s})-(${c}))` }, { t: 'Below zero, so it is', v: s - c }];
     },
     draw({ s, c, kind }) {
@@ -492,8 +497,8 @@ export const TRICKS = [
         s.push({ t: 'Write each part as a numeral, biggest first', v: roman(n), choices: romanChoices(n) });
         return s;
       }
-      if (parts.length === 1) { const f = roman(n)[0]; return [{ t: `What is ${f} worth?`, v: RVAL[f], x: readExpr(f) }, { t: `So ${roman(n)} is`, v: n }]; }
-      const s = parts.map((p) => ({ t: `Split by place: ${roman(p)} is`, v: p, x: readExpr(roman(p)) }));
+      if (parts.length === 1) { const f = roman(n)[0]; return [{ t: `What is ${f} worth?`, v: RVAL[f], x: readDrawn(f) }, { t: `So ${roman(n)} is`, v: n }]; }
+      const s = parts.map((p) => ({ t: `Split by place: ${roman(p)} is`, v: p, x: readDrawn(roman(p)) }));
       s.push({ t: 'Add the parts', v: n });
       return s;
     },

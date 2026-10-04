@@ -434,10 +434,10 @@ export const TRICKS = [
     },
     work(o) {
       const { kind, a, b, x } = o;
-      if (kind === 'add') return [{ t: 'What has been added to x?', v: b, x: `${b}-0` }, { t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
-      if (kind === 'mul') return [{ t: 'How many x\'s on the left?', v: a, x: `${a}-0` }, { t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
+      if (kind === 'add') return [{ t: 'What has been added to x?', v: b, x: 'H.n(TEXT,1)' }, { t: `Take ${b} off both sides: ${x + b} − ${b}`, v: x }];
+      if (kind === 'mul') return [{ t: 'How many x\'s on the left?', v: a, x: String.raw`+SVG.match(/>(\d+)x</)[1]` }, { t: `Share both sides into ${a}: ${a * x} ÷ ${a}`, v: x }];
       const c = a * x + b, s = [];
-      if (kind === 'words') s.push({ t: `As an equation: ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} = ${M(c)}. What does ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} equal?`, v: c, x: `${c}-0` });
+      if (kind === 'words') s.push({ t: `As an equation: ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} = ${M(c)}. What does ${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)} equal?`, v: c, x: 'H.ns(TEXT).pop()' });   // "…and I get c": the last number printed
       s.push({ t: b < 0 ? `Add ${-b} to both sides` : `Take ${b} off both sides`, v: c - b, x: `${c}-${js(b)}` });
       s.push({ t: `Share both sides into ${a}`, v: x });
       return s;
@@ -487,7 +487,7 @@ export const TRICKS = [
     work(o) {
       const { kind, a, d } = o;
       if (kind === 'kth') return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `Steps from the 1st to the ${ORD(o.k)}`, v: o.k - 1, x: `${o.k}-1` }, { t: `${o.k - 1} × ${d}`, v: (o.k - 1) * d, x: `(${o.k}-1)*(${a + d}-${a})` }, { t: `+ the first term, ${a}`, v: a + (o.k - 1) * d }];
-      if (kind === 'rule') return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `${d}n when n = 1`, v: d, x: `${d}*1` }, { t: `First term − ${d}: what fixes it?`, v: a - d }];
+      if (kind === 'rule') return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `${d}n when n = 1`, v: d, x: 'TEXT.match(/is (\\d+)n/)[1]*1' }, { t: `First term − ${d}: what fixes it?`, v: a - d }];
       const v = a + (o.k - 1) * d;
       return [{ t: 'The step', v: d, x: `${a + d}-${a}` }, { t: `Distance from the first term: ${v} − ${a}`, v: v - a, x: `${v}-${a}` }, { t: `Steps: ${v - a} ÷ ${d}`, v: o.k - 1, x: `(${v}-${a})/(${a + d}-${a})` }, { t: 'Plus one for the first term', v: o.k }];
     },

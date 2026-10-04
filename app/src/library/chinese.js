@@ -78,6 +78,12 @@ export function rodDecode(cells) {
   return n;
 }
 const rodExpr = (n) => rodEncode(n).map((c) => `(${c.empty ? 0 : `5*${c.five}+${c.ones}`})*${10 ** c.p}`).join('+');
+/* x readers for test/lib/steps.mjs — what the child SEES. rodsDrawn(k) reads the k-th rod numeral in the
+   picture: cells 44 wide from x = 8, places taking turns from the units (upright) leftwards, and in each cell
+   the rods lying the place's way count one and a rod lying across counts five. loshuSeen adds the two numbers
+   showing in the line through ? that has no blank in it. */
+const rodsDrawn = (k) => String.raw`((s)=>{const n=(+s.match(/viewBox="0 0 ([\d.]+)/)[1]-12)/44,L=[...s.matchAll(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"/g)].map((m)=>m.slice(1).map(Number));let v=0;for(let i=0;i<n;i++){const up=(n-1-i)%2===0,c=L.filter((l)=>l[0]>=8+44*i&&l[0]<=48+44*i),h=c.filter((l)=>l[1]===l[3]).length,w=c.length-h;v=v*10+(up?w+5*h:h+5*w);}return v})(SVG.split('</svg>')[${k}])`;
+const loshuSeen = String.raw`((c)=>{const a=c.indexOf('?'),l=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].find((l)=>l.includes(a)&&l.every((i)=>i===a||c[i]!==''));return l.filter((i)=>i!==a).reduce((t,i)=>t+Number(c[i]),0)})([...SVG.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m)=>m[1]))`;
 const rodSays = (c) => (c.empty ? 'an empty place' : `${c.form}: ${c.five ? 'a crossing rod for five and ' : ''}${c.ones} rod${c.ones === 1 ? '' : 's'}`);
 
 /* The suanpan: each rod has two beads above the beam (5 each) and five below
@@ -192,7 +198,7 @@ export const JOURNEY = [
     }),
     work(q) {
       if (q.kind === 'rodadd') {
-        const s = [{ t: 'Top number', v: q.a, x: rodExpr(q.a) }, { t: 'Bottom number', v: q.b, x: rodExpr(q.b) }];
+        const s = [{ t: 'Top number', v: q.a, x: rodsDrawn(0) }, { t: 'Bottom number', v: q.b, x: rodsDrawn(1) }];
         const A = digitsOf(q.a).reverse(), B = digitsOf(q.b).reverse(); let carry = 0;
         for (let p = 0; p < Math.max(A.length, B.length); p++) { const t = (A[p] || 0) + (B[p] || 0) + carry; s.push({ t: `${PLACE[p]}: ${A[p] || 0} + ${B[p] || 0}${carry ? ' + 1 carried' : ''}, keep`, v: t % 10, x: `Math.floor((${q.a}+${q.b})/${10 ** p})%10` }); carry = Math.floor(t / 10); }
         s.push({ t: 'Read the board', v: q.ans });
@@ -267,7 +273,7 @@ export const JOURNEY = [
       if (q.kind === 'lototal') return [{ t: `Add the top row: ${q.g[0].join(' + ')}`, v: q.T }];
       return [
         { t: `A full line: ${q.full.join(' + ')}`, v: q.T, x: `(${q.g.flat().join('+')})/3` },
-        { t: `The line through ?: its other two, ${q.others[0]} + ${q.others[1]}`, v: q.others[0] + q.others[1], x: `(${q.g.flat().join('+')})/3-${q.g[q.ask[0]][q.ask[1]]}` },
+        { t: `The line through ?: its other two, ${q.others[0]} + ${q.others[1]}`, v: q.others[0] + q.others[1], x: loshuSeen },
         { t: `${q.T} − ${q.others[0] + q.others[1]}`, v: q.ans },
       ];
     },
@@ -289,7 +295,7 @@ export const JOURNEY = [
     }),
     work(q) {
       return [
-        { t: `Add the parts: ${q.w.join(' + ')}`, v: q.S, x: q.w.join('+') },
+        { t: `Add the parts: ${q.w.join(' + ')}`, v: q.S, x: 'H.ns(TEXT).slice(1).reduce((a,b)=>a+b,0)' },   // the ratio as printed, after the whole
         { t: `One part: ${q.T} ÷ ${q.S}`, v: q.u, x: `${q.T}/(${q.w.join('+')})` },
         { t: `The ${['first', 'second', 'third', 'fourth', 'fifth'][q.i]} share: ${q.w[q.i]} parts`, v: q.ans },
       ];

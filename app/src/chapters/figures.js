@@ -702,7 +702,7 @@ export const TRICKS = [
       const tb = `${JSON.stringify(q.tops)}.reduce((s,u)=>s+u+${JSON.stringify(OPP)}[u],0)`;
       const h = [{ t: 'Top and bottom of any one dice add up to', v: 7, x: pair }, { t: `Tops and bottoms of all ${n} dice`, v: 7 * n, x: tb }, { t: 'Take away the top face you can see: hidden dots', v: 7 * n - t, x: `${tb}-${t}` }];
       if (q.mode === 'hidden') return h;
-      return [{ t: 'All six faces of one dice: 1 + 2 + 3 + 4 + 5 + 6', v: 21, x: '1+2+3+4+5+6' }, { t: `All the faces of ${n} dice`, v: 21 * n, x: `${n}*(1+2+3+4+5+6)` }, h[2], { t: 'Dots you can see: all of them take away the hidden ones', v: q.ans }];
+      return [{ t: 'All six faces of one dice: 1 + 2 + 3 + 4 + 5 + 6', v: 21, x: "H.fact('die-total')" }, { t: `All the faces of ${n} dice`, v: 21 * n, x: "H.n(TEXT,1)*H.fact('die-total')" }, h[2], { t: 'Dots you can see: all of them take away the hidden ones', v: q.ans }];
     },
     draw(q) { return diceTower(q.tops, q.fronts); },
   },
@@ -781,7 +781,7 @@ export const TRICKS = [
     },
     work(q) {
       if (q.kind === 'line') {
-        const g = q.parts.filter((p) => p), s = [{ t: 'Angles on a straight line add up to', v: 180, x: '360/2' }];   // half a whole turn
+        const g = q.parts.filter((p) => p), s = [{ t: 'Angles on a straight line add up to', v: 180, x: "H.fact('straight-angle')" }];
         if (g.length > 1) s.push({ t: 'Add the angles you know', v: g[0] + g[1], x: `${g[0]}+${g[1]}` });
         s.push({ t: 'Take that from 180', v: q.ans });
         return s;

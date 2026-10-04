@@ -203,12 +203,13 @@ const worstCase = {
 
 /* ================================================================== pigeonhole */
 
+// xk: how many boxes, as a fixed fact (steps.mjs FACTS), counted, or read off the range the prompt prints
 const HOLE = [
-  { k: 7, xk: "['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].length", what: 'were born on the same day of the week', who: 'children', labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] },
-  { k: 12, xk: "['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].length", what: 'have birthdays in the same month', who: 'people', labels: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
-  { k: 6, xk: "[1,2,3,4,5,6].length", what: 'rolled the same number on one ordinary dice', who: 'players', labels: ['1', '2', '3', '4', '5', '6'] },
-  { k: 10, xk: "'0123456789'.length", what: 'have house numbers ending in the same digit', who: 'friends', labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] },
-  { k: 26, xk: "'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.length", what: 'have first names starting with the same letter (A to Z)', who: 'pupils', labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] },
+  { k: 7, xk: "H.fact('days-in-week')", what: 'were born on the same day of the week', who: 'children', labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] },
+  { k: 12, xk: "H.fact('months-in-year')", what: 'have birthdays in the same month', who: 'people', labels: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
+  { k: 6, xk: "H.fact('die-faces')", what: 'rolled the same number on one ordinary dice', who: 'players', labels: ['1', '2', '3', '4', '5', '6'] },
+  { k: 10, xk: "new Set(Array.from({ length: 1000 }, (_, i) => String(i).slice(-1))).size", what: 'have house numbers ending in the same digit', who: 'friends', labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] },
+  { k: 26, xk: "((m)=>m[2].charCodeAt(0)-m[1].charCodeAt(0)+1)(TEXT.match(/\\(([A-Z]) to ([A-Z])\\)/))", what: 'have first names starting with the same letter (A to Z)', who: 'pupils', labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] },
 ];
 const SHARE = [['apples', 'baskets', 'basket'], ['pupils', 'classrooms', 'classroom'], ['pigeons', 'holes', 'hole'], ['letters', 'postboxes', 'postbox'], ['books', 'shelves', 'shelf']];
 

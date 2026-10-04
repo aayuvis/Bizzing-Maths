@@ -229,6 +229,12 @@ const DICE = [
 const diceCount = (test) => [1, 2, 3, 4, 5, 6].filter(Function('d', `return ${test}`)).length;
 const STALLS = ['Hoopla', 'Darts', 'Ducks', 'Coconut', 'Skittles'];
 const RIDES = ['Wheel', 'Cups', 'Train', 'Slide', 'Boats', 'Swing'];
+/* A step's x reads a chart the way the child does (test/lib/steps.mjs): the scale from the numbered lines
+   drawn, then the bar top or the dot from where it is DRAWN — never the data list behind it. */
+const SCALE = String.raw`const t=[...SVG.matchAll(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*class="dg-grid"\/><text[^>]*>([\d.]+)<\/text>/g)].map((m)=>[+m[1],+m[2]]),[y0,v0]=t[0],[y1,v1]=t[t.length-1],at=(y)=>Math.round((v0+(y-y0)*(v1-v0)/(y1-y0))*1e6)/1e6;`;
+const readBar = (name) => String.raw`(()=>{${SCALE}return at(+SVG.match(/<rect x="[\d.]+" y="([\d.]+)"[^>]*\/><text[^>]*>${name}<\/text>/)[1])})()`;
+const readDot = (label) => String.raw`(()=>{${SCALE}return at(+SVG.match(/<circle cx="[\d.]+" cy="([\d.]+)"[^>]*\/><text[^>]*>${label}<\/text>/)[1])})()`;
+const lineBelow = (label) => String.raw`(()=>{${SCALE}const d=at(+SVG.match(/<circle cx="[\d.]+" cy="([\d.]+)"[^>]*\/><text[^>]*>${label}<\/text>/)[1]);return Math.max(...t.map((p)=>p[1]).filter((v)=>v<=d))})()`;
 
 export const TRICKS = [
   /* ================================================ READING DATA */
@@ -309,7 +315,7 @@ export const TRICKS = [
       return { labels, values, step, a, b, text: `Votes for the best ride. How many more voted for ${labels[a]} than ${labels[b]}?`, expr: `${values[a]}-${values[b]}`, ans: values[a] - values[b] };
     },
     work({ labels, values, a, b }) {
-      return [{ t: `Read the ${labels[a]} bar`, v: values[a], x: `[${values}][${a}]` }, { t: `Read the ${labels[b]} bar`, v: values[b], x: `[${values}][${b}]` }, { t: `${values[a]} − ${values[b]}`, v: values[a] - values[b] }];
+      return [{ t: `Read the ${labels[a]} bar`, v: values[a], x: readBar(labels[a]) }, { t: `Read the ${labels[b]} bar`, v: values[b], x: readBar(labels[b]) }, { t: `${values[a]} − ${values[b]}`, v: values[a] - values[b] }];
     },
     draw({ labels, values, step }) { return barChart(labels, values, step, 'Votes'); },
   },
@@ -365,8 +371,8 @@ export const TRICKS = [
     },
     work(q) {
       const n = q.kind === 'dice' ? 6 : q.bag.length, k = q.kind === 'dice' ? diceCount(DICE[q.ev][1]) : q.bag.filter((x) => x === q.want).length;
-      return [{ t: q.kind === 'dice' ? `How many faces give ${DICE[q.ev][0]}?` : `How many ${q.want} counters?`, v: k, x: q.kind === 'dice' ? `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` : `${JSON.stringify(q.bag)}.filter((c)=>c==='${q.want}').length` },
-        { t: q.kind === 'dice' ? 'How many faces altogether?' : 'How many counters altogether?', v: n, x: q.kind === 'dice' ? '[1,2,3,4,5,6].length' : `${JSON.stringify(q.bag)}.length` },
+      return [{ t: q.kind === 'dice' ? `How many faces give ${DICE[q.ev][0]}?` : `How many ${q.want} counters?`, v: k, x: q.kind === 'dice' ? `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` : `H.count(SVG,/<circle [^>]*class="${COLOUR[q.want]}"/)` },
+        { t: q.kind === 'dice' ? 'How many faces altogether?' : 'How many counters altogether?', v: n, x: q.kind === 'dice' ? 'H.count(SVG,/<rect [^>]*rx="8"/)' : 'H.count(SVG,/<circle /)' },
         { t: `${k} out of ${n}, so it is…`, v: q.ans, choices: q.choices }];
     },
     draw(q) { return q.kind === 'dice' ? dieFaces() : bag(q.bag); },
@@ -412,9 +418,9 @@ export const TRICKS = [
       return { temps, ask, i, j, text, expr, ans };
     },
     work({ temps, ask, i, j }) {
-      if (ask === 'at') { const lab = Math.floor(temps[i] / 4) * 4; return [{ t: 'The numbered line at or just below the dot', v: lab, x: `Math.floor([${temps}][${i}]/4)*4` }, { t: `Add 2 for each small gap above ${lab}`, v: temps[i] }]; }
-      if (ask === 'diff') return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: `[${temps}][${i}]` }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: `[${temps}][${j}]` }, { t: `${temps[i]} − ${temps[j]}`, v: temps[i] - temps[j] }];
-      return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: `[${temps}][${i}]` }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: `[${temps}][${j}]` }, { t: `Halfway: (${temps[i]} + ${temps[j]}) ÷ 2`, v: (temps[i] + temps[j]) / 2 }];
+      if (ask === 'at') { const lab = Math.floor(temps[i] / 4) * 4; return [{ t: 'The numbered line at or just below the dot', v: lab, x: lineBelow(HOURS[i][1]) }, { t: `Add 2 for each small gap above ${lab}`, v: temps[i] }]; }
+      if (ask === 'diff') return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: readDot(HOURS[i][1]) }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: readDot(HOURS[j][1]) }, { t: `${temps[i]} − ${temps[j]}`, v: temps[i] - temps[j] }];
+      return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: readDot(HOURS[i][1]) }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: readDot(HOURS[j][1]) }, { t: `Halfway: (${temps[i]} + ${temps[j]}) ÷ 2`, v: (temps[i] + temps[j]) / 2 }];
     },
     draw({ temps }) { return lineChart(temps); },
   },
@@ -563,9 +569,10 @@ export const TRICKS = [
       return { ...a, ask: a.not ? 'not' : 'is', text, expr, ans: `${k}/${n}`, frac: true };
     },
     work(q) {
-      if (q.kind === 'dice') { const k = diceCount(DICE[q.ev][1]); return [{ t: `How many faces give ${DICE[q.ev][0]}?`, v: k, x: `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` }, { t: 'How many faces altogether?', v: 6, x: '[1,2,3,4,5,6].length' }, { t: 'The chance, as a fraction', v: `${k}/6` }]; }
+      if (q.kind === 'dice') { const k = diceCount(DICE[q.ev][1]); return [{ t: `How many faces give ${DICE[q.ev][0]}?`, v: k, x: `[1,2,3,4,5,6].filter((d)=>${DICE[q.ev][1]}).length` }, { t: 'How many faces altogether?', v: 6, x: 'H.count(SVG,/<rect [^>]*rx="8"/)' }, { t: 'The chance, as a fraction', v: `${k}/6` }]; }
       const n = q.slices.length, has = q.slices.filter((x) => x === q.want).length, k = q.not ? n - has : has;
-      return [{ t: q.not ? `How many are NOT ${q.want}?` : `How many are ${q.want}?`, v: k, x: `${JSON.stringify(q.slices)}.filter((c)=>(c==='${q.want}')!==${!!q.not}).length` }, { t: q.kind === 'spin' ? 'How many equal parts altogether?' : 'How many counters altogether?', v: n, x: `${JSON.stringify(q.slices)}.length` }, { t: 'The chance, as a fraction', v: `${k}/${n}` }];
+      const part = q.kind === 'spin' ? '<path [^>]*class="dg-fill' : '<circle [^>]*class="dg-fill', all = `H.count(SVG,/${part}/)`, mine = `H.count(SVG,/${part}${COLOUR[q.want].slice(7)}"/)`;
+      return [{ t: q.not ? `How many are NOT ${q.want}?` : `How many are ${q.want}?`, v: k, x: q.not ? `${all}-${mine}` : mine }, { t: q.kind === 'spin' ? 'How many equal parts altogether?' : 'How many counters altogether?', v: n, x: all }, { t: 'The chance, as a fraction', v: `${k}/${n}` }];
     },
     draw(q) { return q.kind === 'dice' ? dieFaces() : q.kind === 'spin' ? spinner(q.slices) : bag(q.slices); },
   },
@@ -614,7 +621,7 @@ export const TRICKS = [
       if (kind === 'three') return [{ t: `Hats and masks: ${a} × ${b}`, v: a * b, x: `${a}*${b}` }, { t: `With every one of those, ${c} capes: ${a * b} × ${c}`, v: a * b * c }];
       const first = { coins: 'the first coin', coindie: 'the coin', coinspin: 'the coin', wear: 'tops', cone: 'flavours' }[kind];
       const second = { coins: 'the second coin', coindie: 'the dice', coinspin: 'the spinner', wear: 'skirts', cone: 'toppings' }[kind];
-      const HT = "['heads','tails'].length", FACES = '[1,2,3,4,5,6].length';
+      const HT = "H.fact('coin-sides')", FACES = "H.fact('die-faces')";
       const xa = kind === 'wear' || kind === 'cone' ? said(text, 0) : HT;
       const xb = kind === 'wear' || kind === 'cone' ? said(text, 1) : kind === 'coins' ? HT : kind === 'coindie' ? FACES : said(text, 0);
       return [{ t: kind === 'wear' || kind === 'cone' ? `How many ${first}?` : `Ways ${first} can land`, v: a, x: xa }, { t: kind === 'wear' || kind === 'cone' ? `How many ${second} go with each?` : `Ways for ${second}`, v: b, x: xb }, { t: `${a} × ${b}`, v: a * b }];
