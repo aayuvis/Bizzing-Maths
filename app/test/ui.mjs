@@ -77,7 +77,9 @@ async function run(vp, tag) {
   await page.click('[data-act=endRun]');
   await page.waitForSelector('.lboard');
   ok(await page.evaluate(() => document.querySelector('.road-bar .meter').getBoundingClientRect().height) > 4, 'the road progress bar is drawn');
-  await page.locator('.board-scroll').scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await shot('02c-journey');
+  // scrolled from inside the page: the road re-renders once when the stories arrive (main.js render), and a
+  // locator scroll that waits for a stable box loses that race now and then — on the old build as on the new
+  await page.evaluate(() => document.querySelector('.board-scroll').scrollIntoView({ block: 'nearest' })); await page.waitForTimeout(400); await shot('02c-journey');
   ok(await page.locator('.land-tag').count() >= 4 && await page.locator('.jl').count() === 10, 'the Atlas is this level\'s road across its lands\' paintings, with the ten-level ladder');
   ok(await page.locator('.bgate:not(.summit)').count() >= 4 && await page.locator('.bgate.summit').count() === 1, 'every land ends at a gate, and the road at the summit');
   ok(await page.locator('.secret').count() === 0, 'a placed child\'s recap land has no secrets; they wait on the lands the road reaches');

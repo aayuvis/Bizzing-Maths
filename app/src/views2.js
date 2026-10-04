@@ -114,6 +114,28 @@ const ROAD = { gardens: [72, 7, 1.3], market: [78, 5, 1.1], workshop: [80, 5, 1.
   quarry: [80, 4, 1.2], mine: [80, 4, 1.3], coinstreet: [82, 4, 1.2], lighthouse: [80, 5, 1.2], court: [84, 4, 1.2] };
 function roadY(wid, x) { const [b, a, f] = ROAD[wid] || [78, 5, 1.3]; return b + a * Math.sin((x / 100) * Math.PI * 2 * f + 0.6); }
 
+/* Ambient life (audit v4 D10): every place has ONE loop suited to its plate, drawn by
+   CSS alone in styles/app.css (.amb-<world>). Each mote carries a fixed, well-spread
+   --x and --y in 0–1 (a golden-ratio sequence), so a place scatters its life without
+   CSS having to do modulo arithmetic. Paused when the page is hidden, frozen under
+   reduced motion; test/ambient.mjs holds every world to having one. */
+const G1 = 0.6180339887, G2 = 0.7548776662;
+export const ambLayer = (id, n = 14) => `<div class="amb amb-${id}" aria-hidden="true">${Array.from({ length: n }, (_, i) =>
+  `<i style="--i:${i};--x:${(((i + 1) * G1) % 1).toFixed(3)};--y:${(((i + 1) * G2) % 1).toFixed(3)}"></i>`).join('')}</div>`;
+
+/* Walking to the next pin (audit v4 D6). A board says which pin the child stands on
+   (data-walk-key/-to); main.js remembers the last one it showed for that board. When
+   the child has moved on since, the board also carries data-walk: the points along the
+   road from the old pin to the new one, in the board's own percentages, and main.js
+   walks the avatar along them once (≤ 1.2 s, never under reduced motion). */
+function walkAttr(key, to, from, ptAt) {
+  let a = ` data-walk-key="${esc(key)}" data-walk-to="${to}"`;
+  if (from == null || to < 0 || from >= to) return a;
+  const pts = ptAt(from, to);
+  return a + ` data-walk="${esc(JSON.stringify(pts.map(([x, y]) => [+x.toFixed(2), +y.toFixed(2)])))}"`;
+}
+const walkSeen = (key) => ((R.ui.walked || {})[key]);
+
 export function viewWorld(wid) {
   const w = worldOf(wid), h = R.h, k = kid(h), f = frontier(k, h);
   const nodes = ROUTE.map((n, i) => ({ n, i })).filter((x) => x.n.world === wid);
@@ -124,12 +146,17 @@ export function viewWorld(wid) {
   let wpath = ''; for (let x = 0; x <= walkX; x += 2) wpath += `${x ? 'L' : 'M'}${x},${roadY(wid, x).toFixed(2)} `;
   const sel = R.ui.pick && nodes.find((x) => x.n.id === R.ui.pick) ? R.ui.pick : (nodes.find((x) => x.i === f) || nodes.find((x) => !nodeDone(k, x.n)) || nodes[0]).n.id;
   const selNode = nodes.find((x) => x.n.id === sel);
+  const curJ = nodes.findIndex((x) => x.i === f);
+  const walk = walkAttr('w:' + wid, curJ, walkSeen('w:' + wid), (a, b) => {
+    const out = []; for (let x = xs[a]; x < xs[b]; x += 2) out.push([x, roadY(wid, x)]);
+    out.push([xs[b], roadY(wid, xs[b])]); return out;
+  });
   return `<section class="world-page" style="--wt:${w.tint};--wi:${w.ink}">
     ${pageHead(`${glyph(w.glyph, 26)} ${esc(w.name)}`, esc(w.blurb), (w.track === 'contest' ? back('nav', 'Contest Hall', 'hall') : back('nav', 'Map', 'atlas')), w.intro ? `<button class="btn small" data-act="worldIntro" data-arg="${w.id}">${esc(w.intro.title)}</button>` : '')}
     <div class="board-scroll" data-autoscroll="${xs[nodes.indexOf(selNode)]}">
-      <div class="board w-${w.id}">
+      <div class="board w-${w.id}"${walk}>
         <img src="art/w-${w.id}.webp" alt="" width="1920" height="815">
-        <div class="amb amb-${w.id}" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
+        ${ambLayer(w.id)}
         <div class="octo-gate${walked ? '' : ' first'}" style="top:${Math.min(78, roadY(wid, 2) + 4)}%">${octo(walked === nodes.length ? 'cheer' : 'wave', 64, '', '')}${walked ? '' : `<p class="og-say">Welcome to ${esc(w.name)}! Tap the first pin.</p>`}</div>
         <svg class="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
@@ -329,6 +356,13 @@ const conceptOf = (id) => CONCEPTS.find((c) => c.id === CONCEPT_OF[id]) || { nam
 const PANEL = 100;                                  // each land is 100 units wide in the board's own space
 const bandY = (x) => 78 + 6 * Math.sin((x / PANEL) * Math.PI * 2 * 0.9 + 0.6);
 
+/* The deep methods of two traditions and the Contest track are PLACES of their own
+   (audit v4 D2): on a road they are not one more land in the row but a branch off it,
+   forking from the road where their land begins, with a signpost naming the place. Which
+   lands branch comes from levels.js (their concept), never from a list of levels here. */
+export const BRANCHES = { vedic: { name: 'Sutra Ladder', glyph: '🪜' }, chinese: { name: 'Counting Court', glyph: '🧮' }, contest: { name: 'Contest Hall', glyph: '🏆' } };
+const branchOf = (L) => !L.recap && BRANCHES[L.land.concept] || null;
+
 function levelBoard(k, show, mine, nodes) {
   const tester = R.h.parent.tester;
   // lands (with their nodes); the summit rides at the end of the last land
@@ -347,6 +381,22 @@ function levelBoard(k, show, mine, nodes) {
   const sel = R.ui.rpick != null && placed[R.ui.rpick] ? R.ui.rpick : Math.max(0, firstOpen);
   const pct = (px) => (100 * px) / W;
   let sn = 0;
+  const pinTop = (p) => bandY(p.px) - (p.x.kind === 'stop' ? 0 : 9);
+  const walk = mine ? walkAttr('r:' + show, firstOpen, walkSeen('r:' + show), (a, b) => {
+    const out = [[pct(placed[a].px), pinTop(placed[a])]];
+    for (let x = placed[a].px + 2; x < placed[b].px; x += 2) out.push([pct(x), bandY(x)]);
+    out.push([pct(placed[b].px), pinTop(placed[b])]); return out;
+  }) : '';
+  // the branches: where each one's land begins, the first pin on it, and how far along it is
+  const branches = [];
+  let forks = '';
+  lands.forEach((L, li) => {
+    const br = branchOf(L); if (!br) return;
+    const first = placed.findIndex((p) => p.li === li), stops = L.nodes.filter((x) => x.kind === 'stop');
+    const jx = Math.max(1, li * PANEL - 4), sx = li * PANEL + 8;
+    branches.push({ ...br, li, first, land: L.land, open: L.open || tester, done: stops.filter((x) => x.done).length, all: stops.length });
+    forks += `<path d="M${jx},${bandY(jx).toFixed(2)} C${jx + 6},${(bandY(jx) - 2).toFixed(2)} ${sx - 3},64 ${sx},56" class="br-edge"/><path d="M${jx},${bandY(jx).toFixed(2)} C${jx + 6},${(bandY(jx) - 2).toFixed(2)} ${sx - 3},64 ${sx},56" class="br-rd"/>`;
+  });
   const pins = placed.map((p, i) => {
     const x = p.x, open = x.open || tester, cur = mine && i === firstOpen, left = pct(p.px), top = bandY(p.px);
     if (x.kind === 'stop') {
@@ -364,17 +414,19 @@ function levelBoard(k, show, mine, nodes) {
     const em = !L.recap && J.emblem(k, show, L.land.id);
     const secrets = L.recap || !(L.open || tester) ? '' : J.secretsOf(k, L.land.id).map((s) => s.found ? '' :
       `<button class="secret" style="left:${pct(li * PANEL + s.x)}%;top:${s.y}%" data-act="secret" data-arg="${s.k}|${L.land.id}" aria-label="${esc(s.name)}" title="${esc(s.name)}">${glyph(s.glyph, 24)}</button>`).join('');
-    return `<img class="panel" src="art/w-${L.land.world}.webp" alt="" style="left:${pct(li * PANEL)}%;width:${100 / lands.length}%">
-      <div class="land-tag${L.open || tester ? '' : ' shut'}" style="left:calc(${pct(li * PANEL)}% + 12px)"><b>${L.recap ? icon('retry', 14) : li + 1 - (lands[0].recap ? 1 : 0)}</b><span>${esc(L.land.name)}<small>${done}/${all} stops${em ? ' · fully explored' : ''}</small></span></div>${secrets}`;
+    const br = branchOf(L), bi = br ? branches.find((b) => b.li === li) : null;
+    const sign = bi ? `<button class="br-sign${bi.open ? '' : ' shut'}${placed[sel] && placed[sel].li === li ? ' on' : ''}" style="left:${pct(li * PANEL + 8)}%;top:56%" data-act="roadBranch" data-arg="${bi.first}" aria-label="${esc(br.name)}, a branch off your road: ${esc(L.land.name)}${bi.open ? '' : ', not reached yet'}">${glyph(br.glyph, 20)}<span><small>Branch</small><b>${esc(br.name)}</b></span></button>` : '';
+    return `<img class="panel" src="art/w-${L.land.world}.webp" alt="" style="left:${pct(li * PANEL)}%;width:${100 / lands.length}%">${sign}
+      <div class="land-tag${L.open || tester ? '' : ' shut'}${br ? ' branch' : ''}" style="left:calc(${pct(li * PANEL)}% + 12px)"><b>${L.recap ? icon('retry', 14) : li + 1 - (lands[0].recap ? 1 : 0)}</b><span>${esc(L.land.name)}<small>${done}/${all} stops${em ? ' · fully explored' : ''}</small></span></div>${secrets}`;
   }).join('');
   return { html: `<div class="board-scroll" data-autoscroll="${pct(placed[sel] ? placed[sel].px : 0)}">
-      <div class="board lboard" style="min-width:calc(${lands.length} * var(--land-w, 980px));aspect-ratio:${lands.length * 1920}/815">
+      <div class="board lboard" style="min-width:calc(${lands.length} * var(--land-w, 980px));aspect-ratio:${lands.length * 1920}/815"${walk}>
         ${panels}
         <svg class="road" viewBox="0 0 ${W} 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
+          ${forks}<path d="${path}" class="rd-edge"/><path d="${path}" class="rd"/>${wpath ? `<path d="${wpath}" class="rd-walk"/>` : ''}
         </svg>
         ${pins}
-      </div></div>`, placed, sel };
+      </div></div>`, placed, sel, branches };
 }
 
 function roadCard(p, k, show, mine) {
@@ -422,6 +474,8 @@ export function viewJourney() {
       <button class="btn small" data-act="atlasView" data-arg="islands" title="All 18 places on the islands" aria-label="All 18 places on the islands">${icon('map', 20)}</button>
     </div>
     ${b.html}
+    ${b.branches.length ? `<nav class="road-branches" aria-label="Places that branch off this road"><span class="rbr-h">Branches off this road</span>${b.branches.map((x) =>
+      `<button class="rbr${x.open ? '' : ' shut'}${b.placed[b.sel] && b.placed[b.sel].li === x.li ? ' on' : ''}" data-act="roadBranch" data-arg="${x.first}">${glyph(x.glyph, 18)}<b>${esc(x.name)}</b><small>${esc(x.land.name)} · ${x.done}/${x.all}</small></button>`).join('')}</nav>` : ''}
     ${roadCard(b.placed[b.sel], k, show, mine)}
     ${!mine ? `<p class="muted center">${show < p.level ? `The whole Level ${show} road is open — walk any stop again.` : `This road opens when you pass the Level ${show - 1} test.`} <button class="btn small" data-act="jlv" data-arg="${p.level}">Back to my Level ${p.level} road</button></p>` : ''}
     <p class="muted small center">${esc(L.blurb)} Tap a stop to see it, tap again to go in. Every land hides three secrets.</p>

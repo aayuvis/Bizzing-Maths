@@ -579,17 +579,110 @@ svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .pick-cast{display:flex}.pick-cast .av{border-radius:50%;background:var(--surface2);margin-right:-12px;border:3px solid var(--surface)}
 .pick-t{flex:1;min-width:220px}.pick-t h2{margin:0 0 4px}.pick-hook{color:var(--muted);margin:0 0 4px}
 .world-page .rail{margin:0 0 10px}
-/* ambient life, one cast per place */
+/* ambient life, one cast per place (audit v4 D10) — ONE loop per world, suited to its plate.
+   Every mote has --x and --y in 0–1 from views2.js ambLayer(), so a place says only the
+   band its life lives in. test/ambient.mjs: every world in tricks.js has a rule here with
+   an animation, and the hidden/reduced-motion rules below hold for all of them. */
 .amb{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
-.amb i{position:absolute;left:calc(var(--i) * 7.3%);top:-6%;width:10px;height:10px;opacity:.85}
+.amb i{position:absolute;left:calc(var(--x) * 100%);top:-6%;width:10px;height:10px;opacity:.85}
+/* the Number Gardens: petals falling */
 .amb-gardens i{background:#FFC7D9;border-radius:60% 0 60% 0;animation:petal 11s linear infinite;animation-delay:calc(var(--i) * -.8s)}
 @keyframes petal{to{transform:translate(60px,720px) rotate(540deg)}}
-.amb-market i{top:calc(8% + (var(--i) * 3%) % 14%);width:16px;height:16px;border-radius:50%;background:radial-gradient(#FFE7A0,rgb(255 180 60 / 0) 70%);animation:glow 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -.4s)}
+/* the Market: lanterns glowing under the awnings */
+.amb-market i{top:calc(6% + var(--y) * 16%);width:16px;height:16px;border-radius:50%;background:radial-gradient(#FFE7A0,rgb(255 180 60 / 0) 70%);animation:glow 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -.4s)}
 @keyframes glow{50%{opacity:.2;transform:scale(.6)}}
-.amb-workshop i{top:auto;bottom:calc(10% + (var(--i) * 5%) % 40%);width:3px;height:3px;border-radius:50%;background:#FFD27A;box-shadow:0 0 6px #FFB43A;animation:mote 7s ease-in-out infinite;animation-delay:calc(var(--i) * -.5s)}
+/* the Workshop: sparks rising off the bench */
+.amb-workshop i{top:auto;bottom:calc(10% + var(--y) * 40%);width:3px;height:3px;border-radius:50%;background:#FFD27A;box-shadow:0 0 6px #FFB43A;animation:mote 7s ease-in-out infinite;animation-delay:calc(var(--i) * -.5s)}
 @keyframes mote{0%{transform:translate(0,0);opacity:0}30%{opacity:.9}100%{transform:translate(30px,-160px);opacity:0}}
-.amb-observatory i{top:calc((var(--i) * 4.3%) % 34%);width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:glint 3.6s ease-in-out infinite;animation-delay:calc(var(--i) * -.33s)}
-.amb-harbour i{top:calc(55% + (var(--i) * 2.7%) % 26%);width:22px;height:3px;border-radius:3px;background:rgb(255 255 255 / .8);animation:glint 4s ease-in-out infinite;animation-delay:calc(var(--i) * -.37s)}
+/* the Observatory: the night sky glinting */
+.amb-observatory i{top:calc(var(--y) * 34%);width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:glint 3.6s ease-in-out infinite;animation-delay:calc(var(--i) * -.33s)}
+/* the Harbour and the Decimal Dock: waves running across the water */
+.amb-harbour i,.amb-dock i{top:calc(58% + var(--y) * 30%);width:24px;height:3px;border-radius:3px;background:rgb(255 255 255 / .85);animation:wave 4.4s ease-in-out infinite;animation-delay:calc(var(--i) * -.37s)}
+.amb-dock i{left:calc(var(--x) * 46%);top:calc(52% + var(--y) * 40%)}
+@keyframes wave{0%,100%{opacity:0;transform:translateX(-12px) scaleX(.5)}50%{opacity:.85;transform:translateX(12px) scaleX(1)}}
+/* the Sutra Ladder: stars twinkling over the steps */
+.amb-ladder i{top:calc(var(--y) * 30%);left:calc(var(--x) * 70%);width:9px;height:9px;background:#FFF4C8;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);filter:drop-shadow(0 0 3px #fff);animation:twinkle 3.4s ease-in-out infinite;animation-delay:calc(var(--i) * -.45s)}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.5) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(45deg)}}
+/* the Counting Court: paper lanterns swaying under the eaves */
+.amb-court i{top:0;left:calc(22% + var(--i) * 15%);width:18px;height:24px;border-radius:45%;background:radial-gradient(circle at 50% 45%,#FFD27A,#E0482F 70%);box-shadow:0 0 14px rgb(255 170 70 / .7);transform-origin:50% -26px;margin-top:26px;animation:sway 3.6s ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.7s)}
+.amb-court i::before{content:"";position:absolute;left:50%;bottom:100%;width:2px;height:26px;margin-left:-1px;background:rgb(60 30 20 / .7)}
+.amb-court i:nth-child(n+6){display:none}
+@keyframes sway{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+/* the Bakery: steam off the pies */
+.amb-bakery i{left:calc(18% + var(--x) * 44%);top:calc(52% + var(--y) * 10%);width:24px;height:24px;border-radius:50%;background:rgb(255 255 255 / .9);box-shadow:0 0 10px 4px rgb(255 255 255 / .55);filter:blur(3px);animation:steam 5s ease-out infinite;animation-delay:calc(var(--i) * -.36s)}
+@keyframes steam{0%{opacity:0;transform:translateY(0) scale(.5)}30%{opacity:.6}100%{opacity:0;transform:translateY(-110px) scale(1.7)}}
+/* the Library: dust drifting in the window light */
+.amb-library i{left:calc(30% + var(--x) * 62%);top:calc(10% + var(--y) * 60%);width:4px;height:4px;border-radius:50%;background:#FFF0C4;box-shadow:0 0 6px #FFE19A;animation:drift 9s ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.65s)}
+@keyframes drift{0%{opacity:.1;transform:translate(0,0)}50%{opacity:.8}100%{opacity:.2;transform:translate(16px,-26px)}}
+/* the Clock Tower: the fountain splashing */
+.amb-clocktower i{left:calc(85% + var(--x) * 8%);top:calc(60% + var(--y) * 8%);width:5px;height:5px;border-radius:50%;background:#E8F7FF;box-shadow:0 0 4px #9FD8FF;animation:splash 1.8s ease-in infinite;animation-delay:calc(var(--i) * -.13s)}
+@keyframes splash{0%{opacity:0;transform:translate(0,0)}20%{opacity:.95}50%{transform:translate(4px,-16px)}100%{opacity:0;transform:translate(9px,10px)}}
+/* Coin Street: coins catching the light */
+.amb-coinstreet i{top:calc(45% + var(--y) * 45%);width:10px;height:10px;background:#FFF2B0;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);animation:twinkle 2.8s ease-in-out infinite;animation-delay:calc(var(--i) * -.4s)}
+/* Shape City: clouds drifting over the roofs */
+.amb-shapecity i{left:-12%;top:calc(var(--y) * 14%);width:84px;height:22px;border-radius:22px;background:rgb(255 255 255 / .7);filter:blur(2px);animation:cloud 46s linear infinite;animation-delay:calc(var(--i) * -11.5s)}
+.amb-shapecity i:nth-child(n+5){display:none}
+@keyframes cloud{to{transform:translateX(1700%)}}
+/* the Mine: crystals glinting in the rock */
+.amb-mine i{top:calc(40% + var(--y) * 55%);width:9px;height:9px;background:#CFF2FF;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);filter:drop-shadow(0 0 4px #7FD4FF);animation:twinkle 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -.55s)}
+/* the Factor Forest: fireflies */
+.amb-forest i{top:calc(30% + var(--y) * 55%);width:5px;height:5px;border-radius:50%;background:#F4FF9A;box-shadow:0 0 8px 2px #DFFF6A;animation:firefly 6s ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.75s)}
+@keyframes firefly{0%{opacity:0;transform:translate(0,0)}40%{opacity:.95}70%{opacity:.2}100%{opacity:.9;transform:translate(22px,-18px)}}
+/* the Quarry: stone dust drifting low */
+.amb-quarry i{top:calc(62% + var(--y) * 30%);width:26px;height:26px;border-radius:50%;background:rgb(240 214 170 / .55);filter:blur(5px);animation:dust 8s ease-out infinite;animation-delay:calc(var(--i) * -.6s)}
+@keyframes dust{0%{opacity:0;transform:translate(0,0) scale(.5)}35%{opacity:.6}100%{opacity:0;transform:translate(44px,-26px) scale(1.6)}}
+/* the Square Palace: the fountains sparkling */
+.amb-palace i{top:calc(45% + var(--y) * 45%);width:8px;height:8px;background:#E6F6FF;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:twinkle 3s ease-in-out infinite;animation-delay:calc(var(--i) * -.37s)}
+/* Set Island: ripples on the pools */
+.amb-setisland i{left:calc(23% + var(--x) * 20%);top:calc(32% + var(--y) * 30%);width:14px;height:14px;border-radius:50%;border:2px solid rgb(255 255 255 / .85);animation:ripple 4.2s ease-out infinite;animation-delay:calc(var(--i) * -.6s)}
+.amb-setisland i:nth-child(2n){left:calc(60% + var(--x) * 22%)}
+@keyframes ripple{0%{opacity:.85;transform:scale(.2)}100%{opacity:0;transform:scale(3)}}
+/* the Lighthouse: its lamp pulsing, the sea glinting under it (the beam is painted) */
+.amb-lighthouse i{top:calc(48% + var(--y) * 36%);left:calc(20% + var(--x) * 80%);width:18px;height:2px;border-radius:2px;background:rgb(255 240 200 / .85);animation:wave 5s ease-in-out infinite;animation-delay:calc(var(--i) * -.41s)}
+.amb-lighthouse i:first-child{left:30.7%;top:16%;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;background:radial-gradient(rgb(255 240 190 / .95),rgb(255 220 140 / 0) 68%);animation:lamp 3.2s ease-in-out infinite}
+@keyframes lamp{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+/* the Carnival: the string lights twinkling */
+.amb-carnival i{top:calc(4% + var(--y) * 24%);width:12px;height:12px;border-radius:50%;background:radial-gradient(#FFF1B8,rgb(255 200 80 / 0) 70%);animation:glow 2.4s ease-in-out infinite;animation-delay:calc(var(--i) * -.3s)}
+.amb-carnival i:nth-child(3n){background:radial-gradient(#FFD0E6,rgb(255 120 180 / 0) 70%)}
+/* the Strategy School: leaves blowing off the trees */
+.amb-strategy i{width:9px;height:6px;background:#9CC25A;border-radius:60% 0 60% 0;animation:leaf 13s linear infinite;animation-delay:calc(var(--i) * -.9s)}
+.amb-strategy i:nth-child(2n){background:#E4C35A}
+@keyframes leaf{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(-40px,340px) rotate(260deg)}100%{transform:translate(30px,720px) rotate(540deg)}}
+/* the Logic Labyrinth: the fountain at its heart */
+.amb-logic i{left:calc(30% + var(--x) * 6%);top:calc(36% + var(--y) * 7%);width:5px;height:5px;border-radius:50%;background:#E8F7FF;box-shadow:0 0 4px #9FD8FF;animation:splash 1.8s ease-in infinite;animation-delay:calc(var(--i) * -.13s)}
+/* the Figure Fair: kites bobbing on the wind */
+.amb-figures i{top:calc(4% + var(--y) * 22%);left:calc(28% + var(--x) * 46%);width:16px;height:16px;background:linear-gradient(135deg,#F25C54 50%,#4FB3E8 50%);transform:rotate(45deg);animation:kite 4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.8s)}
+.amb-figures i:nth-child(n+6){display:none}
+@keyframes kite{from{transform:translate(0,0) rotate(38deg)}to{transform:translate(8px,-10px) rotate(54deg)}}
+/* paused when the page is hidden; frozen to the still plate under reduced motion (rule 22) */
+:root[data-hidden] :is(.amb,.map-amb) i{animation-play-state:paused}
+:root[data-motion="reduced"] :is(.amb,.map-amb) i{animation:none!important}
+:root[data-motion="reduced"] :is(.amb,.map-amb){visibility:hidden}
+@media (prefers-reduced-motion:reduce){:is(.amb,.map-amb) i{animation:none!important}:is(.amb,.map-amb){visibility:hidden}}
+
+/* ---- the Atlas road's branches (audit v4 D2): the Ladder, the Court and the Contest Hall fork off it */
+.br-edge{fill:none;stroke:rgb(60 40 20 / .35);vector-effect:non-scaling-stroke;stroke-width:12px;stroke-linecap:round}
+.br-rd{fill:none;stroke:#FFF6E2;vector-effect:non-scaling-stroke;stroke-width:7px;stroke-linecap:round;stroke-dasharray:2 12}
+.br-sign{position:absolute;transform:translate(-50%,-100%);z-index:3;display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:10px;background:#7A4E2A;color:#FFF6E2;box-shadow:0 4px 0 #4E3017,0 8px 14px rgb(0 0 0 / .3);cursor:pointer;font:inherit;white-space:nowrap;min-height:44px}
+.br-sign span{display:flex;flex-direction:column;text-align:left;line-height:1.1}
+.br-sign small{font:700 10px var(--ui);text-transform:uppercase;letter-spacing:.06em;opacity:.8}.br-sign b{font:800 14px var(--display)}
+.br-sign.shut{filter:grayscale(.6);opacity:.9}
+.br-sign:focus-visible{outline:3px solid var(--action);outline-offset:3px}
+.land-tag.branch b{background:#7A4E2A;color:#FFF6E2}
+.road-branches{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-6px 0 14px}
+.rbr-h{font:700 12px var(--ui);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rbr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 12px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.rbr b{font:800 14px var(--display)}.rbr small{color:var(--muted);font-size:12px}
+.rbr.on{border-color:var(--action)}.rbr.shut{opacity:.75}
+
+/* ---- walking to the next pin (audit v4 D6): the bob rests while the avatar walks */
+.me.walking{animation:none;z-index:4}
+
+/* ---- route transitions (audit v4 N10): opacity only, from .55, so the core paints at once */
+.route-in{animation:route-in .18s ease-out}
+@keyframes route-in{from{opacity:.55}}
+:root[data-motion="reduced"] .route-in{animation:none!important}
+@media (prefers-reduced-motion:reduce){.route-in{animation:none!important}}
 
 /* ================================================================ the story stage */
 .story{position:relative;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-raised);aspect-ratio:16/9;max-height:560px;width:100%;cursor:pointer;background:#ddd;user-select:none}
@@ -753,7 +846,6 @@ svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 /* goal lines WRAP: on a 390px phone a nowrap line ran the page to 670px (FIX-MATHS §1, P1) */
 .rg span{white-space:normal;overflow-wrap:anywhere;min-width:0}.rg-met{color:var(--mastered);font-weight:700}
 @media (max-width:880px){.home-r3{grid-template-columns:1fr}.strands{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){.amb,.map-amb{display:none}}
 @media print{.top,.tabbar,.foot{display:none}}
 
 /* ---- Learn: one worked example per idea, clicked through in order */

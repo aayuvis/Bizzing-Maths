@@ -292,6 +292,8 @@ function screen() {
 }
 
 let celShown = null;
+const WALK_MS = 1100;           // walking to the next pin, ≤ 1.2 s (audit v4 D6)
+let walking = null, routeKey = null;   // the walk under way; the screen last shown (for the route fade)
 let STORY_FAIL = false;   // offline before the stories chunk was ever cached: open on Learn rather than hang
 const STORY_SCREENS = ['stop', 'world', 'stories', 'search', 'atlas', 'journey'];   // the screens that tell or list a story
 function render() {
@@ -313,8 +315,54 @@ function render() {
     const x = +sc.dataset.autoscroll / 100 * sc.scrollWidth - sc.clientWidth / 2;
     sc.scrollLeft = Math.max(0, x);
   }
+  walkOn();
+  routeIn();
 }
 R.render = render;
+
+/* Motion is the device's to refuse: the system setting, or Settings' own switch. */
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
+
+/* Walking to the next pin (audit v4 D6). A board names the pin the child stands on
+   (data-walk-key/-to). If it has moved on since this board was last shown, views2 wrote
+   the road between the two pins into data-walk, and the avatar walks it — once: the new
+   pin is remembered at once, so the next render of the board stands still. ≤ 1.2 s, and
+   never under reduced motion (the pin is simply where the child now is). */
+function walkOn() {
+  const b = root.querySelector('.board[data-walk-key]'); if (!b) return;
+  const key = b.dataset.walkKey, to = +b.dataset.walkTo, seen = R.ui.walked || (R.ui.walked = {});
+  seen[key] = to;
+  if (walking && walking.key === key && walking.to === to && performance.now() - walking.t0 < WALK_MS && !still()) {
+    const m = b.querySelector('.cur .me'); if (m && m.animate) walkMe(m, walking); return;
+  }
+  const pts = b.dataset.walk && JSON.parse(b.dataset.walk), me = b.querySelector('.cur .me');
+  if (!pts || pts.length < 2 || !me || still() || !me.animate) return;
+  const W = b.clientWidth, H = b.clientHeight, [ex, ey] = pts.at(-1);
+  const frames = pts.map(([x, y]) => ({ translate: `${((x - ex) * W / 100).toFixed(1)}px ${((y - ey) * H / 100).toFixed(1)}px` }));
+  walking = { key, to, frames, t0: performance.now() };
+  walkMe(me, walking);
+}
+/* A render in the middle of a walk (the stories arriving, a tap) draws a new avatar: it
+   takes up the same walk where the old one was, rather than jumping or starting again. */
+function walkMe(me, w) {
+  me.classList.add('walking');
+  const an = me.animate(w.frames, { duration: WALK_MS, easing: 'ease-in-out' });
+  an.id = 'walk'; an.currentTime = Math.min(WALK_MS, performance.now() - w.t0);
+  const done = () => { me.classList.remove('walking'); if (walking === w && an.playState === 'finished') walking = null; };
+  an.onfinish = done; an.oncancel = done;
+}
+
+/* Route transitions (audit v4 N10): a new screen fades in over 180 ms. It starts at
+   0.55 opacity, so the core is painted on the very first frame — the fade never delays
+   it — and it is opacity only, so no box moves and nothing a check measures shifts.
+   Only when the screen changes (a re-render in place does not fade), never on the
+   first paint of the app, never under reduced motion. Focus is untouched. */
+function routeIn() {
+  const key = `${R.ui.nav}|${R.ui.arg == null ? '' : R.ui.arg}|${R.ui.nav === 'atlas' ? R.ui.atlasView || '' : ''}`;
+  const first = routeKey === null, changed = key !== routeKey; routeKey = key;
+  if (first || !changed || still()) return;
+  const m = document.getElementById('main'); if (m) m.classList.add('route-in');
+}
 
 /* Music follows the screen (standard §11): Home has its own loop, every other screen its
    world's, a game its own (games.js starts that). It starts only after the child's first tap
@@ -1050,6 +1098,13 @@ on('roadPick', (i) => {
   R.ui.rpick = +i; render();
   if (readOn(k)) { const b = root.querySelector('.pick .say-btn'); if (b) say(b.getAttribute('data-arg')); }
 });
+/* A branch (the Sutra Ladder, the Counting Court, the Contest Hall — audit v4 D2): select its
+   first stop and bring its signpost into view on the board, wherever the tap came from. */
+on('roadBranch', (i) => {
+  R.ui.rpick = +i; render();
+  const s = root.querySelector(`.lboard .br-sign[data-arg="${+i}"]`), sc = s && s.closest('.board-scroll');
+  if (sc) sc.scrollTo({ left: Math.max(0, s.offsetLeft - sc.clientWidth / 2), behavior: still() ? 'auto' : 'smooth' });
+});
 on('secret', (a) => {
   const [kind, landId] = a.split('|'), k = kid(R.h), s = J.SECRET_KINDS.find((x) => x.k === kind);
   const rival = kind === 'duel' ? J.secretsOf(k, landId).find((x) => x.k === 'duel').rival : null;
@@ -1381,4 +1436,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, WALK_MS, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
