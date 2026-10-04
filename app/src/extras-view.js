@@ -1,9 +1,9 @@
-/* extras-view.js — the Shop's road skins and game modes (extras.js), and the
+/* extras-view.js — the Shop's road skins, paper skins and game modes (extras.js), and the
    bonus-mode row under the Play tab's games. Pure: state in, string out. */
 import { esc } from './ui.js';
 import { icon } from './icons.js';
 import { bandY } from './board.js';
-import { SKINS, MODES, ownsSkin, ownsMode, skinOf, modesFor } from './extras.js';
+import { SKINS, MODES, PAPERS, ownsSkin, ownsMode, skinOf, ownsPaper, paperOf, modesFor } from './extras.js';
 import { GAMES } from './arcade.js';
 
 /* a little road in the skin, so the card shows what it buys */
@@ -24,6 +24,22 @@ export function shopSkins(k, coins) {
     <div class="skins">${SKINS.map((s) => { const have = ownsSkin(k, s.id); return `<div class="sk-item${on === s.id ? ' on' : ''}" data-skin-card="${s.id}">
       ${preview(s.id)}<b>${esc(s.name)}</b><span class="muted small">${esc(s.blurb)}</span>
       ${have ? `<button class="btn small" data-act="wearSkin" data-arg="${on === s.id ? '' : s.id}">${on === s.id ? 'Back to the plain road' : 'Use it'}</button>` : price(s.price, coins, 'buySkin', s.id)}
+    </div>`; }).join('')}</div>`;
+}
+
+/* a little paper in the skin: its header band, a question on the paper, the clock — drawn by the
+   same extras.css rules as the real paper, through .pp-prev[data-pp] */
+const paperPreview = (id) => `<span class="pp-prev" data-pp="${id}" aria-hidden="true">
+    <span class="pp-bar"><b>Paper 7</b><span class="pp-time">24:00</span></span>
+    <span class="pp-q"><span class="pp-k">Question 3 of 24</span><span class="pp-t">48 + 37 = ?</span></span></span>`;
+
+export function shopPapers(k, coins) {
+  const on = paperOf(k);
+  return `<h2 class="ex-h">${icon('pen', 20)} Paper skins</h2>
+    <p class="muted">How a Contest Hall paper looks while you sit it — the paper, its header and the clock. The questions, the marks and the time stay exactly the same.</p>
+    <div class="skins papers-sk">${PAPERS.map((x) => { const have = ownsPaper(k, x.id); return `<div class="pp-item${on === x.id ? ' on' : ''}" data-paper-card="${x.id}">
+      ${paperPreview(x.id)}<b>${esc(x.name)}</b><span class="muted small">${esc(x.blurb)}</span>
+      ${have ? `<button class="btn small" data-act="wearPaper" data-arg="${on === x.id ? '' : x.id}">${on === x.id ? 'Back to the plain paper' : 'Use it'}</button>` : price(x.price, coins, 'buyPaper', x.id)}
     </div>`; }).join('')}</div>`;
 }
 

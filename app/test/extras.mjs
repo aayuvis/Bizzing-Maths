@@ -62,11 +62,55 @@ ok(X.ledgerWords('skin:stones') === 'bought the Stepping stones road' && X.ledge
 { const h = newHousehold(); h.kids.push(k); h.active = k.id; h.v = SCHEMA;
   Store.saveNow(h); const back = Store.loadHousehold().kids.find((x) => x.id === k.id);
   ok(X.ownsMode(back, 'rush:squares') && X.ownsSkin(back, 'stones') && X.skinOf(back) === 'stones', 'what was bought is still owned after a reload'); }
-ok(SCHEMA === 11, `the store is at v11 (got ${SCHEMA})`);
+ok(SCHEMA === 12, `the store is at v12 (got ${SCHEMA})`);
 { const old = migrate({ v: 10, kids: [{ id: 'a', shop: { owned: ['gold'], worn: { frame: 'gold' }, avatars: ['cubebot'], worlds: [3] } }], parent: {} });
   const s = old.kids[0].shop;
-  ok(old.v === 11 && Array.isArray(s.skins) && !s.skins.length && Array.isArray(s.modes) && !s.modes.length && s.worn.skin === null, 'v10 → v11 adds empty skins and modes and the plain road');
+  ok(old.v === SCHEMA && Array.isArray(s.skins) && !s.skins.length && Array.isArray(s.modes) && !s.modes.length && s.worn.skin === null, 'v10 → v11 adds empty skins and modes and the plain road');
   ok(s.owned[0] === 'gold' && s.worn.frame === 'gold' && s.worlds[0] === 3 && s.avatars[0] === 'cubebot', 'v10 → v11 takes nothing away'); }
+{ const old = migrate({ v: 11, kids: [{ id: 'a', shop: { owned: ['gold'], worn: { frame: 'gold', skin: 'rails' }, avatars: ['cubebot'], worlds: [3], skins: ['rails'], modes: ['rush:mixed'] } }], parent: {} });
+  const s = old.kids[0].shop;
+  ok(old.v === 12 && Array.isArray(s.paperSkins) && !s.paperSkins.length && s.worn.paper === null, 'v11 → v12 adds no paper skins and the plain paper');
+  ok(s.skins[0] === 'rails' && s.worn.skin === 'rails' && s.modes[0] === 'rush:mixed' && s.owned[0] === 'gold' && s.worn.frame === 'gold', 'v11 → v12 takes nothing away'); }
+{ const nk = newKid('N', '8-10', 'cubebot'), h = migrate(JSON.parse(JSON.stringify({ ...newHousehold(), kids: [nk] })));
+  ok(newHousehold().v === SCHEMA && JSON.stringify(h.kids[0].shop) === JSON.stringify(nk.shop), 'a new household is born at the current schema, and migrating it changes nothing'); }
+
+/* ---- paper skins (audit v4 K6): bought once at the printed price, worn, taken off, never xp */
+ok(X.PAPERS.length >= 4 && X.PAPERS.length <= 5, `four or five paper skins (got ${X.PAPERS.length})`);
+for (const it of X.PAPERS) ok(Number.isInteger(it.price) && it.price >= 25 && it.price <= 60 && it.name && it.blurb, `${it.id}: a printed price in line with the road skins (25–60), a name and a line`);
+ok(new Set(X.PAPERS.map((x) => x.id)).size === X.PAPERS.length, 'paper ids are unique');
+{ const t = newKid('Pia', '8-10', 'cubebot'), spendP = (p, why) => Family.spend('Pia', p, why);
+  for (let i = 0; i < 100; i++) Family.earn('Pia', 'answer');
+  const b0 = Family.balance('Pia'), ex = X.paperById.exam, gr = X.paperById.graph;
+  ok(!X.ownsPaper(t, 'exam') && X.paperOf(t) === null, 'a new child owns no paper skin and sits the plain paper');
+  ok(X.buyPaper(t, 'exam', spendP) && Family.balance('Pia') === b0 - ex.price && X.paperOf(t) === 'exam', `a paper skin costs exactly its printed price (${ex.price}) and is worn at once`);
+  const b1 = Family.balance('Pia');
+  ok(!X.buyPaper(t, 'exam', spendP) && Family.balance('Pia') === b1, 'a paper skin is bought once — a second tap spends nothing');
+  ok(!X.buyPaper(t, 'nosuch', spendP) && Family.balance('Pia') === b1, 'an unknown paper costs nothing');
+  ok(!X.wearPaper(t, 'graph') && X.paperOf(t) === 'exam', 'a paper not owned cannot be worn');
+  ok(X.wearPaper(t, null) && X.paperOf(t) === null && X.wearPaper(t, 'exam') && X.paperOf(t) === 'exam', 'an owned paper comes off (the plain paper is back) and goes back on');
+  ok(X.buyPaper(t, 'graph', spendP) && Family.balance('Pia') === b1 - gr.price && X.paperOf(t) === 'graph' && X.ownsPaper(t, 'exam'), 'a second paper is worn at once, and the first is still owned');
+  while (Family.balance('Pia') >= X.paperById.night.price) Family.spend('Pia', 1, 'test');
+  const b2 = Family.balance('Pia');
+  ok(!X.buyPaper(t, 'night', spendP) && Family.balance('Pia') === b2 && !X.ownsPaper(t, 'night'), 'not enough coins: nothing is spent and nothing is owned');
+  ok(t.xp === 0, 'paper skins never touch xp');
+  const led = JSON.parse(mem['bizzing.wallet']).kids.pia.ledger.filter((x) => x.n < 0 && x.why.startsWith('paper:'));
+  ok(led.length === 2 && led[0].why === 'paper:exam' && led[0].n === -ex.price && led[1].why === 'paper:graph', `the ledger says which paper was bought, at its price (${JSON.stringify(led)})`);
+  ok(X.ledgerWords('paper:exam') === 'bought the Exam Hall paper', 'the wallet history says it in words');
+  ok(X.skinOf(t) === null && !(t.shop.skins || []).length, 'a paper skin is not a road skin: the road is untouched');
+  const h = newHousehold(); h.kids.push(t); h.active = t.id; Store.saveNow(h);
+  const back = Store.loadHousehold().kids.find((x) => x.id === t.id);
+  ok(X.ownsPaper(back, 'exam') && X.ownsPaper(back, 'graph') && X.paperOf(back) === 'graph', 'paper skins are still owned, and still worn, after a reload'); }
+
+/* a paper skin is only paint: nothing that builds, times or marks a paper reads it */
+for (const f of ['../src/papers/engine.js', '../src/hall.js']) {
+  const code = readFileSync(new URL(f, import.meta.url), 'utf8');
+  ok(!/extras|paperOf|data-paper|worn/.test(code), `${f.slice(7)} never reads a paper skin`);
+}
+{ const ms = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'), body = ms.slice(ms.indexOf('function sitPaper('), ms.indexOf("on('hallPick'"));
+  ok(body.length > 200 && !/paperOf|extras|worn|data-paper/.test(body), 'main.js sits, times and scores a paper without reading a skin'); }
+{ const css = readFileSync(new URL('../styles/extras.css', import.meta.url), 'utf8');
+  for (const p of X.PAPERS) ok(new RegExp(`\\[data-paper=${p.id}\\] \\.paper`).test(css) && new RegExp(`\\.pp-prev\\[data-pp=${p.id}\\]`).test(css), `${p.id}: drawn by extras.css on the paper and in the Shop's preview`);
+  ok(!/\[data-paper[^\]]*\][^{]*\.(pc|pn|pq-choices)\b[^{]*\{[^}]*(display|order|visibility)/.test(css), 'no skin hides, reorders or removes a choice or a question'); }
 
 /* modes are locked until bought: play() goes to the Shop for a mode not owned */
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
@@ -129,5 +173,5 @@ for (const band of ['6-7', '8-10', '11-14']) {
   ok(sd.lo === 0 && sd.hi === (band === '6-7' ? 20 : band === '8-10' ? 100 : 1000), `${band} the standard line is unchanged`);
 }
 
-console.log(`${fails ? 'FAIL' : 'ok'} extras — 6 road skins and 6 game modes at printed prices, bought once through the wallet, xp untouched, every mode solved and taught`);
+console.log(`${fails ? 'FAIL' : 'ok'} extras — 6 road skins, ${X.PAPERS.length} paper skins and 6 game modes at printed prices, bought once through the wallet, xp untouched, every mode solved and taught`);
 if (fails) process.exit(1);
