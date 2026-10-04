@@ -7,7 +7,7 @@ import * as J from './journey.js';
 import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot, correct } from './tricks.js';
 import * as W from './widgets.js';
 import { LEVELS } from './levels.js';
-import { tasterStop } from './demo.js';
+import { TRY } from './landing-try.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
@@ -193,12 +193,14 @@ let LAND = null, landing0 = null;
 const AGE_MIN = parseInt(BANDS[0].id, 10), AGE_MAX = parseInt(BANDS[BANDS.length - 1].id.split('-').pop(), 10);
 export const PRIVACY_LINE = 'There are no accounts, no analytics, no advertising, no trackers and no third-party scripts.';
 function landTry() {
-  const t = byId[tasterStop()], q = example(t), steps = t.work(q);
+  // cut at build time from the stop's own working (landing-try.js; test/light.mjs holds it to the stop): the
+  // landing draws before the stops' code loads, and must not load it just for this card
+  const t = TRY, steps = t.steps;
   return `<aside class="land-try" aria-label="A trick, worked">
     <div class="land-try-top">${octo('wave', 56, '', '')}<span><span class="kicker">A trick, worked</span><b>${esc(t.title)}</b></span></div>
-    <p class="land-try-q" data-code="try">${esc(q.text)}</p>
-    <ol class="land-try-steps" data-code="try">${steps.map((s) => `<li><span>${esc(s.t)}</span><b>${esc(String(s.v))}</b></li>`).join('')}</ol>
-    <p class="land-try-why" data-code="try"><b>Why it works:</b> ${esc(t.why[0])}</p>
+    <p class="land-try-q" data-code="try">${esc(t.text)}</p>
+    <ol class="land-try-steps" data-code="try">${steps.map((s) => `<li><span>${esc(s.t)}</span><b>${esc(s.v)}</b></li>`).join('')}</ol>
+    <p class="land-try-why" data-code="try"><b>Why it works:</b> ${esc(t.why)}</p>
     <a class="ob-try btn" href="./?demo=try">Try a trick first — nothing is saved</a>
   </aside>`;
 }

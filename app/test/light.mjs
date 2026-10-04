@@ -47,5 +47,11 @@ for (const [bad, why] of [[{ id: 'x', n: NaN }, 'NaN'], [{ id: 'x', a: [1, undef
   let threw = false; try { lightSource({ WORLD: { id: 'w' }, TRICKS: [bad] }, 'bad'); } catch { threw = true; }
   ok(threw, `the light build refuses ${why}`);
 }
+// the landing's worked trick is cut at build time from the stop's own working (tools/build-landing-try.mjs):
+// it must still BE that working, or the page tells a story the stop no longer does
+{ const { landingTry } = await import('../../tools/build-landing-try.mjs'), { TRY } = await import('../src/landing-try.js');
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (!same(TRY, landingTry())) { fails++; console.error('  ✗ app/src/landing-try.js has drifted from the stop — rerun node tools/build-landing-try.mjs'); }
+  if (same({ ...TRY, steps: TRY.steps.map((x, i) => (i ? x : { ...x, v: x.v + '1' })) }, landingTry())) { fails++; console.error('  ✗ BROKEN: a drifted step was not caught'); } }
 console.log(`${fails ? 'FAIL' : 'ok'} light — ${CHAPTERS.length} chapters, ${stops} stops, ${stubs} functions held back until first need`);
 if (fails) process.exit(1);
