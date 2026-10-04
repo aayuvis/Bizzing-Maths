@@ -181,9 +181,11 @@ try {
   // A6 (v4): the level test explains where it put the child, with a question they got right
   await page.evaluate(() => window.__bzm.fire('startLevelTest')); await page.waitForTimeout(300);
   await drive(page, (q) => q.tlevel <= 2);
-  const rights = await page.evaluate(() => { const r = window.__bzm.R.run; return r.items.filter((q, i) => r.results[i] && r.results[i].right).map((q) => String(q.text)); });
+  const rights = await page.evaluate(() => { const r = window.__bzm.R.run; return r.items.filter((q, i) => r.results[i] && r.results[i].right).map((q) => ({ text: String(q.text), ans: q.ans })); });
   const why = await page.locator('.placed-why').innerText().catch(() => '');
-  ok(/You start at Level 3 because you got/.test(why) && rights.some((t) => why.includes(t)), `the placement names a question the child got right (“${why}”)`);
+  // the question is named as it reads in a sentence (journey.saidRight: a compare box filled with its answer)
+  const { saidRight } = await import('../src/journey.js');
+  ok(/You start at Level 3 because you got/.test(why) && rights.some((q) => why.includes(saidRight(q))) && !/[☐□]|= =/.test(why), `the placement names a question the child got right (“${why}”)`);
   await shot('placement');
   await page.evaluate(() => window.__bzm.fire('endRun'));
 
