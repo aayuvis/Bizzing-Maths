@@ -886,6 +886,24 @@ export const byId = Object.fromEntries(TRICKS.map((t) => [t.id, t]));
 export const worldOf = (id) => WORLDS.find((w) => w.id === id);
 export const tricksIn = (wid) => TRICKS.filter((t) => t.world === wid);
 
+/* The stops' CODE, on first need (audit v4 R2). In the browser build each chapter above is its
+   data only (vite-light.mjs): enough for Home, the road, search and the report, and a stub for
+   every function. loadEngine() brings the real chapters and copies them onto the SAME objects,
+   so byId, TRICKS and anything holding a stop see the whole stop from then on. In node, and in
+   dev, the chapters are whole already and this is a no-op. */
+let engine = CHAPTERS.some((c) => c.LIGHT) ? null : true;
+export const engineReady = () => engine === true;
+export function loadEngine() {
+  if (engine === true) return Promise.resolve();
+  return engine || (engine = import('./chapters/full.js').then(({ FULL }) => {
+    for (const c of FULL) {
+      for (const t of c.TRICKS) Object.assign(byId[t.id], t);
+      const w = WORLDS.find((x) => x.id === c.WORLD.id); if (w) Object.assign(w, c.WORLD, { n: w.n, island: w.island });
+    }
+    engine = true;
+  }, (e) => { engine = null; throw e; }));
+}
+
 /* The worked example a chapter teaches from. */
 /* A stop that teaches several ideas (three kinds of triangle, above and below
    100) carries `cases`: one worked example per idea, which Learn clicks through

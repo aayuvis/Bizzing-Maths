@@ -7,28 +7,35 @@
      the Hive's activity feed written (minutes and a milestone) · coins only from
      standard events and never a rank · #/continue and ?from=hive · ?demo labelled
      and touching nothing real · a medal celebrated exactly once.
-   Every assertion here was watched to fail once (see the commit that added it). */
+   Every assertion here was watched to fail once (see the commit that added it).
+   No fixed sleep gates an assertion (audit v4): each waits for the state it is about
+   to check, with a generous timeout, so a loaded machine is slower, not different.
+   THROTTLE=4 slows the CPU fourfold to prove it. */
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { mkdirSync, existsSync, symlinkSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { throttled, served } from './lib/site.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW || '/opt/node22/lib/node_modules/playwright');
 
 const HERE = resolve(import.meta.dirname, '..');
 const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
-const SITE = resolve(HERE, '.site-fam');
+const port = +(process.env.PORT_BASE || 5200) + 2;
+const SITE = resolve(HERE, '.site-fam-' + port);   // per port: two runs at once never share (or delete) a site
 rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: true }); mkdirSync(SHOTS, { recursive: true });
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
-const port = +(process.env.PORT_BASE || 5200) + 2;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
-await new Promise((r) => setTimeout(r, 700));
+await served(port);
 const BASE = `http://127.0.0.1:${port}/Bizzing-Maths/`;
 const FORMULA_ID = (await import('../src/library/formulas.js')).CARDS[0].id, STONE_ID = (await import('../src/library/vedic.js')).JOURNEY[0].id;
 
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.error('  ✗ ' + m); } else if (process.env.V) console.log('  ✓ ' + m); };
-const browser = await chromium.launch({ executablePath: existsSync('/opt/pw-browsers/chromium-1194/chrome-linux/chrome') ? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' : undefined });
+const browser = throttled(await chromium.launch({ executablePath: existsSync('/opt/pw-browsers/chromium-1194/chrome-linux/chrome') ? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' : undefined }));
+/* wait for the app, never the clock: true once `fn` holds in the page, false if it never does (the assertion then says so) */
+const until = async (p, fn, arg, timeout = 30000) => { try { await p.waitForFunction(fn, arg, { timeout, polling: 25 }); return true; } catch { return false; } };
+const navIs = (p, nav) => until(p, (n) => !!window.__bzm && window.__bzm.R.ui.nav === n, nav);
 const errors = [], foreign = [];
 
 /* a household of two, written the way the app writes it, so the walk starts on Home */
@@ -43,7 +50,7 @@ async function page(vp, tag, { seed = true, clock = false } = {}) {
   const p = await ctx.newPage();
   if (clock) await p.clock.install();
   p.on('pageerror', (e) => errors.push(`${tag}: ${e.message}`));
-  p.on('request', (r) => { const u = new URL(r.url()); if (!['127.0.0.1', 'localhost'].includes(u.hostname) && u.protocol.startsWith('http')) foreign.push(`${tag}: ${r.url()}`); });
+  p.on('request', (r) => { const u = new URL(r.url()); if (!['127.0.0.1', '127.0.0.2', 'localhost'].includes(u.hostname) && u.protocol.startsWith('http')) foreign.push(`${tag}: ${r.url()}`); });
   if (seed) await p.addInitScript((h) => { try { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(h)); } catch {} }, household());
   return { p, ctx, shot: (n) => p.screenshot({ path: `${SHOTS}/fam-${tag}-${n}.png` }) };
 }
@@ -65,7 +72,8 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(await p.evaluate(() => document.documentElement.scrollWidth) <= vp.width, `${tag}: no sideways scroll on Home`);
 
   // the switcher: two children, one tap, nothing mixed
-  await p.click('[data-bz=kid]'); await p.waitForSelector('.sheet'); await p.waitForTimeout(300);
+  await p.click('[data-bz=kid]'); await p.waitForSelector('.sheet'); await p.waitForSelector('.kid-menu .km-row');
+  await until(p, () => document.getAnimations().every((a) => a.playState !== 'running' || a.effect.getTiming().iterations === Infinity), null, 5000);
   await shot('sheet');
   ok(await p.locator('.kid-menu .km-kid[data-act=switchKid]').count() === 2, `${tag}: the menu lists both children`);
   ok(await p.locator('.kid-menu .km-kid.on .km-tick').count() === 1, `${tag}: the child playing has the tick`);
@@ -78,20 +86,21 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.click('[data-bz=kid]'); await p.click('.kid-menu .km-kid[data-arg=ka]'); await p.waitForSelector('.home2');
 
   // back stays in the app
-  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/library"]' : '[data-bz=tab][href="#/library"]'); await p.waitForTimeout(150);
-  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/puzzles"]' : '[data-bz=tab][href="#/puzzles"]'); await p.waitForTimeout(150);
-  await p.goBack(); await p.waitForTimeout(250);
+  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/library"]' : '[data-bz=tab][href="#/library"]'); await navIs(p, 'library');
+  await p.click(vp.width <= 720 ? '[data-bz=tabbar] a[href="#/puzzles"]' : '[data-bz=tab][href="#/puzzles"]'); await navIs(p, 'puzzles');
+  await p.goBack(); await until(p, () => window.__bzm.R.ui.nav !== 'puzzles');
   ok((await state(p)).nav === 'library' && p.url().startsWith(BASE), `${tag}: back returns to the previous screen inside the app`);
-  await p.goBack(); await p.waitForTimeout(250);
+  await p.goBack(); await until(p, () => window.__bzm.R.ui.nav !== 'library');
   ok((await state(p)).nav === 'home' && p.url().startsWith(BASE), `${tag}: back walks screen by screen to Home, inside the app (at ${p.url()})`);
 
   // PIN on grown-ups
-  await p.goto(BASE + '#/grownups'); await p.waitForTimeout(200);
+  await p.goto(BASE + '#/grownups'); await p.waitForSelector('.pin-dots, .report');
   ok(await p.locator('.pin-dots').count() === 1 && await p.locator('.report').count() === 0, `${tag}: grown-ups asks for the PIN first`);
   for (const ch of '1234') await p.keyboard.press(ch);
   await p.waitForSelector('.rc'); await shot('report');
-  // the PIN is never kept as itself: the seeded plain '1234' was hashed on load, and nothing stores it
-  await p.waitForTimeout(400);
+  // the PIN is never kept as itself: the seeded plain '1234' was hashed on load, and nothing stores it.
+  // A migrated household is written at once (audit v4 Q1), so storage already holds this schema's record.
+  await until(p, () => { try { return JSON.parse(localStorage.getItem('bzm_household')).v >= 10; } catch { return false; } });
   const kept = await p.evaluate(() => localStorage.getItem('bzm_household') || '');
   ok(!/"pin"\s*:/.test(kept) && !kept.includes('"1234"') && /"pinHash":"[0-9a-f]{32}\$[0-9a-f]{64}"/.test(kept), `${tag}: the PIN is kept only as a salted hash`);
   const rc = await p.$$eval('.rc', (cs) => cs.map((c) => [...c.querySelectorAll('.rc-cell .kicker')].map((x) => x.textContent).join()));
@@ -136,7 +145,11 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 
 /* first-load weight (standard §11, audit N2): the phone's first screen ≤ 1.5 MB
    transferred, initial JavaScript ≤ 400 KB gzipped. GitHub Pages gzips text, the
-   test server does not — so text is measured gzipped, images as they are. */
+   test server does not — so text is measured gzipped, images as they are.
+   Audit v4 R2 took the stops' code off the first screen (vite-light.mjs): 371 KB → 244 KB.
+   The budget is held at what that reached plus 5%, so the gain cannot quietly erode;
+   raise it only with a reason written here. */
+const JS_BUDGET_KB = 257;
 {
   const { p, ctx } = await page({ width: 390, height: 844 }, 'weight');
   const got = [];
@@ -144,10 +157,47 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.goto(BASE); await p.waitForSelector('.home2'); await p.waitForLoadState('networkidle');
   const total = got.reduce((a, x) => a + x.n, 0), js = got.filter((x) => x.js).reduce((a, x) => a + x.n, 0);
   ok(total <= 1.5 * 1024 * 1024, `first screen on a phone is ≤ 1.5 MB (got ${(total / 1048576).toFixed(2)} MB: ${got.sort((a, b) => b.n - a.n).slice(0, 4).map((x) => x.u.split('/').pop() + ' ' + Math.round(x.n / 1024) + 'K').join(', ')})`);
-  ok(js <= 400 * 1024, `initial JavaScript is ≤ 400 KB gzipped (got ${Math.round(js / 1024)} KB)`);
+  ok(js <= JS_BUDGET_KB * 1024, `initial JavaScript is ≤ ${JS_BUDGET_KB} KB gzipped (got ${Math.round(js / 1024)} KB)`);
+  ok(!got.some((x) => /\/full-/.test(x.u)) && !(await p.evaluate(() => window.__bzm.engineReady())), 'no stop\'s code is downloaded for Home — only the stops\' data');
   ok(!got.some((x) => /\/(shapes|formulas|dictionary|vedic|chinese)-/.test(x.u)), 'no Library tool is downloaded for Home');
   ok(!got.some((x) => /\/story-data-/.test(x.u)), 'no story is downloaded for Home — they arrive with the first screen that tells one');
+  // and a stop's screen, opened cold, waits for its code and then draws it whole: a Counting Court stop, the last chapter
+  await p.evaluate(() => { location.hash = '#/stop/hundred-fowls|learn'; });
+  ok(await until(p, () => window.__bzm.engineReady() && window.__bzm.R.ui.nav === 'stop' && !!document.querySelector('.stop-page .learn')), 'a stop opened from Home draws once its code arrives');
+  ok(await p.evaluate(() => performance.getEntriesByType('resource').some((e) => /\/full-[\w-]+\.js$/.test(e.name))), 'and the stops\' code is what arrived for it');
   await ctx.close();
+}
+
+/* offline after one visit (sw.js keeps every hashed asset it served): the stops' code, a
+   Library tool and the app itself come back with no network. The worker is registered only
+   off 127.0.0.1/localhost (main.js), so this serves the same build on 127.0.0.2 — still a
+   secure loopback origin to the browser. */
+{
+  const srv2 = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.2'], { cwd: SITE, stdio: 'ignore' });
+  try {
+    await served(port, 600, '127.0.0.2');
+    const B2 = `http://127.0.0.2:${port}/Bizzing-Maths/`;
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => errors.push(`offline: ${e.message}`));
+    await p.addInitScript((h) => { try { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(h)); } catch {} }, household());
+    await p.goto(B2); await p.waitForSelector('.home2');
+    await p.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+    await p.reload(); await p.waitForSelector('.home2');
+    ok(await until(p, () => !!navigator.serviceWorker.controller), 'the service worker looks after the app from the second load');
+    // the first visit opens a stop and a Library tool, so their code is fetched — and kept
+    await p.evaluate(() => { location.hash = '#/stop/times-eleven|learn'; }); await until(p, () => window.__bzm.R.ui.nav === 'stop' && !!document.querySelector('.stop-page .learn'));
+    await p.evaluate(() => { location.hash = '#/lib/dictionary'; }); await until(p, () => !!document.querySelector('.t-dictionary'));
+    await p.evaluate(() => { location.hash = '#/home'; }); await until(p, () => window.__bzm.R.ui.nav === 'home');
+    await ctx.setOffline(true);
+    await p.reload(); await p.waitForSelector('.home2', { timeout: 30000 }).catch(() => {});
+    ok(await p.locator('.home2').count() === 1 && !(await p.evaluate(() => window.__bzm.engineReady())), 'offline, the app opens on Home (the stops\' code not yet asked for)');
+    await p.evaluate(() => { location.hash = '#/stop/hundred-fowls|learn'; });
+    ok(await until(p, () => window.__bzm.R.ui.nav === 'stop' && !!document.querySelector('.stop-page .learn')) && await p.locator('.engine-fail').count() === 0, 'offline, a stop opens: its code came from the worker');
+    await p.evaluate(() => { location.hash = '#/lib/dictionary'; });
+    ok(await until(p, () => !!document.querySelector('.t-dictionary')), 'offline, a Library tool visited once opens');
+    await ctx.close();
+  } finally { srv2.kill(); }
 }
 
 /* the Contest Hall: sit a paper by keyboard, leave mid-way, carry on, hand it in, read the review */
@@ -160,9 +210,13 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.click('[data-act=paperStart][data-arg="g34|2"]'); await p.waitForSelector('.pq-choices');
   ok(await p.locator('.pq-choices .pc').count() === 5 && await p.locator('.paper-nav .pn').count() === 24, 'a grades 3–4 paper: 24 questions, five choices each');
   const first = await p.evaluate(() => window.__bzm.R.paper.p.items[0]);
-  await p.keyboard.press(String.fromCharCode(97 + first.choices.indexOf(first.ans))); await p.waitForTimeout(500);
+  await p.keyboard.press(String.fromCharCode(97 + first.choices.indexOf(first.ans))); await until(p, () => window.__bzm.R.paper.i !== 0);
   ok(await p.evaluate(() => window.__bzm.R.paper.i) === 1, 'choosing an answer moves to the next question');
-  await p.keyboard.press('b'); await p.waitForTimeout(100); await p.keyboard.press('Backspace'); await p.waitForTimeout(100);
+  // answer question 2, let the paper move on, step back to it and clear it — never a race with the move
+  await p.keyboard.press('b'); await until(p, () => window.__bzm.R.paper.answers[1] != null && window.__bzm.R.paper.i === 2);
+  ok(await p.evaluate(() => window.__bzm.R.paper.answers[1] != null), 'B answers question 2');
+  await p.keyboard.press('ArrowLeft'); await until(p, () => window.__bzm.R.paper.i === 1);
+  await p.keyboard.press('Backspace'); await until(p, () => window.__bzm.R.paper.answers[1] == null);
   ok(await p.evaluate(() => window.__bzm.R.paper.answers[1] == null), 'Backspace leaves a question blank');
   // leave, come back: the answers are kept and the clock kept running
   await p.click('[data-act=paperQuit]'); await p.waitForSelector('.paper-resume');
@@ -184,28 +238,36 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 {
   const { p, ctx, shot } = await page({ width: 1280, height: 800 }, 'deep');
   await p.goto(BASE); await p.waitForSelector('.home2, [data-bz=home], main');
-  const at = async (hash) => { await p.evaluate((h) => { location.hash = h; }, hash); await p.waitForTimeout(450); return p.evaluate(() => { const R = window.__bzm.R; return { nav: R.ui.nav, arg: R.ui.arg, tab: R.ui.tab, lcase: R.ui.lcase, beat: R.ui.beat, cell: R.ui.cell, op: R.ui.factOp, jlv: R.ui.jlv, lib: R.ui.lib, run: R.run && { kind: R.run.kind, fam: R.run.fam } }; }); };
-  let s = await at('#/lib/dictionary|perimeter');
+  /* a link is followed when its screen is up: the Library tool loaded and drawn (a lazy chunk —
+     it once arrived after a fixed 450 ms wait and failed a stone, then a formula), the stop page,
+     the grid, the road, the run. Nothing is read before that screen is there. */
+  const at = async (hash, ready, arg) => {
+    await p.evaluate((h) => { location.hash = h; }, hash);
+    await until(p, ready, arg);
+    return p.evaluate(() => { const R = window.__bzm.R; return { nav: R.ui.nav, arg: R.ui.arg, tab: R.ui.tab, lcase: R.ui.lcase, beat: R.ui.beat, cell: R.ui.cell, op: R.ui.factOp, jlv: R.ui.jlv, lib: R.ui.lib, run: R.run && { kind: R.run.kind, fam: R.run.fam } }; });
+  };
+  const tool = (id) => window.__bzm.R.ui.nav === 'lib' && window.__bzm.R.ui.arg === id && !!document.querySelector('.t-' + id);
+  let s = await at('#/lib/dictionary|perimeter', tool, 'dictionary');
   ok(s.lib && s.lib.dictionary && s.lib.dictionary.open === 'perimeter' && /perimeter/i.test(await p.textContent('main')), `a word link opens that word in the Dictionary (${JSON.stringify(s.lib && s.lib.dictionary)})`);
-  s = await at('#/lib/formulas|' + FORMULA_ID);
+  s = await at('#/lib/formulas|' + FORMULA_ID, tool, 'formulas');
   ok(s.lib && s.lib.formulas && s.lib.formulas.card && s.lib.formulas.tab === 'card', `a formula link opens that formula's card (${JSON.stringify(s.lib && s.lib.formulas)})`);
-  s = await at('#/lib/vedic|' + STONE_ID);
+  s = await at('#/lib/vedic|' + STONE_ID, tool, 'vedic');
   ok(s.lib && s.lib.vedic && s.lib.vedic.step === 0, 'a stone link opens that stone on its journey');
-  s = await at('#/lib/explorer|360');
+  s = await at('#/lib/explorer|360', tool, 'explorer');
   ok(s.lib && s.lib.explorer && s.lib.explorer.n === '360', 'the number of the hour opens on its page in the Number Explorer');
-  s = await at('#/stop/times-eleven|learn|1');
+  s = await at('#/stop/times-eleven|learn|1', () => window.__bzm.R.ui.nav === 'stop' && !!document.querySelector('.stop-page .learn'));
   ok(s.nav === 'stop' && s.arg === 'times-eleven' && s.tab === 'learn' && s.lcase === 1, `a worked-idea link opens the stop on Learn, on that idea (${JSON.stringify(s)})`);
-  s = await at('#/stop/times-eleven|story|3');
+  s = await at('#/stop/times-eleven|story|3', () => window.__bzm.R.ui.tab === 'story' && !!document.querySelector('.stop-page .story'));
   ok(s.tab === 'story' && s.beat === 3, 'a story-moment link opens the story at that beat');
-  s = await at('#/facts/×|7×8');
+  s = await at('#/facts/×|7×8', () => window.__bzm.R.ui.nav === 'facts' && !!document.querySelector('.fgrid'));
   ok(s.nav === 'facts' && s.op === '×' && s.cell === '7×8', `a fact link opens the facts grid on that fact (${s.op} ${s.cell})`);
-  s = await at('#/journey/2');
+  s = await at('#/journey/2', () => window.__bzm.R.ui.nav === 'journey' && !!document.querySelector('.lboard'));
   ok(s.nav === 'journey' && s.jlv === 2, 'a level link opens that level\'s road');
-  s = await at('#/puzzles/space');
+  s = await at('#/puzzles/space', () => !!window.__bzm.R.run && window.__bzm.R.run.kind === 'puzzle');
   ok(s.run && s.run.kind === 'puzzle' && s.run.fam === 'space', 'a puzzle-family link starts six of that family');
   await p.evaluate(() => window.__bzm.fire('quitRun'));
   // and a card in My Feed: tap its button, land on its thing
-  await at('#/feed'); await p.waitForSelector('.bzf-card[data-kind] .bzf-row a', { timeout: 15000 });
+  await at('#/feed', () => window.__bzm.R.ui.nav === 'feed'); await p.waitForSelector('.bzf-card[data-kind] .bzf-row a', { timeout: 30000 });
   await shot('feed');
   ok(await p.locator('.bzf-card .bzf-more').count() > 0 && await p.locator('.bzf-card .bzf-where').count() > 0, 'feed cards carry a second line and where they live');
   const card = await p.$eval('.bzf-card[data-kind] .bzf-row a', (x) => x.getAttribute('href'));
@@ -216,7 +278,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 /* #/continue and ?from=hive */
 {
   const { p, ctx } = await page({ width: 1280, height: 800 }, 'hive');
-  await p.goto(BASE + '?from=hive#/continue'); await p.waitForTimeout(400);
+  await p.goto(BASE + '?from=hive#/continue'); await until(p, () => !!window.__bzm && window.__bzm.R.ui.nav !== 'home' && !!document.querySelector('.stop-page, .run'));
   const s = await state(p);
   ok(s.nav === 'stop' && s.arg, `#/continue opens the Continue card's station (got ${JSON.stringify(s)})`);
   ok(await p.locator('.hive-chip').count() === 1 && await p.$eval('.hive-chip', (a) => a.href) === 'https://aayuvis.github.io/Bizzing_Schedule/', '?from=hive shows "back to my day"');
@@ -232,13 +294,15 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await shot('home');
   ok(/Sample/.test(await p.textContent('.demo-bar')) && /Asha/.test(await p.textContent('[data-bz=greet] strong')), '?demo opens a labelled sample child');
   ok(await p.evaluate(() => Object.keys(window.__bzm.R.h.kids[0].days).length) >= 6, 'the sample has weeks of progress');
-  await p.click('[data-bz=continue]'); await p.waitForTimeout(200);
+  await p.click('[data-bz=continue]'); await until(p, () => window.__bzm.R.ui.nav !== 'home');
   // things that save at once in a real household: a new face, the sound switch
-  await p.evaluate(() => { window.__bzm.fire('setAv', 'rocket'); window.__bzm.fire('sound'); }); await p.waitForTimeout(400);
-  for (let i = 0; i < 6; i++) { await p.keyboard.press('Shift'); await p.waitForTimeout(30); }
+  await p.evaluate(() => Promise.all([window.__bzm.fire('setAv', 'rocket'), window.__bzm.fire('sound')]));
+  for (let i = 0; i < 6; i++) await p.keyboard.press('Shift');
+  // and anything that saves later is made to save NOW (the page going away flushes it), so the check is not a race with a timer
+  await p.evaluate(() => dispatchEvent(new Event('pagehide')));
   const after = await p.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)]))));
   ok(after === real, 'the sample never touches the real household, prefs, wallet or feed');
-  await p.goto(BASE + '?demo=try'); await p.waitForTimeout(400);
+  await p.goto(BASE + '?demo=try'); await until(p, () => !!window.__bzm && window.__bzm.R.ui.nav === 'stop' && !!document.querySelector('.demo-bar'));
   ok((await state(p)).nav === 'stop' && /Trying a trick/.test(await p.textContent('.demo-bar')), '?demo=try opens one stop to try, labelled');
   await ctx.close();
 }

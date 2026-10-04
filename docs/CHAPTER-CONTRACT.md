@@ -5,6 +5,13 @@ It exports `WORLD` and `TRICKS`, which `src/tricks.js` picks up; its `STORIES` l
 `app/src/chapters/stories/<world>.js`, gathered by `src/story-data.js` — a chunk of their own that loads on
 first need, never on first paint (the 400 KB first-load budget). Read `app/src/tricks.js` (the first 27 stops) before writing one: they are the house style.
 
+**The first screen carries a chapter's data, not its code** (audit v4 R2, `app/vite-light.mjs`). In the
+browser build tricks.js sees each chapter as its `WORLD` and `TRICKS` with every function replaced by a
+stub; the real chapter arrives with the first stop opened (`loadEngine()`, `src/chapters/full.js`).
+So a stop's data fields must survive JSON exactly — no `undefined`, `NaN`, getters, `Date`s or class
+instances — or the build stops and says which field. A new chapter is added to `full.js` as well as to
+tricks.js; `test/light.mjs` fails one that is in one and not the other.
+
 The two tests that decide whether a chapter ships:
 
 ```bash

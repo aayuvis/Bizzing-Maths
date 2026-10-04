@@ -752,6 +752,7 @@ svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .rg{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.rg > b{flex-basis:100%}
 /* goal lines WRAP: on a 390px phone a nowrap line ran the page to 670px (FIX-MATHS §1, P1) */
 .rg span{white-space:normal;overflow-wrap:anywhere;min-width:0}.rg-met{color:var(--mastered);font-weight:700}
+.rg-none{color:var(--muted);font-style:italic}
 @media (max-width:880px){.home-r3{grid-template-columns:1fr}.strands{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.amb,.map-amb{display:none}}
 @media print{.top,.tabbar,.foot{display:none}}

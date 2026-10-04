@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/tricks.mjs && node test/facts.mjs && node test/contest.mjs && node test/games.mjs && node test/model.mjs && node test/avatars.mjs && node test/stories.mjs && node test/puzzles.mjs && node test/objectives.mjs && node test/library.mjs && node test/levels.mjs && node test/journey.mjs && node test/themes.mjs && node test/family.mjs && node test/voice.mjs && node test/family2.mjs && node test/feed.mjs && node test/papers-bank.mjs && node test/papers-bank-old.mjs && node test/papers.mjs && node test/extras.mjs",
+    "test": "node test/tricks.mjs && node test/facts.mjs && node test/contest.mjs && node test/games.mjs && node test/model.mjs && node test/light.mjs && node test/avatars.mjs && node test/stories.mjs && node test/puzzles.mjs && node test/objectives.mjs && node test/library.mjs && node test/levels.mjs && node test/journey.mjs && node test/themes.mjs && node test/family.mjs && node test/voice.mjs && node test/family2.mjs && node test/feed.mjs && node test/papers-bank.mjs && node test/papers-bank-old.mjs && node test/papers.mjs && node test/extras.mjs",
     "check": "node test/ui.mjs && node test/family-ui.mjs && node test/fold.mjs && node test/standard.mjs && node test/feed-ui.mjs && node test/extras-ui.mjs && node test/rubric-ui.mjs",
     "deploy": "./deploy.sh"
   },

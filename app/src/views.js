@@ -840,7 +840,7 @@ function report(c) {
         <p class="muted small">${rc.mastery.mastered} stops mastered · ${rc.mastery.goals} of ${rc.mastery.goalsTotal} goals. Fluent means still fast after a gap of days.</p></div>
     </div>
     <div class="rc-strands"><p class="kicker">Where the learning is — goals met, by strand</p>
-      ${rc.mastery.strands.map((st) => `<div class="rc-st"><span>${glyph(st.glyph, 16)} ${esc(st.name)}</span><span class="bar"><i style="width:${st.total ? Math.round(100 * st.met / st.total) : 0}%"></i></span><b class="mono">${st.met}/${st.total}</b></div>`).join('')}</div>
+      ${rc.mastery.strands.map((st) => `<div class="rc-st"><span>${glyph(st.glyph, 16)} ${esc(st.name)}</span><span class="bar"><i style="width:${st.total ? Math.round(100 * st.met / st.total) : 0}%"></i></span>${st.started ? `<b class="mono">${st.met}/${st.total}</b>` : '<b class="rc-none muted small">not started yet</b>'}</div>`).join('')}</div>
     <div class="rep-grid">
       <div><p class="kicker">Tricks mastered</p><p>${learned.length ? learned.map((t) => esc(t.title)).join(' · ') : 'None yet.'}</p></div>
       <div><p class="kicker">Worth a hand with</p><p>${traps.length ? traps.slice(0, 8).map((f) => `<span class="mono">${esc(ftext(f))}</span>`).join(', ') : 'Nothing is tripping them up right now.'}</p>

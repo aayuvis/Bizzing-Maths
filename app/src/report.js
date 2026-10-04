@@ -64,7 +64,7 @@ export function reportCard(k, feed = [], now = Date.now()) {
   const when = { morning: 0, afternoon: 0, evening: 0 };
   for (const x of mine.filter((x) => x.d >= weekOf(now - 3 * 7 * DAY))) when[x.t < 720 ? 'morning' : x.t < 1020 ? 'afternoon' : 'evening'] += x.m;
   const m = measures(k), p = J.progress(k);
-  const strands = goalsFor(k).map((s) => { const gs = s.goals.filter((g) => !g.later); return { name: s.name, glyph: s.glyph, met: gs.filter((g) => g.met).length, total: gs.length }; });
+  const strands = goalsFor(k).map((s) => { const gs = s.goals.filter((g) => !g.later); return { name: s.name, glyph: s.glyph, met: gs.filter((g) => g.met).length, total: gs.length, started: gs.some((g) => g.seen) }; });
   const facts = Object.values(k.facts || {});
   return {
     v: 1, app: 'maths', who: k.name, band: k.band, at: now,

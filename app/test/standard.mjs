@@ -6,7 +6,7 @@
    ⬡ stays in the top bar during a run and hides only inside a timed contest question.
 
    Every assertion here was watched to fail once before it was trusted. */
-import { site, household, kidRec, checker, SHOTS } from './lib/site.mjs';
+import { until, ready, site, household, kidRec, checker, SHOTS } from './lib/site.mjs';
 import { checkShell } from './lib/shell-check.mjs';
 
 const { BASE, browser, close } = await site('std', +(process.env.PORT_BASE || 5200) + 4);
@@ -25,7 +25,7 @@ async function open(vp, h, url = '') {
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(e.message));
   await p.addInitScript((hh) => { try { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); } catch {} }, h);
-  await p.goto(BASE + url); await p.waitForTimeout(350);
+  await p.goto(BASE + url); await ready(p);
   return { p, ctx };
 }
 const nav = (p) => p.evaluate(() => window.__bzm.R.ui.nav);
@@ -50,15 +50,15 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   /* 3 · tester mode: no locks on what it opened; no blank road stops */
   {
     const { p, ctx } = await open(vp, seeded({ tester: true }), '#/journey');
-    await p.evaluate(() => { window.__bzm.R.ui.jlv = 8; window.__bzm.render(); }); await p.waitForTimeout(150);
+    await p.evaluate(() => { window.__bzm.R.ui.jlv = 8; window.__bzm.render(); }); await ready(p);
     const blank = await p.$$eval('.lboard .bpin > span:first-child', (s) => s.filter((x) => !x.textContent.trim() && !x.querySelector('svg')).length);
     ok(blank === 0, `${tag}: no road stop is a blank circle on a later level in tester mode (got ${blank})`);
     ok(await p.locator('.lboard .bpin.shut').count() === 0, `${tag}: tester mode shows no shut stop on the road`);
     await p.screenshot({ path: `${SHOTS}/std-${tag}-tester-road.png` });
-    await p.evaluate(() => window.__bzm.fire('openWorld', 'observatory')); await p.waitForTimeout(150);
+    await p.evaluate(() => window.__bzm.fire('openWorld', 'observatory')); await ready(p);
     ok(await p.locator('.board .lvb.later, .board .bpin.shut').count() === 0, `${tag}: tester mode draws no lock on world-board pins`);
     for (const tool of ['vedic', 'chinese', 'tables']) {
-      await p.evaluate((t) => window.__bzm.go('lib', t), tool); await p.waitForTimeout(600);
+      await p.evaluate((t) => window.__bzm.go('lib', t), tool); await ready(p);
       const locked = await p.$$eval('.locked, .bpin.shut', (s) => s.filter((x) => x.offsetParent).length);
       ok(locked === 0, `${tag}: tester mode leaves no locked ${tool} stone (got ${locked})`);
     }
@@ -67,10 +67,10 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   /* 4 · ⬡ stays in the bar during a run; hides only in a timed contest question */
   {
     const { p, ctx } = await open(vp, seeded());
-    await p.evaluate(() => window.__bzm.fire('startFacts', '×')); await p.waitForTimeout(200);
+    await p.evaluate(() => window.__bzm.fire('startFacts', '×')); await ready(p);
     const hiveVis = () => p.$eval('[data-bz=hive]', (e) => getComputedStyle(e).visibility === 'visible');
     ok(await nav(p) === 'run' && await hiveVis(), `${tag}: ⬡ stays in the top bar during a drill`);
-    await p.evaluate(() => window.__bzm.go('contest')); await p.evaluate(() => window.__bzm.fire('startContest')); await p.waitForTimeout(200);
+    await p.evaluate(() => window.__bzm.go('contest')); await p.evaluate(() => window.__bzm.fire('startContest')); await ready(p);
     ok(!(await hiveVis()), `${tag}: ⬡ hides inside a timed contest question`);
     await ctx.close();
   }
@@ -115,12 +115,12 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const items = await p.$$eval('[data-bz=drawer] a', (x) => x.map((e) => e.querySelector('b').textContent.trim()));
   ok(items.join('|') === 'My page|Shop|Collection|Medals|My mistakes|What I’m learning|The Story Shelf|My Feed|Settings|Grown-ups|Help|Privacy|Back to the Hive', `${tag}: ☰ lists the family order (got ${items.join('|')})`);
   /* the coin chip opens the wallet history (§1.1) */
-  await p.click('[data-bz=coins]'); await p.waitForTimeout(150);
+  await p.click('[data-bz=coins]'); await ready(p);
   ok(await p.locator('.sheet.wallet').count() === 1 && /Bizzing coins/.test(await p.textContent('.sheet.wallet')), `${tag}: the coin chip opens the wallet`);
-  await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+  await p.keyboard.press('Escape'); await ready(p);
   /* every screen: no emoji in a control, no broken text, no sideways scroll */
   for (const r of ROUTES) {
-    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await p.waitForTimeout(r.startsWith('lib') ? 700 : 220);
+    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await ready(p);
     const em = await emojiIn(p);
     ok(em.length === 0, `${tag}: zero emoji in controls on #/${r} (got ${em.slice(0, 4).join(' | ')})`);
     const txt = await p.evaluate(() => document.querySelector('main').innerText);
@@ -129,7 +129,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   }
   /* touch targets (P3): every control a child taps is at least 44px, on Home, Puzzles, Goals and Facts */
   if (phone) for (const r of ['home', 'puzzles', 'goals', 'facts', 'play', 'settings', 'shop']) {
-    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await p.waitForTimeout(250);
+    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await ready(p);
     const small = await p.$$eval('main button, main a, main [role=tab], [data-bz=tabbar] a', (b) => b.filter((x) => {
       if (!x.offsetParent || x.closest('p, .bz-foot, .foot') || x.classList.contains('linkish')) return false;   // inline text links are exempt
       const r = x.getBoundingClientRect(); return r.width < 43.5 || r.height < 43.5; }).map((x) => (x.className || x.tagName) + ':' + Math.round(x.getBoundingClientRect().height)));
@@ -137,13 +137,13 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   }
   /* N12: the Puzzle Tower's floor pins never overlap on a phone */
   if (phone) {
-    await p.evaluate(() => { location.hash = '#/puzzles'; }); await p.waitForTimeout(300);
+    await p.evaluate(() => { location.hash = '#/puzzles'; }); await ready(p);
     const boxes = await p.$$eval('.fpin', (b) => b.map((x) => x.getBoundingClientRect()).map((r) => [r.left, r.top, r.right, r.bottom]));
     let hits = 0; for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const [a, b] = [boxes[i], boxes[j]]; if (a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1) hits++; }
     ok(boxes.length === 12 && hits === 0, `${tag}: the twelve tower pins do not overlap (${hits} overlaps)`);
   }
   /* Settings in the five sections, in order (§5) */
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForTimeout(200);
+  await p.evaluate(() => { location.hash = '#/settings'; }); await ready(p);
   const secs = await p.$$eval('.set-sec', (s) => s.map((x) => x.dataset.sec));
   ok(secs.join() === 'me,sound,look,comfort,grownups', `${tag}: Settings sections in the standard's order (got ${secs})`);
   ok(await p.locator('.set-sec[data-sec=sound] input[type=range]').count() === 1, `${tag}: one volume slider`);
@@ -173,7 +173,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.waitForSelector('.home2');
   const found = [];
   const scan = async (where) => { for (const e of await ctrlEmoji(p)) found.push(`${where}: ${e}`); };
-  const goTool = async (t) => { await p.evaluate((x) => { location.hash = '#/home'; location.hash = '#/lib/' + x; }, t); await p.waitForTimeout(450); };
+  const goTool = async (t) => { await p.evaluate((x) => { location.hash = '#/home'; location.hash = '#/lib/' + x; }, t); await ready(p); };
   const clickKey = (key) => p.evaluate(([sel, k]) => { const el = [...document.querySelectorAll(sel)].find((e) => e.offsetParent && ((e.dataset.arg || '') + '#' + e.textContent.trim()) === k); if (el) el.click(); return !!el; }, [TABSEL, key]);
   let views = 0;
   for (const t of TOOLS) {
@@ -182,15 +182,15 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
     for (let round = 0; round < 3; round++) {
       const keys = await p.$$eval(TABSEL, (els) => els.filter((e) => e.offsetParent).map((e) => (e.dataset.arg || '') + '#' + e.textContent.trim()));
       const fresh = keys.filter((k) => !seen.has(k)); if (!fresh.length) break;
-      for (const k of fresh) { seen.add(k); if (await clickKey(k)) { await p.waitForTimeout(160); await scan(`${t} › ${k.split('#')[1].slice(0, 20)}`); views++; } }
+      for (const k of fresh) { seen.add(k); if (await clickKey(k)) { await ready(p); await scan(`${t} › ${k.split('#')[1].slice(0, 20)}`); views++; } }
     }
     for (const o of OPENERS) {
       await goTool(t);
       const hit = await p.evaluate((pre) => { const el = [...document.querySelectorAll(`main [data-arg^="${pre}"]`)].find((e) => e.offsetParent); if (el) el.click(); return !!el; }, o);
-      if (hit) { await p.waitForTimeout(250); await scan(`${t} › ${o}`); views++; }
+      if (hit) { await ready(p); await scan(`${t} › ${o}`); views++; }
     }
   }
-  await p.evaluate(() => { location.hash = '#/grownups'; }); await p.waitForTimeout(250);
+  await p.evaluate(() => { location.hash = '#/grownups'; }); await ready(p);
   for (const ch of '1234') await p.keyboard.press(ch);
   await p.waitForSelector('.rc'); await scan('grown-ups');
   const rcEmoji = await p.$$eval('.rc', (r, src) => r.flatMap((x) => (x.innerText.match(new RegExp(src, 'gu')) || [])), EMOJI.source.replace('/u', ''));
@@ -206,7 +206,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const ctx = await browser.newContext({ viewport: vp, colorScheme: mode, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
   await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
-  await p.goto(BASE); await p.waitForSelector('[data-bz=home]'); await p.waitForTimeout(400);
+  await p.goto(BASE); await p.waitForSelector('[data-bz=home]'); await ready(p);
   const f = await checkShell(p, { phone: vp.width < 500 });
   SHELL[`${tag} ${mode}`] = f;
   ok(f.length === 0, `${tag} ${mode}: checkShell matches Bee (${f.join('; ')})`);
@@ -218,7 +218,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 {
   const { p, ctx } = await open({ width: 1280, height: 800 }, seeded());
   await p.evaluate(() => { localStorage.setItem('bizzing.wallet', JSON.stringify({ v: 1, kids: { ahana: { coins: 700, ledger: [{ a: 'bee', t: Date.now() - 864e5, n: 700, why: 'migrated' }] } } })); });
-  await p.reload(); await p.evaluate(() => { location.hash = '#/collection'; }); await p.waitForTimeout(400);
+  await p.reload(); await p.evaluate(() => { location.hash = '#/collection'; }); await ready(p);
   const cards = await p.$$eval('.bz-av', (c) => c.map((x) => ({ tier: x.dataset.tier, state: x.dataset.state, say: x.querySelector('.av-say').textContent.trim(), label: x.querySelector('figcaption b').textContent })));
   ok(cards.length === 96, `the Collection shows all 96 (got ${cards.length})`);
   ok(cards.every((c) => c.say && c.label), 'every card states its tier and its path in words');
@@ -226,15 +226,15 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(tiers.common === 24 && tiers.rare === 36 && tiers.epic === 24 && tiers.legendary === 12, `tiers 24/36/24/12 (got ${JSON.stringify(tiers)})`);
   ok(cards.filter((c) => c.tier === 'legendary').every((c) => /^First: |^Opens with its world/.test(c.say)), 'a Legendary first asks for its learning milestone');
   ok(cards.filter((c) => c.state === 'world').length === 48, `packs 5–12 wait for their worlds on the free plan; their Commons are free all the same (got ${cards.filter((c) => c.state === 'world').length})`);
-  await p.click('.bz-av[data-id=pyrafox] .btn'); await p.waitForTimeout(200);
+  await p.click('.bz-av[data-id=pyrafox] .btn'); await ready(p);
   const after = await p.evaluate(() => ({ k: window.__bzm.R.h.kids[0], w: JSON.parse(localStorage.getItem('bizzing.wallet')).kids.ahana }));
   ok(after.k.avatar === 'pyrafox' && after.k.shop.avatars.includes('pyrafox') && after.w.coins === 580 && after.w.ledger.some((x) => x.why === 'avatar:pyrafox' && x.n === -120), `a Rare costs exactly 120 coins through the wallet (got ${after.w.coins})`);
-  await p.evaluate(() => { location.hash = '#/shop'; }); await p.waitForTimeout(150);
-  await p.click('.shop-tabs [data-arg=worlds]'); await p.waitForTimeout(150);
-  await p.click('.world-card [data-act=buyWorld][data-arg="3"]'); await p.waitForTimeout(200);
+  await p.evaluate(() => { location.hash = '#/shop'; }); await ready(p);
+  await p.click('.shop-tabs [data-arg=worlds]'); await ready(p);
+  await p.click('.world-card [data-act=buyWorld][data-arg="3"]'); await ready(p);
   const w3 = await p.evaluate(() => ({ k: window.__bzm.R.h.kids[0], w: JSON.parse(localStorage.getItem('bizzing.wallet')).kids.ahana, theme: document.documentElement.dataset.theme }));
   ok(w3.k.shop.worlds.includes(3) && w3.w.coins === 340 && w3.theme === 'blueprint', `world 3 opens for 240 coins and dresses the app (got ${w3.w.coins}, ${w3.theme})`);
-  await p.click('.shop-tabs [data-arg=avatars]'); await p.waitForTimeout(150);
+  await p.click('.shop-tabs [data-arg=avatars]'); await ready(p);
   const tabs = await p.$$eval('.shop-tabs [role=tab]', (t) => t.map((x) => x.textContent.trim()));
   ok(tabs.join() === 'Avatars,Worlds,Extras' && await p.locator('.wal-card .wal-list li').count() >= 3, `the Shop: Avatars · Worlds · Extras, then the wallet history (got ${tabs})`);
   const lines = await p.$$eval('.wal-card .wal-list li', (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
@@ -253,7 +253,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
     await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded({ plan: 'family' }));
     await p.goto(BASE); await p.waitForSelector('.home2');
     for (const w of WORLDS6) {
-      await p.evaluate((id) => window.__bzm.fire('theme', id), w); await p.waitForTimeout(500);
+      await p.evaluate((id) => window.__bzm.fire('theme', id), w); await ready(p);
       const st = await p.evaluate(() => { const pl = document.querySelector('.ws-plate'), cs = getComputedStyle(pl);
         return { bg: cs.backgroundImage, layers: [['.ws-plate'], ['.ws-near'], ['.ws-parts i'], ['.ws-idle', '.ws-idle > *']].filter((ss) => ss.some((s) => { const e = document.querySelector(s); return e && getComputedStyle(e).animationName !== 'none'; })).length,
           card: getComputedStyle(document.querySelector('[data-bz=greet]')).backgroundColor, ink: getComputedStyle(document.querySelector('[data-bz=greet] strong')).color, muted: getComputedStyle(document.querySelector('[data-bz=greet] small')).color }; });
@@ -291,7 +291,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.addInitScript(NORM);
   await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded({ plan: 'family', tester: true }));
   await p.goto(BASE); await p.waitForSelector('.home2');
-  const to = async (h, ms = 300) => { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(ms); };
+  const to = async (h) => { await p.evaluate((x) => { location.hash = x; }, h); await ready(p); };
   /* 1 · Play: a hero tile's picture never sits on its words, and no tile is white on white */
   await to('#/play');
   const heroes = await p.$$eval('.hero-t', (ts) => ts.map((t) => {
@@ -307,7 +307,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(heroes.every((h) => h.bg !== 'none' || contrast(h.ink, h.bgc) >= 3), `${T}: every Play hero tile has a ground under its words (${heroes.filter((h) => h.bg === 'none' && contrast(h.ink, h.bgc) < 3).map((h) => h.id).join(', ')})`);
   /* 2 · a page subtitle wraps; it is never cut with an ellipsis */
   for (const r of ['puzzles', 'library', 'medals', 'atlas', 'contest', 'goals']) {
-    await to('#/' + r, 220);
+    await to('#/' + r);
     const cut = await p.$$eval('.phead-t p', (ps) => ps.filter((x) => x.offsetParent).filter((x) => { const c = getComputedStyle(x); return c.textOverflow === 'ellipsis' || c.whiteSpace === 'nowrap' || x.scrollWidth > x.clientWidth + 1; }).map((x) => x.textContent.slice(0, 24)));
     ok(cut.length === 0, `${T}: #/${r}'s subtitle wraps, never cut (${cut.join(' | ')})`);
   }
@@ -318,14 +318,14 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   /* 4 · the Continue card's title is a title in every world (orbit's h3 once fell to body size) */
   await to('#/home');
   for (const w of WORLDS6) {
-    await p.evaluate((id) => window.__bzm.fire('theme', id), w); await p.waitForTimeout(120);
+    await p.evaluate((id) => window.__bzm.fire('theme', id), w); await ready(p);
     const fs = await p.$eval('.bz-jbody h3', (h) => parseFloat(getComputedStyle(h).fontSize)).catch(() => 0);
     ok(fs >= 18, `${T}: ${w}'s Continue card title is a title (${fs}px)`);
   }
   await p.evaluate(() => window.__bzm.fire('theme', 'graph'));
   /* 5 · progress tracks show their empty part on the card they sit on */
   for (const tool of ['formulas', 'vedic', 'chinese', 'tables']) {
-    await to('#/lib/' + tool, 650);
+    await to('#/lib/' + tool);
     const tr = await p.$$eval('[role=progressbar]', (bs) => bs.filter((b) => b.offsetParent).map((b) => {
       const own = __rgb(getComputedStyle(b).backgroundColor); let e = b.parentElement, under = null;
       while (e) { const c = __rgb(getComputedStyle(e).backgroundColor); const a = +(c.match(/[\d.]+/g) || [])[3]; if (c !== 'rgba(0, 0, 0, 0)' && (isNaN(a) || a > 0.5)) { under = c; break; } e = e.parentElement; }
@@ -336,13 +336,13 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
     ok((tr.length > 0 || (tool === 'formulas' && tag === 'phone')) && flat.every((c) => c >= 1.25), `${T}: ${tool}'s progress track is visible on its ground (contrast ${flat.map((c) => c.toFixed(2)).join(', ')})`);
   }
   /* C · the Formula Book's pictures are in colour, in the world's colours, locked or collected */
-  await to('#/lib/formulas', 650);
+  await to('#/lib/formulas');
   const lockedFill = await p.$eval('.t-formulas-tile.locked .t-formulas-tpic .dg-fill1', (e) => [__rgb(getComputedStyle(e).fill), getComputedStyle(e.closest('svg')).opacity, getComputedStyle(e.closest('svg')).filter]);
   ok(chroma(lockedFill[0]) >= 18 && +lockedFill[1] >= 0.5 && lockedFill[2] === 'none', `${T}: a locked formula card is a coloured silhouette, not grey (${lockedFill.join(' / ')})`);
-  await p.evaluate(() => { const b = document.querySelector('[data-arg="open|area-trapezium"]'); if (b) b.click(); }); await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = document.querySelector('[data-arg="open|area-trapezium"]'); if (b) b.click(); }); await ready(p);
   const fills = await p.$$eval('.t-formulas-pic .dg-fill1, .t-formulas-pic .dg-fill2', (es) => [...new Set(es.map((e) => __rgb(getComputedStyle(e).fill)))]);
   ok(fills.length === 2 && fills.every((f) => chroma(f) >= 18), `${T}: the trapezium's two copies are two colours (${fills.join(' / ')})`);
-  await p.evaluate(() => window.__bzm.fire('theme', 'rangoli')); await p.waitForTimeout(150);
+  await p.evaluate(() => window.__bzm.fire('theme', 'rangoli')); await ready(p);
   const fillsR = await p.$$eval('.t-formulas-pic .dg-fill1', (es) => __rgb(getComputedStyle(es[0]).fill)).catch(() => '');
   ok(fillsR && fillsR !== fills[0], `${T}: the Formula Book's colours come from the world (graph ${fills[0]}, rangoli ${fillsR})`);
   await p.evaluate(() => window.__bzm.fire('theme', 'graph'));
@@ -354,7 +354,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   ok(gap.length > 0 && gap.every((g) => g >= 6), `${T}: a certificate row keeps the name apart from its line (gaps ${gap.join(',')})`);
   /* 8 · on a dark page, every painted daylight plate is dimmed to dusk */
   if (mode === 'dark') for (const r of ['atlas', 'library', 'journey', 'play', 'puzzles', 'feed', 'world/bakery', 'home']) {
-    await to('#/' + r, 500);
+    await to('#/' + r);
     const lit = await p.evaluate(() => { const out = [];
       for (const e of document.querySelectorAll('main *, [data-bz] *')) {
         if (!e.offsetParent && e.tagName !== 'IMG') continue;
@@ -375,9 +375,9 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
   await p.goto(BASE); await p.waitForSelector('.home2');
   await p.evaluate(() => { const R = window.__bzm.R; R.ui.draft = { name: 'Asha', band: '8-10', avatar: 'hexbee' }; window.__bzm.fire('createKid'); });
-  await p.waitForTimeout(150);
+  await until(p, () => !!document.querySelector('.conf'), null, 5000);   // the confetti is up (it lasts seconds: never wait for animations here)
   const before = await p.locator('.conf').count();
-  await p.evaluate(() => window.__bzm.fire('startPlace')); await p.waitForTimeout(150);
+  await p.evaluate(() => window.__bzm.fire('startPlace')); await until(p, () => window.__bzm.R.ui.nav === 'run' && !!document.querySelector('.run, main'));
   ok(before === 1 && await p.locator('.conf').count() === 0 && await p.evaluate(() => window.__bzm.R.ui.nav) === 'run', `the new child's confetti is cleared when the first question shows (before ${before}, after ${await p.locator('.conf').count()})`);
   await ctx.close();
 }
@@ -387,11 +387,11 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const { p, ctx } = await open({ width: 1280, height: 800 }, seeded());
   await p.waitForSelector('.home2');
   ok(await p.evaluate(() => document.documentElement.dataset.music !== 'on'), 'no music before the first tap');
-  await p.mouse.click(640, 30); await p.waitForTimeout(900);
+  await p.mouse.click(640, 30); await until(p, () => document.documentElement.dataset.music === 'on');
   ok(await p.evaluate(() => document.documentElement.dataset.music === 'on' && document.documentElement.dataset.tune === 'home'), 'Home plays its own loop after the first tap');
-  await p.evaluate(() => window.__bzm.go('atlas')); await p.waitForTimeout(400);
+  await p.evaluate(() => window.__bzm.go('atlas')); await ready(p); await until(p, () => document.documentElement.dataset.tune !== 'home');
   ok(await p.evaluate(() => document.documentElement.dataset.tune) === 'hills', 'elsewhere, the world’s own loop (Patchwork Hills)');
-  await p.evaluate(() => window.__bzm.fire('setDev', 'calm')); await p.waitForTimeout(300);
+  await p.evaluate(() => window.__bzm.fire('setDev', 'calm')); await until(p, () => document.documentElement.dataset.music !== 'on');
   ok(await p.evaluate(() => document.documentElement.dataset.music) === 'off', 'Calm mode turns the music off');
   await ctx.close();
 }
@@ -402,12 +402,12 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.fill('[data-bz=search] input', 'bakery'); await p.press('[data-bz=search] input', 'Enter'); await p.waitForSelector('#q');
   ok(await p.evaluate(() => window.__bzm.R.ui.nav) === 'search' && await p.locator('.results button').count() > 0, 'the bar’s search opens the results');
   for (const [q, want, kind] of [['bakery', 'The Fraction Bakery', 'Place'], ['suki', '', 'Story'], ['hypotenuse', 'hypotenuse', 'Word']]) {
-    await p.fill('#q', ''); await p.type('#q', q); await p.waitForTimeout(700);
+    await p.fill('#q', ''); await p.type('#q', q); await until(p, (q) => window.__bzm.R.ui.q === q && window.__bzm.R.ui.more !== null, q); await ready(p);
     const res = await p.$$eval('.results button', (b) => b.map((x) => ({ kind: x.querySelector('.r-kind').textContent, t: x.querySelector('b').textContent })));
     ok(res.some((r) => r.kind.toLowerCase() === kind.toLowerCase() && (!want || r.t.toLowerCase() === want.toLowerCase())), `search "${q}" finds a ${kind}${want ? ` (${want})` : ''} (got ${res.slice(0, 3).map((r) => r.kind + ':' + r.t).join(', ')})`);
   }
-  await p.fill('#q', ''); await p.type('#q', 'bakery'); await p.waitForTimeout(300);
-  await p.click('.results button'); await p.waitForTimeout(250);
+  await p.fill('#q', ''); await p.type('#q', 'bakery'); await until(p, () => window.__bzm.R.ui.q === 'bakery' && window.__bzm.R.ui.more !== null); await ready(p);
+  await p.click('.results button'); await until(p, () => window.__bzm.R.ui.nav !== 'search'); await ready(p);
   ok((await p.evaluate(() => window.__bzm.R.ui.nav)) === 'world', 'a result opens what it names');
   await ctx.close();
 }
