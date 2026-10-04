@@ -298,6 +298,11 @@ GAMES = {
                 "small round stone fountain at the left and right edges, a carved wooden lattice screen and climbing jasmine "
                 "along the far wall, an empty wooden bench. The centre is open plain tiles in soft even "
                 "morning light. Calm and uncluttered. Terracotta, cream, leaf green, marigold orange.",
+    'g-cubes':  "A wide view of a sunny wooden playroom floor seen from slightly above: plain smooth unpainted wooden building "
+                "cubes, every cube identical and completely blank with no marks or pictures on any face, stacked into small "
+                "towers and staircases at the left and right edges, a woven cotton rug, a low shelf with potted plants, a window "
+                "letting soft morning light fall across the boards. The centre is open plain floorboards in soft even light. "
+                "Calm and uncluttered. Honey wood, soft teal, warm cream, leaf green.",
 }
 for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
 

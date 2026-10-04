@@ -72,10 +72,16 @@ ok(SCHEMA === 11, `the store is at v11 (got ${SCHEMA})`);
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 ok(/if \(mode && !ownsMode\(k, arg\)\) return go\('shop'\);/.test(main), 'main.js play(): a mode not owned opens the Shop, not the game');
 /* and it pays what its game pays: the SAME callbacks, the mode only passed through */
-const play = main.slice(main.indexOf('function play(arg)'), main.indexOf('\n}\n', main.indexOf('function play(arg)')));
-for (const [id, fn, pay] of [['rush', 'numberRush', 'tick(k, right, 1)'], ['target', 'makeTarget', 'tick(k, true, 5)'], ['line', 'numberLine', 'tick(k, right, 1)']]) {
+const play = main.slice(main.indexOf('function play(arg'), main.indexOf('\n}\n', main.indexOf('function play(arg')));
+/* the wage is decided in ONE place (model.js payout/WAGE): each game hands payout() its own
+   arg, mode and all, and payout reads the table by the game's name — so a mode cannot pay
+   differently, and the standard amounts are the ones the games always paid */
+const { WAGE, payout } = await import('../src/model.js');
+for (const [id, fn, pay, xp] of [['rush', 'numberRush', 'payout(k, arg, right)', 1], ['target', 'makeTarget', 'payout(k, arg, true)', 5], ['line', 'numberLine', 'payout(k, arg, right)', 1]]) {
   const line = play.split('\n').find((l) => l.includes(`G.${fn}(`)) || '';
-  ok(line.includes('{ mode, ') && line.includes(pay) && (line.match(/tick\(/g) || []).length === 1, `${id}: one call, the standard wage (${pay}), mode passed through`);
+  ok(line.includes('{ mode, ') && line.includes(pay) && (line.match(/payout\(/g) || []).length === 1 && !/\btick\(/.test(line), `${id}: one call, through payout (${pay}), mode passed through`);
+  ok(WAGE[id] === xp, `${id}: the standard wage is still ${xp} xp (WAGE has ${WAGE[id]})`);
+  for (const m of X.modesFor(id)) { const a = newKid('W', '8-10', 'cubebot'), b = newKid('W', '8-10', 'cubebot'); payout(a, id, true); payout(b, m.id, true); ok(a.xp === xp && b.xp === a.xp, `${m.id} pays what ${id} pays (${b.xp} vs ${a.xp})`); }
 }
 
 /* every mode is a real game with its own how-to */

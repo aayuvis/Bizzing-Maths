@@ -1,4 +1,4 @@
-/* games.js — the Arcade. Three games, every one with keyboard AND touch.
+/* games.js — the Arcade. Four games (and Sudoku), every one with keyboard AND touch.
 
    Each game runs in its own fullscreen overlay appended to <body> — Bizzing
    Bee's `.arc-play` lesson: the app re-renders its whole DOM on a tap, and a
@@ -16,6 +16,7 @@ import { int, pick, shuffle, seeded, dayKey } from './rand.js';
 import { esc, sfx, confetti, music } from './ui.js';
 import { icon } from './icons.js';
 import { makeSudoku, conflicts, SUDOKU } from './puzzles.js';
+import { cubePuzzle, viewsOf, sameViews, count as cubeCount, LEVELS as CUBE_LEVELS, BANK as CUBE_BANK, bandLevel as cubeLevel } from './cubes.js';
 
 /* ------------------------------------------------------------ the frame */
 
@@ -211,6 +212,7 @@ export const HOWTO = {
   rush: { practises: 'your own facts, at speed', steps: [['○', 'Sums drift down from the sky.'], ['⌨', 'Type the answer on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
   target: { practises: 'joining numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'The two join into one new number.'], ['◎', 'Use every number to make the target.']] },
   line: { practises: 'estimating where a number sits', steps: [['?', 'A number appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
+  cubes: { practises: 'reading a shape from its front, side and top', steps: [['▦', 'Three views show a stack of cubes: front, side, top.'], ['▲', 'Pick a square, then raise or lower its tower.'], ['✓', 'Match all three views. Fewest cubes earns a third star.']] },
   sudoku: { practises: 'logic: every row, column and box once', steps: [['▢', 'Pick an empty square.'], ['✎', 'Fill it in, by tap or by key.'], ['✓', 'No row, column or box may repeat one.']] },
   // the bonus modes (extras.js): each its own how-to, the same keys and pad as its game
   'rush:mixed': { practises: 'all four operations, at speed', steps: [['±', 'Adding, taking away, times and sharing — all falling at once.'], ['⌨', 'Type the answer on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
@@ -846,5 +848,184 @@ export function sudoku(kid, n, lv, { onEnd }) {
   g.quit = () => { if (!done) onEnd(false, 0); end(g); };
   current = g;
   intro(g, 'Sudoku', 'sudoku', begin);
+  return g;
+}
+
+/* ========================================================== CUBE BUILDER */
+
+/* Three views of a stack of cubes — front, side (from the right), top — and an empty
+   floor. Pick a square, raise or lower its tower; it is solved when all three views of
+   what was built match. Every puzzle is proved before it is shown (cubes.js, and the
+   brute force in test/games.mjs): it has a stack, its level's promise holds, and the
+   FEWEST cubes is known by search, so the third star is measured, never guessed.
+
+   One function, `act`, changes the build. The keys, the taps on a square, the up and
+   down buttons and the height pad all call it, so keyboard and touch cannot drift. */
+export const CUBE_ROUNDS = 3;
+export const cubeStars = (score) => (score >= 8 ? 3 : score >= 5 ? 2 : score >= 2 ? 1 : 0);
+
+/* the stack drawn as a picture: front faces square, depth going up and to the right */
+function cubeIso(h, n, hmax, sel) {
+  const s = 30, d = 15, W = n * s + n * d + 4, H = hmax * s + n * d + 6, base = H - 3;
+  const out = [];
+  for (let k = n - 1; k >= 0; k--) {                 // k = rows from the front: draw the back row first
+    const r = n - 1 - k;
+    for (let c = 0; c < n; c++) {
+      const i = r * n + c, X = 2 + c * s + k * d, Y0 = base - k * d, on = i === sel ? ' sel' : '';
+      out.push(`<polygon class="cb-floor${on}" points="${X},${Y0} ${X + d},${Y0 - d} ${X + s + d},${Y0 - d} ${X + s},${Y0}"/>`);
+      for (let z = 0; z < h[i]; z++) {
+        const Y = Y0 - (z + 1) * s;
+        out.push(`<g class="cb-cube${on}"><rect class="f" x="${X}" y="${Y}" width="${s}" height="${s}"/><polygon class="t" points="${X},${Y} ${X + d},${Y - d} ${X + s + d},${Y - d} ${X + s},${Y}"/><polygon class="r" points="${X + s},${Y} ${X + s + d},${Y - d} ${X + s + d},${Y + s - d} ${X + s},${Y + s}"/></g>`);
+      }
+    }
+  }
+  return `<svg class="cb-iso" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Your stack: ${cubeCount(h)} cubes">${out.join('')}</svg>`;
+}
+
+/* one view: the target's squares, and what the build shows over them */
+function cubeView(name, want, have, rows, hi, ax) {
+  const cols = want.length, cells = [];
+  for (let y = rows - 1; y >= 0; y--) for (let x = 0; x < cols; x++) {
+    const w = want[x] > y, b = have[x] > y;
+    cells.push(`<i class="${w && b ? 'ok' : w ? 'miss' : b ? 'extra' : ''}${x === hi ? ' hi' : ''}"></i>`);
+  }
+  const match = want.join() === have.join();
+  return `<figure class="cb-view${match ? ' match' : ''}" data-view="${name.split(' ')[0].toLowerCase()}"><div class="cb-vg" style="--c:${cols}">${cells.join('')}</div>${ax ? `<div class="cb-ax" aria-hidden="true"><span>${ax[0]}</span><span>${ax[1]}</span></div>` : ''}<figcaption>${match ? icon('check', 16) : ''}${esc(name)}</figcaption></figure>`;
+}
+function cubeTop(want, have, n, sel) {
+  return `<figure class="cb-view${want.join() === have.join() ? ' match' : ''}" data-view="top"><div class="cb-vg" style="--c:${n}">${want.map((w, i) => `<i class="${w && have[i] ? 'ok' : w ? 'miss' : have[i] ? 'extra' : ''}${i === sel ? ' hi' : ''}"></i>`).join('')}</div><figcaption>${want.join() === have.join() ? icon('check', 16) : ''}Top</figcaption></figure>`;
+}
+
+export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
+  const lv = level || cubeLevel(kid.band), L = CUBE_LEVELS[lv];
+  const f = frame('Cube Builder', `${L.name}: ${L.blurb}`, () => g.quit(), 'cubes', 'cubes');
+  const g = { f, tune: 'calm' };
+  const order = shuffle(CUBE_BANK[lv].map((_, i) => i)).slice(0, CUBE_ROUNDS);
+  let round = 0, score = 0, p, h, sel = 0, phase = 'build', born = -1, combo, nextT = 0;
+  const made = [], again = [];
+
+  function next() {
+    round++; p = cubePuzzle(lv, order[round - 1]);
+    h = new Array(p.n * p.n).fill(0); sel = Math.floor(p.n * p.n / 2); phase = 'build'; born = -1;
+    draw();
+  }
+  const views = () => viewsOf(h, p.n);
+  function draw(msg = '') {
+    const v = views(), n = p.n, r = Math.floor(sel / n), c = sel % n, total = cubeCount(h);
+    f.hud.innerHTML = `<span class="chip">Puzzle <b>${round}</b> of ${CUBE_ROUNDS}</span><span class="chip">Stars <b>${score}</b></span>`;
+    const lock = phase === 'won' || phase === 'shown';
+    f.body.innerHTML = `<div class="cb${lock ? ' lock' : ''}">
+      <div class="cb-views">
+        ${cubeView('Front', p.views.front, v.front, p.hmax, c)}
+        ${cubeView('Side, from the right', p.views.side.slice().reverse(), v.side.slice().reverse(), p.hmax, n - 1 - r, ['front', 'back'])}
+        ${cubeTop(p.views.top, v.top, n, sel)}
+      </div>
+      <div class="cb-main">
+        <div class="cb-build">
+          <div class="cb-grid" role="grid" aria-label="The floor, seen from above. The front is at the bottom." style="--n:${n}">${h.map((x, i) =>
+            `<button class="cb-cell h${x}${i === sel ? ' sel' : ''}${i === born ? ' born' : ''}" data-i="${i}" aria-label="Row ${Math.floor(i / n) + 1} from the back, column ${(i % n) + 1}: ${x} cube${x === 1 ? '' : 's'}"${i === sel ? ' aria-current="true"' : ''}><b>${x || ''}</b></button>`).join('')}</div>
+          <p class="cb-front">Front</p>
+        </div>
+        <div class="cb-side">
+        ${cubeIso(h, n, p.hmax, sel)}
+      <div class="cb-ctl" role="group" aria-label="Height of the chosen tower">
+        <button class="btn cb-ud" data-a="down" aria-label="Lower the tower (minus key)">${icon('down', 22)}</button>
+        ${Array.from({ length: p.hmax + 1 }, (_, x) => `<button class="pk cb-h${h[sel] === x ? ' on' : ''}" data-a="set" data-v="${x}" aria-label="Height ${x}">${x}</button>`).join('')}
+        <button class="btn cb-ud" data-a="up" aria-label="Raise the tower (plus key)">${icon('up', 22)}</button>
+      </div>
+      <div class="cb-msg" aria-live="polite">${msg || (phase === 'matched' ? `All three views match, with <b>${total}</b> cubes. It can be done with fewer: take some away, or press Done.` : `<b>${total}</b> cube${total === 1 ? '' : 's'} so far. Make all three views match.`)}</div>
+      <div class="mt-tools">
+        ${phase === 'matched' ? `<button class="btn primary" data-a="done">Done with ${total} <kbd>Enter</kbd></button>` : `<button class="btn" data-a="done" ${lock ? 'disabled' : ''}>Check <kbd>Enter</kbd></button>`}
+        <button class="btn" data-a="clear" ${lock ? 'disabled' : ''}>Clear <kbd>C</kbd></button>
+        <button class="btn ghost" data-a="show" ${lock ? 'disabled' : ''}>Show me <kbd>S</kbd></button>
+      </div>
+        </div>
+      </div>
+      <p class="mt-keys">Keys: arrows choose a square · <kbd>+</kbd> <kbd>-</kbd> or <kbd>0</kbd>–<kbd>${p.hmax}</kbd> set its tower · <kbd>Enter</kbd> check</p>
+    </div>`;
+    f.body.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => act('sel', +b.dataset.i));
+    f.body.querySelectorAll('[data-a]').forEach((b) => b.onclick = () => act(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined));
+  }
+
+  /* THE one way the build changes: every key and every tap comes through here */
+  function act(a, x) {
+    if (!p || phase === 'won' || phase === 'shown') return;
+    const n = p.n;
+    if (a === 'sel') { sel = x; born = -1; sfx.click(); return draw(); }
+    if (a === 'move') {
+      const r = Math.floor(sel / n) + x[0], c = (sel % n) + x[1];
+      if (r >= 0 && r < n && c >= 0 && c < n) { sel = r * n + c; born = -1; sfx.click(); draw(); }
+      return;
+    }
+    if (a === 'up' || a === 'down' || a === 'set') {
+      const to = a === 'set' ? x : h[sel] + (a === 'up' ? 1 : -1);
+      if (to < 0 || to > p.hmax) { sfx.bad(); return wobble(g, f.body.querySelector('.cb-cell.sel')); }
+      if (to === h[sel]) return;
+      h[sel] = to; born = sel; to > 0 ? sfx.place() : sfx.click(); juice(g);
+      return settle();
+    }
+    if (a === 'clear') { h.fill(0); born = -1; sfx.click(); phase = 'build'; return draw(); }
+    if (a === 'done') {
+      if (phase === 'matched') return solved(2);
+      // a check before the views match: the first view that does not, wobbles
+      sfx.bad(); combo.miss();
+      const v = views(), bad = ['front', 'side', 'top'].find((k) => p.views[k].join() !== v[k].join());
+      draw(`The ${bad === 'side' ? 'side' : bad} view does not match yet.`);
+      return wobble(g, f.body.querySelector(`[data-view="${bad}"]`));
+    }
+    if (a === 'show') {
+      phase = 'shown'; h = p.answer.slice(); born = -1; combo.miss(); onTick(false);
+      again.push(`Puzzle ${round}: shown, ${p.min} cubes`);
+      draw(`One way, with the fewest cubes: <b>${p.min}</b>.`);
+      wobble(g, f.body.querySelector('.cb-iso'));
+      nextT = setTimeout(() => current === g && (round < CUBE_ROUNDS ? next() : finish()), 2600);
+    }
+  }
+  function settle() {
+    const match = sameViews(views(), p.views);
+    if (match && cubeCount(h) === p.min) return solved(3);
+    const was = phase; phase = match ? 'matched' : 'build';
+    draw();
+    if (match && was !== 'matched') { sfx.good(); const iso = f.body.querySelector('.cb-iso'), [x, y] = centre(iso, f.body.querySelector('.cb')); pop(g, f.body.querySelector('.cb'), x, y); }
+  }
+  function solved(stars) {
+    phase = 'won'; score += stars; combo.hit(); sfx.level(); onTick(true);
+    made.push(`Puzzle ${round}: ${cubeCount(h)} cubes${stars === 3 ? ', the fewest' : ''}`);
+    if (stars < 3) again.push(`Puzzle ${round}: the fewest was ${p.min}`);
+    draw(stars === 3 ? `<b>Solved, with the fewest cubes: ${p.min}.</b>` : `<b>Solved</b> with ${cubeCount(h)} cubes. The fewest was ${p.min}.`);
+    const box = f.body.querySelector('.cb'), [x, y] = centre(f.body.querySelector('.cb-iso'), box);
+    pop(g, box, x, y, stars === 3 ? '★★★' : '★★');
+    nextT = setTimeout(() => current === g && (round < CUBE_ROUNDS ? next() : finish()), 1300);
+  }
+  function finish() {
+    clearTimeout(nextT);
+    const stars = cubeStars(score);
+    onEnd(score, stars);
+    resultCard(g, { title: `${score} of ${CUBE_ROUNDS * 3} stars`, practised: { skill: 'Reading a solid from its front, side and top views', items: made, again }, best: combo.best,
+      lines: ['Start with the tallest towers the views need, where a front peak and a side peak meet: one tower can stand for both.'], stars,
+      again: () => { g.quit(); cubeBuilder(kid, { onTick, onEnd, level }); }, done: () => g.quit() });
+  }
+  function begin() {
+    combo = comboMeter(g);
+    g.key = (e) => {
+      if (e.key === 'Escape') { g.quit(); return true; }
+      const mv = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+      if (mv) { act('move', mv); return true; }
+      if (e.key === '+' || e.key === '=' || e.key === ']') { act('up'); return true; }
+      if (e.key === '-' || e.key === '_' || e.key === '[') { act('down'); return true; }
+      if (/^\d$/.test(e.key)) { act('set', +e.key); return true; }
+      if (e.key === 'Backspace' || e.key === 'Delete') { act('set', 0); return true; }
+      if (e.key === 'Enter' || e.key === ' ') { act('done'); return true; }
+      if (e.key === 'c' || e.key === 'C') { act('clear'); return true; }
+      if (e.key === 's' || e.key === 'S') { act('show'); return true; }
+      return false;
+    };
+    next();
+  }
+  g.stop = () => clearTimeout(nextT);
+  g.quit = () => end(g);
+  g.probe = { answer: () => p && p.answer.slice(), build: () => h && h.slice(), level: () => lv, puzzle: () => p, finish: () => !g.ended && finish() };
+  current = g;
+  intro(g, 'Cube Builder', 'cubes', begin);
   return g;
 }

@@ -21,6 +21,7 @@ const GAMES = [
   { title: 'Number Rush', sub: 'A game · facts fall, pop them', act: 'play', arg: 'rush', words: 'game bubbles facts speed' },
   { title: 'Make the Target', sub: 'A game · four numbers, one target', act: 'play', arg: 'target', words: 'game target countdown' },
   { title: 'Number Line', sub: 'A game · estimate where it goes', act: 'play', arg: 'line', words: 'game estimate estimation' },
+  { title: 'Cube Builder', sub: 'A game · build a stack from its three views', act: 'play', arg: 'cubes', words: 'game cubes blocks views front side top plan elevation 3d solid spatial shape stack' },
   { title: 'Mock Contest', sub: 'Play · you and ten rivals', act: 'nav', arg: 'contest', words: 'contest rivals competition' },
   { title: 'The Puzzle Tower', sub: 'Puzzles · twelve floors', act: 'nav', arg: 'puzzles', words: 'puzzle tower sudoku nets balance logic' },
   { title: 'Twenty facts', sub: 'Practice · facts picked for you', act: 'nav', arg: 'facts', words: 'facts times tables practice fluency' },

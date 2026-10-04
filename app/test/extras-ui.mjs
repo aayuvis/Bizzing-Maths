@@ -140,6 +140,8 @@ const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboar
     ['play', '.gtiles', () => p.click('.hero-t.daily-t'), 'daily'],
     ['puzzles', '[data-act=sudokuPlay]', () => p.click('[data-act=sudokuPlay] >> nth=0'), 'sudoku'],
     ['play', '.amodes', () => p.click('[data-act=play][data-arg="line:negatives"]'), 'line:negatives'],
+    ['play', '.gtiles', () => p.click('[data-act=play][data-arg=cubes]'), 'cubes'],
+    ['puzzles', '[data-act=cubesPlay]', () => p.click('[data-act=cubesPlay] >> nth=2'), 'cubes'],
   ];
   for (const [from, sel, openIt, id] of games) {
     await nav(p, G, 'home', '#app main'); await nav(p, G, from, sel);
@@ -168,6 +170,94 @@ const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboar
   await p.waitForTimeout(200); await p.goBack(); await p.waitForTimeout(300);
   s3 = await st(G);
   ok(!s3.game && s3.nav === 'play' && s3.hash === '#/play', `Play again replaces the entry: one Back still lands on Play (nav ${s3.nav}, ${s3.hash})`);
+  await ctx.close();
+}
+
+/* ------------------------------------------------ Cube Builder, played to the end on a phone:
+   puzzle 1 by KEYBOARD (arrows and digits), puzzle 2 by TOUCH (taps on squares and the height
+   pad, and the up button), puzzle 3 checked too early (the wrong view wobbles) and then shown.
+   The finish card, the best score in k.games.cubes, the wage per solved puzzle, 44px targets,
+   reduced motion, and Back closing the game. */
+for (const dark of [false, true]) {
+  const tag = dark ? 'dark' : 'light';
+  const { p, ctx, G, shot } = await open({ width: 390, height: 844 }, 'cubes-phone-' + tag, { dark });
+  if (dark) await G(() => { document.documentElement.setAttribute('data-mode', 'dark'); });
+  const probe = (k) => G((k) => { const g = window.__bzmGames.active(); return g && g.probe[k](); }, k);
+  const kidNow = () => G(() => ({ xp: window.__bzm.R.h.kids[0].xp, games: window.__bzm.R.h.kids[0].games }));
+  await nav(p, G, 'play', '.gtiles');
+  ok(await p.locator('.gtile[data-arg=cubes]').count() === 1, `${tag}: Cube Builder has a tile on Play`);
+  const x0 = (await kidNow()).xp;
+  await p.tap('.gtile[data-arg=cubes]'); await p.waitForSelector('.g-intro');
+  const how = await p.$$eval('.g-how li', (l) => l.length);
+  ok(how === 3 && /Cube Builder/.test(await p.locator('.g-card h2').innerText()), `${tag}: a title card with a three-step how-to (${how})`);
+  if (!dark) await shot('intro');
+  await skip(p); await p.waitForSelector('.cb-grid');
+  ok((await probe('level')) === 2, `${tag}: an 8–10 plays level 2`);
+  // 44px targets on a phone: the squares, the height pad, up and down, the tools and Back
+  const small = await G(() => [...document.querySelectorAll('.play .cb-cell, .play .cb-ctl button, .play .mt-tools button, .play .play-x, .play .play-m')].map((b) => { const r = b.getBoundingClientRect(); return [b.className, Math.round(r.width), Math.round(r.height)]; }).filter(([, w, h]) => w < 44 || h < 44));
+  ok(small.length === 0, `${tag}: every Cube Builder control is at least 44px on a phone (${JSON.stringify(small.slice(0, 4))})`);
+  const wide = await G(() => document.querySelector('.play-body').scrollWidth - document.querySelector('.play-body').clientWidth);
+  ok(wide <= 0, `${tag}: nothing scrolls sideways on a phone (${wide}px)`);
+  await shot('play');
+
+  // puzzle 1 by KEYBOARD: arrows to each square, a digit for its height
+  const ans1 = await probe('answer'), n = 3;
+  let sel = 4;
+  for (let i = 0; i < ans1.length; i++) {
+    if (!ans1[i]) continue;
+    const [r, c, r0, c0] = [Math.floor(i / n), i % n, Math.floor(sel / n), sel % n];
+    for (let k = 0; k < Math.abs(r - r0); k++) await p.keyboard.press(r > r0 ? 'ArrowDown' : 'ArrowUp');
+    for (let k = 0; k < Math.abs(c - c0); k++) await p.keyboard.press(c > c0 ? 'ArrowRight' : 'ArrowLeft');
+    sel = i;
+    if (ans1[i] > 1) { await p.keyboard.press('+'); await p.keyboard.press(String(ans1[i])); } else await p.keyboard.press('1');
+  }
+  await p.waitForTimeout(150);
+  const m1 = await p.locator('.cb-msg').innerText(), b1 = await probe('build');
+  ok(b1.join() === ans1.join() && /fewest/.test(m1) && await p.locator('.cb-view.match').count() === 3, `${tag}: puzzle 1 built by keyboard matches all three views, with the fewest (${m1})`);
+  await p.waitForFunction(() => /Puzzle\s*2/.test(document.querySelector('.play-hud').textContent), null, { timeout: 4000 });
+
+  // puzzle 2 by TOUCH: tap a square, then the height pad (or the up button for a tower of one)
+  const ans2 = await probe('answer');
+  for (let i = 0; i < ans2.length; i++) {
+    if (!ans2[i]) continue;
+    await p.tap(`.cb-cell[data-i="${i}"]`);
+    if (ans2[i] === 1) await p.tap('[data-a=up]'); else await p.tap(`[data-a=set][data-v="${ans2[i]}"]`);
+  }
+  await p.waitForTimeout(150);
+  ok((await probe('build')).join() === ans2.join() && /fewest/.test(await p.locator('.cb-msg').innerText()), `${tag}: puzzle 2 built by touch, solved with the fewest`);
+  await p.waitForFunction(() => /Puzzle\s*3/.test(document.querySelector('.play-hud').textContent), null, { timeout: 4000 });
+  ok((await kidNow()).xp - x0 === 10, `${tag}: two solved puzzles paid the standard wage twice (${(await kidNow()).xp - x0} xp)`);
+
+  // puzzle 3: a check before the views match wobbles the wrong view; then Show me
+  await p.keyboard.press('1'); const j0 = await G(() => +document.querySelector('.play').dataset.juice);
+  await p.keyboard.press('Enter'); await p.waitForTimeout(80);
+  const wob = await p.locator('.cb-view.gwob').count(), j1 = await G(() => +document.querySelector('.play').dataset.juice);
+  ok(wob === 1 && j1 > j0 && /does not match/.test(await p.locator('.cb-msg').innerText()), `${tag}: Enter before the views match wobbles the view that is wrong (${wob})`);
+  // reduced motion: a raised tower does not bounce
+  await G(() => document.documentElement.setAttribute('data-motion', 'reduced'));
+  await p.keyboard.press('2'); await p.waitForTimeout(30);
+  const anim = await G(() => { const b = document.querySelector('.cb-cell.born'); return b ? getComputedStyle(b).animationName : 'no born'; });
+  ok(anim === 'none', `${tag}: under reduced motion a raised tower does not bounce (${anim})`);
+  await G(() => document.documentElement.removeAttribute('data-motion'));
+  const xs = (await kidNow()).xp;
+  await p.keyboard.press('s'); await p.waitForTimeout(100);
+  ok((await probe('build')).join() === (await probe('answer')).join() && (await kidNow()).xp === xs, `${tag}: Show me builds the fewest stack, and pays nothing`);
+  await p.waitForSelector('.play-end', { timeout: 5000 });
+  const end = await p.locator('.play-end').innerText(), rec = (await kidNow()).games.cubes;
+  ok(/6 of 9 stars/.test(end) && /front, side and top/.test(end) && await p.locator('.play-end .stars .on').count() === 2, `${tag}: the finish card: 6 of 9, two stars, and what was practised (${end.slice(0, 80).replace(/\n/g, ' ')})`);
+  ok(rec && rec.best === 6 && rec.plays === 1, `${tag}: the best score is saved in k.games.cubes (${JSON.stringify(rec)})`);
+  await shot('end');
+  ok((await st(G)).hash === '#/game/cubes', `${tag}: the game has its own hash`);
+  await p.goBack(); await p.waitForTimeout(300);
+  const s4 = await st(G);
+  ok(!s4.game && s4.overlay === 0 && s4.nav === 'play', `${tag}: Back closes Cube Builder and lands on Play (nav ${s4.nav}, ${s4.hash})`);
+  ok(/Best 6/.test(await p.locator('.gtile[data-arg=cubes]').innerText()), `${tag}: the Play tile shows the best score`);
+  // the Puzzle Tower offers it too, at all three levels, and search finds it
+  await nav(p, G, 'puzzles', '[data-act=cubesPlay]');
+  ok(await p.locator('[data-act=cubesPlay]').count() === 3, `${tag}: the Puzzle Tower offers Cube Builder at three levels`);
+  await p.tap('[data-act=cubesPlay] >> nth=0'); await skip(p); await p.waitForSelector('.cb-grid');
+  ok((await probe('level')) === 1, `${tag}: and a level chosen there is the level played`);
+  await G(() => window.__bzmGames.active().quit()); await p.waitForTimeout(150);
   await ctx.close();
 }
 
@@ -201,6 +291,7 @@ for (const dark of [false, true]) {
     ['target', async () => { await nav(p, G, 'play', '.gtiles'); await p.click('[data-act=play][data-arg=target]'); }, '.mt-card'],
     ['line', async () => { await nav(p, G, 'play', '.gtiles'); await p.click('[data-act=play][data-arg=line]'); }, '.nl-track'],
     ['sudoku', async () => { await nav(p, G, 'puzzles', '[data-act=sudokuPlay]'); await p.click('[data-act=sudokuPlay] >> nth=0'); }, '.sdk'],
+    ['cubes', async () => { await nav(p, G, 'play', '.gtiles'); await p.click('[data-act=play][data-arg=cubes]'); }, '.cb-grid'],
   ]) {
     await openIt(); await p.waitForSelector('.g-intro');
     const introBad = (await G(worst)).filter((x) => x.min < x.need);
