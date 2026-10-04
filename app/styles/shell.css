@@ -254,6 +254,7 @@ html[data-bz-dark] .bz-plate,:root[data-mode="dark"] .bz-plate{filter:brightness
 .sc-rank{margin:6px 0}
 .sc-medals{display:flex;gap:6px;margin:8px 0 12px;min-height:56px;align-items:center}
 .trick-day{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:start;margin:16px 0}.trick-day .kick{grid-column:1/-1}
+.trick-day .worked{font-size:14px;line-height:1.5;color:var(--muted);margin:4px 0 6px}
 @media (max-width:620px){.showcase{grid-template-columns:1fr;text-align:center;justify-items:center}.sc-medals{justify-content:center}.showcase .row{justify-content:center}}
 
 /* ------------------------------------------------------------------ search, mistakes */

@@ -335,13 +335,22 @@ export function rushPool(kid, mode = null) {
   }
   return pool.map((f) => ({ fact: f, a: f.a, b: f.b, op: f.op }));
 }
+/* How fast the bubbles fall (audit v4 G8). A gentle rise with the run of pops in a row —
+   3% a pop, at most +30% — on top of the slow climb with the score (12% every five pops,
+   never more than double). A landing or a wrong Enter ends the run, so a child who is
+   struggling gets the slower sky back at once. The streak is the game's own count, never
+   the combo meter, and it only sets a speed: it pays nothing. */
+export const RUSH_BASE = 0.05;
+export function rushSpeed(score, streak) {
+  return RUSH_BASE * Math.min(2, 1.12 ** Math.floor(score / 5)) * (1 + 0.03 * Math.min(10, Math.max(0, streak)));
+}
 export function numberRush(kid, { onTick, onEnd, mode = null }) {
   const mk = modeKey('rush', mode);
   const pool = rushPool(kid, mk ? mode : null);
   const ops = uniq(pool.map((x) => x.op));
   const f = frame(titled('Number Rush', mk), mode === 'squares' && mk ? 'Pop each square: a number times itself' : 'Type the answer to pop a bubble', () => g.quit(), 'rush', mk || 'rush');
   const g = { f, tune: 'bright' };
-  let raf = 0, bubbles = [], input = '', score = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = 0.05, over = false;
+  let raf = 0, bubbles = [], input = '', score = 0, streak = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = rushSpeed(0, 0), over = false;
   const popped = [], landed = [];
   let cv, ctx, typed, stage, inp, W = 0, H = 0, combo;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -388,8 +397,8 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
   }
   function popIt(b) {
     bubbles = bubbles.filter((x) => x !== b);
-    score++; combo.hit(); sfx.pop(); sfx.good();
-    if (score % 5 === 0) speed *= 1.12;
+    score++; streak++; combo.hit(); sfx.pop(); sfx.good();
+    speed = rushSpeed(score, streak);
     popped.push(b.text);
     pop(g, stage, b.x, b.y, '+1');
     splash(stage, b);
@@ -432,7 +441,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     for (const b of bubbles.slice()) {
       if (b.y - b.r > H - 20) {
         bubbles = bubbles.filter((x) => x !== b);
-        lives--; combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
+        lives--; streak = 0; speed = rushSpeed(score, streak); combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
         pop(g, stage, b.x, H - 14);
         wobble(g, f.hud.querySelector('.lives'));
         if (lives <= 0) return finish();
@@ -450,7 +459,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     if (over) return;
     if (k === '⌫') setInput(input.slice(0, -1));
     // Enter on an answer that popped nothing: it was wrong for every bubble up
-    else if (k === '✓') { if (input) { sfx.bad(); combo.miss(); wobble(g, inp); setInput(''); } }
+    else if (k === '✓') { if (input) { sfx.bad(); streak = 0; speed = rushSpeed(score, streak); combo.miss(); wobble(g, inp); setInput(''); } }
     else if (/^\d$/.test(k)) { sfx.click(); setInput(input + k); }
   }
   function finish() {
@@ -663,7 +672,14 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) 
    the middle. Every target is a real point on its line, and a round never asks for the
    exact middle (that is the one place anybody can put a marker without thinking). */
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-export function lineSpec(band, mode = null) {
+/* The line widens as a child gets them close (audit v4 G8). A round starts on the band's own line
+   (0–20 / 0–100 / 0–1000, unchanged); after 2 close answers (four points or more) it is the second
+   width, after 4 the third. It never narrows inside a game, and the points are a share of the line,
+   so a longer line is harder to place on but never worth less. */
+export const LINE_WIDTHS = { '6-7': [20, 50, 100], '8-10': [100, 500, 1000], '11-14': [1000, 5000, 10000] };
+export const NEG_WIDTHS = { '6-7': [10, 20, 50], '8-10': [50, 100, 200], '11-14': [500, 1000, 5000] };
+export const lineStep = (closeCount) => Math.min(2, Math.floor(Math.max(0, closeCount) / 2));
+export function lineSpec(band, mode = null, step = 0) {
   if (mode === 'fractions') {
     const dens = band === '6-7' ? [2, 4] : band === '8-10' ? [2, 3, 4, 5, 8, 10] : [3, 4, 5, 6, 8, 10, 12];
     return { lo: 0, hi: 1, snap: 100, ends: ['0', '1'], skill: 'Placing fractions between 0 and 1',
@@ -671,9 +687,9 @@ export function lineSpec(band, mode = null) {
         for (;;) { const d = dens[int(0, dens.length - 1, r)], n = int(1, d - 1, r); if (gcd(n, d) === 1 && 2 * n !== d) return { v: n / d, label: `${n}/${d}` }; }
       } };
   }
-  const max = band === '6-7' ? 20 : band === '8-10' ? 100 : 1000;
+  const max = LINE_WIDTHS[band in LINE_WIDTHS ? band : '8-10'][Math.max(0, Math.min(2, step))];
   if (mode === 'negatives') {
-    const m = band === '6-7' ? 10 : band === '8-10' ? 50 : 500;
+    const m = NEG_WIDTHS[band in NEG_WIDTHS ? band : '8-10'][Math.max(0, Math.min(2, step))];
     return { lo: -m, hi: m, snap: m <= 10 ? 2 : 1, ends: [`−${m}`, String(m)], mid: '0', skill: `Placing numbers between −${m} and ${m}`,
       pick(r = Math.random) { for (;;) { const v = int(-m + 1, m - 1, r); if (v !== 0 && Math.abs(v) >= m * 0.06) return { v, label: v < 0 ? `−${-v}` : String(v) }; } } };
   }
@@ -681,16 +697,21 @@ export function lineSpec(band, mode = null) {
     pick(r = Math.random) { let v; do { v = int(1, max - 1, r); } while (Math.abs(v - max / 2) < max * 0.06); return { v, label: String(v) }; } };
 }
 export function numberLine(kid, { onTick, onEnd, mode = null }) {
-  const mk = modeKey('line', mode), L = lineSpec(kid.band, mk ? mode : null);
-  const { lo, hi } = L, span = hi - lo, mid = (lo + hi) / 2;
-  const f = frame(titled('Number Line', mk), `Place the number between ${L.ends[0]} and ${L.ends[1]}`, () => g.quit(), 'line', mk || 'line');
+  const mk = modeKey('line', mode), FULL = lineSpec(kid.band, mk ? mode : null);
+  const f = frame(titled('Number Line', mk), `Place the number between ${FULL.ends[0]} and ${FULL.ends[1]}`, () => g.quit(), 'line', mk || 'line');
   const g = { f, tune: 'sea' };
   const ROUNDS = 8;
-  let round = 0, total = 0, target = 0, label = '', pos = mid, placed = false, combo;
   const close = [], far = [];
+  // the line for this round: it widens with the close answers so far (lineStep), never narrows
+  let L, lo, hi, span, mid;
+  const widen = () => { L = lineSpec(kid.band, mk ? mode : null, lineStep(close.length)); ({ lo, hi } = L); span = hi - lo; mid = (lo + hi) / 2; };
+  widen();
+  let round = 0, total = 0, target = 0, label = '', pos = mid, placed = false, combo;
 
   function next() {
+    const was = hi; widen();
     round++; placed = false; pos = mid;
+    const sub = f.el.querySelector('.play-t span'); if (sub) sub.textContent = hi !== was ? `The line grows: now ${L.ends[0]} to ${L.ends[1]}` : `Place the number between ${L.ends[0]} and ${L.ends[1]}`;
     ({ v: target, label } = L.pick());
     draw();
   }

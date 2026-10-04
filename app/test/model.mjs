@@ -1,5 +1,5 @@
 /* test/model.mjs — the household, the atlas frontier, band gating, placement, the Store seam. */
-import { raiseLevel, worldOpen, newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
+import { raiseLevel, pickLevel, noteRun, worldOpen, newHousehold, newKid, ROUTE, frontier, isOpen, scoreRun, RUNGS, placeFrom, rankOf, RANKS, tick, trickRec } from '../src/model.js';
 import { TRICKS, byId } from '../src/tricks.js';
 import { migrate } from '../src/store.js';
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 20) console.error('  ✗ ' + m); } };
@@ -77,4 +77,44 @@ console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement
   ok(raiseLevel(k, 'x', 1, 1, true) === 0 && k.tricks.x.lvNext === 2, 'a second Warm-up run does not move it again');
   ok(raiseLevel(k, 'x', 2, 0.8, true) === 0 && raiseLevel(k, 'x', 2, 1, false) === 0, 'eight right, or too slow, is not three stars');
   ok(raiseLevel(k, 'x', 2, 0.9, true) === 3 && raiseLevel(k, 'x', 3, 1, true) === 0 && k.tricks.x.lvNext === 3, 'it stops at Champion'); }
+// E7 (audit v4): the drill opens at a level picked from recent accuracy
+{ const R = (lv, pct, fast = true) => ({ lv, pct, fast });
+  ok(pickLevel([]) === 1, 'no runs yet: Warm-up');
+  ok(pickLevel([R(1, 0.9), R(1, 1)]) === 2, 'two runs at 90%+ and fast: one up');
+  ok(pickLevel([R(1, 1)]) === 1, 'one good run alone is not "the last two"');
+  ok(pickLevel([R(2, 1, false), R(2, 1)]) === 2, 'two good runs, one of them slow: stays');
+  ok(pickLevel([R(2, 0.95), R(2, 0.8)]) === 2, 'the last run at 80%: stays');
+  ok(pickLevel([R(2, 1), R(2, 0.5)]) === 1, 'the last run under 60%: one down');
+  ok(pickLevel([R(1, 0.2), R(1, 0.1)]) === 1, 'never below Warm-up');
+  ok(pickLevel([R(3, 1), R(3, 1)]) === 3, 'never above Champion');
+  ok(pickLevel([R(1, 0.5), R(3, 0.6)]) === 3, 'exactly 60% is not under 60%');
+  const k = { tricks: {} };
+  noteRun(k, 'y', 2, 0.95, true); ok(k.tricks.y.lvNext === 3, 'three stars still raise the start (raiseLevel holds)');
+  noteRun(k, 'y', 3, 0.5, true); ok(k.tricks.y.lvNext === 2, 'a run under 60% brings it back one');
+  noteRun(k, 'y', 2, 0.7, true); ok(k.tricks.y.lvNext === 2, 'a middling run keeps it');
+  for (let i = 0; i < 6; i++) noteRun(k, 'y', 1, 0.1, false);
+  ok(k.tricks.y.lvNext === 1 && k.tricks.y.recent.length === 4, 'it never goes below 1 and keeps only a few runs');
+  ok(k.tricks.y.recent.every((x) => !('xp' in x)) && k.xp === undefined, 'picking a level touches no rank'); }
+// B1/B5 (audit v4): Octo's greeting names something true from the child's own record
+{ const { greetingLine, LINES } = await import('../src/greeting.js');
+  const now = new Date(2026, 9, 4, 10).getTime(), DAY = 86400000;
+  const g = newKid('Mira', '8-10');
+  const plain = LINES.map((f) => f('Mira'));
+  ok(plain.includes(greetingLine(g, now)), 'a new child gets one of the plain lines');
+  g.last = { what: 'stop', title: 'Near a hundred', at: now - DAY };
+  ok(/You cracked <b>“Near a hundred”<\/b> yesterday, Mira/.test(greetingLine(g, now)), 'a stop passed yesterday is named, with when: ' + greetingLine(g, now));
+  g.last.at = now - 3 * 3600e3; ok(/Near a hundred”<\/b> today/.test(greetingLine(g, now)), 'today is said as today');
+  // older than yesterday: a fact that slipped and is due comes first
+  g.last.at = now - 9 * DAY;
+  g.facts['7×8'] = { n: 4, ok: 3, box: 0, due: now - 1000, last: now - 2 * DAY, miss: 1, recent: ['F', 'F', 'F', 'X'], lapsed: true };
+  ok(/<b>7 × 8<\/b> slipped/.test(greetingLine(g, now)) && !/56/.test(greetingLine(g, now)), 'a slipped fact that is due is named, never its answer');
+  g.last.at = now - DAY; ok(/Near a hundred”<\/b> yesterday/.test(greetingLine(g, now)), 'yesterday’s stop comes before an older slip'); g.last.at = now - 9 * DAY;
+  g.facts['7×8'].due = now + DAY; ok(!/7 × 8/.test(greetingLine(g, now)), 'a slipped fact that is not due yet is not');
+  // a medal close by (8 of 10 three-star stops)
+  for (const t of TRICKS.slice(0, 8)) g.tricks[t.id] = { stars: 3 };
+  ok(/Two more and the <b>Fast and fearless<\/b> medal is yours/.test(greetingLine(g, now)), 'a medal that is near is named: ' + greetingLine(g, now));
+  g.medals = { fearless: { at: now } }; ok(!/Fast and fearless/.test(greetingLine(g, now)), 'an earned medal is not "near"');
+  ok(/You cracked <b>“Near a hundred”<\/b> last time/.test(greetingLine(g, now)), 'with nothing nearer, the last thing done, further back');
+  const h2 = newKid('Kai', '6-7'); h2.last = { what: 'tried', title: 'Make ten first', at: now - DAY };
+  ok(/had a go at <b>“Make ten first”<\/b> yesterday/.test(greetingLine(h2, now)), 'a try is said kindly'); }
 if (fails) process.exit(1);
