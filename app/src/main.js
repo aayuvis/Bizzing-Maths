@@ -2,7 +2,7 @@
    driver, keys, and every data-act in one table. */
 
 import { R } from './runtime.js';
-import { Store, DEMO, Family } from './store.js';
+import { Store, DEMO, Family, APP_ID } from './store.js';
 import { sampleHousehold, tasterHousehold, tasterStop } from './demo.js';
 import { award, medalById } from './medals.js';
 import { buy } from './shop.js';
@@ -25,6 +25,7 @@ import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
+import { avatarFile } from './model.js';
 import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, payout, trickRec, raiseLevel, noteRun, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
 import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
 import { keypad } from './keypad.js';
@@ -47,6 +48,7 @@ import * as AU from './audio.js';
 import { music } from './ui.js';
 import { setSayRate } from './voice.js';
 import { byAvatar, avatarCtx, ownsAvatar } from './avatars.js';
+import { stateOf, WORLD_PRICE } from './integration/bizzing-avatars.js';
 import { makeCert } from './cert.js';
 import { bindShell } from './integration/bizzing-shell.js';
 import { bindFeedKeys } from './integration/bizzing-feed.js';
@@ -321,7 +323,7 @@ const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { 
 /* actions that only move between screens or change a setting: they never wait for the code */
 const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
   'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
-  'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert'];
+  'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert', 'avDeck', 'avPeek'];
 gateActions({ ready: engineReady, wait: engine, safe: new Set(SAFE_ACTS), failed: () => toast('This needs the internet once — then it works offline.') });
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { if (!engineReady()) engine().catch(() => {}); }, { capture: true, passive: true, once: true });
 
@@ -340,6 +342,7 @@ function render() {
   document.documentElement.toggleAttribute('data-nokid', !kid(R.h));   // no child yet: no empty avatar pill, no tabs (shell.css)
   root.innerHTML = V.shell(screen());
   for (const i of root.querySelectorAll('.bz-av img')) if (i.complete && i.naturalWidth) i.classList.add('in');   // already in memory: no placeholder flash
+  greetOpens();
   if (root.querySelector('img[data-lsrc]')) import('./landing.js').then((m) => m.wire(root));   // the landing's screenshots, as they scroll near
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
@@ -1159,6 +1162,58 @@ on('setAv', (a) => {
   if (!ownsAvatar(R.h, k, a)) return toast('Not yours yet — its card says how it is earned.');
   k.avatar = a; Store.saveNow(R.h); sfx.click(); render();
 });
+/* Bizzing Bee's avatar card deck (avatar-cards.js, loaded when it first opens — never on Home's
+   first paint). The deck holds the child's OWNED faces and opens on the one being worn; a face
+   not yet owned is peeked at alone, as a silhouette that says how it is earned. */
+let cardsMod = null;
+const avCards = () => cardsMod || (cardsMod = import('./avatar-cards.js').catch((e) => { cardsMod = null; throw e; }));
+const ownedFaces = (k) => AVATARS.filter((a) => ownsAvatar(R.h, k, a));
+/* what opened the deck, as a way to find it again after a re-render (Wear redraws the screen) */
+function findAgain(el) {
+  if (!el || !el.closest) return () => null;
+  if (el.closest('[data-bz=greet]')) return () => root.querySelector('[data-bz=greet] > img');
+  const a = el.closest('[data-act]'); if (!a) return () => null;
+  const sel = `[data-act="${a.dataset.act}"]${a.dataset.arg != null ? `[data-arg="${CSS.escape(a.dataset.arg)}"]` : ':not([data-arg])'}`;
+  return () => root.querySelector(sel);
+}
+function earnWords(id, k) {
+  const a = byAvatar[id], s = stateOf(a, avatarCtx(R.h, k));
+  if (s.state === 'world') { const t = THEMES[s.world - 1]; return `It opens when ${t ? t.name : 'its world'} opens — with the family plan, or ${WORLD_PRICE} coins in the Shop. Then ${a.milestone ? `${a.milestone.label}, and ` : ''}${s.price} coins.`; }
+  if (s.state === 'milestone') return `First, ${a.milestone.label}. Then ${s.price} coins in the Shop.`;
+  if (s.state === 'buy') return `${s.price} Bizzing coins in the Shop${s.short ? ` — ${s.short} more to go` : ''}.`;
+  return s.say;
+}
+on('avDeck', (start, ev) => {
+  const k = kid(R.h); if (!k) return;
+  const trigger = (ev && ev.target && ev.target.closest && ev.target.closest('button, [role=button]')) || document.activeElement, again = findAgain(trigger);
+  return avCards().then((M) => {
+    const ids = ownedFaces(k);
+    M.openDeck({ ids, start: start && ids.includes(start) ? start : k.avatar, trigger, refocus: again,
+      worn: () => (kid(R.h) || {}).avatar,
+      history: (id) => M.historyOf(id, kid(R.h), Family.ledger(k.name), APP_ID),
+      wear: (id) => fire('setAv', id), celebrate: () => confetti(60) });
+  }, () => toast('The cards need the internet once — then they work offline.'));
+});
+on('avPeek', (id, ev) => {
+  const k = kid(R.h); if (!k || !byAvatar[id]) return;
+  if (ownsAvatar(R.h, k, id)) return fire('avDeck', id, ev);
+  const trigger = (ev && ev.target && ev.target.closest && ev.target.closest('[data-act]')) || document.activeElement;
+  return avCards().then((M) => M.openDeck({ ids: [id], start: id, trigger, refocus: findAgain(trigger), locked: { id, earn: earnWords(id, k) } }),
+    () => toast('The cards need the internet once — then they work offline.'));
+});
+/* Home's hello card is the family shell's (rule 16), and its picture stays Octo (rule 25): the
+   shell is not edited. After each draw the picture is made a button that opens the deck, with
+   the child's own face as a small badge on its corner so it is clear what opens. */
+function greetOpens() {
+  const k = kid(R.h), img = k && root.querySelector('[data-bz=greet] > img'); if (!img) return;
+  const label = `Your avatar cards — ${ownedFaces(k).length} owned`;
+  img.tabIndex = 0; img.setAttribute('role', 'button'); img.setAttribute('aria-label', label); img.alt = label; img.title = 'Your avatar cards';
+  img.classList.add('greet-open');
+  img.insertAdjacentHTML('afterend', `<span class="greet-badge" aria-hidden="true"><img src="avatars/${escH(avatarFile(k.avatar))}.webp" width="44" height="44" alt=""></span>`);
+}
+root.addEventListener('click', (e) => { if (e.target.closest('[data-bz=greet] > img.greet-open, [data-bz=greet] .greet-badge')) { e.preventDefault(); fire('avDeck', null, e); } });
+root.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-bz=greet] > img.greet-open')) { e.preventDefault(); fire('avDeck', null, e); } });
+
 /* The Shop (standard §1, §8): fixed prices through the family engine; nothing random. */
 on('buyAv', (id) => {
   const k = kid(R.h), a = byAvatar[id]; if (!k || !a) return;

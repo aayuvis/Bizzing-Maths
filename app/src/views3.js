@@ -161,7 +161,7 @@ export function avatarCard(h, k, a, ctx, { act = true } = {}) {
     ? `<button class="btn small${wearing ? ' on' : ''}" data-act="setAv" data-arg="${a.id}" ${wearing ? 'aria-pressed="true"' : ''}>${wearing ? 'Wearing' : 'Wear'}</button>`
     : s.state === 'buy' ? `<button class="btn small" data-act="buyAv" data-arg="${a.id}" ${s.short ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)} ${s.price}</button>` : '';
   return `<figure class="bz-av${wearing ? ' wearing' : ''}" data-tier="${a.tier}" data-state="${s.state}" data-id="${a.id}">
-    <img src="${a.art}" alt="" width="120" height="120" loading="lazy" decoding="async">
+    <img src="${a.art}" alt="${act ? `${esc(a.name)} — open its card` : ''}" width="120" height="120" loading="lazy" decoding="async"${act ? ` class="av-peek" data-act="avPeek" data-arg="${a.id}" role="button" tabindex="0"` : ''}>
     <figcaption>${esc(a.name)} <b>${TIERS[a.tier].label}</b><span class="av-say">${esc(s.say)}</span></figcaption>${btn}
   </figure>`;
 }

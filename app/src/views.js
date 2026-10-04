@@ -750,13 +750,13 @@ export function viewMe() {
   const fluent = OPS.reduce((a, o) => a + tally(k.facts, o).fluent, 0), floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
   return `<section class="me-page">
     <div class="showcase" data-tier="${tier}">
-      <div class="sc-face">${mine(k, 168, '')}</div>
+      <button class="sc-face sc-open" data-act="avDeck" aria-label="Your avatar cards — ${owned} owned" title="Your avatar cards">${mine(k, 168, '')}</button>
       <div class="sc-t">
         <p class="kicker">${esc(TIERS[tier].label)} · Age ${esc(k.band.replace('-', '–'))}</p>
         <h1>${esc(k.name)}</h1>
         <p class="sc-rank"><b>Rank ${rk.i + 1} · ${esc(rk.n)}</b> <span class="muted">— ${k.xp} right answers</span></p>
         <div class="sc-medals">${top.length ? top.map((m) => `<img src="art/medal-${m.id}.webp" alt="${esc(m.name)}" title="${esc(m.name)}" width="56" height="56">`).join('') : '<span class="muted small">Your first medal comes from your first stop.</span>'}</div>
-        <div class="row gap wrap"><button class="btn small" data-act="nav" data-arg="collection">${icon('cards', 16)} ${owned} of ${AVATARS.length} avatars</button><button class="btn small" data-act="nav" data-arg="medals">${icon('medal', 16)} Medals</button><button class="btn small" data-act="nav" data-arg="who">${icon('users', 16)} Switch or add</button></div>
+        <div class="row gap wrap"><button class="btn small" data-act="avDeck">${icon('sparkle', 16)} Avatar cards</button><button class="btn small" data-act="nav" data-arg="collection">${icon('cards', 16)} ${owned} of ${AVATARS.length} avatars</button><button class="btn small" data-act="nav" data-arg="medals">${icon('medal', 16)} Medals</button><button class="btn small" data-act="nav" data-arg="who">${icon('users', 16)} Switch or add</button></div>
       </div>
     </div>
     <button class="hcard yatra" data-act="nav" data-arg="goals">

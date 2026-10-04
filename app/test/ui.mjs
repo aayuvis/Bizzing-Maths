@@ -492,6 +492,10 @@ async function run(vp, tag) {
   await settled(); await shot('19b-change-avatar');
   await page.click('.bz-av[data-id=pyrafox]').catch(() => {});
   ok(await page.locator('.bz-av[data-id=pyrafox] [data-act=setAv]').count() === 0, 'a face not yet earned has no Wear button');
+  // a tap on its picture peeks at its card (avatar-cards.js): a silhouette with no Wear either; Escape puts it away
+  await until(() => !!document.querySelector('.avd-ov .avc'), null, 10000);
+  ok(await page.locator('.avd-ov .avc.locked[data-id=pyrafox]').count() === 1 && await page.locator('.avd-ov [data-avd=wear]').count() === 0, 'a tap on a locked face peeks at its card, which cannot be worn');
+  await page.keyboard.press('Escape'); await until(() => !document.querySelector('.avd-ov'));
   // home + grown-ups
   await nav('home'); await page.waitForSelector('.home2');
   await shot('20-home');

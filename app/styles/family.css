@@ -155,3 +155,87 @@
 .cel.lvup .kicker,.cel.lvup h2,.cel.lvup .cel-say,.cel.lvup .cel-coins{margin-left:22px;margin-right:22px}
 @keyframes lvIn{from{transform:translateX(-50%) scale(.2) rotate(-90deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.lvup-n,.lvup-octo,.lvup-kid{animation:none}}
+
+/* ---- the avatar card deck (avatar-cards.js — Bizzing Bee's openAvDeck, in this app's tokens).
+   Home's hello card is the family's: its picture is not resized or moved, only given a focus
+   ring and the child's own face as a badge on its corner (positioned off the shell's measured
+   15px padding and 150×164 / 120×140 picture, so Home's geometry is untouched). */
+.bz-greet > img.greet-open{cursor:pointer;border-radius:22px;transition:transform .15s ease,filter .15s ease}
+.bz-greet > img.greet-open:hover{transform:translateY(-2px)}
+.bz-greet > img.greet-open:focus-visible{outline:3px solid var(--action);outline-offset:3px}
+.greet-badge{position:absolute;left:calc(15px + 150px - 48px);top:calc(50% + 82px - 48px);width:48px;height:48px;border-radius:50%;padding:2px;box-sizing:border-box;
+  background:var(--surface);border:2.5px solid var(--treasure);box-shadow:0 3px 10px rgb(20 30 60 / .25);cursor:pointer;display:grid;place-items:center;pointer-events:auto}
+.greet-badge img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.bz-greet > img.greet-open:hover + .greet-badge,.bz-greet > img.greet-open:focus-visible + .greet-badge{transform:scale(1.08)}
+@media (max-width:720px){ .greet-badge{left:calc(15px + 120px - 44px);top:calc(50% + 70px - 44px);width:44px;height:44px} }
+.sc-open{border:0;padding:0;cursor:pointer;font:inherit;color:inherit;transition:transform .15s ease}
+.sc-open:hover{transform:translateY(-2px)}
+.sc-open:focus-visible{outline:3px solid var(--action);outline-offset:3px}
+.bz-av img.av-peek{cursor:zoom-in}
+.bz-av img.av-peek:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+
+.avd-ov{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;overflow:auto;
+  background:rgb(12 16 34 / .72);animation:avd-in .18s ease-out both;box-sizing:border-box;
+  touch-action:pan-y;overscroll-behavior:contain}   /* a sideways swipe is the deck's, never the browser's "back" */
+.avd-stage{position:relative;display:grid;place-items:center;width:min(100%,420px);padding:0 30px;box-sizing:border-box}
+.avd-live{position:relative;z-index:2;width:100%;max-width:340px;animation:avd-pop .26s cubic-bezier(.2,1.3,.4,1) both}
+.avd-live.from-r{animation-name:avd-from-r}.avd-live.from-l{animation-name:avd-from-l}
+.avd-ghost{position:absolute;top:50%;left:50%;width:min(320px,calc(100% - 80px));height:88%;border-radius:22px;background:var(--surface2);border:1px solid var(--line);box-shadow:0 12px 30px rgb(0 0 0 / .3)}
+.avd-ghost.g1{transform:translate(-50%,-50%) rotate(-4deg) translateX(-10px)}
+.avd-ghost.g2{transform:translate(-50%,-50%) rotate(5deg) translateX(12px);opacity:.8}
+.avd-ghost.g3{transform:translate(-50%,-50%) rotate(-8deg) translateX(-18px);opacity:.55}
+.avd-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:48px;height:48px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;
+  background:var(--surface);color:var(--ink);box-shadow:0 4px 14px rgb(0 0 0 / .35)}
+.avd-nav:hover{background:var(--action-tint)}
+.avd-nav:focus-visible,.avd-bar button:focus-visible{outline:3px solid var(--treasure);outline-offset:2px}
+.avd-prev{left:0}.avd-next{right:0}
+.avd-bar{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.avd-count{font:700 13px var(--mono);letter-spacing:.04em;color:#fff;opacity:.92}
+.avd-wear,.avd-x{min-height:46px;padding:10px 22px;border-radius:999px;font:750 15px var(--ui);cursor:pointer;border:0}
+.avd-wear{background:var(--treasure);color:#2B2117;box-shadow:0 4px 0 #B8861A}
+.avd-wear:active{transform:translateY(2px);box-shadow:0 2px 0 #B8861A}
+.avd-x{background:rgb(255 255 255 / .92);color:#1B2238}
+.avd-worn{display:inline-flex;align-items:center;gap:6px;min-height:46px;font:800 15px var(--ui);color:#7EE0A6}
+
+.avc{--rc:#7B8794;position:relative;box-sizing:border-box;width:100%;padding:14px 16px 16px;border-radius:22px;overflow:hidden;color:var(--ink);
+  background:linear-gradient(170deg,color-mix(in srgb,var(--rc) 20%,var(--surface)) 0%,var(--surface) 46%);
+  border:3px solid var(--rc);box-shadow:0 24px 60px rgb(0 0 0 / .45),inset 0 0 0 1px rgb(255 255 255 / .25)}
+.avc-legendary{box-shadow:0 24px 60px rgb(0 0 0 / .45),0 0 34px color-mix(in srgb,var(--rc) 55%,transparent)}
+.avc::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgb(255 255 255 / .35) 48%,transparent 60%);transform:translateX(-100%);animation:avc-sheen 4.5s ease-in-out 0.4s infinite}
+.avc-common::after{display:none}
+.avc-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.avc-tier{font:900 12px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--rc);padding:4px 10px;border-radius:999px}
+.avc-common .avc-tier{background:color-mix(in srgb,var(--rc) 85%,#000)}
+.avc-legendary .avc-tier{color:#3A2A00}
+.avc-pack{display:inline-flex;align-items:center;gap:6px;font:750 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.avc-pack i{width:9px;height:9px;border-radius:3px;background:var(--rc)}
+.avc-art{display:grid;place-items:center;margin:6px auto 2px;width:168px;height:168px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 22%,transparent),transparent 70%)}
+.avc-art img{width:168px;height:168px;object-fit:contain}
+.avc.locked .avc-art img{filter:brightness(0) opacity(.3)}
+:root[data-mode=dark] .avc.locked .avc-art img{filter:brightness(0) invert(1) opacity(.25)}
+.avc-name{margin:2px 0 0;text-align:center;font:800 24px/1.15 var(--display);color:var(--ink);outline:none}
+.avc-locked{display:block;font:600 12px var(--ui);color:var(--muted)}
+.avc-title{margin:2px 0 4px;text-align:center;font:italic 600 13px/1.3 var(--ui);color:var(--muted)}
+.avc-rank{margin:0 0 8px;text-align:center;font:700 12.5px/1.4 var(--ui);color:var(--ink)}
+.avc-rank span{white-space:nowrap}
+.avc-power{margin:0 0 8px;font:500 13px/1.4 var(--ui)}
+.avc-power b{color:color-mix(in srgb,var(--rc) 70%,var(--ink))}
+.avc-stats{display:grid;gap:5px;background:color-mix(in srgb,var(--surface2) 80%,transparent);border-radius:12px;padding:9px 11px}
+.avc-stat{display:grid;grid-template-columns:96px 1fr 26px;align-items:center;gap:8px;font:700 12px var(--ui)}
+.avc-stat b{font:800 13px var(--mono);text-align:right}
+.avc-bar{height:8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 12%,transparent);overflow:hidden}
+.avc-bar i{display:block;height:100%;border-radius:inherit;background:var(--rc)}
+.avc-lore{margin:9px 2px 8px;text-align:center;font:500 13px/1.45 var(--ui)}
+.avc-hist{border-top:1px dashed color-mix(in srgb,var(--rc) 45%,var(--line));padding-top:8px}
+.avc-hh{display:block;font:800 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.avc-hist ul{margin:0;padding-left:18px;font:600 13px/1.45 var(--ui)}
+@media (max-height:760px){ .avc-art,.avc-art img{width:132px;height:132px} .avc-lore{margin:6px 2px} }
+@media (max-width:400px){ .avd-stage{padding:0 22px} .avc{padding:12px 13px 14px} .avc-stat{grid-template-columns:90px 1fr 24px} }
+@keyframes avd-in{from{opacity:0}to{opacity:1}}
+@keyframes avd-pop{from{transform:scale(.94);opacity:.4}to{transform:none;opacity:1}}
+@keyframes avd-from-r{from{transform:translateX(36px) rotate(3deg);opacity:.3}to{transform:none;opacity:1}}
+@keyframes avd-from-l{from{transform:translateX(-36px) rotate(-3deg);opacity:.3}to{transform:none;opacity:1}}
+@keyframes avc-sheen{0%,60%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){ .avd-ov,.avd-live{animation:none!important} .avc::after{display:none} .bz-greet > img.greet-open,.sc-open{transition:none} }
+:root[data-motion=reduced] :is(.avd-ov,.avd-live){animation:none!important}
+:root[data-motion=reduced] .avc::after{display:none}

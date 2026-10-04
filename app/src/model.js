@@ -89,10 +89,12 @@ export function newHousehold() { return { v: 12, kids: [], active: null, parent:
 export const readOn = (k) => !!k && (k.prefs && k.prefs.read != null ? !!k.prefs.read : k.band === '6-7');
 
 export function newKid(name, band, avatar) {
+  const face = COMMONS.includes(avatar) ? avatar : COMMONS[0];   // a new child starts with a Common
   return {
     id: 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
     name: String(name || '').trim().slice(0, 20) || 'Friend',
-    band, avatar: COMMONS.includes(avatar) ? avatar : COMMONS[0],   // a new child starts with a Common
+    band, avatar: face,
+    starter: face,        // the face picked on the first day: its avatar card says so (avatar-cards.js)
     xp: 0,
     facts: {},            // fact key → fluency record (facts.js)
     tricks: {},           // trick id → { stars, best, learned, runs }
