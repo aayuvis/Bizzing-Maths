@@ -695,7 +695,7 @@ export function viewMe() {
       </span>
       <span class="jgo2">See what you’re learning →</span>
     </button>
-    <div class="card trick-day"><span class="kick gold">Trick of the day</span>${av('aryabhatta', 56, 'Aryabhata')}${trickOfDay(k)}</div>
+    <div class="card trick-day"><span class="kick gold">Trick of the day</span>${av('aryabhatta', 56, 'Aryabhata')}<div class="td-body">${trickOfDay(k)}</div></div>
     <div class="two">
       <div class="card">
         <p class="kicker">Your rank — ${k.xp} right answers</p>

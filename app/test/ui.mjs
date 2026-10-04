@@ -34,6 +34,9 @@ async function run(vp, tag) {
   const R = () => page.evaluate(() => { const r = window.__bzm.R; return { nav: r.ui.nav, run: r.run && { kind: r.run.kind, i: r.run.i, n: r.run.items.length, over: r.run.over, fb: r.run.fb, q: r.run.items[r.run.i] } }; });
   const nav = (k) => page.click(vp.width <= 720 ? `[data-bz=tabbar] a[href="#/${k}"]` : `[data-bz=tab][href="#/${k}"]`);
   const typeAns = async (ans) => { for (const ch of String(ans)) await page.keyboard.press(ch); };
+  // a right answer moves on by itself after 420 ms (fast) or 650 ms (not): wait for THAT, not a fixed 480 ms that
+  // raced the slower path and typed the next answer into the feedback (a flake seen on the unchanged build too)
+  const settle = (i0) => page.waitForFunction((i) => { const r = window.__bzm.R.run; return !r || r.over || (r.i !== i && !r.fb); }, i0, { timeout: 4000 }).catch(() => {});
 
   await page.goto(`http://127.0.0.1:${port}/Bizzing-Maths/`);
   // onboarding, one question per screen (Bizzing Finance's): landing → name → age → five faces → two worlds
@@ -164,7 +167,7 @@ async function run(vp, tag) {
   ok(star1 >= 1, 'Your turn earns the first star');
   // drill: all right
   await page.click('[data-act=startDrill]');
-  for (let i = 0; i < 10; i++) { const s = await R(); await typeAns(s.run.q.ans); await page.waitForTimeout(520); if (i === 3) await shot('06-drill'); }
+  for (let i = 0; i < 10; i++) { const s = await R(); await typeAns(s.run.q.ans); await settle(s.run.i); if (i === 3) await shot('06-drill'); }
   await page.waitForTimeout(500);
   ok((await R()).run.over, 'drill finishes');
   await shot('07-drill-end');
@@ -184,7 +187,7 @@ async function run(vp, tag) {
   await page.evaluate(() => window.__bzm.go('facts'));
   await page.waitForSelector('.fgrid');
   await page.click('[data-act=startFacts]');
-  for (let i = 0; i < 20; i++) { const s = await R(); if (!s.run || s.run.over) break; await typeAns(s.run.q.ans); await page.waitForTimeout(480); }
+  for (let i = 0; i < 20; i++) { const s = await R(); if (!s.run || s.run.over) break; await typeAns(s.run.q.ans); await settle(s.run.i); }
   await page.waitForTimeout(400);
   ok((await R()).run.over, 'twenty facts finish');
   await page.click('[data-act=endRun]'); await page.waitForSelector('.fgrid');
@@ -216,7 +219,7 @@ async function run(vp, tag) {
       if (st.run.q.choices) await page.keyboard.press(String(st.run.q.choices.indexOf(st.run.q.ans) + 1)); else await typeAns(String(st.run.q.ans).replace('−', '-'));
       await page.waitForTimeout(80);
       const st2 = await R(); if (st2.run && st2.run.fb && !st2.run.over) { if (!st2.run.fb.right) { ok(false, `${sid}: typed its own answer ${st.run.q.ans} and was marked wrong`); } if (st2.run.fb) await page.keyboard.press('Enter'); }
-      await page.waitForTimeout(560);
+      await settle(st.run.i);
     }
     await page.waitForTimeout(300);
     ok((await R()).run && (await R()).run.over, `${sid}: drill finishes`);

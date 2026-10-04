@@ -571,6 +571,7 @@ export const CSS = `
 .t-dictionary-az button{min-width:30px;min-height:32px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font:700 13px var(--mono);cursor:pointer}
 .t-dictionary-az button:disabled{opacity:.3;cursor:default}
 .t-dictionary-az button.on{background:var(--action);color:var(--action-ink);border-color:transparent}
+@media (max-width:899px){.t-dictionary-az{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}.t-dictionary-az button{flex:none;min-width:44px;min-height:44px}}   /* P3: 44px letters on a phone, one swipeable row */
 .t-dictionary-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
 .t-dictionary-pane{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px}
 @media (max-width:760px){.t-dictionary-cols{grid-template-columns:1fr}.t-dictionary-pane{order:-1;position:static}}
