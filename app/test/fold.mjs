@@ -28,7 +28,9 @@ const SCREENS = [
   // above the fold at 390×844 — and on the 1000×560 laptop Bee's own geometry is the rule, not this file's
   ['home', (b) => b.go('home'), '[data-bz=next]', '[data-bz=continue]', { start: 0.62, laptop: 'bee' }],
   ['atlas road', (b) => b.go('atlas'), '.board-scroll', '.lboard .bpin.cur'],
-  ['atlas islands', (b) => b.fire('atlasView', 'islands'), '.map-board'],
+  // a road with branches on it (the Sutra Ladder, the Counting Court, the Contest Hall): the road is still the thing
+  ['road + branches', (b) => { b.R.ui.jlv = 6; b.render(); }, '.board-scroll', '.lboard .bpin'],
+  ['atlas islands', (b) => { b.R.ui.jlv = null; b.fire('atlasView', 'islands'); }, '.map-board'],
   ['world board', (b) => b.fire('openWorld', 'market'), '.board-scroll'],
   ['stop · learn', (b) => { b.fire('openStop', 'kinds-of-triangle'); b.fire('stopTab', 'learn'); }, '.learn .hook', '.learn .hook svg'],
   ['stop · drill', (b) => b.fire('stopTab', 'drill'), '.stop-page .center-card'],

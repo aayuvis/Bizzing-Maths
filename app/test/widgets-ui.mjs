@@ -7,7 +7,7 @@
    and no widget starts on its answer. Screenshots of each, desktop and phone, light and dark. */
 import { site, SHOTS, kidRec, household, checker } from './lib/site.mjs';
 
-const { BASE, browser, close } = await site('widgets', +(process.env.PORT_BASE || 5200) + 8);
+const { BASE, browser, close } = await site('widgets', +(process.env.PORT_BASE || 5200) + 10);
 const { ok, fails } = checker();
 const errors = [];
 

@@ -9,7 +9,7 @@
    5 · Shop: an avatar card is never blank while its picture loads */
 import { site, household, kidRec, checker, SHOTS } from './lib/site.mjs';
 
-const { BASE, browser, close } = await site('v4', +(process.env.PORT_BASE || 5200) + 8);
+const { BASE, browser, close } = await site('v4', +(process.env.PORT_BASE || 5200) + 9);
 const { ok, fails } = checker();
 const errors = [];
 const EMOJI = /\p{Extended_Pictographic}/u;
