@@ -78,5 +78,11 @@ ok(/\bOcto\b/.test(GUIDE.nameFirst), 'the guide introduces itself as Octo');
 for (const [k, line] of Object.entries(GUIDE)) ok(!RIVALS.some((r) => new RegExp(`\\b${r.name}\\b`).test(line)), `guide line ${k} names no rival (${line})`);
 ok(!/twenty-five|thirty faces/.test(Object.values(GUIDE).join(' ')), 'the guide does not count faces that no longer exist');
 
+/* the browser tab shows Octo alone, no background square — Bizzing Bee's tab look (owner, 4 Oct 2026) */
+{ const { readFileSync } = await import('node:fs');
+  const tabOk = (html, svg) => /<link rel="icon" href="favicon\.svg"/.test(html) && !/<rect\b/.test(svg) && !/<g stroke="#4E74E2"/.test(svg) && /<circle/.test(svg);
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), fav = readFileSync(new URL('../public/favicon.svg', import.meta.url), 'utf8'), app = readFileSync(new URL('../public/icon.svg', import.meta.url), 'utf8');
+  ok(tabOk(html, fav), 'the tab icon is Octo with no background square');
+  ok(!tabOk(html.replace('favicon.svg', 'icon.svg'), app), 'BROKEN: the square app icon in the tab is caught'); }
 console.log(`${fails ? 'FAIL' : 'ok'} family — coins at standard amounts, fixed prices, medals from evidence, the sample`);
 if (fails) process.exit(1);
