@@ -166,6 +166,29 @@ const contestStops = () => TRICKS.filter((t) => (WORLDS.find((w) => w.id === t.w
 
 const RANK = { '6-7': 0, '8-10': 1, '11-14': 2 };
 
+/* Has the child done ANYTHING a goal could be measured on? (audit v4 Q2) A goal with no
+   evidence is "not started yet", never "0%": a 0% says the child tried and got none right.
+   Read from the same place the goal sends a child to work on it (`how`), so a goal cannot
+   be added without its evidence being known — test/objectives.mjs fails an unknown `how`. */
+const tried = (r) => !!r && ((r.runs || 0) > 0 || (r.stars || 0) > 0 || !!r.learned || (r.best || 0) > 0);
+const pzTried = (p) => !!p && ((p.tries || 0) > 0 || (p.right || 0) > 0 || Object.keys(p.solved || {}).length > 0);
+const EVIDENCE = {
+  facts: (k, op) => Object.keys(k.facts || {}).some((x) => { const m = /^\d+([+\-×÷²])\d+$/.exec(x); return m && m[1] === op && (k.facts[x].n || 0) > 0; }),
+  world: (k, wid) => tricksIn(wid).some((t) => tried((k.tricks || {})[t.id])),
+  lib: (k, id) => { const d = (k.lib || {})[id]; return !!d && ((d.level || 5) > 5 || Object.values(d.levels || {}).some((l) => (l.runs || 0) > 0)); },
+  atlas: (k) => Object.values(k.tricks || {}).some(tried),
+  stories: (k) => Object.keys(k.stories || {}).length > 0,
+  arcade: (k) => { const g = (k.games || {}).line; return !!g && ((g.plays || 0) > 0 || g.best != null); },
+  puzzles: (k, fam) => fam ? pzTried((k.puzzles || {})[fam]) : Object.keys(k.quest || {}).length > 0,
+  contest: (k) => ((k.contest || {}).runs || 0) > 0,
+  hall: (k) => ((k.papers || {}).log || []).length > 0 || contestStops().some((t) => tried((k.tricks || {})[t.id])),
+};
+export function evidence(k, how) {
+  const [kind, arg] = String(how).split(':'), f = EVIDENCE[kind];
+  if (!f) throw new Error(`no evidence rule for a goal worked on at "${how}"`);
+  return f(k, arg);
+}
+
 /* The goals that apply to this child: a goal marked for an older band shows
    as "coming later" for a younger one, never as a failure. */
 export function goalsFor(k) {
@@ -174,7 +197,8 @@ export function goalsFor(k) {
     goals: s.goals.map((g) => {
       const r = g.measure(k);
       const later = g.band && RANK[k.band] < RANK[g.band];
-      return { ...g, ...r, bar: g.bar, later, status: later ? 'later' : r.met ? 'met' : r.pct > 0 ? 'going' : 'new' };
+      const seen = r.pct > 0 || evidence(k, r.how);
+      return { ...g, ...r, bar: g.bar, later, seen, status: later ? 'later' : r.met ? 'met' : r.pct > 0 ? 'going' : 'new' };
     }),
   }));
 }

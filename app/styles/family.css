@@ -120,7 +120,7 @@
 .rc-bars.mast i{background:color-mix(in srgb,#178A4C 35%,transparent)}.rc-bars.mast i.now{background:#178A4C}
 .rc-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
 .rc-strands{margin:4px 0 12px}
-.rc-st{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr 44px;gap:10px;align-items:center;font-size:14px;margin:5px 0}
+.rc-st{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr minmax(44px,auto);gap:10px;align-items:center;font-size:14px;margin:5px 0}
 .rc-st .bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;display:block}.rc-st .bar i{display:block;height:100%;background:var(--treasure)}
 .chip-s{font:700 11px var(--ui);background:var(--treasure-tint);color:var(--ink);padding:2px 8px;border-radius:99px;vertical-align:middle}
 @media (max-width:760px){ .rc-three{grid-template-columns:1fr} }
@@ -142,3 +142,4 @@
 /* My Feed: where a card lives, and its second line */
 .bzf-where{margin:0 0 2px;font:700 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .bzf-more{margin:6px 0 2px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--action) 7%,transparent);font-size:14px;line-height:1.45;color:var(--ink)}
+.rc-st .rc-none{font-weight:400;white-space:nowrap}

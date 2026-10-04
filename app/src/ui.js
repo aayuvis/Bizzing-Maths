@@ -13,10 +13,25 @@ export function cls(...a) { return a.filter(Boolean).join(' '); }
 /* ---- action dispatch ---------------------------------------------------- */
 const acts = Object.create(null);
 export function on(name, fn) { acts[name] = fn; }
+/* An action may need code that is not here yet (the stops' code: tricks.js loadEngine). The
+   gate holds every action until it is, IN ORDER, and returns the promise so a caller that
+   waits — the headless checks — sees the action done. An action that only moves between
+   screens or changes a setting is `safe` and never waits: a screen that needs the code waits
+   for it itself (main.js screen()). Set once by main.js. */
+let gate = null, queue = null;
+export function gateActions(g) { gate = g; }
 export function fire(name, arg, ev) {
   const fn = acts[name];
-  if (fn) fn(arg, ev);
-  else console.warn('no action:', name);
+  if (!fn) { console.warn('no action:', name); return; }
+  // once anything is waiting, everything after it waits behind it too: taps happen in the order they were made
+  if (gate && (queue || (!gate.safe.has(name) && !gate.ready()))) {
+    const need = () => (gate.safe.has(name) || gate.ready() ? null : gate.wait().then(() => true, (e) => { gate.failed(e); return false; }));
+    const p = (queue || Promise.resolve()).then(need).then((ok) => (ok === false ? undefined : fn(arg, ev)))
+      .catch((e) => { if (typeof reportError === 'function') reportError(e); else setTimeout(() => { throw e; }); });
+    queue = p; p.then(() => { if (queue === p) queue = null; });
+    return p;
+  }
+  return fn(arg, ev);
 }
 export function bindRoot(root) {
   const go = (ev) => {

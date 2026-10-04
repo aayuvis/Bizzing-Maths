@@ -141,7 +141,14 @@ let timer = null, pending = null;
 
 export const Store = {
   available: !!ls,
-  loadHousehold() { return migrate(read(KEY)); },
+  /* A record walked forward is written back AT ONCE (audit v4 Q1): migrated once, not on every
+     load until some tap happens to save it — and a newer build's record is left as it is. */
+  loadHousehold() {
+    const raw = read(KEY); if (!raw || typeof raw !== 'object') return null;
+    const from = 'v' in raw ? raw.v : 0, h = migrate(raw);
+    if (h && h.v !== from) this.saveNow(h);
+    return h;
+  },
   /* debounced: save() runs on nearly every tap */
   saveHousehold(h) {
     pending = h;

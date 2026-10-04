@@ -51,6 +51,22 @@ ok(migrate({ v: 99, x: 1 }).v === 99, 'a newer save is never downgraded');
   const h = migrate({ v: 9, kids: [], parent: { pin: '4821' } });
   ok(h.parent.pin === undefined && !JSON.stringify(h).includes('4821') && pinOk('4821', h.parent.pinHash) && !pinOk('4822', h.parent.pinHash), 'v9 → v10 hashes a plain PIN and keeps no copy of it');
   ok(migrate({ v: 9, kids: [], parent: { pin: null } }).parent.pinHash === null, 'no PIN stays no PIN'); }
+/* audit v4 Q1: a migrated household is written back once, on load — not re-migrated on every load */
+{ const kept = new Map(); let writes = 0;
+  const had = globalThis.localStorage;
+  globalThis.localStorage = { getItem: (k) => (kept.has(k) ? kept.get(k) : null), setItem: (k, v) => { if (k === 'bzm_household') writes++; kept.set(k, String(v)); }, removeItem: (k) => kept.delete(k) };
+  const { Store, SCHEMA } = await import('../src/store.js?q1');   // a fresh module, so it finds this storage
+  kept.set('bzm_household', JSON.stringify({ v: 6, kids: [{ id: 'a', name: 'A', avatar: 'hexbee', prefs: {}, shop: { owned: [], worn: {} } }], active: 'a', parent: { pin: '1234' } }));
+  const h1 = Store.loadHousehold();
+  const onDisk = JSON.parse(kept.get('bzm_household'));
+  ok(h1.v === SCHEMA && writes === 1 && onDisk.v === SCHEMA, `a v6 record is migrated and saved once, at load (writes ${writes}, on disk v${onDisk.v})`);
+  ok(!('pin' in onDisk.parent) && /\$/.test(onDisk.parent.pinHash), 'what is saved is the migrated record: the plain PIN is gone from storage too');
+  const h2 = Store.loadHousehold();
+  ok(h2.v === SCHEMA && writes === 1, `loading again re-migrates nothing and writes nothing (writes ${writes})`);
+  kept.set('bzm_household', JSON.stringify({ v: 99, kids: [] })); writes = 0;
+  ok(Store.loadHousehold().v === 99 && writes === 0, 'a newer build\'s record is left exactly as it is');
+  kept.delete('bzm_household'); ok(Store.loadHousehold() === null && writes === 0, 'no record: nothing loaded, nothing written');
+  globalThis.localStorage = had; }
 console.log(`${fails ? 'FAIL' : 'ok'} model — frontier, band gating, placement, ranks, migration`);
 // v7 keeps what a child had: the face they wear is theirs, the world they were dressed in stays open
 { const h = migrate({ v: 6, kids: [{ id: 'a', avatar: 'supernova', prefs: { theme: 'orbit' }, shop: { owned: ['gold'], worn: {} } }], parent: { pin: null } });

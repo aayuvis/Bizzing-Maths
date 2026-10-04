@@ -17,9 +17,9 @@ function loadHall() {
   return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
 }
 const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
-import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush } from './ui.js';
+import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush, gateActions } from './ui.js';
 import * as J from './journey.js';
-import { TRICKS, byId, drill, correct, stepRight, tricksIn, worldOf, learnCases } from './tricks.js';
+import { TRICKS, byId, drill, correct, stepRight, tricksIn, worldOf, learnCases, loadEngine, engineReady } from './tricks.js';
 import * as F from './facts.js';
 import { onJourney } from './model.js';
 import { readOn } from './model.js';
@@ -58,8 +58,9 @@ const root = document.getElementById('app');
 /* ?demo is a sample child, ?demo=try a one-stop taster; both live in memory
    only (store.js DEMO) and are thrown away when the tab closes. */
 const TRY = DEMO && /[?&]demo=try\b/.test(location.search);
-R.h = DEMO ? (TRY ? tasterHousehold() : sampleHousehold()) : Store.loadHousehold() || newHousehold();
-if (DEMO) Family.showDemo((kid(R.h) || {}).sampleWallet);
+/* The sample is built by driving the engine (demo.js), so in demo mode it is built once the
+   stops' code is here (start(), below); until then the household is empty and nothing renders. */
+R.h = DEMO ? newHousehold() : Store.loadHousehold() || newHousehold();
 R.fromHive = /[?&]from=hive\b/.test(location.search);   // the Hive sent us: offer the way back
 R.ui.cels = [];
 R.sound = Store.loadDevice('sound', true);
@@ -251,6 +252,10 @@ function screen() {
   if (n === 'grownups') return V.viewGrownups();
   if (!k || n === 'welcome') return V.viewWelcome();
   if (n === 'start') return V.viewStart();
+  if (!engineReady() && !LIGHT_SCREENS.includes(n)) {
+    if (!ENGINE_FAIL) { if (!engineWait) { engineWait = true; const again = () => { engineWait = false; render(); }; engine().then(again, again); } return '<section class="narrow"><div class="card center-card engine-wait"><p class="muted">Opening…</p></div></section>'; }
+    return `<section class="narrow"><div class="card center-card engine-fail"><p>This part of the app needs the internet the first time. Once it has loaded it works offline.</p><button class="btn" data-act="nav" data-arg="home">Back to Home</button></div></section>`;
+  }
   if (n === 'run' && R.run) return V.viewRun();
   switch (n) {
     case 'atlas': return onJourney(kid(R.h)) && R.ui.atlasView !== 'islands' ? V2.viewJourney() : V2.viewAtlasMap();
@@ -291,6 +296,21 @@ function screen() {
     default: return V.viewHome();
   }
 }
+
+/* The stops' code arrives on first need (tricks.js loadEngine, audit v4 R2): Home and the
+   screens a child reaches from it without a stop draw from the stops' data alone; every other
+   screen, and every action, waits for the code. It starts coming on the first touch or key,
+   so by the time the tap lands it is usually here. Offline before it was ever fetched, the
+   screen says so instead of hanging (the service worker keeps it after one visit). */
+const LIGHT_SCREENS = ['home', 'welcome', 'start', 'grownups', 'privacy', 'help', 'me', 'shop', 'collection', 'medals', 'settings', 'who', 'wallet'];
+let ENGINE_FAIL = false, engineWait = false;
+const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { ENGINE_FAIL = true; throw e; });
+/* actions that only move between screens or change a setting: they never wait for the code */
+const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
+  'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
+  'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert'];
+gateActions({ ready: engineReady, wait: engine, safe: new Set(SAFE_ACTS), failed: () => toast('This needs the internet once — then it works offline.') });
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { if (!engineReady()) engine().catch(() => {}); }, { capture: true, passive: true, once: true });
 
 let celShown = null;
 let STORY_FAIL = false;   // offline before the stories chunk was ever cached: open on Learn rather than hang
@@ -1311,6 +1331,7 @@ addEventListener('keydown', (e) => {
   { const d = document.querySelector('[data-bz=drawer]'); if (d && !d.hidden) return; }
   if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }
   if (avKey(e)) return;
+  if (!engineReady() && !LIGHT_SCREENS.includes(R.ui.nav) && kid(R.h)) return;   // the screen is still waiting for the stops' code
   if (!(e.metaKey || e.ctrlKey || e.altKey) && paperKey(e)) { e.preventDefault(); return; }
   // a question answered by building: its own keys first (widgets.js)
   if (R.ui.nav === 'run' && R.run && !R.run.fb && !R.run.over && W.isWidget(R.run.items[R.run.i]) && !(e.metaKey || e.ctrlKey || e.altKey)) {
@@ -1461,14 +1482,19 @@ bindShell({
 
 /* ------------------------------------------------------------- start */
 
-backfill();
-unseen(kid(R.h));
-for (const k of R.h.kids) if (!k.sample) snapshot(k);   // this week's line on the report card
-if (!DEMO) Family.track(() => (kid(R.h) || {}).name);   // the Hive counts active minutes, per child
-if (!kid(R.h)) { R.ui.nav = 'welcome'; render(); }
-else if (TRY) fire('openStop', tasterStop());
-else if (location.hash) readHash();
-else go('home');
+function start() {
+  if (DEMO) { R.h = TRY ? tasterHousehold() : sampleHousehold(); Family.showDemo((kid(R.h) || {}).sampleWallet); }
+  backfill();
+  unseen(kid(R.h));
+  for (const k of R.h.kids) if (!k.sample) snapshot(k);   // this week's line on the report card
+  if (!DEMO) Family.track(() => (kid(R.h) || {}).name);   // the Hive counts active minutes, per child
+  if (!kid(R.h)) { R.ui.nav = 'welcome'; render(); }
+  else if (TRY) fire('openStop', tasterStop());
+  else if (location.hash) readHash();
+  else go('home');
+}
+if (DEMO) engine().then(start, () => { root.innerHTML = '<section class="narrow"><div class="card center-card engine-fail"><p>The sample needs the internet the first time.</p></div></section>'; });
+else start();
 
 /* Offline: the service worker, registered from the page so it scopes to
    wherever the app is served (a GitHub project page is a sub-path). */
@@ -1476,4 +1502,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, engineReady, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app

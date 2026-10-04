@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { copyFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { lightChapters } from './vite-light.mjs';
 
 /* The service worker is not an app module — it must land at the build root
    unhashed, or its scope is wrong. One inline plugin beats a dependency.
@@ -28,11 +29,13 @@ export default defineConfig({
   /* Relative base so a build drops onto any static host — GitHub Pages, a CDN
      path, or a folder someone opens through a local server. */
   base: './',
-  plugins: [copySW()],
+  plugins: [lightChapters(__dirname), copySW()],
   /* Vite's 500 kB warning measures MINIFIED size; the family budget is what a phone
      downloads — initial JS ≤ 400 KB gzipped, first screen ≤ 1.5 MB — and
-     test/family-ui.mjs enforces that on every check. The chapters are the engine
-     Home needs, so they stay in the first chunk; the Library loads by route. */
+     test/family-ui.mjs enforces that on every check (with a tighter budget of its own).
+     Home needs the chapters' data but none of their code, so the first chunk carries
+     only the data (vite-light.mjs) and the code arrives on the first tap; the Library,
+     the Contest Hall, the stories and the games load by route. */
   build: { outDir: 'build', emptyOutDir: true, target: 'es2020', chunkSizeWarningLimit: 1000 },
   server: { port: 8080, open: false },
 });

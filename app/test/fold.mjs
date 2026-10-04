@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { mkdirSync, existsSync, symlinkSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { served } from './lib/site.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW || '/opt/node22/lib/node_modules/playwright');
 const HERE = resolve(import.meta.dirname, '..'), SITE = resolve(HERE, '.site-fold');
@@ -17,7 +18,7 @@ rmSync(SITE, { recursive: true, force: true }); mkdirSync(SITE, { recursive: tru
 symlinkSync(resolve(HERE, 'build'), resolve(SITE, 'Bizzing-Maths'));
 const port = +(process.env.PORT_BASE || 5200) + 3;
 const srv = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: SITE, stdio: 'ignore' });
-await new Promise((r) => setTimeout(r, 700));
+await served(port);
 const SHOTS = process.env.SHOTS || resolve(HERE, '.shots');
 
 // [name, how to get there, core selector]
@@ -50,7 +51,7 @@ const SCREENS = [
   ['goals', (b) => b.go('goals'), '.strands'],
   ['story shelf', (b) => b.go('stories'), '.shelf'],
   // My Feed (standard §6a): the cards themselves, not a title about them; the data is a lazy chunk, so wait for it
-  ['my feed', async (b) => { b.go('feed'); for (let i = 0; i < 50 && !document.querySelector('.bzf-card[data-kind]'); i++) await new Promise((r) => setTimeout(r, 100)); }, '.bzf-list', '.bzf-card[data-kind] h3'],
+  ['my feed', async (b) => { b.go('feed'); for (let i = 0; i < 300 && !document.querySelector('.bzf-card[data-kind]'); i++) await new Promise((r) => setTimeout(r, 100)); }, '.bzf-list', '.bzf-card[data-kind] h3'],
   // the games: the title card, then the play itself (the how-to skipped by its own button)
   ['game · title card', (b) => b.fire('play', 'rush'), '.g-card', '.g-card [data-g=go]'],
   ['game · rush', () => document.querySelector('.g-intro [data-g=go]').click(), '.rush-stage', '.rush-in'],
@@ -62,7 +63,10 @@ const SCREENS = [
 const START = 0.35, SHOW = 0.45;
 const LANDING = ['landing · hero', () => {}, '.land-hero', '.land-hero [data-act=obStart]'];
 async function check(page, tag, [name, go, sel, see, rule = {}]) {
-  await page.evaluate(`(${go.toString()})(window.__bzm)`); await page.waitForTimeout(250);
+  // wait for the screen, never the clock: a lazy chunk (a Library tool, the stops' code) may arrive late
+  await page.evaluate(`(${go.toString()})(window.__bzm)`);
+  for (const x of [sel, see].filter(Boolean)) await page.waitForSelector(x, { state: 'attached', timeout: 30000 }).catch(() => {});
+  await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
   await page.evaluate(() => window.scrollTo(0, 0));
   const m = await page.evaluate((sel) => {
     const el = document.querySelector(sel); if (!el) return null;

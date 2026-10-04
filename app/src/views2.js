@@ -284,7 +284,7 @@ export function viewGoals() {
 export function goalsReport(c) {
   const gs = goalsFor(c), sm = summary(c);
   return `<div class="rep-goals"><p class="kicker">Goals — ${sm.met} of ${sm.total} reached</p>
-    ${gs.map((s) => `<p class="rg"><b>${glyph(s.glyph, 16)} ${esc(s.name)}</b> ${s.goals.filter((g) => !g.later).map((g) => `<span class="rg-${g.status}" title="${esc(g.can)}">${g.status === 'met' ? icon('check', 14) : Math.round(g.pct * 100) + '%'} ${esc(g.can.replace(/^I can |^I know |^I have /, '').replace(/\.$/, ''))}</span>`).join('')}</p>`).join('')}</div>`;
+    ${gs.map((s) => { const now = s.goals.filter((g) => !g.later); return `<p class="rg"><b>${glyph(s.glyph, 16)} ${esc(s.name)}</b> ${!now.length ? '' : !now.some((g) => g.seen) ? '<span class="rg-none">not started yet</span>' : now.map((g) => `<span class="rg-${g.seen ? g.status : 'none'}" title="${esc(g.can)}">${g.status === 'met' ? icon('check', 14) : g.seen ? Math.round(g.pct * 100) + '%' : 'not started'} ${esc(g.can.replace(/^I can |^I know |^I have /, '').replace(/\.$/, ''))}</span>`).join('')}</p>`; }).join('')}</div>`;
 }
 
 /* ------------------------------------------------------------- the library */
