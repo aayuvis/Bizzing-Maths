@@ -19,7 +19,7 @@ export const NOT_A_MISTAKE = ['place', 'leveltest', 'mistakes'];
 export const keyOf = (q) => `${q.trick || (q.fact ? 'fact' : q.puzzle ? 'pz' : 'q')}|${q.text}|${q.ans}`;
 
 /* only what the runner needs to ask it again, and what the review needs to explain it */
-const FIELDS = ['text', 'ans', 'choices', 'keys', 'frac', 'why', 'explain', 'trick', 'fact', 'expr', 'kind', 'say', 'choiceHtml', 'decimals', 'tol', 'unit'];
+const FIELDS = ['text', 'ans', 'choices', 'keys', 'frac', 'why', 'explain', 'trick', 'fact', 'expr', 'kind', 'say', 'choiceHtml', 'decimals', 'tol', 'unit', 'simplest', 'input', 'bar', 'hits', 'how'];
 export function slim(q) {
   const o = {};
   for (const f of FIELDS) if (q[f] != null) o[f] = q[f];

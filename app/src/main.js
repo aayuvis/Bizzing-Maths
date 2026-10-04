@@ -36,6 +36,7 @@ import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize,
 import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor, byTheme, worldIsOpen } from './themes.js';
 import * as V3 from './views3.js';
 import * as MD from './mistakes.js';
+import * as W from './widgets.js';
 import { search as searchCore, searchMore } from './search.js';
 import * as AU from './audio.js';
 import { music } from './ui.js';
@@ -354,6 +355,7 @@ function startRun(kind, title, items, extra = {}) {
 function ask() {
   const run = R.run; if (!run || run.over) return;
   run.t0 = performance.now(); run.input = ''; run.fb = null;
+  run.w = W.init(run.items[run.i]);   // a question answered by building (widgets.js) starts empty
   render();
   const k = kid(R.h), q = run.items[run.i];
   if (readOn(k)) say(q.say || V.spoken(q.text));
@@ -372,6 +374,7 @@ const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', 
 function typeKey(k) {
   const run = R.run; if (!run || run.fb || run.over) return;
   const q = run.items[run.i]; if (q.choices) return;
+  if (W.isWidget(q)) return widgetType(q, k);
   if (k === '⌫') run.input = run.input.slice(0, -1);
   else if (k === '✓') { if (run.input !== '') return submit(run.input); return; }
   else if ((/^\d$/.test(k) || (q.keys || []).includes(k)) && run.input.length < 9) run.input += k;
@@ -409,6 +412,86 @@ function submit(given) {
   // placement stops after two misses in a row
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
+
+/* ------------------------------------------------------------- answering by building (widgets.js)
+
+   The widget builds a value; submit() judges it exactly as it judges a typed one, so a right build
+   moves on by itself and a wrong one holds until dismissed. Building waits for Check (or Enter):
+   stepping a bar or a column through every value must not find the answer by sweeping. A number typed
+   on the keyboard still works, as everywhere else, and shows in the widget as it is typed. */
+function patchWidget() {
+  const run = R.run, el = document.getElementById('widget'); if (!run || !el) return render();
+  const q = run.items[run.i];
+  el.outerHTML = W.view(q, run.w, { fb: run.fb });
+  if (q.input === 'chart' && run.w.cur >= 0) { const b = document.querySelector(`#widget [data-hit="${run.w.cur}"]`); if (b) b.focus(); }
+}
+function widgetAct(a, arg) {
+  const run = R.run; if (!run || run.fb || run.over) return;
+  const q = run.items[run.i]; if (!W.isWidget(q)) return;
+  W.act(q, run.w, a, arg); run.input = '';   // building takes over from anything typed
+  patchWidget();
+}
+function widgetSubmit() {
+  const run = R.run; if (!run || run.fb || run.over) return;
+  const q = run.items[run.i]; if (!W.isWidget(q)) return;
+  const v = run.input !== '' ? run.input : W.value(q, run.w);
+  if (v !== '') submit(v);
+}
+function widgetType(q, k) {
+  const run = R.run;
+  if (k === '✓') return widgetSubmit();
+  if (k === '⌫') run.input = run.input.slice(0, -1);
+  else if ((/^\d$/.test(k) || (q.keys || []).includes(k)) && run.input.length < 9) run.input += k;
+  else return;
+  W.mirror(q, run.w, run.input);
+  patchWidget();
+  if (correct(q, run.input)) submit(run.input);   // a typed answer is taken the moment it is right, as everywhere
+}
+on('wf', (a) => widgetAct(a));
+on('wb', (a) => widgetAct(a));
+on('wCheck', () => widgetSubmit());
+/* the keys: ←/→ and ↑/↓ build, Space shades, Enter checks (a focused button keeps its own Enter/Space) */
+function widgetKey(e) {
+  const run = R.run, q = run.items[run.i], k = e.key, t = e.target;
+  if ((k === 'Enter' || k === ' ') && t && t.tagName === 'BUTTON' && t.closest && t.closest('#widget')) return 'native';
+  if (/^Arrow| /.test(k)) run.w.kb = true;   // the cursor (a part, a column) is drawn once the keys are in use
+  if (q.input === 'chart') {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[k];
+    if (d) { widgetAct('cur', d); return true; }
+    if ((k === 'Enter' || k === ' ') && run.w.cur >= 0) { submit(q.choices[run.w.cur]); return true; }
+    return false;
+  }
+  if (q.input === 'fracbar') {
+    const a = { ArrowRight: 'n+', ArrowLeft: 'n-', ArrowUp: 'k+', ArrowDown: 'k-' }[k];
+    if (a) { widgetAct(a); return true; }
+    if (k === ' ') { widgetAct('toggle'); if (R.run && R.run.w) { R.run.w.cur = Math.min(R.run.w.n - 1, R.run.w.cur + 1); patchWidget(); } return true; }
+  }
+  if (q.input === 'blocks') {
+    if (k === 'ArrowLeft' || k === 'ArrowRight') { widgetAct('col', k === 'ArrowRight' ? 1 : -1); return true; }
+    const d = { ArrowUp: '+', '+': '+', '=': '+', ArrowDown: '-', '-': '-' }[k];
+    if (d) { widgetAct('hto'[run.w.col] + d); return true; }
+  }
+  if (k === 'Enter') { widgetSubmit(); return true; }
+  return false;
+}
+/* touch: tap a part to shade it or clear it, or drag along the bar to paint every part you pass */
+let paint = null;
+root.addEventListener('pointerdown', (e) => {
+  const p = e.target.closest && e.target.closest('#widget .wf-p'); if (!p || p.disabled) return;
+  const run = R.run; if (!run || run.fb) return;
+  e.preventDefault();
+  const i = +p.dataset.part; paint = { on: !run.w.on.includes(i) };
+  widgetAct('paint', [i, paint.on]);
+});
+addEventListener('pointermove', (e) => {
+  if (!paint) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY), p = el && el.closest && el.closest('#widget .wf-p');
+  if (p && R.run && R.run.w && R.run.w.on.includes(+p.dataset.part) !== paint.on) widgetAct('paint', [+p.dataset.part, paint.on]);
+});
+addEventListener('pointerup', () => { paint = null; });
+addEventListener('pointercancel', () => { paint = null; });
+/* a part clicked from the keyboard (Tab to it, Space or Enter) — a pointer has already been handled */
+root.addEventListener('click', (e) => { const p = e.target.closest && e.target.closest('#widget .wf-p'); if (p && e.detail === 0) widgetAct('toggle', +p.dataset.part); });
 
 const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes', 'warmup', 'mix'];
 
@@ -1226,6 +1309,10 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }
   if (avKey(e)) return;
   if (!(e.metaKey || e.ctrlKey || e.altKey) && paperKey(e)) { e.preventDefault(); return; }
+  // a question answered by building: its own keys first (widgets.js)
+  if (R.ui.nav === 'run' && R.run && !R.run.fb && !R.run.over && W.isWidget(R.run.items[R.run.i]) && !(e.metaKey || e.ctrlKey || e.altKey)) {
+    const h = widgetKey(e); if (h === 'native') return; if (h) { e.preventDefault(); return; }
+  }
   if (R.ui.nav === 'lib' && toolById[R.ui.arg] && toolById[R.ui.arg].key && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) { if (toolById[R.ui.arg].key(e, libCtx(R.ui.arg))) { e.preventDefault(); render(); return; } }
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
@@ -1386,4 +1473,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app

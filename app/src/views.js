@@ -4,7 +4,8 @@
 import { R } from './runtime.js';
 import { esc, cls, nWord } from './ui.js';
 import * as J from './journey.js';
-import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot } from './tricks.js';
+import { TRICKS, WORLDS, byId, worldOf, tricksIn, example, learnCases, droot, correct } from './tricks.js';
+import * as W from './widgets.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
@@ -421,8 +422,11 @@ function learnTab(t) {
   const note = cs.length > 1 && c.note ? `<p class="case-note"><b>${esc(c.label)}.</b> ${esc(c.note)}</p>` : '';
   const next = more ? btn(`Next: ${esc(cs[ci + 1].label)} →`, 'learnCase', String(ci + 1), 'primary') : btn('Your turn →', 'stopTab', 'turn', 'primary');
   const figure = t.fig ? fig(t.fig(q)) : '';
+  // a case answered by building shows the widget too: empty while the steps are watched, built at the end
+  const wq = W.isWidget(q) ? { ...q, html: t.draw ? t.draw(q) : '', ...(q.input === 'chart' && t.hits ? { hits: t.hits(q) } : {}) } : null;
+  const built = wq ? `<div class="learn-wid">${W.demo(wq, shown >= steps.length, correct)}</div>` : '';
   return `<div class="learn">
-    <div class="card hook">${strip}${note ? '' : '<p class="kicker">Try this</p>'}${t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${note}${q.text === t.q(t.ex).text ? `<p>${esc(t.hook)}</p>` : ''}</div>
+    <div class="card hook">${strip}${note ? '' : '<p class="kicker">Try this</p>'}${wq && q.input === 'chart' ? '' : t.draw ? t.draw(q) : ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}">${esc(q.text)}</p>${note}${q.text === t.q(t.ex).text ? `<p>${esc(t.hook)}</p>` : ''}${built}</div>
     <div class="card"><p class="kicker">The trick</p><p class="idea">${esc(t.idea)}</p>
       <ol class="steps">${steps.map((s, i) => `<li class="${i < shown ? 'shown' : ''}"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${i < shown ? esc(s.v) : '?'}</b></li>`).join('')}</ol>
       <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${next}</p>`}</div>
@@ -473,20 +477,22 @@ export function viewRun() {
   if (run.over) return viewRunEnd(run);
   const q = run.items[run.i];
   const fb = run.fb;
+  const wid = W.isWidget(q) && run.w;   // answered by building (widgets.js): the widget replaces the answer line and the pad
   return `<section class="runner ${fb ? (fb.right ? 'is-right' : 'is-wrong') : ''}">
     ${pageHead(esc(run.title), esc(run.sub || ''), back('quitRun', 'Stop'))}
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
       ${q.bonus ? `<p class="bonus-bar"><span class="chip gold">Bonus ×2 · optional</span> <span class="muted small">Almost next-level hard. Only adds points — it cannot lose you the test.</span> ${fb ? '' : btn('Finish without the bonus', 'skipBonus', '', 'small')}</p>` : ''}
-      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
+      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${wid && q.input === 'chart' ? '' : q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
       <button class="say-btn say-q" data-act="sayQ" aria-label="Read the question aloud" title="Read it aloud (R)">${icon('speaker', 20)}</button>
-      ${q.choices
+      ${wid ? W.view(q, run.w, { fb })
+        : q.choices
         ? `<div class="choice-row big${q.choiceHtml ? ' pics' : ''}">${q.choices.map((c, i) => `<button class="btn big${q.choiceHtml ? ' pic' : ''}${fb && c === q.ans ? ' right' : ''}${fb && !fb.right && c === fb.given ? ' wrong' : ''}" data-act="choose" data-arg="${esc(c)}" ${fb ? 'disabled' : ''}>${q.choiceHtml ? q.choiceHtml[i] : ''}<span>${esc(c)} <kbd>${i + 1}</kbd></span></button>`).join('')}</div>`
         : `<p class="answer mono" id="ans" aria-live="polite">${fb ? esc(fb.given) : esc(run.input) || '<span class="caret"></span>'}</p>`}
-      ${fb ? feedback(q, fb, run) : hintFor(run, q)}${fb || q.choices ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
+      ${fb ? feedback(q, fb, run) : hintFor(run, q)}${fb || q.choices || wid ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
     </div>
-    ${!fb && !q.choices ? keypad(q.keys) : ''}
+    ${!fb && !q.choices && !wid ? keypad(q.keys) : ''}
     ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
 }

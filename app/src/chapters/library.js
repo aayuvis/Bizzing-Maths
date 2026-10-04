@@ -144,18 +144,19 @@ export const TRICKS = [
     caseKey: 'kind',
     cases: [
       { label: 'What is a digit worth?', note: 'Find the digit\'s place first. The digit says how many; the place says of what.',
-        ex: { n: 4372, p: 2, kind: 'worth' } },
+        ex: { n: 4372, p: 2, kind: 'worth', input: 'blocks' } },
       { label: 'The missing part', note: 'Now the number is pulled apart into its places, with one part hidden. What is missing is what that digit is worth.',
         ex: { n: 5847, p: 2, kind: 'expand' } },
     ],
     gen(r, lv = 1) {
       return fresh(() => {
         const n = distinctDigits(lv === 1 ? int(2, 3, r) : lv === 2 ? int(3, 4, r) : int(5, 6, r), r);
-        const kind = lv === 1 ? 'worth' : pick(['worth', 'expand'], r);
-        return this.q({ n, p: int(lv === 1 ? 0 : 1, len(n) - 1, r), kind });
+        const kind = lv === 1 ? 'worth' : pick(['worth', 'expand'], r), p = int(lv === 1 ? 0 : 1, len(n) - 1, r);
+        // a worth up to the hundreds is sometimes built with blocks (widgets.js 'blocks')
+        return this.q({ n, p, kind, input: kind === 'worth' && p <= 2 && r() < 0.4 ? 'blocks' : undefined });
       });
     },
-    q({ n, p, kind }) {
+    q({ n, p, kind, input }) {
       const d = digitAt(n, p), ans = Number(String(d) + '0'.repeat(p));
       if (kind === 'expand') {
         const parts = String(n).split('').map((x, i, a) => Number(x + '0'.repeat(a.length - 1 - i)));
@@ -163,7 +164,7 @@ export const TRICKS = [
         const others = parts.filter((_, i) => i !== parts.length - 1 - p);
         return { n, p, kind, text: `${fmt(n)} = ${shown.join(' + ')}`, say: `${n} equals ${shown.join(' plus ').replace('?', 'what')}`, expr: `${n}-(${others.join('+')})`, ans };
       }
-      return { n, p, kind, text: `In ${fmt(n)}, what is the ${d} worth?`, say: `In ${n}, what is the digit ${d} worth?`, expr: `Math.floor(${n}/${10 ** p})%10*${10 ** p}`, ans };
+      return { n, p, kind, ...(input ? { input, how: 'Build what it is worth with blocks.' } : {}), text: `In ${fmt(n)}, what is the ${d} worth?`, say: `In ${n}, what is the digit ${d} worth?`, expr: `Math.floor(${n}/${10 ** p})%10*${10 ** p}`, ans };
     },
     work({ n, p, kind }) {
       const d = digitAt(n, p);
@@ -258,7 +259,7 @@ export const TRICKS = [
       { label: 'Past halfway: round up', note: 'To the nearest hundred, look at the tens digit. 7 tens is past the halfway 5 tens, so up it goes.',
         ex: { n: 4372, to: 100 } },
       { label: 'Below halfway: round down', note: 'To the nearest ten, look at the ones digit. 3 is below halfway, so it rounds DOWN — the tens digit stays as it is.',
-        ex: { n: 63, to: 10 } },
+        ex: { n: 63, to: 10, input: 'blocks' } },
       { label: 'Exactly halfway', note: 'To the nearest thousand, look at the hundreds. 2,500 is exactly halfway — equally close to both — and the agreed rule is: halfway rounds up.',
         ex: { n: 2500, to: 1000 } },
     ],
@@ -268,12 +269,13 @@ export const TRICKS = [
       const hi = to === 10 ? (lv === 1 ? 99 : 999) : to === 100 ? (lv === 2 ? 999 : 9999) : 99999;
       let n = int(lo, hi, r);
       if (n % to === 0) n += int(1, to - 1, r);
-      return this.q({ n, to });
+      // an answer below a thousand is sometimes built with blocks (widgets.js 'blocks')
+      return this.q({ n, to, input: Math.round(n / to) * to <= 999 && r() < 0.3 ? 'blocks' : undefined });
     },
-    q({ n, to }) {
+    q({ n, to, input }) {
       const lower = n - (n % to), ans = n % to >= to / 2 ? lower + to : lower;
       const dir = n % to === to / 2 ? 'halfway' : n % to > to / 2 ? 'up' : 'down';
-      return { n, to, dir, text: `Round ${fmt(n)} to the nearest ${fmt(to)}`, say: `Round ${n} to the nearest ${to}`, expr: `Math.round(${n}/${to})*${to}`, ans };
+      return { n, to, dir, ...(input ? { input, how: 'Build the rounded number with blocks.' } : {}), text: `Round ${fmt(n)} to the nearest ${fmt(to)}`, say: `Round ${n} to the nearest ${to}`, expr: `Math.round(${n}/${to})*${to}`, ans };
     },
     work({ n, to }) {
       const lower = n - (n % to);

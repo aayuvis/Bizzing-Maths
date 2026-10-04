@@ -63,6 +63,18 @@ A stop teaches ONE idea. Its fields, all required unless marked:
   - **a choice**: `choices: ['Yes', 'No']` or `['acute', 'right', 'obtuse']` (2–4 options) with `ans` one of them. Use choices for names (shapes, angle types, likely/unlikely), comparisons (`>`, `<`, `=`), and anything not typeable. Keep the answer's position random (shuffle), and keep options plausible.
 - `expr` — the answer computed a DIFFERENT way, as a JavaScript expression evaluated with `Function('return (' + expr + ')')`. For a number or fraction answer it must evaluate to the same number (`'3/4'` ⇔ `0.75`). For a choice it must evaluate to the choice string (`"a%b===0?'Yes':'No'"`). This is the independent check — never just paste `ans` into it.
 - `say` *(optional)* — how to read it aloud if `text` reads badly (`'three quarters of twenty'`).
+- `input` *(optional, set by `gen()` on SOME questions)* — answer by building instead of typing (`src/widgets.js`).
+  The answer is still the value above, judged by `correct()`; the widget only builds it.
+  - `'fracbar'` — cut a bar into equal parts (up to 12) and shade some. Hands in `'k/n'`, or with
+    `bar: { give: 'k', lockN }` the shaded count over given parts, or `bar: { give: 'n', lockK }` the parts
+    for given shading.
+  - `'blocks'` — hundreds, tens and ones, 0–9 of each: a whole number 0–999.
+  - `'chart'` — tap a bar, row or dot. Needs `choices` (in chart order) and the stop's `hits(q)`, measured
+    from the same layout as `draw(q)`: `{ w, h, hits: [{ label, x, y, w, h }] }`.
+  - `how` — one short line the widget shows ("Tap the bar."). Keep it out of `text`: the same question is
+    typed everywhere else (contest, feed).
+  `test/widgets.mjs` fails a widget question that cannot build its answer, starts on it, or taps the wrong bar.
+  Show it in Learn by putting `input` on one case's `ex`.
 - Time answers: ask for minutes (`ans: 45`), or use choices (`'3:45'`). Money: whole units or decimals with `decimals:true`.
 
 ## One worked example per idea — `cases` (every stop is audited)
