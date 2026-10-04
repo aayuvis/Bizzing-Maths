@@ -338,11 +338,11 @@ export function rushPool(kid, mode = null) {
 /* How fast the bubbles fall (audit v4 G8). A gentle rise with the run of pops in a row —
    3% a pop, at most +30% — on top of the slow climb with the score (12% every five pops,
    never more than double). A landing or a wrong Enter ends the run, so a child who is
-   struggling gets the slower sky back at once. The streak is the game's own count, never
+   struggling gets the slower sky back at once. The run of pops in a row is the game's own count, never
    the combo meter, and it only sets a speed: it pays nothing. */
 export const RUSH_BASE = 0.05;
-export function rushSpeed(score, streak) {
-  return RUSH_BASE * Math.min(2, 1.12 ** Math.floor(score / 5)) * (1 + 0.03 * Math.min(10, Math.max(0, streak)));
+export function rushSpeed(score, inARow) {
+  return RUSH_BASE * Math.min(2, 1.12 ** Math.floor(score / 5)) * (1 + 0.03 * Math.min(10, Math.max(0, inARow)));
 }
 export function numberRush(kid, { onTick, onEnd, mode = null }) {
   const mk = modeKey('rush', mode);
@@ -350,7 +350,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
   const ops = uniq(pool.map((x) => x.op));
   const f = frame(titled('Number Rush', mk), mode === 'squares' && mk ? 'Pop each square: a number times itself' : 'Type the answer to pop a bubble', () => g.quit(), 'rush', mk || 'rush');
   const g = { f, tune: 'bright' };
-  let raf = 0, bubbles = [], input = '', score = 0, streak = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = rushSpeed(0, 0), over = false;
+  let raf = 0, bubbles = [], input = '', score = 0, inARow = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = rushSpeed(0, 0), over = false;
   const popped = [], landed = [];
   let cv, ctx, typed, stage, inp, W = 0, H = 0, combo;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -397,8 +397,8 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
   }
   function popIt(b) {
     bubbles = bubbles.filter((x) => x !== b);
-    score++; streak++; combo.hit(); sfx.pop(); sfx.good();
-    speed = rushSpeed(score, streak);
+    score++; inARow++; combo.hit(); sfx.pop(); sfx.good();
+    speed = rushSpeed(score, inARow);
     popped.push(b.text);
     pop(g, stage, b.x, b.y, '+1');
     splash(stage, b);
@@ -441,7 +441,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     for (const b of bubbles.slice()) {
       if (b.y - b.r > H - 20) {
         bubbles = bubbles.filter((x) => x !== b);
-        lives--; streak = 0; speed = rushSpeed(score, streak); combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
+        lives--; inARow = 0; speed = rushSpeed(score, inARow); combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
         pop(g, stage, b.x, H - 14);
         wobble(g, f.hud.querySelector('.lives'));
         if (lives <= 0) return finish();
@@ -459,7 +459,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     if (over) return;
     if (k === '⌫') setInput(input.slice(0, -1));
     // Enter on an answer that popped nothing: it was wrong for every bubble up
-    else if (k === '✓') { if (input) { sfx.bad(); streak = 0; speed = rushSpeed(score, streak); combo.miss(); wobble(g, inp); setInput(''); } }
+    else if (k === '✓') { if (input) { sfx.bad(); inARow = 0; speed = rushSpeed(score, inARow); combo.miss(); wobble(g, inp); setInput(''); } }
     else if (/^\d$/.test(k)) { sfx.click(); setInput(input + k); }
   }
   function finish() {

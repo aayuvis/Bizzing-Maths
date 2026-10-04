@@ -127,10 +127,10 @@ ok(/data-i[^]*?onclick = \(\) => act\('sel'/.test(cb) && /data-a[^]*?onclick = \
 { ok(rushSpeed(0, 0) === RUSH_BASE, 'Number Rush starts at its base speed');
   let prev = rushSpeed(3, 0);
   for (let st = 1; st <= 20; st++) { const v = rushSpeed(3, st); ok(v >= prev && v / prev <= 1.05, `fall speed rises gently with the streak (${st}: ×${(v / prev).toFixed(3)})`); prev = v; }
-  ok(rushSpeed(3, 10) > rushSpeed(3, 0), 'a streak really does speed the sky up');
-  ok(rushSpeed(3, 99) === rushSpeed(3, 10) && rushSpeed(3, 10) / rushSpeed(3, 0) <= 1.3 + 1e-9, 'the streak adds at most 30%');
+  ok(rushSpeed(3, 10) > rushSpeed(3, 0), 'pops in a row really do speed the sky up');
+  ok(rushSpeed(3, 99) === rushSpeed(3, 10) && rushSpeed(3, 10) / rushSpeed(3, 0) <= 1.3 + 1e-9, 'pops in a row add at most 30%');
   ok(rushSpeed(999, 999) <= RUSH_BASE * 2 * 1.3 + 1e-12, 'never more than 2.6× the start, however long the game');
-  ok(rushSpeed(12, 0) < rushSpeed(12, 6), 'a landing (streak back to nought) gives the slower sky back');
+  ok(rushSpeed(12, 0) < rushSpeed(12, 6), 'a landing (the run of pops back to nought) gives the slower sky back');
   for (const band of ['6-7', '8-10', '11-14']) for (const mode of [null, 'negatives']) {
     const w = [0, 1, 2].map((s) => lineSpec(band, mode, s)), span = (x) => x.hi - x.lo;
     ok(span(w[0]) < span(w[2]) && span(w[0]) <= span(w[1]) && span(w[1]) <= span(w[2]), `${band}/${mode}: the line widens step by step (${w.map(span)})`);
@@ -142,7 +142,7 @@ ok(/data-i[^]*?onclick = \(\) => act\('sel'/.test(cb) && /data-a[^]*?onclick = \
   ok(steps.every((v, i) => !i || v >= steps[i - 1]), 'it never narrows');
   const src2 = readFileSync(new URL('../src/games.js', import.meta.url), 'utf8');
   ok(/close\.length/.test(src2.slice(src2.indexOf('const widen'), src2.indexOf('const widen') + 200)), 'the Number Line game widens from its close answers');
-  ok(/speed = rushSpeed\(score, streak\)/.test(src2), 'Number Rush sets its speed from rushSpeed'); }
+  ok(/speed = rushSpeed\(score, inARow\)/.test(src2), 'Number Rush sets its speed from rushSpeed'); }
 
 console.log(`${fails ? 'FAIL' : 'ok'} games — 750 puzzles solved and checked; ${proved} Cube Builder puzzles proved by solver AND brute force; one wage path; Rush and Line ramp gently inside a game; title cards, combo and finish screens`);
 if (fails) process.exit(1);
