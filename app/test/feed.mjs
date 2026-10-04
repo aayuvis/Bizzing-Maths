@@ -11,15 +11,15 @@
    slipped comes back first, this week's cards sink, a stone waits for the one before it, and a
    session ends at twenty. Each check is watched failing on a broken copy (the `broken` block). */
 import { readFileSync, existsSync } from 'node:fs';
-import { cut, manifest, WALKS, bandsFrom, leaks, nearDups, workedText, GROUPS, groupOf, indexOf, NEEDS_PICTURE } from '../../tools/build-feed.mjs';
+import { cut, manifest, WALKS, bandsFrom, leaks, nearDups, workedText, GROUPS, groupOf, indexOf, NEEDS_PICTURE, ALGEBRA_FROM } from '../../tools/build-feed.mjs';
 import { INDEX } from '../src/feed/index.js';
 import { RIVALS } from '../src/contest.js';
 import { evalSum } from '../src/stories.js';
 const BODIES = {};
 for (const g of GROUPS) Object.assign(BODIES, (await import(`../src/feed/g-${g}.js`)).BODY);
 const ITEMS = INDEX.map((x) => ({ ...BODIES[x.id], ...x, play: BODIES[x.id].play }));
-import { feedFor, order } from '../src/integration/bizzing-feed.js';
-import { session, options, markSeen, feedLevel, levelName, pay } from '../src/feed.js';
+import { feedFor, order, feedCard } from '../src/integration/bizzing-feed.js';
+import { session, options, markSeen, feedLevel, levelName, pay, showOpts, PER_STOP, stopOf, GENERIC_WHY } from '../src/feed.js';
 import { TRICKS, byId, worldOf, learnCases, correct, parseNum } from '../src/tricks.js';
 import { STORIES } from '../src/story-data.js';
 import { LEVELS } from '../src/levels.js';
@@ -359,6 +359,134 @@ const broken = [
 for (const [what, c] of broken) ok(!!bad(c), `the check catches ${what}`);
 { const L = 3, items = ITEMS.map((c) => (c.id === 'level-10' ? c : c)); const leak = feedFor({ items: [...items, { ...first('trick'), id: 'x-far', level: 9 }], level: L, band: '8-10', now: NOW });
   ok(!leak.some((x) => x.id === 'x-far'), 'the engine drops a card two levels up'); }
+
+/* ---------------------------------------------------------------- audit v4: the options, the algebra, one stop, the why */
+/* V7/E11 — the VALUE of the right option. Among numeric questions, where the answer sits among its
+   options (smallest … largest) is near uniform: each rank at most 1.5× its fair share overall, and in
+   no kind with 15 or more such cards is the answer the middle one, or the smallest, or the largest, in
+   more than half. (The old cut: middle in 61%, facts 86%, formulas 98%; a magic square's always smallest.) */
+const numeric = (c) => c.play && c.play.opts.every((o) => Number.isFinite(parseNum(String(o))));
+function rankFaults(items) {
+  const out = [], all = {}, kinds = {};
+  for (const c of items.filter(numeric)) {
+    const v = c.play.opts.map((o) => parseNum(String(o))), n = v.length, r = v.filter((x) => x < v[0]).length;
+    (all[n] ||= Array(n).fill(0))[r]++;
+    const kk = (kinds[`${c.kind}/${n}`] ||= Array(n).fill(0)); kk[r]++;
+  }
+  for (const [n, cs] of Object.entries(all)) { const tot = cs.reduce((a, b) => a + b, 0); if (tot >= 30) cs.forEach((x, r) => { if (x > 1.5 * tot / n) out.push(`${n} options: the answer is rank ${r} in ${x} of ${tot}`); }); }
+  for (const [k, cs] of Object.entries(kinds)) { const tot = cs.reduce((a, b) => a + b, 0), n = cs.length; if (tot >= 15 && n >= 3) cs.forEach((x, r) => { if (x > tot / 2) out.push(`${k}: the answer is ${r === 0 ? 'the smallest' : r === n - 1 ? 'the largest' : 'the middle'} in ${x} of ${tot}`); }); }
+  return out;
+}
+/* plausibility: when the answer is positive, no wrong option is 0, negative, or under a tenth of it;
+   and none has the answer's value written another way */
+function implausible(items) {
+  const out = [];
+  for (const c of items.filter(numeric)) {
+    const [a, ...w] = c.play.opts.map((o) => parseNum(String(o)));
+    for (const x of w) if (Math.abs(x - a) < 1e-9 || (a > 0 && (x <= 0 || x < a / 10 - 1e-9))) out.push(`${c.id}: ${c.play.q} offers ${x} for ${a}`);
+  }
+  return out;
+}
+/* the display SLOT, read off the card as it is rendered (the family's card, then showOpts) */
+const slotOf = (c) => { const h = showOpts(feedCard(c, { why: '' }, {}), c.play.show), os = [...h.matchAll(/data-o="(\d+)"/g)].map((x) => +x[1]); return os.length === c.play.opts.length && new Set(os).size === os.length ? os.indexOf(0) : -1; };
+function slotFaults(items) {
+  const out = [], kinds = {}, all = {};
+  for (const c of items.filter((x) => x.play)) {
+    const s = slotOf(c), n = c.play.opts.length; if (s < 0) { out.push(`${c.id}: a button lost in the layout`); continue; }
+    (kinds[`${c.kind}/${n}`] ||= Array(n).fill(0))[s]++; (all[n] ||= Array(n).fill(0))[s]++;
+  }
+  for (const [k, cs] of Object.entries(kinds)) if (Math.max(...cs) - Math.min(...cs) > 1) out.push(`${k}: the right option by slot ${cs.join('/')}`);
+  for (const [n, cs] of Object.entries(all)) { const tot = cs.reduce((a, b) => a + b, 0); cs.forEach((x, i) => { if (x > 1.5 * tot / n) out.push(`${n} options: slot ${i} holds ${x} of ${tot}`); }); }
+  return out;
+}
+{
+  const rf = rankFaults(ITEMS), pf = implausible(ITEMS), sf = slotFaults(ITEMS);
+  ok(!rf.length, `the right option's value is not given away by its rank (${rf.slice(0, 4).join('; ')})`);
+  ok(!pf.length, `every wrong option is plausible (${pf.length}: ${pf.slice(0, 3).join('; ')})`);
+  ok(!sf.length, `the right option's slot is even, per kind (${sf.slice(0, 4).join('; ')})`);
+  // and as a child meets them: the slots shown across many sessions
+  const seen = [0, 0, 0];
+  for (const band of ['6-7', '8-10', '11-14']) for (let L = 1; L <= 10; L++) for (let d = 0; d < 5; d++)
+    for (const x of session(H(), child(band, L), ITEMS, NOW + d * 864e5)) { const c = byIdF[x.id]; if (c.play && c.play.opts.length === 3) seen[slotOf(c)]++; }
+  const tot = seen.reduce((a, b) => a + b, 0);
+  ok(seen.every((x) => x <= 1.5 * tot / 3 && x >= tot / 3 / 1.5), `the slots shown in sessions are even (${seen.join('/')})`);
+  // each check bites: the old shapes fail it
+  const middle = ITEMS.map((c) => (numeric(c) && c.play.opts.length === 3 ? { ...c, play: { ...c.play, opts: [c.play.opts[0], String(parseNum(c.play.opts[0]) - 1), String(parseNum(c.play.opts[0]) + 1)] } } : c));
+  ok(rankFaults(middle).length > 0, 'the rank check catches the answer always in the middle');
+  const smallest = ITEMS.map((c) => (c.kind === 'magic' ? { ...c, play: { ...c.play, opts: [c.play.opts[0], String(+c.play.opts[0] + 1), String(+c.play.opts[0] + 2)] } } : c));
+  ok(rankFaults(smallest).some((f) => /^magic/.test(f)), 'the rank check catches a magic square whose answer is always the smallest');
+  const sq = ITEMS.find((c) => c.kind === 'try' && numeric(c) && +c.play.opts[0] > 100);
+  ok(implausible([{ ...sq, play: { ...sq.play, opts: [sq.play.opts[0], '3', '0'] } }]).length === 2, 'the plausibility check catches 0 and a tenth-too-small option');
+  ok(slotFaults(ITEMS.map((c) => (c.play ? { ...c, play: { ...c.play, show: undefined } } : c))).length > 0, 'the slot check catches the family card\'s own order (no show)');
+  ok(slotFaults(ITEMS.map((c) => (c.play ? { ...c, play: { ...c.play, show: [...Array(c.play.opts.length).keys()] } } : c))).length > 0, 'the slot check catches the right option always first');
+}
+
+/* V3 — the algebra waits for Level 4: no card on Levels 1–3 is a stop's algebra or says it */
+const algebraic = (c) => c.kind === 'algebra' || /algebra behind/i.test(c.title || '') || /^In algebra:/.test(c.more || '');
+const earlyAlg = (items) => items.filter((c) => c.level != null && c.level < ALGEBRA_FROM && algebraic(c)).map((c) => c.id);
+ok(!earlyAlg(ITEMS).length, `no algebra on Levels 1–${ALGEBRA_FROM - 1} (${earlyAlg(ITEMS).slice(0, 4).join(', ')})`);
+ok(ITEMS.some((c) => c.kind === 'algebra' && c.level >= ALGEBRA_FROM), 'and the algebra is still there from Level 4');
+ok(earlyAlg([{ ...first('algebra'), level: 2 }]).length === 1 && earlyAlg([{ ...first('trick'), level: 1, more: 'In algebra: x' }]).length === 1, 'the algebra check catches an algebra card, and a trick saying its algebra, on Level 1–3');
+
+/* V4 — one stop is not a session: at most PER_STOP cards about one stop, at every level, band and day,
+   after a stop was just passed (its cards move up), and with a mistake due; the gap fills from the next */
+const perStop = (list) => { const n = {}; for (const x of list) { const s = stopOf(byIdF[x.id]); if (s) n[s] = (n[s] || 0) + 1; } return Math.max(0, ...Object.values(n)); };
+{
+  let worst = 0, uncapped = 0, short = '';
+  for (const band of ['6-7', '8-10', '11-14']) for (let L = 1; L <= 10; L++) for (const d of [0, 1, 2, 5]) for (const what of ['', 'passed', 'mistake']) {
+    const k = child(band, L), now = NOW + d * 864e5, st = LEVELS[L - 1].steps[d % LEVELS[L - 1].steps.length].stop;
+    if (what === 'passed') k.last = { what: 'stop', title: byId[st].title, at: now - 6e4 };
+    if (what === 'mistake') k.mistakes = { x: { q: { trick: st, text: 'a question', ans: 1 }, box: 0, due: now - 1, at: now - 864e5, misses: 1 } };
+    const list = session(H(), k, ITEMS, now), raw = feedFor(options(H(), k, ITEMS, now));
+    worst = Math.max(worst, perStop(list)); uncapped = Math.max(uncapped, perStop(raw));
+    if (list.length < raw.length) short = `${band} L${L} ${what}: ${list.length} < ${raw.length}`;
+  }
+  ok(worst <= PER_STOP, `one stop has at most ${PER_STOP} cards in a session (worst ${worst})`);
+  ok(!short, `a capped session fills from the next-ranked cards (${short})`);
+  ok(uncapped > PER_STOP, `and the engine alone would have given one stop ${uncapped} — the cap is doing something`);
+}
+
+/* V5 — the why names its reason: a card about a stop names the stop, a fact card names the fact, a
+   word or formula names a stop that teaches it, a slip names what slipped and when, a near medal is
+   named with how many are left. A generic line is left only on a card with nothing to name. */
+function whyFaults(list) {
+  const out = [];
+  for (const x of list) {
+    const c = byIdF[x.id], stop = stopOf(c) && byId[c.key.slice(5)];
+    if (/ more to the .+ medal$/.test(x.why)) continue;
+    if (stop && !x.why.includes(stop.title)) out.push(`${x.id}: "${x.why}" does not name ${stop.title}`);
+    else if (c.kind === 'fact' && !x.why.includes(F.text(F.parseKey(c.key.slice(5))))) out.push(`${x.id}: "${x.why}" does not name its fact`);
+    else if (/^(word|wordq|formula)/.test(c.kind) && c.topics.some((t) => t.startsWith('stop:')) && !c.topics.some((t) => t.startsWith('stop:') && x.why.includes(byId[t.slice(5)].title))) out.push(`${x.id}: "${x.why}" names no stop that teaches it`);
+  }
+  return out;
+}
+{
+  const faults = [];
+  for (const band of ['6-7', '8-10', '11-14']) for (let L = 1; L <= 10; L++) faults.push(...whyFaults(session(H(), child(band, L), ITEMS, NOW)));
+  ok(!faults.length, `every why names its reason when it has one (${faults.length}: ${faults.slice(0, 3).join('; ')})`);
+  const raw = whyFaults(feedFor(options(H(), child('8-10', 5), ITEMS, NOW)));
+  ok(raw.length > 0 && raw.some((f) => /For Level 5/.test(f)), `the why check catches the engine's generic "For Level 5" (${raw.length})`);
+  // a mistake says what slipped and when
+  const k = child('8-10', 3);
+  k.mistakes = { x: { q: { trick: 'column-sub', text: '912 − 437', ans: 475 }, box: 0, due: NOW - 1, at: NOW - 864e5, misses: 1 } };
+  const s = session(H(), k, ITEMS, NOW).filter((x) => byIdF[x.id].key === 'stop:column-sub');
+  ok(s.length && s.every((x) => x.why.startsWith('You slipped on 912 − 437 yesterday')), `a mistake's why: "You slipped on 912 − 437 yesterday" (${s[0] && s[0].why})`);
+  // a fact that slipped says which, and when
+  const FC = ITEMS.find((c) => c.kind === 'fact' && c.bands.includes('8-10') && c.key.includes('×')), key = FC.key.slice(5), k2 = child('8-10', 3), r = F.blank();
+  F.record(r, true, 1000, '8-10', NOW - 40 * 864e5); F.record(r, true, 1000, '8-10', NOW - 30 * 864e5); F.record(r, true, 1000, '8-10', NOW - 20 * 864e5); F.record(r, false, 9000, '8-10', NOW - 2 * 864e5);
+  k2.facts[key] = r;
+  const fx = session(H(), k2, ITEMS, r.due + 3600e3).find((x) => x.id === FC.id);
+  const sod = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }, ago = Math.round((sod(r.due + 3600e3) - sod(r.last)) / 864e5);
+  ok(fx && fx.why === `You slipped on ${F.text(F.parseKey(key))} ${ago === 0 ? 'today' : ago === 1 ? 'yesterday' : ago + ' days ago'}`, `a slipped fact's why names it and when (${fx && fx.why})`);
+  // a medal within reach says so, and only when it is true
+  const k3 = child('8-10', 3); let n3 = 0;
+  for (const f of F.BANK['×']) { if (n3 >= 23) break; const rr = F.blank(); rr.n = 4; rr.box = F.MASTERED_BOX; rr.peak = F.MASTERED_BOX; rr.due = NOW + 864e5; rr.recent = ['F', 'F']; k3.facts[F.key(f)] = rr; n3++; }
+  const fluentNow = F.OPS.reduce((a, o) => a + F.tally(k3.facts, o).fluent, 0);
+  const medalWhys = session(H(), k3, ITEMS, NOW).filter((x) => / more to the Quick hands medal$/.test(x.why));
+  ok(fluentNow === 23 && medalWhys.length > 0 && medalWhys.every((x) => x.why === 'Two more to the Quick hands medal' && byIdF[x.id].kind === 'fact'), `two facts short of Quick hands: "Two more to the Quick hands medal" on fact cards (${fluentNow} fluent; ${medalWhys.length})`);
+  ok(!session(H(), child('8-10', 3), ITEMS, NOW).some((x) => / medal$/.test(x.why)), 'and no medal line when none is near');
+  ok(session(H(), child('8-10', 5), ITEMS, NOW).filter((x) => GENERIC_WHY.test(x.why)).every((x) => !stopOf(byIdF[x.id]) && byIdF[x.id].kind !== 'fact'), 'a generic line is left only where there is nothing to name');
+}
 
 const lv = Object.entries(m.byLevel).map(([k, v]) => `L${k} ${v}`).join(', ');
 if (fails) { console.error(`feed: ${fails} failure(s)`); process.exit(1); }
