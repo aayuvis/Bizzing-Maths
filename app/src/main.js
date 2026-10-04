@@ -305,6 +305,7 @@ function render() {
   document.documentElement.toggleAttribute('data-nokid', !kid(R.h));   // no child yet: no empty avatar pill, no tabs (shell.css)
   root.innerHTML = V.shell(screen());
   for (const i of root.querySelectorAll('.bz-av img')) if (i.complete && i.naturalWidth) i.classList.add('in');   // already in memory: no placeholder flash
+  if (root.querySelector('img[data-lsrc]')) import('./landing.js').then((m) => m.wire(root));   // the landing's screenshots, as they scroll near
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
   syncMusic();

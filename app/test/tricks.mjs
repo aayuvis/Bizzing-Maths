@@ -1,7 +1,7 @@
 /* test/tricks.mjs — the trick and the arithmetic must agree, every time.
    Three independent routes to each answer: the trick's own last step, q.ans,
    and a plain evaluation of q.expr. Any disagreement fails the build. */
-import { TRICKS, WORLDS, example, correct, parseNum, learnCases, caseSig } from '../src/tricks.js';
+import { TRICKS, WORLDS, example, correct, parseNum, learnCases, caseSig, CHECKED } from '../src/tricks.js';
 import { seeded } from '../src/rand.js';
 import { checkSteps, constReport, weakness, H } from './lib/steps.mjs';
 // STEPS_ONLY=world,world limits the middle-step check while a world is being given its x (never in CI)
@@ -26,7 +26,7 @@ for (const t of TRICKS) {
   const shownSigs = new Set(lc.map((c) => caseSig(t, c.q)));
   if (t.cases) ok(shownSigs.size === lc.length, `${t.id}: two Learn cases show the same idea (${[...shownSigs].join(', ')})`);
   const gens = [];
-  for (const lv of [1, 2, 3]) for (let i = 0; i < 700; i++) { const g = t.gen(r, lv); gens.push(g); qs.push(g); }
+  for (const lv of CHECKED.levels) for (let i = 0; i < CHECKED.each; i++) { const g = t.gen(r, lv); gens.push(g); qs.push(g); }
   if (t.caseKey) for (const g of gens) { const sig = caseSig(t, g); if (!shownSigs.has(sig)) { ok(false, `${t.id}: the drill asks about "${sig}" but Learn never shows it`); break; } }
   for (const q of qs) {
     n++;
