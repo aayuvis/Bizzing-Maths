@@ -217,13 +217,14 @@ const CORE = [
       { label: 'The ones stay small', note: 'The ones add up to less than ten, so they just sit after the tens.',
         ex: { a: 42, b: 35 } },
       { label: 'The ones make a new ten', note: 'The ones add up to ten or more. Their extra ten joins the tens you already have, so the tens digit goes up by one.',
-        ex: { a: 47, b: 36 } },
+        ex: { a: 47, b: 36, input: 'blocks' } },
     ],
     gen(r, lv = 1) {
       const a = int(lv === 1 ? 12 : 23, lv === 3 ? 99 : 68, r), b = int(11, lv === 1 ? 29 : 89, r);
-      return this.q({ a, b });
+      // some answers are built with tens and ones blocks (widgets.js 'blocks')
+      return this.q({ a, b, input: lv < 3 && r() < 0.3 ? 'blocks' : undefined });
     },
-    q({ a, b }) { return { a, b, carry: (a % 10) + (b % 10) > 9 ? 'yes' : 'no', text: `${a} + ${b}`, expr: `${a}+${b}`, ans: a + b }; },
+    q({ a, b, input }) { return { a, b, ...(input ? { input, how: 'Build the answer with tens and ones.' } : {}), carry: (a % 10) + (b % 10) > 9 ? 'yes' : 'no', text: `${a} + ${b}`, expr: `${a}+${b}`, ans: a + b }; },
     work({ a, b }) {
       const t = Math.floor(a / 10) * 10 + Math.floor(b / 10) * 10, o = (a % 10) + (b % 10);
       return [
@@ -905,6 +906,7 @@ export const caseSig = (t, q) => [].concat(t.caseKey || []).map((k) => String(q[
    be typed at all. */
 export function dress(t, q) {
   if (t.draw && !q.html) q.html = t.draw(q);
+  if (q.input === 'chart' && t.hits && !q.hits) q.hits = t.hits(q);   // where each answer can be tapped (widgets.js)
   if (t.keys && !q.keys) q.keys = t.keys;
   return q;
 }

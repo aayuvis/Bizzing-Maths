@@ -61,14 +61,17 @@ export const TRICKS = [
       'So 3/4 reads as "three of four equal pieces". And the more pieces you cut, the smaller each one is: a quarter is smaller than a half, even though 4 is bigger than 2.',
     ],
     alg: 'k shaded out of n equal parts = k/n',
-    ex: { n: 4, k: 3, shape: 'pie' },
+    ex: { n: 4, k: 3, shape: 'pie', input: 'fracbar' },   // Learn shows the share built on a bar
     oneIdea: true,
     keys: ['/'],
     gen(r, lv = 1) {
       const n = lv === 1 ? pick([2, 4], r) : lv === 2 ? pick([2, 3, 4], r) : pick([3, 5, 6, 8], r);
-      return this.q({ n, k: int(1, n - 1, r), shape: lv === 1 ? 'pie' : pick(['pie', 'bar'], r) });
+      const shape = lv === 1 ? 'pie' : pick(['pie', 'bar'], r);
+      // some pies are answered by building the same share on a bar (widgets.js 'fracbar')
+      return this.q({ n, k: int(1, n - 1, r), shape, input: shape === 'pie' && r() < 0.4 ? 'fracbar' : undefined });
     },
-    q({ n, k, shape = 'pie' }) {
+    q({ n, k, shape = 'pie', input }) {
+      if (input === 'fracbar') return { n, k, shape, input, how: 'Build the same share on the bar.', frac: true, text: `A pie cut into ${n} equal pieces. What fraction is shaded?`, expr: `${k}/${n}`, ans: F(k, n) };
       return { n, k, shape, frac: true, text: `A ${shape === 'pie' ? 'pie' : 'cake'} cut into ${n} equal pieces. What fraction is shaded?`, expr: `${k}/${n}`, ans: F(k, n) };
     },
     work({ n, k }) {
@@ -126,7 +129,7 @@ export const TRICKS = [
     caseKey: 'miss',
     cases: [
       { label: 'Missing top', note: 'Work out what the bottom was multiplied by, then do the same to the top.',
-        ex: { a: 3, b: 4, m: 3, miss: 'top' } },
+        ex: { a: 3, b: 4, m: 3, miss: 'top', input: 'fracbar' } },
       { label: 'Missing bottom', note: 'This time the tops tell you the multiplier. Do the same to the bottom.',
         ex: { a: 2, b: 3, m: 4, miss: 'bottom' } },
       { label: 'Going down: dividing', note: 'The new bottom is smaller, so the pieces are being glued back together: divide the top by the same number.',
@@ -136,12 +139,18 @@ export const TRICKS = [
       const miss = lv === 1 ? 'top' : lv === 2 ? pick(['top', 'bottom'], r) : pick(['top', 'bottom', 'down'], r);
       const b = miss === 'down' ? int(2, 8, r) : int(2, lv === 1 ? 5 : lv === 2 ? 8 : 12, r);
       const m = miss === 'down' ? int(2, Math.max(2, Math.floor(40 / b)), r) : int(2, lv === 1 ? 4 : lv === 2 ? 6 : 9, r);
-      return this.q({ a: int(1, b - 1, r), b, m, miss });
+      // some are answered on a bar (widgets.js 'fracbar') when it has few enough parts to tap
+      const bar = (miss === 'down' ? b : b * m) <= 12 && r() < 0.35;
+      return this.q({ a: int(1, b - 1, r), b, m, miss, input: bar ? 'fracbar' : undefined });
     },
-    q({ a, b, m, miss }) {
-      if (miss === 'bottom') return { a, b, m, miss, text: `${a}/${b} = ${a * m}/?`, expr: `${a * m}*${b}/${a}`, ans: b * m };
-      if (miss === 'down') return { a, b, m, miss, text: `${a * m}/${b * m} = ?/${b}`, expr: `${a * m}*${b}/${b * m}`, ans: a };
-      return { a, b, m, miss, text: `${a}/${b} = ?/${b * m}`, expr: `${b * m}*${a}/${b}`, ans: a * m };
+    q({ a, b, m, miss, input }) {
+      /* On the bar the child makes the missing number: shades the top over the given parts, or (bottom
+         missing) keeps the given shaded parts and cuts the bar until they are the same share. */
+      const w = input === 'fracbar' ? { input, how: miss === 'bottom' ? `These ${a * m} parts stay shaded. Cut the bar into equal parts until it is the same share.` : `The bar is cut into ${miss === 'down' ? b : b * m} equal parts. Shade the same share.`,
+        bar: miss === 'bottom' ? { give: 'n', lockK: a * m } : { give: 'k', lockN: miss === 'down' ? b : b * m } } : {};
+      if (miss === 'bottom') return { a, b, m, miss, ...w, text: `${a}/${b} = ${a * m}/?`, expr: `${a * m}*${b}/${a}`, ans: b * m };
+      if (miss === 'down') return { a, b, m, miss, ...w, text: `${a * m}/${b * m} = ?/${b}`, expr: `${a * m}*${b}/${b * m}`, ans: a };
+      return { a, b, m, miss, ...w, text: `${a}/${b} = ?/${b * m}`, expr: `${b * m}*${a}/${b}`, ans: a * m };
     },
     work({ a, b, m, miss }) {
       if (miss === 'bottom') return [{ t: `${a} × what makes ${a * m}?`, v: m, x: `${a * m}/${a}` }, { t: `Same to the bottom: ${b} × ${m}`, v: b * m }];
@@ -160,7 +169,7 @@ export const TRICKS = [
       'Or in one step, with the biggest number that goes into both — here 4. When nothing but 1 divides both numbers, the fraction is in its simplest form: the biggest pieces that share can be cut into.',
     ],
     alg: 'a/b = (a ÷ g)/(b ÷ g), g = the highest common factor of a and b',
-    ex: { a: 12, b: 16 },
+    ex: { a: 12, b: 16, input: 'fracbar' },   // Learn shows the same share glued into the biggest pieces
     oneIdea: true,
     keys: ['/'],
     gen(r, lv = 1) {
@@ -168,9 +177,13 @@ export const TRICKS = [
       let p, d;
       do { d = int(2, qmax, r); p = int(1, d - 1, r); } while (gcd(p, d) !== 1);
       const m = int(2, Math.max(2, Math.min(mmax, Math.floor(60 / d))), r);
-      return this.q({ a: p * m, b: d * m });
+      // some are built on a bar with the biggest pieces that fit (widgets.js 'fracbar')
+      return this.q({ a: p * m, b: d * m, input: lv < 3 && r() < 0.35 ? 'fracbar' : undefined });
     },
-    q({ a, b }) { const g = gcd(a, b); return { a, b, frac: true, simplest: true, text: `Simplify ${a}/${b}`, expr: `${a}/${b}`, ans: F(a / g, b / g) }; },
+    q({ a, b, input }) {
+      const g = gcd(a, b);
+      return { a, b, ...(input ? { input, how: 'Build it on the bar, with the biggest pieces you can.' } : {}), frac: true, simplest: true, text: `Simplify ${a}/${b}`, expr: `${a}/${b}`, ans: F(a / g, b / g) };
+    },
     work({ a, b }) {
       const g = gcd(a, b);
       return [

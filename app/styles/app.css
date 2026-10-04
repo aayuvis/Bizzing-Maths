@@ -984,3 +984,44 @@ div.jcard{cursor:default}
 /* grown-ups: certificates — the child's name and what follows are two things, never one run-on word */
 .cert-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 0}
 .cert-row > b{min-width:5ch}
+
+/* ---------------------------------------------------------------- answering by building (widgets.js) */
+.wid{margin:6px auto 4px;max-width:540px}
+.wid-read{font:700 26px var(--mono);margin:6px 0 2px;color:var(--ink)}
+.wid-read b{font-weight:800}
+.wid-keys{font-size:13px;margin:4px 0 8px}
+.wbtn{min-width:48px;min-height:48px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:800 24px/1 var(--mono);cursor:pointer;touch-action:manipulation}
+.wbtn:hover:not(:disabled){border-color:var(--action);color:var(--action)}
+.wbtn:focus-visible,.wf-p:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+.wbtn:disabled{opacity:.45;cursor:default}
+.wf-row{display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0}
+.wf-lab{font:600 16px var(--ui);color:var(--ink);min-width:8ch;text-align:center}
+.wf-bar{display:flex;height:64px;border:2.5px solid var(--ink);border-radius:10px;overflow:hidden;touch-action:none;margin:10px 0;user-select:none;-webkit-user-select:none}
+.wf-p{flex:1 1 0;min-width:0;border:0;border-left:2px solid var(--ink);background:var(--surface);cursor:pointer;padding:0;border-radius:0}
+.wf-p:first-child{border-left:0}
+.wf-p.on{background:var(--action)}
+.wf-p.cur{box-shadow:inset 0 0 0 3px var(--surface),inset 0 0 0 6px var(--fix)}
+.wfrac.off .wf-p{cursor:default}
+.wb-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.wb-col{border:2px solid var(--line);border-radius:14px;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;min-width:0}
+.wb-col.cur{border-color:var(--action);box-shadow:0 0 0 2px var(--action)}
+.wb-head{font:700 14px var(--ui);margin:0;color:var(--ink)}
+.wb-pile{min-height:96px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-content:flex-end;width:100%;padding:4px 0}
+.wb-pile i{display:block;background-color:#FFE3A3;border:1.5px solid var(--ink);border-radius:2px}
+:root[data-mode=dark] .wb-pile i{background-color:#5A4413}
+.wb-pile .wb-h{width:26px;height:26px;background-image:linear-gradient(to right,var(--ink) 1px,transparent 1px),linear-gradient(to bottom,var(--ink) 1px,transparent 1px);background-size:5px 5px}
+.wb-pile .wb-t{width:9px;height:44px;background-image:linear-gradient(to bottom,var(--ink) 1px,transparent 1px);background-size:100% 4.4px}
+.wb-o{width:10px;height:10px}
+.wb-n{font:800 28px var(--mono);margin:4px 0;color:var(--ink)}
+.wb-btns{display:flex;gap:8px}
+.wchart .tapchart{position:relative;margin:0 auto 6px;width:fit-content;max-width:100%}
+.wchart .tapchart .dg{margin:0}
+.tc-hit{position:absolute;background:transparent;border:0;border-radius:10px;cursor:pointer;padding:0;margin:0}
+.tc-hit:hover:not(:disabled){background:color-mix(in srgb,var(--action) 12%,transparent)}
+.tc-hit.cur,.tc-hit:focus-visible{outline:3px solid var(--action);outline-offset:-3px;background:color-mix(in srgb,var(--action) 14%,transparent)}
+.tc-hit.right{outline:3px solid var(--mastered);outline-offset:-3px;background:color-mix(in srgb,var(--mastered) 18%,transparent)}
+.tc-hit.wrong{outline:3px solid var(--fix);outline-offset:-3px;background:color-mix(in srgb,var(--fix) 18%,transparent)}
+.tc-hit:disabled{cursor:default}
+.learn-wid{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+@media (max-width:560px){.wchart{margin-left:-14px;margin-right:-14px}.wchart .tapchart .dg{width:100%}.wb-cols{gap:6px}}
+.wid-how{font:650 16px var(--ui);color:var(--ink);margin:2px 0 6px}

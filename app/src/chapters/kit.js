@@ -78,13 +78,24 @@ export function barChart(labels, values, step = 1, title = '') {
   if (title) s += T(W / 2, 12, title, 'dg-small');
   return svg(W, y0 + H + 26, s, title || 'A bar chart');
 }
+/* Where each bar of barChart() can be tapped (widgets.js 'chart'): its whole column, label included,
+   measured from the same layout so a tap on a bar is always that bar. */
+export function barHits(labels) {
+  const H = 150, bw = 36, gap = 18, x0 = 40, y0 = 20, W = x0 + labels.length * (bw + gap) + 10;
+  return { w: W, h: y0 + H + 26, hits: labels.map((l, i) => ({ label: l, x: x0 + 8 + i * (bw + gap) - gap / 2, y: y0, w: bw + gap, h: H + 26 })) };
+}
 /* Pictogram rows: labels[], counts[], each symbol worth `per`. Half symbols allowed. */
-export function pictogram(labels, counts, per = 2, sym = '●') {
+/* rowH spaces the rows out (a row you tap needs room — pictoHits), and cols is how many symbols wide. */
+export function pictogram(labels, counts, per = 2, sym = '●', rowH = 30, cols = 12) {
   let s = '', y = 26;
   labels.forEach((l, i) => { s += T(8, y, l, 'dg-text', 'start'); const full = Math.floor(counts[i] / per), half = counts[i] % per ? 1 : 0;
-    for (let j = 0; j < full + half; j++) s += `<text x="${100 + j * 26}" y="${y}" class="dg-sym${j === full ? ' half' : ''}">${sym}</text>`; y += 30; });
+    for (let j = 0; j < full + half; j++) s += `<text x="${100 + j * 26}" y="${y}" class="dg-sym${j === full ? ' half' : ''}">${sym}</text>`; y += rowH; });
   s += T(8, y + 6, `${sym} = ${per}`, 'dg-small', 'start');
-  return svg(100 + 12 * 26, y + 16, s, 'A pictogram');
+  return svg(100 + cols * 26, y + 16, s, 'A pictogram');
+}
+/* Where each row of pictogram() can be tapped: the whole row, its name included. */
+export function pictoHits(labels, rowH = 30, cols = 12) {
+  return { w: 100 + cols * 26, h: 26 + labels.length * rowH + 16, hits: labels.map((l, i) => { const top = 26 + i * rowH - rowH * 0.7, y = Math.max(0, top); return { label: l, x: 0, y, w: 100 + cols * 26, h: rowH - (y - top) }; }) };
 }
 /* A two-set Venn diagram with counts in each region (use '' to leave blank, '?' to ask). */
 export function venn(la, lb, onlyA, both, onlyB, outside = null) {

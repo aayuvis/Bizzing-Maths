@@ -22,6 +22,7 @@ npm run check      # drives build/ under /Bizzing-Maths/ in Chromium, desktop + 
 | `src/contest.js` | `RIVALS` (the Bee's ten), the hardness ladder, `playRound()`, `championship()`, `runOut()`. |
 | `src/games.js` | Overlay frame on a painted plate (`public/art/g-*.webp`), the Family Standard §10 kit (title card + 3-second how-to, pop particles, wobble, a display-only combo meter, a finish screen naming what was practised), shared `keypad()`, `numberRush`, `makeTarget` (+ `solve`, `makePuzzle`), `numberLine`, `sudoku`. Styles in `styles/games.css`. |
 | `src/figs.js` | SVG figures: `jumps`, `area`, `grid`. |
+| `src/widgets.js` | Answering by building (`q.input`): the fraction bar, place-value blocks and tap-the-chart. Builds a value `correct()` judges; `test/widgets.mjs` proves each can build its answer and never starts on it. |
 | `src/views.js` | Every screen. |
 | `src/main.js` | Boot, hash routing, the question runner, guided steps, contest driver, keys, all actions. |
 | `src/store.js` | The seam: household + device buckets, versioned `migrate()`, backup/restore. |

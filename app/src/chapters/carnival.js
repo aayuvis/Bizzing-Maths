@@ -6,7 +6,7 @@
    unlabelled, and the function machine shows a "?" where the number goes. */
 
 import { int, pick, shuffle, seeded } from '../rand.js';
-import { svg, text, barChart, pictogram, grid } from './kit.js';
+import { svg, text, barChart, barHits, pictogram, pictoHits, grid } from './kit.js';
 
 export const WORLD = {
   id: 'carnival', name: 'The Data Carnival', short: 'Carnival', band: '6-7',
@@ -59,7 +59,7 @@ function dieFaces() {
 
 const HOURS = [['9 am', '9am'], ['10 am', '10'], ['11 am', '11'], ['12 noon', '12'], ['1 pm', '1pm'], ['2 pm', '2'], ['3 pm', '3']];
 function lineChart(temps) {
-  const lo = 12, hi = 34, H = 176, x0 = 44, y0 = 14, gap = 44, W = x0 + gap * (temps.length - 1) + 30;
+  const lo = 12, hi = 34, H = 176, x0 = 44, y0 = 14, gap = 44, W = x0 + gap * (temps.length - 1) + 38;   // room past the last dot for a finger (lineHits)
   const Y = (v) => y0 + H - ((v - lo) / (hi - lo)) * H, X = (i) => x0 + 14 + i * gap;
   let s = '';
   for (let v = lo; v <= hi; v += 2) s += `<line x1="${x0}" y1="${Y(v)}" x2="${W - 6}" y2="${Y(v)}" class="dg-grid"/>` + (v % 4 === 0 ? text(x0 - 6, Y(v) + 4, v, 'dg-small', 'end') : '');
@@ -69,6 +69,15 @@ function lineChart(temps) {
   s += text(10, 10, '°C', 'dg-small', 'start');
   return svg(W, y0 + H + 28, s, 'A line graph of the temperature through the day');
 }
+/* Where each dot of lineChart() can be tapped (widgets.js 'chart'): the whole column above its time. */
+function lineHits(temps) {
+  const H = 176, x0 = 44, y0 = 14, gap = 44, W = x0 + gap * (temps.length - 1) + 38, X = (i) => x0 + 14 + i * gap, last = temps.length - 1;
+  // each dot owns the strip halfway to its neighbours; the first reaches back over the scale, the last to the edge
+  return { w: W, h: y0 + H + 28, hits: temps.map((_, i) => { const a = i ? X(i) - gap / 2 : 0, b = i < last ? X(i) + gap / 2 : W; return { label: HOURS[i][0], x: a, y: 0, w: b - a, h: y0 + H + 28 }; }) };
+}
+/* A tapped pictogram needs rows a finger can hit, and no wider than its longest row. */
+const PICTO_ROW = 50;
+const pictoCols = (counts, per) => Math.max(6, Math.max(...counts.map((c) => Math.ceil(c / per))) + 1);
 
 /* ------------------------------------------------------------ logic grids */
 
@@ -234,6 +243,8 @@ const RIDES = ['Wheel', 'Cups', 'Train', 'Slide', 'Boats', 'Swing'];
 const SCALE = String.raw`const t=[...SVG.matchAll(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*class="dg-grid"\/><text[^>]*>([\d.]+)<\/text>/g)].map((m)=>[+m[1],+m[2]]),[y0,v0]=t[0],[y1,v1]=t[t.length-1],at=(y)=>Math.round((v0+(y-y0)*(v1-v0)/(y1-y0))*1e6)/1e6;`;
 const readBar = (name) => String.raw`(()=>{${SCALE}return at(+SVG.match(/<rect x="[\d.]+" y="([\d.]+)"[^>]*\/><text[^>]*>${name}<\/text>/)[1])})()`;
 const readDot = (label) => String.raw`(()=>{${SCALE}return at(+SVG.match(/<circle cx="[\d.]+" cy="([\d.]+)"[^>]*\/><text[^>]*>${label}<\/text>/)[1])})()`;
+/* x for "which dot is at this temperature?": every dot read against the scale, then found by its value */
+const dotOf = (T) => String.raw`(()=>{${SCALE}return [...SVG.matchAll(/<circle cx="[\d.]+" cy="([\d.]+)"/g)].map((m)=>at(+m[1])).indexOf(${T})+1})()`;
 const lineBelow = (label) => String.raw`(()=>{${SCALE}const d=at(+SVG.match(/<circle cx="[\d.]+" cy="([\d.]+)"[^>]*\/><text[^>]*>${label}<\/text>/)[1]);return Math.max(...t.map((p)=>p[1]).filter((v)=>v<=d))})()`;
 
 export const TRICKS = [
@@ -255,10 +266,18 @@ export const TRICKS = [
         ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [10, 6, 8], per: 2, ask: 1 } },
       { label: 'A half star', note: 'A half star is half of what one star is worth. With 4 in a star, half a star is 2.',
         ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [18, 12, 8], per: 4, ask: 0 } },
+      { label: 'Which stall?', note: 'Backwards: share the prizes into stars first — 8 prizes at 2 a star is 4 stars — then find the row with that many.',
+        ex: { labels: ['Hoopla', 'Darts', 'Ducks'], counts: [10, 6, 8], per: 2, ask: 'which', a: 2 } },
       { label: 'The whole chart', note: 'Altogether means every row. Count all the whole stars, times by the key, then add the halves.',
         ex: { labels: ['Hoopla', 'Darts', 'Ducks', 'Coconut'], counts: [8, 6, 12, 4], per: 4, ask: -1 } },
     ],
     gen(r, lv = 1) {
+      // some questions are answered by tapping the row (widgets.js 'chart'): which stall won this many?
+      if (lv < 3 && r() < 0.3) {
+        const per = lv === 1 ? 2 : pick([2, 4], r), labels = shuffle(STALLS, r).slice(0, lv === 1 ? 3 : 4);
+        let counts; do counts = labels.map(() => (per / 2) * int(2, lv === 1 ? 12 : 16, r)); while (new Set(counts).size < counts.length || !counts.some((c) => c % per === 0));
+        return this.q({ labels, counts, per, ask: 'which', a: pick(counts.map((c, i) => (c % per ? -1 : i)).filter((i) => i >= 0), r) });
+      }
       return fresh(() => {
         const per = lv === 1 ? 2 : lv === 2 ? pick([2, 4], r) : pick([4, 10], r);
         const labels = shuffle(STALLS, r).slice(0, lv === 1 ? 3 : 4);
@@ -267,21 +286,25 @@ export const TRICKS = [
         return this.q({ labels, counts, per, ask });
       });
     },
-    q({ labels, counts, per, ask }) {
+    q({ labels, counts, per, ask, a }) {
+      if (ask === 'which') return { labels, counts, per, ask, a, idea: 'which', input: 'chart', how: 'Tap the row.', text: `Each ★ is ${per} prizes. Which stall won ${counts[a]} prizes?`,
+        expr: `${JSON.stringify(labels)}[[${counts}].indexOf(${counts[a]})]`, ans: labels[a], choices: [...labels] };
       const sym = (c) => [Math.floor(c / per), c % per ? 1 : 0];
       const rows = ask < 0 ? counts : [counts[ask]];
       const F = sum(rows.map((c) => sym(c)[0])), H = sum(rows.map((c) => sym(c)[1]));
       return { labels, counts, per, ask, idea: ask < 0 ? 'all' : H ? 'half' : 'whole', text: ask < 0 ? `Each ★ is ${per} prizes. How many prizes were won altogether?` : `Each ★ is ${per} prizes. How many prizes were won at ${labels[ask]}?`,
         expr: rows.join('+'), ans: F * per + H * (per / 2) };
     },
-    work({ counts, per, ask, labels }) {
+    work({ counts, per, ask, labels, a }) {
+      if (ask === 'which') return [{ t: `${counts[a]} ÷ ${per}: how many ★ is that?`, v: counts[a] / per, x: 'H.n(TEXT,2)/H.n(TEXT,1)' }, { t: 'Which row has that many ★?', v: labels[a], choices: labels }];
       const rows = ask < 0 ? counts : [counts[ask]];
       const F = sum(rows.map((c) => Math.floor(c / per))), H = sum(rows.map((c) => (c % per ? 1 : 0)));
       const s = [{ t: ask < 0 ? 'Count every whole ★' : `Count the whole ★ at ${labels[ask]}`, v: F, x: `[${rows}].reduce((a,c)=>a+(c-c%${per})/${per},0)` }, { t: `${F} × ${per}`, v: F * per, x: `[${rows}].reduce((a,c)=>a+c-c%${per},0)` }];
       if (H) { s.push({ t: 'How many half ★?', v: H, x: `[${rows}].filter((c)=>c%${per}!==0).length` }); s.push({ t: `Add ${H} × ${per / 2}`, v: F * per + H * (per / 2) }); }
       return s;
     },
-    draw({ labels, counts, per }) { return pictogram(labels, counts, per, '★'); },
+    draw({ labels, counts, per, input }) { return input === 'chart' ? pictogram(labels, counts, per, '★', PICTO_ROW, pictoCols(counts, per)) : pictogram(labels, counts, per, '★'); },
+    hits: ({ labels, counts, per }) => pictoHits(labels, PICTO_ROW, pictoCols(counts, per)),
   },
   {
     id: 'bar-compare', world: 'carnival', band: '6-7', title: 'Bar charts: how many more?',
@@ -294,7 +317,7 @@ export const TRICKS = [
     ],
     alg: 'how many more = taller bar − shorter bar',
     ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [9, 4, 6, 7], step: 1, a: 0, b: 1 },
-    caseKey: 'step',
+    caseKey: 'idea',
     cases: [
       { label: 'Each line is 1', note: 'Read across from the top of each bar, then take the smaller from the bigger.',
         ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [9, 4, 6, 7], step: 1, a: 0, b: 1 } },
@@ -302,8 +325,18 @@ export const TRICKS = [
         ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [16, 10, 12, 8], step: 2, a: 0, b: 3 } },
       { label: 'Each line is 10', note: 'The lines go up in tens. A bar that stops halfway between two lines is worth a 5 in the middle.',
         ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [65, 30, 45, 50], step: 10, a: 0, b: 2 } },
+      { label: 'Which ride?', note: 'Backwards: read the bar you are given, add the difference, then find the bar that reaches that height.',
+        ex: { labels: ['Wheel', 'Cups', 'Train', 'Slide'], values: [9, 4, 6, 7], step: 1, a: 3, b: 1, ask: 'which' } },
     ],
     gen(r, lv = 1) {
+      // some questions are answered by tapping the bar (widgets.js 'chart'): which ride got this many more?
+      if (lv < 3 && r() < 0.35) {
+        const step = lv, labels = shuffle(RIDES, r).slice(0, lv === 1 ? 3 : 4);
+        let values, a, b;
+        do { values = labels.map(() => step * int(1, 10, r)); a = int(0, labels.length - 1, r); b = int(0, labels.length - 1, r); }
+        while (values[a] <= values[b] || values.filter((v) => v === values[a]).length > 1);
+        return this.q({ labels, values, step, a, b, ask: 'which' });
+      }
       const step = lv === 1 ? 1 : lv === 2 ? 2 : 10, unit = lv === 3 ? 5 : step;
       const labels = shuffle(RIDES, r).slice(0, lv === 1 ? 3 : int(4, 5, r));
       let values;
@@ -311,13 +344,17 @@ export const TRICKS = [
       let a, b; do { a = int(0, labels.length - 1, r); b = int(0, labels.length - 1, r); } while (values[a] <= values[b]);
       return this.q({ labels, values, step, a, b });
     },
-    q({ labels, values, step, a, b }) {
-      return { labels, values, step, a, b, text: `Votes for the best ride. How many more voted for ${labels[a]} than ${labels[b]}?`, expr: `${values[a]}-${values[b]}`, ans: values[a] - values[b] };
+    q({ labels, values, step, a, b, ask }) {
+      if (ask === 'which') return { labels, values, step, a, b, ask, idea: 'which', input: 'chart', how: 'Tap the bar.', text: `Votes for the best ride. Which ride got ${values[a] - values[b]} more votes than ${labels[b]}?`,
+        expr: `${JSON.stringify(labels)}[[${values}].indexOf(${values[b]}+${values[a] - values[b]})]`, ans: labels[a], choices: [...labels] };
+      return { labels, values, step, a, b, idea: `each line ${step}`, text: `Votes for the best ride. How many more voted for ${labels[a]} than ${labels[b]}?`, expr: `${values[a]}-${values[b]}`, ans: values[a] - values[b] };
     },
-    work({ labels, values, a, b }) {
+    work({ labels, values, a, b, ask }) {
+      if (ask === 'which') return [{ t: `Read the ${labels[b]} bar`, v: values[b], x: readBar(labels[b]) }, { t: `${values[b]} + ${values[a] - values[b]}`, v: values[a], x: readBar(labels[a]) }, { t: 'Which bar reaches that?', v: labels[a], choices: labels }];
       return [{ t: `Read the ${labels[a]} bar`, v: values[a], x: readBar(labels[a]) }, { t: `Read the ${labels[b]} bar`, v: values[b], x: readBar(labels[b]) }, { t: `${values[a]} − ${values[b]}`, v: values[a] - values[b] }];
     },
     draw({ labels, values, step }) { return barChart(labels, values, step, 'Votes'); },
+    hits: ({ labels }) => barHits(labels),
   },
 
   /* ================================================ CHANCE, IN WORDS */
@@ -398,18 +435,26 @@ export const TRICKS = [
         ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'diff', i: 4, j: 0 } },
       { label: 'Halfway between', note: 'There is no dot there, but the line joins the two readings — halfway along is halfway between them.',
         ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'half', i: 1, j: 2 } },
+      { label: 'Which time?', note: 'Backwards: start at the temperature on the side, go across to the line, then straight down to the time.',
+        ex: { temps: [16, 18, 22, 24, 28, 26, 22], ask: 'when', i: 4, j: 4 } },
     ],
     gen(r, lv = 1) {
       return fresh(() => {
         const temps = [int(7, 10, r) * 2]; for (let i = 1; i < 7; i++) temps.push(Math.max(14, Math.min(32, temps[i - 1] + 2 * int(i < 5 ? -1 : -2, i < 5 ? 3 : 1, r))));
         if (Math.max(...temps) === Math.min(...temps)) temps[3] += 2;
         if (lv === 1) { const i = int(0, 6, r); return this.q({ temps, ask: 'at', i, j: i }); }
+        // some questions are answered by tapping the dot (widgets.js 'chart'): when was it this warm?
+        if (lv === 2 && r() < 0.3) { const one = temps.map((t, i) => (temps.indexOf(t) === temps.lastIndexOf(t) ? i : -1)).filter((i) => i >= 0);
+          if (one.length) { const i = pick(one, r); return this.q({ temps, ask: 'when', i, j: i }); } }
         if (lv === 2) { let i, j; do { i = int(0, 6, r); j = int(0, 6, r); } while (temps[i] <= temps[j]); return this.q({ temps, ask: 'diff', i, j }); }
         const i = int(0, 5, r); return this.q({ temps, ask: 'half', i, j: i + 1 });
       });
     },
     q({ temps, ask, i, j }) {
       const h = (k) => HOURS[k][0];
+      if (ask === 'when') { const times = HOURS.map((x) => x[0]);
+        return { temps, ask, i, j, input: 'chart', how: 'Tap the dot.', text: `The line graph shows the temperature at the carnival. At what time was it ${temps[i]} °C?`,
+          expr: `${JSON.stringify(times)}[[${temps}].indexOf(${temps[i]})]`, ans: times[i], choices: times }; }
       const text = ask === 'at' ? `The line graph shows the temperature at the carnival. How warm was it at ${h(i)}, in °C?`
         : ask === 'diff' ? `The line graph shows the temperature at the carnival. How many degrees warmer was it at ${h(i)} than at ${h(j)}?`
           : `The line graph shows the temperature at the carnival. About how warm was it halfway between ${h(i)} and ${h(j)}?`;
@@ -418,11 +463,13 @@ export const TRICKS = [
       return { temps, ask, i, j, text, expr, ans };
     },
     work({ temps, ask, i, j }) {
+      if (ask === 'when') return [{ t: `Go across from ${temps[i]} °C to the line. Which dot is it, counting from the left?`, v: i + 1, x: dotOf(temps[i]) }, { t: 'Go straight down to the time', v: HOURS[i][0], choices: HOURS.map((x) => x[0]) }];
       if (ask === 'at') { const lab = Math.floor(temps[i] / 4) * 4; return [{ t: 'The numbered line at or just below the dot', v: lab, x: lineBelow(HOURS[i][1]) }, { t: `Add 2 for each small gap above ${lab}`, v: temps[i] }]; }
       if (ask === 'diff') return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: readDot(HOURS[i][1]) }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: readDot(HOURS[j][1]) }, { t: `${temps[i]} − ${temps[j]}`, v: temps[i] - temps[j] }];
       return [{ t: `At ${HOURS[i][0]}`, v: temps[i], x: readDot(HOURS[i][1]) }, { t: `At ${HOURS[j][0]}`, v: temps[j], x: readDot(HOURS[j][1]) }, { t: `Halfway: (${temps[i]} + ${temps[j]}) ÷ 2`, v: (temps[i] + temps[j]) / 2 }];
     },
     draw({ temps }) { return lineChart(temps); },
+    hits: ({ temps }) => lineHits(temps),
   },
   {
     id: 'mean-fair-share', world: 'carnival', band: '8-10', title: 'The mean: fair shares',
