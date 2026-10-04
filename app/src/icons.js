@@ -16,7 +16,7 @@ export const GLYPH = {
   '🛳': 'ship', '🛳️': 'ship', '⭕': 'circle', '🎪': 'tent', '🪨': 'rock', '⛏': 'pick', '⛏️': 'pick', '🗼': 'lighthouse',
   '🪙': 'coin', '⚡': 'bolt', '🧠': 'brain', '📐': 'ruler', '💡': 'bulb', '🧭': 'compass', '🧩': 'puzzle', '🏆': 'trophy',
   '🔒': 'lock', '🔊': 'speaker', '🏅': 'medal', '🗺': 'map', '🗺️': 'map', '⚑': 'flag', '🏁': 'flag', '⛳': 'flag',
-  '🔢': 'hash', '🧮': 'abacus', '🎭': 'mask', '🧊': 'cube', '🌀': 'spiral', '⚖': 'scales', '⚖️': 'scales', '🔍': 'search', '🎯': 'target',
+  '🔢': 'hash', '🧮': 'abacus', '🎭': 'mask', '🧊': 'cube', '🌀': 'spiral', '⚖': 'scales', '⚖️': 'scales', '🔍': 'search', '🎯': 'target', '🎡': 'wheel', '📝': 'paper',
   '🏰': 'castle', '🌡': 'thermo', '🌡️': 'thermo', '🔤': 'letters', '➕': 'plusOp', '✖': 'timesOp', '✖️': 'timesOp',
   '💯': 'hundred', '📊': 'chart', '🎲': 'dice', '✨': 'sparkle', '📍': 'pin', '⬡': 'hex', '♥': 'heart', '♪': 'music',
   '★': 'star', '✓': 'check', '✕': 'x', '✗': 'x', '🔄': 'retry', '↺': 'retry', '#': 'hash',

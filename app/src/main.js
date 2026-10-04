@@ -301,7 +301,9 @@ function render() {
   applyTheme(themeOf(kid(R.h), R.h));   // the active child's world; switching child switches it
   applySkin(kid(R.h));                  // and the road skin they wear (extras.js)
   document.documentElement.toggleAttribute('data-bz-dark', document.documentElement.getAttribute('data-mode') === 'dark');   // the avatar glow (§8)
+  document.documentElement.toggleAttribute('data-nokid', !kid(R.h));   // no child yet: no empty avatar pill, no tabs (shell.css)
   root.innerHTML = V.shell(screen());
+  for (const i of root.querySelectorAll('.bz-av img')) if (i.complete && i.naturalWidth) i.classList.add('in');   // already in memory: no placeholder flash
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
   syncMusic();
@@ -315,6 +317,9 @@ function render() {
   }
 }
 R.render = render;
+/* an avatar card's picture has arrived: drop its placeholder (shell.css .bz-av img.in). One capturing
+   listener for every card the app will ever draw — load does not bubble, but it does capture. */
+document.addEventListener('load', (e) => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest('.bz-av')) t.classList.add('in'); }, true);
 
 /* Music follows the screen (standard §11): Home has its own loop, every other screen its
    world's, a game its own (games.js starts that). It starts only after the child's first tap

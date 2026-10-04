@@ -146,6 +146,18 @@ function pop(g, host, x, y, label = '') {
   setTimeout(() => el.remove(), 900);
   return el;
 }
+/* A popped Rush bubble splashes: droplets of its own colour and a ring its own size, where it was.
+   Under reduced motion the ring stands still for a moment and goes (games.css .gsplash.calm). */
+function splash(host, b) {
+  const el = document.createElement('div'), still = calm();
+  el.className = 'gsplash' + (still ? ' calm' : '');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText = `left:${Math.round(b.x)}px;top:${Math.round(b.y)}px;--r:${Math.round(b.r)}px;--h:${b.hue}`;
+  el.innerHTML = '<span class="gs-ring"></span>' + Array.from({ length: 10 }, (_, i) =>
+    `<i style="--a:${i * 36 + int(-12, 12)}deg;--d:${Math.round(b.r * 0.9 + int(10, 34))}px;--s:${int(7, 12)}px"></i>`).join('');
+  host.appendChild(el);
+  setTimeout(() => el.remove(), still ? 450 : 700);
+}
 /* The answer flies up to the score: the number the child typed goes where it counts (G6). */
 function fly(g, host, x, y, text) {
   if (calm()) return;
@@ -365,10 +377,12 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
   function spawn(now) {
     const { fact, ...q } = pick(pool);
     const g = (q.op === '×' || q.op === '+') && Math.random() < 0.5 ? { ...q, a: q.b, b: q.a } : q;
-    const r = 38 + Math.min(10, ftext(g).length);
-    const lanes = Math.max(2, Math.floor(W / (r * 2.4)));
+    // big enough to read at arm's length on a phone (audit v4 G5), and born WHOLE inside the stage:
+    // a bubble half-hidden behind the bar read as cut, so it swells in where it starts instead
+    const r = (W < 500 ? 46 : 52) + Math.min(8, ftext(g).length);
+    const lanes = Math.max(2, Math.floor(W / (r * 2.3)));
     const lane = int(0, lanes - 1);
-    bubbles.push({ fact, text: ftext(g), ans: answer(g), x: (lane + 0.5) * (W / lanes), y: -r, r, hue: pick([218, 150, 32, 268, 190]), born: now });
+    bubbles.push({ fact, text: ftext(g), ans: answer(g), x: (lane + 0.5) * (W / lanes), y: r + 2, r, hue: pick([218, 150, 32, 268, 190]), born: now });
   }
   function popIt(b) {
     bubbles = bubbles.filter((x) => x !== b);
@@ -376,6 +390,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     if (score % 5 === 0) speed *= 1.12;
     popped.push(b.text);
     pop(g, stage, b.x, b.y, '+1');
+    splash(stage, b);
     fly(g, stage, b.x, b.y, String(b.ans));
     onTick(true, b.fact);
     hud();
@@ -388,15 +403,20 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     fl.addColorStop(0, 'rgba(196,69,60,0)'); fl.addColorStop(1, 'rgba(196,69,60,.16)');
     ctx.fillStyle = fl; ctx.fillRect(0, H - 26, W, 26);
     const face = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'ui-monospace, monospace'; // the theme's digits
+    const t = performance.now(), still = calm();
     for (const b of bubbles) {
-      const gr = ctx.createRadialGradient(b.x - b.r * .35, b.y - b.r * .4, b.r * .1, b.x, b.y, b.r);
-      gr.addColorStop(0, `hsl(${b.hue} 90% 94%)`); gr.addColorStop(.6, `hsl(${b.hue} 80% 80%)`); gr.addColorStop(1, `hsl(${b.hue} 65% 58%)`);
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(b.x - b.r * .38, b.y - b.r * .45, b.r * .22, b.r * .12, -0.6, 0, Math.PI * 2); ctx.fill();
+      // bold and solid, so a real bubble never reads as one of the plate's painted ones
+      const R0 = still ? b.r : b.r * Math.min(1, 0.55 + (t - b.born) / 400);
+      ctx.save(); ctx.shadowColor = 'rgba(16,22,44,.28)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+      const gr = ctx.createRadialGradient(b.x - R0 * .35, b.y - R0 * .4, R0 * .1, b.x, b.y, R0);
+      gr.addColorStop(0, `hsl(${b.hue} 95% 96%)`); gr.addColorStop(.55, `hsl(${b.hue} 85% 84%)`); gr.addColorStop(1, `hsl(${b.hue} 70% 62%)`);
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, R0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = `hsl(${b.hue} 60% 34%)`; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(b.x, b.y, R0 - 1.75, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, R0 - 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.ellipse(b.x - R0 * .4, b.y - R0 * .47, R0 * .2, R0 * .11, -0.6, 0, Math.PI * 2); ctx.fill();
       // size the sum to fit INSIDE its bubble: a monospace glyph is ~0.6em wide
-      const fs = Math.min(b.r * 0.5, (b.r * 1.7) / (b.text.length * 0.6));
-      ctx.fillStyle = '#10162c'; ctx.font = `700 ${Math.round(fs)}px ${face}`;
+      const fs = Math.min(R0 * 0.52, (R0 * 1.6) / (b.text.length * 0.6));
+      ctx.fillStyle = '#0b1020'; ctx.font = `800 ${Math.round(fs)}px ${face}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.text, b.x, b.y + 1);
     }
   }
@@ -445,7 +465,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
   }
   g.stop = () => { over = true; cancelAnimationFrame(raf); removeEventListener('resize', size); };
   g.quit = () => end(g);
-  g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), finish: () => !over && finish() };
+  g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), bubbles: () => bubbles.map((b) => ({ x: b.x, y: b.y, r: b.r })), finish: () => !over && finish() };
   current = g;
   intro(g, titled('Number Rush', mk), mk || 'rush', begin);
   return g;

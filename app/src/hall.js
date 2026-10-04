@@ -9,6 +9,7 @@
    problems is used. */
 import { R } from './runtime.js';
 import { esc } from './ui.js';
+import { glyph, icon } from './icons.js';
 import { kid, avatarFile } from './model.js';
 import { byId, worldOf, tricksIn } from './tricks.js';
 import { paintedRoad } from './board.js';
@@ -39,12 +40,12 @@ export function viewHall() {
   const here = stops.findIndex((x) => !x.done), sel = R.ui.hsel != null && stops[R.ui.hsel] ? R.ui.hsel : Math.max(0, here);
   const me = `<img class="av" src="avatars/${esc(avatarFile(k.avatar))}.webp" width="34" height="34" alt="">`;
   const board = paintedRoad({ img: 'j-contest', here, sel, me, minWidth: 980, aspect: '1920/640', band: [76, 6, 1.1],
-    stops: stops.map((s, i) => ({ label: s.label, state: s.done ? 'done' : 'open', act: 'hallPick', arg: String(i), badge: `<em class="hall-g" aria-hidden="true">${s.glyph}</em>` })) });
+    stops: stops.map((s, i) => ({ label: s.label, state: s.done ? 'done' : 'open', act: 'hallPick', arg: String(i), badge: `<em class="hall-g" aria-hidden="true">${glyph(s.glyph, 24)}</em>` })) });
   const x = stops[sel];
   const card = x.kind === 'world'
-    ? `<div class="pick-t"><p class="kicker">${x.s.passed} of ${x.s.n} strategies passed</p><h2>${esc(x.glyph)} ${esc(x.label)}</h2><p class="pick-hook">${esc(x.blurb || '')}</p></div>
+    ? `<div class="pick-t"><p class="kicker">${x.s.passed} of ${x.s.n} strategies passed</p><h2 class="hall-h">${glyph(x.glyph, 26)} ${esc(x.label)}</h2><p class="pick-hook">${esc(x.blurb || '')}</p></div>
        <div class="pick-go"><button class="btn primary big" data-act="openWorld" data-arg="${x.id}">Go in</button></div>`
-    : `<div class="pick-t"><p class="kicker">${((k.papers || {}).log || []).length} papers sat</p><h2>📝 The Paper Hall</h2><p class="pick-hook">${esc(x.blurb)}</p></div>
+    : `<div class="pick-t"><p class="kicker">${((k.papers || {}).log || []).length} papers sat</p><h2 class="hall-h">${glyph('📝', 26)} The Paper Hall</h2><p class="pick-hook">${esc(x.blurb)}</p></div>
        <div class="pick-go"><button class="btn primary big" data-act="hallPapers">Choose a paper</button></div>`;
   return `<section class="hall">
     <div class="hall-head"><h1 class="hall-t">The Contest Hall</h1><span class="muted small">Contest-style practice · every problem proved to have one answer</span></div>
@@ -73,8 +74,8 @@ function papersPanel(k) {
 /* Every strategy in the hall, by world, with its stars — the index a review points into. */
 function strategyIndex(k) {
   return `<div class="card hall-index"><p class="kicker">The thirty ways in</p>
-    ${HALL_WORLDS.filter((w) => worldOf(w)).map((w) => `<div class="hi-w"><b>${esc(worldOf(w).glyph)} ${esc(worldOf(w).name)}</b>
-      <div class="hi-s">${tricksIn(w).map((t) => `<button class="hi-stop${stars(k, t.id) >= 2 ? ' done' : ''}" data-act="openStop" data-arg="${t.id}">${stars(k, t.id) >= 2 ? '✓ ' : ''}${esc(t.title)}</button>`).join('')}</div></div>`).join('')}
+    ${HALL_WORLDS.filter((w) => worldOf(w)).map((w) => `<div class="hi-w"><b class="hall-h">${glyph(worldOf(w).glyph, 20)} ${esc(worldOf(w).name)}</b>
+      <div class="hi-s">${tricksIn(w).map((t) => `<button class="hi-stop${stars(k, t.id) >= 2 ? ' done' : ''}" data-act="openStop" data-arg="${t.id}">${stars(k, t.id) >= 2 ? icon('check', 14) + ' ' : ''}${esc(t.title)}</button>`).join('')}</div></div>`).join('')}
   </div>`;
 }
 

@@ -142,14 +142,27 @@
 /* the won target pops (g-born) but does not stay enlarged: at 1.08 its 20px rings reached the cards */
 .mt-target.won{transform:none}
 .mt-target{margin-bottom:40px}
-/* G6: the answer flies to the score; the screen's edge glows on a combo; the backdrop stays calm
-   behind the play so the painted bubbles never compete with the real ones (FIX-MATHS N12) */
+/* G6: the answer flies to the score; the screen's edge glows on a combo. (FIX-MATHS N12 kept the
+   painted bubbles from competing by washing the stage pale; audit v4 found it pale and empty, so now the
+   real bubbles are drawn solid and rimmed instead — see the Number Rush block at the end.) */
 .gfly{position:absolute;z-index:6;transform:translate(-50%,-50%);font:800 28px var(--mono);color:var(--action);text-shadow:0 2px 0 var(--surface);pointer-events:none;animation:gfly .75s cubic-bezier(.5,0,.3,1) forwards}
 @keyframes gfly{60%{opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.5);opacity:0}}
 .play.edge{box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--treasure) 70%,transparent),inset 0 0 60px color-mix(in srgb,var(--treasure) 35%,transparent);transition:box-shadow .25s}
 .play.edge-hot{animation:gedge 1.4s ease-in-out infinite}
 @keyframes gedge{50%{box-shadow:inset 0 0 0 6px var(--treasure),inset 0 0 90px color-mix(in srgb,var(--treasure) 55%,transparent)}}
 @media (prefers-reduced-motion:reduce){.play.edge-hot{animation:none}.gfly{display:none}}
-.g-rush .rush-stage{background:color-mix(in srgb,var(--surface) 62%,transparent);backdrop-filter:blur(7px) saturate(.55);border-radius:20px}
 .play-x{display:flex;align-items:center;gap:4px;min-height:44px;padding:0 12px 0 6px;width:auto}
 .play-m{min-width:44px;min-height:44px}
+/* Number Rush, audit v4 (G5, G6): the stage IS the painted sky — no pale wash, no blur — and it starts
+   below the bar with a margin, so nothing is born behind the header. The real bubbles are drawn solid and
+   rimmed (games.js draw) so the plate's painted bubbles never pass for them. */
+.g-rush .rush-stage{background:linear-gradient(rgb(255 255 255 / .1),transparent 40%);backdrop-filter:none;margin:10px 12px 0;border-radius:20px;box-shadow:inset 0 0 0 2px rgb(255 255 255 / .55)}
+.gsplash{position:absolute;width:0;height:0;pointer-events:none;z-index:5}
+.gsplash .gs-ring{position:absolute;left:calc(var(--r) * -1);top:calc(var(--r) * -1);width:calc(var(--r) * 2);height:calc(var(--r) * 2);border-radius:50%;border:3px solid hsl(var(--h) 70% 55%);box-sizing:border-box;animation:gs-ring .45s ease-out forwards}
+.gsplash i{position:absolute;left:calc(var(--s) / -2);top:calc(var(--s) / -2);width:var(--s);height:calc(var(--s) * 1.3);border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:hsl(var(--h) 80% 62%);animation:gs-drop .6s cubic-bezier(.2,.7,.35,1) forwards}
+@keyframes gs-ring{from{transform:scale(.9);opacity:.9}to{transform:scale(1.35);opacity:0}}
+@keyframes gs-drop{0%{transform:rotate(var(--a)) translateX(calc(var(--r) * .6)) scale(1);opacity:1}100%{transform:rotate(var(--a)) translateX(var(--d)) translateY(10px) scale(.4);opacity:0}}
+.gsplash.calm *{animation:none}
+.gsplash.calm i{display:none}
+:root[data-motion=reduced] .gsplash *{animation:none}
+@media (prefers-reduced-motion:reduce){.gsplash *{animation:none}.gsplash i{display:none}}

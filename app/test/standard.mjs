@@ -79,7 +79,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 
 /* ================================================================== §2–§11 harmonise, §3 key elements */
 const EMOJI = /\p{Extended_Pictographic}/u;
-const ROUTES = ['home', 'atlas', 'journey', 'library', 'puzzles', 'play', 'contest', 'facts', 'goals', 'stories', 'me', 'shop', 'collection', 'medals', 'settings', 'help', 'mistakes', 'search', 'privacy', 'world/bakery', 'stop/make-ten', 'lib/dictionary', 'lib/vedic'];
+const ROUTES = ['home', 'hall', 'atlas', 'journey', 'library', 'puzzles', 'play', 'contest', 'facts', 'goals', 'stories', 'me', 'shop', 'collection', 'medals', 'settings', 'help', 'mistakes', 'search', 'privacy', 'world/bakery', 'stop/make-ten', 'lib/dictionary', 'lib/vedic'];
 async function emojiIn(p) {
   return p.evaluate((src) => { const re = new RegExp(src, 'u'); const out = [];
     for (const el of document.querySelectorAll('button, [role=tab], nav, h1, h2, h3, .chip')) { if (!el.offsetParent && el.tagName !== 'NAV') continue; const t = el.innerText || ''; if (re.test(t)) out.push(t.trim().slice(0, 30)); }
@@ -127,13 +127,21 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
     ok(!BAD_TEXT.test(txt), `${tag}: no [object Object], {placeholder}, undefined or NaN on #/${r} (${(txt.match(BAD_TEXT) || [])[0]})`);
     ok(await width(p) <= vp.width, `${tag}: no sideways scroll on #/${r} (${await width(p)})`);
   }
-  /* touch targets (P3): every control a child taps is at least 44px, on Home, Puzzles, Goals and Facts */
-  if (phone) for (const r of ['home', 'puzzles', 'goals', 'facts', 'play', 'settings', 'shop']) {
-    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await p.waitForTimeout(250);
-    const small = await p.$$eval('main button, main a, main [role=tab], [data-bz=tabbar] a', (b) => b.filter((x) => {
-      if (!x.offsetParent || x.closest('p, .bz-foot, .foot') || x.classList.contains('linkish')) return false;   // inline text links are exempt
-      const r = x.getBoundingClientRect(); return r.width < 43.5 || r.height < 43.5; }).map((x) => (x.className || x.tagName) + ':' + Math.round(x.getBoundingClientRect().height)));
-    ok(small.length === 0, `${tag}: every target on #/${r} is ≥ 44px (got ${small.length}: ${small.slice(0, 5).join(', ')})`);
+  /* touch targets (P3, audit v4): on a phone, every visible button, link and [data-act] control on every main
+     screen — and the bar and the tab bar around it — is at least 44 × 44 CSS px. ONE exemption, stated: a link
+     that is a run of words inside a sentence (an <a> or .linkish inside a <p>, or the footer's links), where
+     the line itself is the target (WCAG 2.5.8's inline exception). A standalone "Learn it →" is not inline.
+     The top bar is not this app's to size: it is Bee's, placed to Bee's measured pixels by checkShell (rule 16),
+     so its 37px buttons are a family finding, reported, not overridden here. The phone tab bar IS checked. */
+  if (phone) for (const r of ROUTES) {
+    await p.evaluate((x) => { location.hash = '#/' + x; }, r); await p.waitForTimeout(r.startsWith('lib') || r === 'hall' ? 700 : 250);
+    const small = await p.$$eval('main button, main a[href], main [data-act], main [role=tab], main summary, [data-bz=tabbar] a', (b) => [...new Set(b)].filter((x) => {
+      if (!x.offsetParent || x.closest('.bz-foot, .foot') || x.closest('p, li > span') && (x.tagName === 'A' || x.classList.contains('linkish'))) return false;
+      if (x.closest('[aria-hidden=true]') || x.disabled) return false;
+      const cs = getComputedStyle(x); if (cs.visibility === 'hidden') return false;
+      const r = x.getBoundingClientRect(); return r.width < 43.5 || r.height < 43.5; })
+      .map((x) => `${x.tagName.toLowerCase()}.${String(x.className || '').split(' ')[0]}${x.dataset.act ? '[' + x.dataset.act + ']' : ''} "${(x.innerText || x.getAttribute('aria-label') || '').trim().slice(0, 14)}" ${Math.round(x.getBoundingClientRect().width)}×${Math.round(x.getBoundingClientRect().height)}`));
+    ok(small.length === 0, `${tag}: every target on #/${r} is ≥ 44 × 44px (got ${small.length}: ${small.slice(0, 6).join(', ')})`);
   }
   /* N12: the Puzzle Tower's floor pins never overlap on a phone */
   if (phone) {

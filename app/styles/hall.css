@@ -3,7 +3,13 @@
 .hall{display:flex;flex-direction:column;gap:14px}
 .hall-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 .hall-t{font:800 26px/1.1 var(--display);margin:0}
-.bpin .hall-g{position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-style:normal;font-size:22px;filter:drop-shadow(0 2px 3px rgb(0 0 0 / .35))}
+.bpin .hall-g{position:absolute;top:-46px;left:50%;transform:translateX(-50%);width:38px;height:38px;margin:0;display:grid;place-items:center;border-radius:50%;background:var(--surface);color:var(--action);border:2px solid #fff;box-shadow:0 3px 8px rgb(0 0 0 / .3);letter-spacing:0}
+.bpin .hall-g svg{display:block;width:24px;height:24px}
+/* the child's marker stands BESIDE their pin, never on its icon above it (audit v4 N4) */
+.hall .bpin .me{bottom:auto;top:50%;left:calc(100% + 10px);margin:-20px 0 0;transform:none}
+.hall-h{display:inline-flex;align-items:center;gap:8px}
+.hall-h svg{flex:none;color:var(--action)}
+.hi-stop svg{vertical-align:-2px}
 .papers-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .paper-resume{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--treasure-tint);border-radius:12px;padding:8px 12px;margin:8px 0}
 .paper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;margin:10px 0 12px}
