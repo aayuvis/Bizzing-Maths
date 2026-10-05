@@ -227,12 +227,14 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const { p, ctx } = await open({ width: 1280, height: 800 }, seeded());
   await p.evaluate(() => { localStorage.setItem('bizzing.wallet', JSON.stringify({ v: 1, kids: { ahana: { coins: 700, ledger: [{ a: 'bee', t: Date.now() - 864e5, n: 700, why: 'migrated' }] } } })); });
   await p.reload(); await p.evaluate(() => { location.hash = '#/collection'; }); await ready(p);
-  const cards = await p.$$eval('.bz-av', (c) => c.map((x) => ({ tier: x.dataset.tier, state: x.dataset.state, say: x.querySelector('.av-say').textContent.trim(), label: x.querySelector('figcaption b').textContent })));
+  const cards = await p.$$eval('.bz-av', (c) => c.map((x) => ({ tier: x.dataset.tier, state: x.dataset.state, say: x.querySelector('.av-say').textContent.trim(), label: x.querySelector('figcaption b').textContent,
+    world: Math.ceil(([...document.querySelectorAll('.pack')].indexOf(x.closest('.pack')) + 1) / 2) })));
   ok(cards.length === 96, `the Collection shows all 96 (got ${cards.length})`);
   ok(cards.every((c) => c.say && c.label), 'every card states its tier and its path in words');
   const tiers = cards.reduce((a, c) => ((a[c.tier] = (a[c.tier] || 0) + 1), a), {});
   ok(tiers.common === 24 && tiers.rare === 36 && tiers.epic === 24 && tiers.legendary === 12, `tiers 24/36/24/12 (got ${JSON.stringify(tiers)})`);
-  ok(cards.filter((c) => c.tier === 'legendary').every((c) => /^First: |^Opens with its world/.test(c.say)), 'a Legendary first asks for its learning milestone');
+  ok(cards.filter((c) => c.tier === 'legendary').every((c) => (c.state === 'milestone' && /^First: \S/.test(c.say)) || (c.state === 'world' && c.say === `Opens with World ${c.world}`)), 'a Legendary first asks for its learning milestone, or names the world it waits for');
+  ok(cards.filter((c) => c.state === 'world').every((c) => c.world >= 3 && c.say === `Opens with World ${c.world}`), 'a face whose world is shut names that world by its number');
   ok(cards.filter((c) => c.state === 'world').length === 48, `packs 5–12 wait for their worlds on the free plan; their Commons are free all the same (got ${cards.filter((c) => c.state === 'world').length})`);
   await p.click('.bz-av[data-id=pyrafox] .btn'); await ready(p);
   const after = await p.evaluate(() => ({ k: window.__bzm.R.h.kids[0], w: JSON.parse(localStorage.getItem('bizzing.wallet')).kids.ahana }));

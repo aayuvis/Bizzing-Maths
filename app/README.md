@@ -31,7 +31,7 @@ npm run check      # drives build/ under /Bizzing-Maths/ in Chromium, desktop + 
 | `src/voice.js` | Read-aloud in the device's own voice (en-IN first), given words from voice-text.js so maths is said, not spelled. Silent when muted. |
 | `src/voice-text.js` | The tokeniser: text → words a child is taught ("three quarters", "seven times eight", numbers in full, clock times, units). |
 | `src/lines.js` | The fixed sentences a child hears (Nova's onboarding lines, the wrong-answer reply). |
-| `src/views3.js` | The family layer's screens: top bar, ☰ drawer, tabs, Settings (five sections), Shop, wallet sheet, Collection, Medals, Help, search, mistakes deck, the world stage, Octo. |
+| `src/views3.js` | The family layer's screens: top bar, ☰ drawer, tabs, Settings (five sections), Shop, wallet sheet, Collection (Medals, Avatars and Worlds tabs, the tab in the hash; #/medals opens Medals), Help, search, mistakes deck, the world stage, Octo. |
 | `src/avatars.js` | The 96 (12 packs × 8) for the family engine `integration/bizzing-avatars.js`; Legendary milestones read from the record. |
 | `src/themes.js` | The six worlds: name, display face, idle traveller, tune; painted day and night plates. |
 | `src/audio.js` · `src/music.js` | One AudioContext: effects and music buses, master volume, ducking, Calm mode. Music composed in code, loaded on first tap. |
