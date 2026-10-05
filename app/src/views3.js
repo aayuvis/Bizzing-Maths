@@ -10,7 +10,7 @@ import { esc } from './ui.js';
 import { icon, glyph } from './icons.js';
 import { kid, rankOf, RANKS, readOn, BANDS } from './model.js';
 import { Family, DEMO } from './store.js';
-import { CATALOGUE, PACKS, byAvatar, avatarCtx, problems } from './avatars.js';
+import { CATALOGUE, PACKS, byAvatar, avatarCtx } from './avatars.js';
 import { stateOf, TIERS, WORLD_PRICE } from './integration/bizzing-avatars.js';
 import { THEMES, byTheme, themeOf, worldIsOpen, plate } from './themes.js';
 import { FRAMES, owns, worn } from './shop.js';
@@ -71,6 +71,7 @@ const DRAWER = [
 ];
 export function drawer(k) {
   const due = k ? MD.count(k).due : 0;
+  const here = R.ui.nav === 'collection' && R.ui.arg === 'medals' ? 'medals' : R.ui.nav;   // the Medals tab is the drawer's Medals
   return `<div class="drawer-back" data-act="drawer" aria-hidden="true"></div>
   <nav class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="dr-head"><img src="mascot/octo-logo.webp" width="32" height="32" alt=""><b>Bizzing <em>Maths</em></b>
@@ -80,7 +81,7 @@ export function drawer(k) {
       <button class="dr-q" data-act="sound" aria-pressed="${!R.sound}">${icon(R.sound ? 'speaker' : 'mute', 20)}<span>${R.sound ? 'Mute' : 'Sound on'}</span></button>
       <button class="dr-q" data-act="mode">${icon(isDark() ? 'sun' : 'moon', 20)}<span>${isDark() ? 'Light' : 'Dark'}</span></button>
     </div>
-    <ul class="dr-list">${DRAWER.map((x) => x ? `<li><button data-act="nav" data-arg="${x[0]}"${R.ui.nav === x[0] ? ' aria-current="page"' : ''}>${icon(x[2], 22)}<span>${x[1]}</span>${x[0] === 'mistakes' && due ? `<b class="dr-n">${due}</b>` : ''}</button></li>` : '<li class="dr-sep" role="separator"></li>').join('')}
+    <ul class="dr-list">${DRAWER.map((x) => x ? `<li><button data-act="nav" data-arg="${x[0]}"${here === x[0] ? ' aria-current="page"' : ''}>${icon(x[2], 22)}<span>${x[1]}</span>${x[0] === 'mistakes' && due ? `<b class="dr-n">${due}</b>` : ''}</button></li>` : '<li class="dr-sep" role="separator"></li>').join('')}
       <li><a href="${HIVE}">${icon('hex', 22)}<span>Back to the Hive</span></a></li></ul>
   </nav>`;
 }
@@ -155,16 +156,28 @@ export function walletList(lines) {
 }
 
 /* ------------------------------------------------------------------ avatar cards (§8) */
+/* What a face's card says, in Bizzing Bee's words. The engine (stateOf) decides the state; this
+   only words it — "N more to go" from the real wallet, the world by its number. */
+export function avatarSay(a, s) {
+  if (s.state === 'owned') return a.tier === 'common' ? 'Free for everyone' : 'Yours';
+  if (s.state === 'buy') return DEMO ? `${s.price} coins` : s.short ? `${s.price} coins · ${s.short} more to go` : 'Ready to buy';
+  if (s.state === 'world') return `Opens with World ${s.world}`;
+  return s.say;
+}
 export function avatarCard(h, k, a, ctx, { act = true } = {}) {
-  const s = stateOf(a, ctx), wearing = k && k.avatar === a.id;
-  const btn = !act ? '' : s.state === 'owned'
-    ? `<button class="btn small${wearing ? ' on' : ''}" data-act="setAv" data-arg="${a.id}" ${wearing ? 'aria-pressed="true"' : ''}>${wearing ? 'Wearing' : 'Wear'}</button>`
-    : s.state === 'buy' ? `<button class="btn small" data-act="buyAv" data-arg="${a.id}" ${s.short ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)} ${s.price}</button>` : '';
-  return `<figure class="bz-av${wearing ? ' wearing' : ''}" data-tier="${a.tier}" data-state="${s.state}" data-id="${a.id}">
+  const s = stateOf(a, ctx), wearing = k && k.avatar === a.id, say = avatarSay(a, s);
+  const btn = !act ? '' : wearing && s.state === 'owned' ? `<span class="av-on">${icon('check', 16)} Wearing</span>`
+    : s.state === 'owned' ? `<button class="btn small av-wear" data-act="setAv" data-arg="${a.id}" aria-label="Wear ${esc(a.name)}">Wear</button>`
+    : s.state === 'buy' ? `<button class="btn small av-buy" data-act="buyAv" data-arg="${a.id}" aria-label="Buy ${esc(a.name)} for ${s.price} coins" ${s.short ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)}<b class="mono">${s.price}</b></button>` : '';
+  // a tap anywhere on the card but its button opens the card too (the picture is the keyboard's way in)
+  return `<figure class="bz-av${wearing ? ' wearing' : ''}" data-tier="${a.tier}" data-state="${s.state}" data-id="${a.id}"${act ? ` data-act="avPeek" data-arg="${a.id}"` : ''}>
     <img src="${a.art}" alt="${act ? `${esc(a.name)} — open its card` : ''}" width="120" height="120" loading="lazy" decoding="async"${act ? ` class="av-peek" data-act="avPeek" data-arg="${a.id}" role="button" tabindex="0"` : ''}>
-    <figcaption>${esc(a.name)} <b>${TIERS[a.tier].label}</b><span class="av-say">${esc(s.say)}</span></figcaption>${btn}
+    <figcaption>${esc(a.name)} <b>${TIERS[a.tier].label}</b></figcaption><span class="av-say">${esc(say)}</span>${btn}
   </figure>`;
 }
+/* Each pack is one panel (Bee's avPacksHTML): a dot, the name, "3/8", and its world on the right;
+   all eight faces in one row on a laptop. */
+const packDot = (n) => `--c1:hsl(${(n * 47) % 360} 72% 62%);--c2:hsl(${(n * 47 + 50) % 360} 70% 52%)`;
 export function packGrid(h, k, { buyFirst = false } = {}) {
   const ctx = avatarCtx(h, k); if (DEMO) ctx.who = '';
   let packs = PACKS.slice();
@@ -172,21 +185,63 @@ export function packGrid(h, k, { buyFirst = false } = {}) {
   return packs.map((p) => {
     const w = THEMES[Math.ceil(p.n / 2) - 1], open = worldIsOpen(h, k, w.n);
     const avs = CATALOGUE.filter((a) => a.pack === p.n), have = avs.filter((a) => stateOf(a, ctx).state === 'owned').length;
-    return `<section class="pack" aria-labelledby="pk-${p.id}">
-      <header class="pack-h"><h3 id="pk-${p.id}">${esc(p.name)}</h3><span class="muted small">${esc(p.blurb)} · ${esc(w.name)}${open ? '' : ' — opens with its world'} · ${have} of 8</span></header>
+    return `<section class="pack" data-pack="${p.id}" aria-labelledby="pk-${p.id}">
+      <header class="pack-h"><span class="pack-dot" style="${packDot(p.n)}" aria-hidden="true"></span><h3 id="pk-${p.id}">${esc(p.name)}</h3>
+        <span class="pack-n mono" aria-label="${have} of ${avs.length} yours">${have}/${avs.length}</span>
+        <span class="pack-w">${icon(open ? 'map' : 'lock', 14)} World ${w.n} · ${esc(w.name)}${open ? '' : ` — family plan or ${WORLD_PRICE} coins`}</span></header>
+      <p class="pack-b">${esc(p.blurb)}</p>
       <div class="avgrid">${avs.map((a) => avatarCard(h, k, a, ctx)).join('')}</div></section>`;
   }).join('');
 }
 
+/* ------------------------------------------------------------------ the Collection (Bee's viewCollection) */
+/* Three tabs, each with its count from the code: the medals (medals.js), the 96 faces (avatars.js)
+   and the six worlds (themes.js). The tab lives in the hash — #/collection/medals — so Back moves
+   between them; #/medals lands on the Medals tab. Avatars is the default: the Collection is
+   "your avatars" everywhere else in the app. */
+export const COLL_TABS = ['medals', 'avatars', 'worlds'];
+export const collTab = (arg = R.ui.arg) => (COLL_TABS.includes(arg) ? arg : 'avatars');
+export function collCounts(h, k) {
+  const ctx = avatarCtx(h, k), ms = medalStates(k);
+  return {
+    medals: [ms.filter((m) => m.earned).length, ms.length],
+    avatars: [CATALOGUE.filter((a) => stateOf(a, ctx).state === 'owned').length, CATALOGUE.length],
+    worlds: [THEMES.filter((t) => worldIsOpen(h, k, t.n)).length, THEMES.length],
+  };
+}
 export function viewCollection() {
-  const h = R.h, k = kid(h), ctx = avatarCtx(h, k); if (DEMO) ctx.who = '';
-  const have = CATALOGUE.filter((a) => stateOf(a, ctx).state === 'owned').length;
-  return `<section class="collection">
-    ${head('Collection', `${have} of ${CATALOGUE.length} are yours. Every card says how it is earned — never by chance.`, `<button class="btn small" data-act="nav" data-arg="shop">${icon('shop', 18)} Shop</button>`)}
-    ${problems().length ? '' : ''}
-    <div class="tier-key">${Object.entries(TIERS).map(([t, x]) => `<span class="tk tk-${t}"><i></i>${x.label}${x.price ? ` · ${x.price} coins` : ' · free'}</span>`).join('')}</div>
-    ${packGrid(h, k)}
+  const h = R.h, k = kid(h), tab = collTab(), n = collCounts(h, k), coins = Family.balance(k.name);   // the same number as the top bar's pill
+  const tabs = [['medals', 'Medals', 'medal'], ['avatars', 'Avatars', 'sparkle'], ['worlds', 'Worlds', 'palette']];
+  const T = TIERS;
+  const intro = {
+    avatars: `Commons are free for everyone. Rares are ${T.rare.price} Bizzing coins and Epics ${T.epic.price} once their world is open; a Legendary is ${T.legendary.price} after its learning milestone. Every price is fixed, and nothing here is left to chance.`,
+    medals: `${n.medals[0]} of ${n.medals[1]} medals won — every one from something you did, never from time on the app or a run of days.`,
+    worlds: `Each world repaints the app. Worlds 1 and 2 are open to everyone; the others open with the family plan, or ${WORLD_PRICE} Bizzing coins each.`,
+  }[tab];
+  return `<section class="collection" data-tab="${tab}">
+    <header class="phead coll-head"><button class="back" data-act="nav" data-arg="home"><span aria-hidden="true">‹</span> Home</button>
+      <div class="phead-t"><h1>Collection</h1></div>
+      <div class="phead-r"><button class="btn small print-btn" data-act="printCards" aria-label="Print my cards">${icon('printer', 18)}<span class="pb-t">Print my cards</span></button>
+        <button class="coin-chip coll-coins" data-act="wallet" aria-haspopup="dialog" aria-label="${coins} Bizzing coins — open your wallet">${icon('coin', 20)}<b class="mono">${coins}</b></button></div></header>
+    <div class="coll-tabs" role="tablist" aria-label="Collection">${tabs.map(([id, name, ic]) => `<button role="tab" id="ct-${id}" aria-selected="${tab === id}" aria-controls="coll-panel" class="ct${tab === id ? ' on' : ''}" data-act="collTab" data-arg="${id}" data-n="${n[id][0]}" data-of="${n[id][1]}">${icon(ic, 18)}<span>${name} · <b class="mono">${n[id][0]}/${n[id][1]}</b></span></button>`).join('')}</div>
+    <p class="coll-intro">${intro}${tab === 'medals' ? '' : ' <button class="linkish" data-act="nav" data-arg="shop">Open the Shop</button>'}</p>
+    <div id="coll-panel" role="tabpanel" aria-labelledby="ct-${tab}">${tab === 'medals' ? medalsGrid(k) : tab === 'worlds' ? collWorlds(h, k, coins) : packGrid(h, k)}</div>
   </section>`;
+}
+/* The six worlds as Bee's world cards: the painted plate, the name, what it costs, and Use it. */
+function collWorlds(h, k, coins) {
+  const cur = themeOf(k, h);
+  return `<div class="coll-worlds">${THEMES.map((t) => {
+    const open = worldIsOpen(h, k, t.n), on = cur === t.id, short = DEMO ? 0 : Math.max(0, WORLD_PRICE - coins);
+    const say = open ? (t.n <= 2 ? 'Open · free for everyone' : 'Open') : DEMO ? `${WORLD_PRICE} coins` : short ? `${WORLD_PRICE} coins · ${short} more to go` : 'Ready to buy';
+    return `<div class="cw${open ? '' : ' shut'}${on ? ' on' : ''}" data-world="${t.id}" data-n="${t.n}">
+      <span class="cw-art" style="background-image:url(${plate(t.id, isDark(), true)})">${open ? '' : `<span class="cw-lock">${icon('lock', 16)}</span>`}</span>
+      <div class="cw-t"><span class="cw-k mono">World ${t.n}</span><b style="font-family:'${t.display}'">${esc(t.name)}</b><span class="muted small">${esc(t.blurb)}</span>
+        <span class="cw-say">${say}</span>${open ? '' : '<span class="cw-plan muted small">Comes with the family plan</span>'}</div>
+      ${open ? (on ? `<span class="av-on cw-on">${icon('check', 16)} Your world</span>` : `<button class="btn small" data-act="theme" data-arg="${t.id}" aria-label="Use ${esc(t.name)}">Use this world</button>`)
+        : `<button class="btn small av-buy" data-act="buyWorld" data-arg="${t.n}" aria-label="Open ${esc(t.name)} for ${WORLD_PRICE} coins" ${short ? 'disabled aria-disabled="true"' : ''}>${icon('coin', 16)}<b class="mono">${WORLD_PRICE}</b></button>`}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 /* ------------------------------------------------------------------ the Shop (§1) */
@@ -264,14 +319,14 @@ export function viewSettings() {
 }
 
 /* ------------------------------------------------------------------ Medals, Help */
-export function viewMedals() {
-  const k = kid(R.h), ms = medalStates(k), n = ms.filter((m) => m.earned).length;
-  return `<section>${head('Medals', `${n} of ${ms.length} — every one from something you did, never from time on the app or a run of days.`)}
-    <div class="card"><div class="medals">${ms.map((m) => `<div class="medal${m.earned ? ' on' : ''}">
+/* The medals grid: the Collection's Medals tab (#/medals opens it there). */
+export function medalsGrid(k) {
+  const ms = medalStates(k);
+  return `<div class="card"><div class="medals">${ms.map((m) => `<div class="medal${m.earned ? ' on' : ''}">
       <img src="art/medal-${m.id}.webp" alt="" width="86" height="86" loading="lazy">
       <b>${esc(m.name)}</b><small>${esc(m.desc)}</small>
       ${m.earned ? `<small class="when">Earned ${new Date(m.earned.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small>` : `<span class="bar" role="img" aria-label="${m.now} of ${m.need}"><i style="width:${Math.round(100 * m.now / m.need)}%"></i></span><small>${m.now} of ${m.need}</small>`}
-    </div>`).join('')}</div></div></section>`;
+    </div>`).join('')}</div></div>`;
 }
 export const GLOSSARY = [
   ['Bizzing coins', 'The one money of every Bizzing app. Earned for learning; spent at fixed prices.'],

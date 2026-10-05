@@ -118,15 +118,88 @@ body{font-family:var(--ui)}
 .tier-key{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 14px;font-size:13px;color:var(--muted)}
 .tk i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:3px solid #7B8794}
 .tk-rare i{border-color:#3D7DF0}.tk-epic i{border-color:#B14FC4}.tk-legendary i{border-color:#F0B429}
-.pack{margin:0 0 22px}
-.pack-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 10px}
-.pack-h h3{margin:0;font-size:20px}
-.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:12px}
-.bz-av{color:var(--ink)}
-.bz-av figcaption{display:flex;flex-direction:column;gap:2px}
-.bz-av .av-say{font:500 12px/1.3 var(--ui);color:var(--muted)}
-.bz-av .btn{width:100%;justify-content:center}
-.bz-av.wearing{outline:3px solid var(--action);outline-offset:2px}
+/* each pack is one panel (Bee's .bz-pack): dot · name · 3/8 · its world on the right; eight faces
+   in ONE row wherever the panel is wide enough, four or three to a row below that */
+.pack{margin:0 0 16px;padding:14px 16px 16px;border-radius:22px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh);container-type:inline-size}
+.pack-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 2px}
+.pack-dot{width:16px;height:16px;border-radius:5px;background:linear-gradient(135deg,var(--c1),var(--c2));flex:none}
+.pack-h h3{margin:0;font-size:20px;line-height:1.2}
+.pack-n{font:700 14px var(--mono);color:var(--muted);padding:1px 7px;border-radius:999px;background:var(--surface2)}
+.pack-w{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:650 13px var(--ui);color:var(--muted)}
+.pack-b{margin:0 0 10px 26px;font-size:13px;color:var(--muted)}
+.avgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@container (min-width:860px){.avgrid{grid-template-columns:repeat(8,minmax(0,1fr))}}
+@container (max-width:420px){.avgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}}
+.bz-av{color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;min-width:0;padding:8px 6px 10px;border-radius:18px}
+.bz-av img{width:100%;max-width:120px;height:auto}
+.bz-av figcaption{display:flex;flex-direction:column;gap:1px;font-weight:700;font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.bz-av figcaption b{font-weight:800}
+.bz-av[data-act]{cursor:pointer}
+.bz-av .av-say{flex:1;font:600 12.5px/1.3 var(--ui);color:var(--muted);overflow-wrap:anywhere}
+.bz-av .btn{margin-top:4px;min-height:44px;min-width:44px;width:auto;padding:6px 16px;justify-content:center;border-radius:12px}
+.bz-av .av-wear{background:var(--surface2);border-color:transparent;color:var(--action);font-weight:750}
+.av-buy{background:var(--treasure-tint);border:1.5px solid color-mix(in srgb,var(--treasure) 60%,transparent);color:var(--treasure-deep);font-weight:750}
+.av-buy .ico{color:var(--treasure-deep)} .av-buy .ico path:first-child,.av-buy .ico circle:first-child{fill:var(--treasure);opacity:1}
+.av-buy[disabled]{opacity:1;cursor:default;filter:saturate(.75)}
+.av-on{margin-top:4px;min-height:44px;display:inline-flex;align-items:center;gap:5px;font:800 14px var(--ui);color:var(--mastered)}
+.bz-av.wearing{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--action) 35%,transparent)}
+@container (max-width:420px){.bz-av figcaption{font-size:13px}.bz-av .av-say{font-size:11.5px}.bz-av .btn{padding:6px 10px}}
+@media (max-width:620px){.pack{padding:12px 10px 12px}.pack-w{margin-left:0;flex-basis:100%}.pack-b{margin-left:0}}
+
+/* the Collection: Bee's header (‹ Home · Collection · Print my cards · coins), three counted tabs */
+.collection{max-width:1180px;margin:0 auto}
+.coll-head .phead-r{flex-wrap:wrap;justify-content:flex-end}
+.coll-head .back,.print-btn{min-height:44px}
+.coll-head .back{font:750 15px var(--ui);padding:8px 16px 8px 12px}.coll-head .back span{font-size:20px;line-height:1}
+.print-btn{border-radius:999px;background:var(--surface2);border-color:var(--line);font-weight:750}
+.coll-coins{height:44px}
+.coll-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 12px}
+.coll-tabs .ct{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:8px 10px;border-radius:12px;border:0;background:var(--surface2);color:var(--muted);font:750 15px var(--ui);cursor:pointer}
+.coll-tabs .ct b{font:inherit}
+.coll-tabs .ct.on{background:var(--action);color:var(--action-ink)}
+.coll-tabs .ct:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+.coll-intro{margin:0 0 14px;font-size:14.5px;line-height:1.55;color:var(--muted)}
+.coll-intro .linkish{min-height:0;display:inline}
+.coll-worlds{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.cw{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--sh);padding-bottom:14px}
+.cw.on{box-shadow:0 0 0 3px var(--action)}
+.cw-art{position:relative;display:block;aspect-ratio:21/9;background-size:cover;background-position:center}
+.cw.shut .cw-art{filter:grayscale(.55) brightness(.85)}
+.cw-lock{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgb(0 0 0 / .55);color:#fff}
+.cw-t{flex:1;display:flex;flex-direction:column;gap:3px;padding:10px 14px}
+.cw-k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.cw-t b{font-size:21px;line-height:1.15}
+.cw-say{font:700 13.5px var(--ui);color:var(--treasure-deep);margin-top:2px}
+.cw .btn,.cw .av-on{margin:0 14px;align-self:flex-start;min-height:44px}
+.cw .btn{padding:6px 18px;border-radius:12px}
+@media (max-width:620px){
+  .coll-head{grid-template-columns:auto 1fr auto}
+  .coll-head .phead-t{text-align:center}
+  .print-btn .pb-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .print-btn{width:44px;padding:0}
+  .coll-tabs{gap:6px}
+  .coll-tabs .ct{flex-direction:column;gap:2px;font-size:13px;padding:6px 4px;min-height:54px}
+  .coll-intro{font-size:13.5px}
+  .coll-worlds{grid-template-columns:1fr}
+}
+
+/* "Print my cards": the child's owned cards on screen, then several to an A4 page on paper */
+.print-sheet{position:fixed;inset:0;z-index:80;overflow:auto;background:var(--paper);padding:0 16px 24px}
+.ps-bar{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;background:var(--paper);border-bottom:1px solid var(--line);margin-bottom:14px}
+.ps-bar b{flex:1;font:750 16px var(--ui)}
+.ps-bar .btn{min-height:44px}
+.ps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;max-width:1180px;margin:0 auto}
+.ps-grid .avc{box-shadow:none}
+.ps-grid .avc::after{display:none}
+@media print{
+  @page{size:A4;margin:8mm}
+  html.printing body > *:not(#print-sheet){display:none !important}
+  html.printing,html.printing body{background:#fff !important}
+  .print-sheet{position:static;overflow:visible;padding:0;background:#fff}
+  .ps-bar{display:none}
+  .ps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;max-width:none}
+  .ps-grid .avc{break-inside:avoid;zoom:.62;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#1B2238;background:#fff;border-width:3px}
+}
 .shop-tabs{margin:0 0 16px}
 .worlds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 .world-card{display:grid;grid-template-rows:auto 1fr auto;background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--sh-raised);padding-bottom:12px}

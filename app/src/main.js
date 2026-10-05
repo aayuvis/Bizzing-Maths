@@ -234,6 +234,9 @@ function go(nav, arg = null, fromHash = false) {
   // #/game/<id> is a game's own history entry (games.js): with a game up it is already handled;
   // without one (Forward, a reload) it opens the game from the Play room, as #/play/<id> does
   if (nav === 'game') { if (gameOn()) return; nav = 'play'; }
+  // the Medals page is the Collection's Medals tab now (Bee's Collection); old links still land on it
+  if (nav === 'medals') { nav = 'collection'; arg = 'medals'; if (fromHash) history.replaceState(null, '', '#/collection/medals'); }
+  if (nav === 'collection' && arg != null && !V3.COLL_TABS.includes(arg)) { arg = null; if (fromHash) history.replaceState(null, '', '#/collection'); }
   if (!ROUTES.includes(nav) || (NEEDS_ARG[nav] && !NEEDS_ARG[nav](arg))) { nav = 'home'; arg = null; if (fromHash) history.replaceState(null, '', '#/home'); }
   // a game or a puzzle family named in the link starts it — the address then settles on its room
   if ((nav === 'play' || nav === 'puzzles') && arg) {
@@ -243,7 +246,7 @@ function go(nav, arg = null, fromHash = false) {
   }
   arg = deepen(nav, arg);
   if (nav !== R.ui.nav && !fromHash) R.ui.prev = R.ui.nav;
-  R.ui.sheet = false; R.ui.drawer = false; R.ui.wallet = false;
+  R.ui.sheet = false; R.ui.drawer = false; R.ui.wallet = false; closePrint();
   if (nav === 'search' && R.ui.nav !== 'search') { R.ui.q = R.ui.q || ''; R.ui.more = []; }
   if (nav !== 'paper' && R.paper) { keepDraft(); stopClock(); R.paper = null; }   // the draft is kept; the clock is a deadline
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
@@ -299,7 +302,6 @@ function screen() {
     case 'me': return V.viewMe();
     case 'shop': return V3.viewShop();
     case 'collection': return V3.viewCollection();
-    case 'medals': return V3.viewMedals();
     case 'settings': return V3.viewSettings();
     case 'help': return V3.viewHelp();
     case 'mistakes': return V3.viewMistakes();
@@ -323,7 +325,7 @@ const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { 
 /* actions that only move between screens or change a setting: they never wait for the code */
 const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
   'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
-  'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert', 'avDeck', 'avPeek'];
+  'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert', 'avDeck', 'avPeek', 'collTab', 'printCards'];
 gateActions({ ready: engineReady, wait: engine, safe: new Set(SAFE_ACTS), failed: () => toast('This needs the internet once — then it works offline.') });
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { if (!engineReady()) engine().catch(() => {}); }, { capture: true, passive: true, once: true });
 
@@ -1185,7 +1187,8 @@ function earnWords(id, k) {
 }
 on('avDeck', (start, ev) => {
   const k = kid(R.h); if (!k) return;
-  const trigger = (ev && ev.target && ev.target.closest && ev.target.closest('button, [role=button]')) || document.activeElement, again = findAgain(trigger);
+  const t0 = ev && ev.target && ev.target.closest ? ev.target : null;
+  const trigger = (t0 && (t0.closest('button, [role=button]') || (t0.closest('figure.bz-av') || { querySelector: () => null }).querySelector('img.av-peek'))) || document.activeElement, again = findAgain(trigger);
   return avCards().then((M) => {
     const ids = ownedFaces(k);
     M.openDeck({ ids, start: start && ids.includes(start) ? start : k.avatar, trigger, refocus: again,
@@ -1197,10 +1200,38 @@ on('avDeck', (start, ev) => {
 on('avPeek', (id, ev) => {
   const k = kid(R.h); if (!k || !byAvatar[id]) return;
   if (ownsAvatar(R.h, k, id)) return fire('avDeck', id, ev);
-  const trigger = (ev && ev.target && ev.target.closest && ev.target.closest('[data-act]')) || document.activeElement;
+  let trigger = (ev && ev.target && ev.target.closest && ev.target.closest('[data-act]')) || document.activeElement;
+  if (trigger && trigger.matches && trigger.matches('figure.bz-av')) trigger = trigger.querySelector('img.av-peek') || trigger;   // focus goes back to its picture
   return avCards().then((M) => M.openDeck({ ids: [id], start: id, trigger, refocus: findAgain(trigger), locked: { id, earn: earnWords(id, k) } }),
     () => toast('The cards need the internet once — then they work offline.'));
 });
+/* The Collection's tabs live in the hash (#/collection/medals), so Back steps from tab to tab. */
+on('collTab', (t) => { if (V3.COLL_TABS.includes(t) && t !== V3.collTab()) go('collection', t); });
+/* "Print my cards" (Bee's printAvCards): the child's OWNED faces as cut-out trading cards, the deck's
+   own card HTML, several to an A4 page through the print stylesheet. Drawn in this page — no pop-up,
+   no network once the cards' code is cached — then the browser's print dialog. */
+on('printCards', (_, ev) => {
+  const k = kid(R.h); if (!k) return;
+  const trigger = (ev && ev.target && ev.target.closest && ev.target.closest('button')) || document.activeElement;
+  return avCards().then((M) => {
+    const ids = ownedFaces(k);
+    closePrint();
+    const el = document.createElement('div');
+    el.id = 'print-sheet'; el.className = 'print-sheet';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Your cards, ready to print');
+    el.innerHTML = `<div class="ps-bar"><b>${ids.length} card${ids.length === 1 ? '' : 's'} — ${escH(k.name)}’s collection</b>
+        <button class="btn small primary" data-ps="print">Print</button><button class="btn small" data-ps="close">Close</button></div>
+      <div class="ps-grid">${ids.map((id) => M.cardHTML(id, { owned: true, history: M.historyOf(id, k, Family.ledger(k.name), APP_ID) })).join('')}</div>`;
+    const close = () => { closePrint(); if (trigger && trigger.isConnected) trigger.focus({ preventScroll: true }); };
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-ps]'); if (!b) return; if (b.dataset.ps === 'close') close(); else window.print(); });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } });
+    document.body.appendChild(el); document.documentElement.classList.add('printing');
+    el.querySelector('[data-ps=print]').focus({ preventScroll: true });
+    const imgs = [...el.querySelectorAll('img')].map((i) => (i.complete ? null : i.decode().catch(() => {})));
+    return Promise.all(imgs).then(() => { if (document.getElementById('print-sheet') === el) window.print(); });
+  }, () => toast('The cards need the internet once — then they work offline.'));
+});
+function closePrint() { const o = document.getElementById('print-sheet'); if (o) o.remove(); document.documentElement.classList.remove('printing'); }
 /* Home's hello card is the family shell's (rule 16), and its picture stays Octo (rule 25): the
    shell is not edited. After each draw the picture is made a button that opens the deck, with
    the child's own face as a small badge on its corner so it is clear what opens. */
