@@ -26,7 +26,7 @@ import { validate, stateOf, TIERS, worldOf as packWorld } from './integration/bi
 
 export const PACKS = [
   { n: 1, id: 'shapes', name: 'Shape Pals', blurb: 'Bodies built from solids.' },
-  { n: 2, id: 'counting', name: 'Counting Critters', blurb: 'Spots, beads and berries you can count.' },
+  { n: 2, id: 'counting', name: 'Counting Critters', blurb: 'Arms, spots and berries you can count.' },
   { n: 3, id: 'tools', name: 'Tool Kit', blurb: 'Made from the geometry box.' },
   { n: 4, id: 'fractions', name: 'Fraction Feast', blurb: 'Cut into equal parts.' },
   { n: 5, id: 'origami', name: 'Origami', blurb: 'Folded from one square of paper. From Bizzing Bee.' },
@@ -43,7 +43,7 @@ export const PACKS = [
 const C = 'common', Ra = 'rare', E = 'epic', L = 'legendary';
 const ROWS = {
   1: [['cubebot', 'Cube Bot', C], ['orbowl', 'Orb Owl', C], ['pyrafox', 'Pyramid Fox', Ra], ['cylicat', 'Cylinder Cat', Ra], ['torupup', 'Donut Pup', Ra], ['conicorn', 'Cone-icorn', E], ['octachick', 'Octahedron Chick', E], ['dodecadrake', 'Dodeca Dragon', L]],
-  2: [['ladybird', 'Spotty Ladybird', C], ['beadpillar', 'Bead Caterpillar', C], ['starfish', 'Five-arm Starfish', Ra], ['peapod', 'Pea-pod Pup', Ra], ['eggchick', 'Egg-tray Chick', Ra], ['dalmatian', 'Dotty Dalmatian', E], ['berrybear', 'Berry Bear', E], ['cubellama', 'Cube Llama', L]],
+  2: [['octo', 'Octo', C], ['ladybird', 'Spotty Ladybird', C], ['starfish', 'Five-arm Starfish', Ra], ['peapod', 'Pea-pod Pup', Ra], ['eggchick', 'Egg-tray Chick', Ra], ['dalmatian', 'Dotty Dalmatian', E], ['berrybear', 'Berry Bear', E], ['cubellama', 'Cube Llama', L]],
   3: [['protortle', 'Protractor Turtle', C], ['rulraffe', 'Ruler Giraffe', C], ['pencilbird', 'Pencil Bird', Ra], ['abacuhog', 'Abacus Hedgehog', Ra], ['chalkbun', 'Chalk Bunny', Ra], ['compacrab', 'Compass Crab', E], ['sharpowl', 'Sharpener Owl', E], ['setsquin', 'Set-square Penguin', L]],
   4: [['pizzapanda', 'Pizza Panda', C], ['piepig', 'Pie Piglet', C], ['orangeotter', 'Orange Otter', Ra], ['sandhippo', 'Sandwich Hippo', Ra], ['pancakepeng', 'Pancake Penguin', Ra], ['chocobear', 'Choco Bear', E], ['cakecat', 'Cake Cat', E], ['melonwhale', 'Melon Whale', L]],
   5: [['paperplane', 'Paper Plane', C], ['cranefold', 'Crane', C], ['hopfold', 'Hop Frog', Ra], ['fanfold', 'Fan Dancer', Ra], ['lotusfold', 'Lotus', Ra], ['kabuto', 'Kabuto', E], ['flutterfold', 'Flutter', E], ['goldencrane', 'Golden Crane', L]],

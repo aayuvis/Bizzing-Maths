@@ -111,7 +111,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const tabs = await p.$$eval(phone ? '[data-bz=tabbar] a' : '[data-bz=tab]', (b) => b.map((x) => x.textContent.trim()));
   // My Feed is the sixth and LAST tab, after Play (owner, 2 Oct 2026; standard §6a)
   ok(tabs.join() === 'Home,Atlas,Library,Puzzles,Play,My Feed', `${tag}: tabs are Home · Atlas · Library · Puzzles · Play · My Feed (got ${tabs})`);
-  ok(await p.locator('[data-bz=greet] img[src*=octo]').count() === 1 && (await p.textContent('[data-bz=greet] .bz-bubble')).length > 20, `${tag}: Octo greets with a line about the child`);
+  ok(await p.locator('[data-bz=greet] img').count() === 1 && await p.locator('[data-bz=greet] > img[src*="avatars/"]').count() === 1 && (await p.textContent('[data-bz=greet] .bz-bubble')).length > 20, `${tag}: the hello card shows the child's own face, with a line about the child`);
   const items = await p.$$eval('[data-bz=drawer] a', (x) => x.map((e) => e.querySelector('b').textContent.trim()));
   ok(items.join('|') === 'My page|Shop|Collection|Medals|My mistakes|What I’m learning|The Story Shelf|My Feed|Settings|Grown-ups|Help|Privacy|Back to the Hive', `${tag}: ☰ lists the family order (got ${items.join('|')})`);
   /* the coin chip opens the wallet history (§1.1) */

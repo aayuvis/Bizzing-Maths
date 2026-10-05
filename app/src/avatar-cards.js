@@ -36,7 +36,7 @@ export const WORDS = {
   dodecadrake: ['Pentagon Fire — sees the pattern in a ball of flat faces', 'Twelve pentagons fold into one roundish dragon, and every corner looks the same.'],
   // Counting Critters
   ladybird: ['Spot Count — sees how many in a small group without pointing', 'Spotty Ladybird never counts its spots one by one; it sees them in little groups.'],
-  beadpillar: ['Bead Slide — moves along a line one bead at a time, never skipping', 'Each part of Bead Caterpillar is a bead on a counting string.'],
+  octo: ['Eight Arms — counts to eight without letting go of anything', 'Octo, the Bizzing Maths octopus, counts its eight arms every morning, just to be sure.'],
   starfish: ['Five-arm Reach — lends a hand on every side', 'Five-arm Starfish can count to five on itself, and start again.'],
   peapod: ['Pod Pairs — puts things in twos before you can blink', 'Pea-pod Pup shares every pod fairly, pea by pea.'],
   eggchick: ['Row and Column — sees a full tray as rows of the same size', 'Egg-tray Chick knows a tray is just equal rows, side by side.'],

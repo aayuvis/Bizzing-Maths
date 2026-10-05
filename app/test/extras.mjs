@@ -62,14 +62,14 @@ ok(X.ledgerWords('skin:stones') === 'bought the Stepping stones road' && X.ledge
 { const h = newHousehold(); h.kids.push(k); h.active = k.id; h.v = SCHEMA;
   Store.saveNow(h); const back = Store.loadHousehold().kids.find((x) => x.id === k.id);
   ok(X.ownsMode(back, 'rush:squares') && X.ownsSkin(back, 'stones') && X.skinOf(back) === 'stones', 'what was bought is still owned after a reload'); }
-ok(SCHEMA === 12, `the store is at v12 (got ${SCHEMA})`);
+ok(SCHEMA === 13, `the store is at v13 (got ${SCHEMA})`);
 { const old = migrate({ v: 10, kids: [{ id: 'a', shop: { owned: ['gold'], worn: { frame: 'gold' }, avatars: ['cubebot'], worlds: [3] } }], parent: {} });
   const s = old.kids[0].shop;
   ok(old.v === SCHEMA && Array.isArray(s.skins) && !s.skins.length && Array.isArray(s.modes) && !s.modes.length && s.worn.skin === null, 'v10 → v11 adds empty skins and modes and the plain road');
   ok(s.owned[0] === 'gold' && s.worn.frame === 'gold' && s.worlds[0] === 3 && s.avatars[0] === 'cubebot', 'v10 → v11 takes nothing away'); }
 { const old = migrate({ v: 11, kids: [{ id: 'a', shop: { owned: ['gold'], worn: { frame: 'gold', skin: 'rails' }, avatars: ['cubebot'], worlds: [3], skins: ['rails'], modes: ['rush:mixed'] } }], parent: {} });
   const s = old.kids[0].shop;
-  ok(old.v === 12 && Array.isArray(s.paperSkins) && !s.paperSkins.length && s.worn.paper === null, 'v11 → v12 adds no paper skins and the plain paper');
+  ok(old.v === SCHEMA && Array.isArray(s.paperSkins) && !s.paperSkins.length && s.worn.paper === null, 'v11 → v12 adds no paper skins and the plain paper');
   ok(s.skins[0] === 'rails' && s.worn.skin === 'rails' && s.modes[0] === 'rush:mixed' && s.owned[0] === 'gold' && s.worn.frame === 'gold', 'v11 → v12 takes nothing away'); }
 { const nk = newKid('N', '8-10', 'cubebot'), h = migrate(JSON.parse(JSON.stringify({ ...newHousehold(), kids: [nk] })));
   ok(newHousehold().v === SCHEMA && JSON.stringify(h.kids[0].shop) === JSON.stringify(nk.shop), 'a new household is born at the current schema, and migrating it changes nothing'); }

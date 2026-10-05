@@ -42,7 +42,7 @@ export const bandRank = (b) => BANDS.findIndex((x) => x.id === b);
    once their world is open, and a Legendary first asks for its learning milestone. No
    draws, no chance. A new child picks a Common (onboarding shows six). */
 import { CATALOGUE, PACKS, AVATAR_IDS, COMMONS, byAvatar } from './avatars.js';
-export const STARTER_AVATARS = ['cubebot', 'protortle', 'hexbee', 'phasefox', 'thermobear', 'ladybird'];
+export const STARTER_AVATARS = ['octo', 'cubebot', 'protortle', 'hexbee', 'phasefox', 'thermobear'];
 export const AVATARS = AVATAR_IDS;
 export const AVATAR_PACKS = PACKS.map((p) => ({ ...p, avatars: CATALOGUE.filter((a) => a.pack === p.n).map((a) => a.id) }));
 export const AVATAR_NAME = Object.fromEntries(CATALOGUE.map((a) => [a.id, a.name]));
@@ -54,7 +54,7 @@ export const AVATAR_KEPT = ['pixel', 'koi', 'panda', 'melody', 'samurai', 'goldl
   // Bizzing Bee's cosmos and lab faces, out of this app's 96 (they are Bee's): a child who wears one still sees it
   'rocket', 'astro', 'comet', 'luna', 'saturn', 'supernova', 'beaker', 'atom', 'magnet', 'scopey', 'robo', 'brainiac'];
 const AVATAR_FILES = new Set([...AVATARS, ...AVATAR_KEPT]);
-export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : COMMONS[0]);
+export const avatarFile = (id) => (AVATAR_FILES.has(id) ? id : 'octo');
 export { byAvatar };
 
 /* ---------------------------------------------------------------- ranks */
@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 12, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
+export function newHousehold() { return { v: 13, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -89,7 +89,7 @@ export function newHousehold() { return { v: 12, kids: [], active: null, parent:
 export const readOn = (k) => !!k && (k.prefs && k.prefs.read != null ? !!k.prefs.read : k.band === '6-7');
 
 export function newKid(name, band, avatar) {
-  const face = COMMONS.includes(avatar) ? avatar : COMMONS[0];   // a new child starts with a Common
+  const face = COMMONS.includes(avatar) ? avatar : 'octo';   // a new child starts with a Common
   return {
     id: 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
     name: String(name || '').trim().slice(0, 20) || 'Friend',

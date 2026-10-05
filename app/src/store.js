@@ -21,7 +21,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 12;
+export const SCHEMA = 13;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -115,6 +115,17 @@ const STEPS = {
       const shop = k.shop || (k.shop = { owned: [], worn: {} });
       shop.worn = shop.worn || {}; shop.paperSkins = shop.paperSkins || [];
       if (shop.worn.paper === undefined) shop.worn.paper = null;
+    }
+    return h;
+  },
+  // v13: Octo joins the 96 as a free Common (owner, 5 Oct 2026), in Bead Caterpillar's place in
+  // Counting Critters. A child who wore, picked or kept the caterpillar now has Octo there.
+  12: (h) => {
+    h.v = 13;
+    const swap = (id) => (id === 'beadpillar' ? 'octo' : id);
+    for (const k of h.kids) {
+      k.avatar = swap(k.avatar); if (k.starter) k.starter = swap(k.starter);
+      if (k.shop && Array.isArray(k.shop.avatars)) k.shop.avatars = [...new Set(k.shop.avatars.map(swap))];
     }
     return h;
   },

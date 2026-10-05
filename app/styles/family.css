@@ -158,16 +158,10 @@
 
 /* ---- the avatar card deck (avatar-cards.js — Bizzing Bee's openAvDeck, in this app's tokens).
    Home's hello card is the family's: its picture is not resized or moved, only given a focus
-   ring and the child's own face as a badge on its corner (positioned off the shell's measured
-   15px padding and 150×164 / 120×140 picture, so Home's geometry is untouched). */
+   ring: it shows the child's own face, so Home's geometry is untouched. */
 .bz-greet > img.greet-open{cursor:pointer;border-radius:22px;transition:transform .15s ease,filter .15s ease}
 .bz-greet > img.greet-open:hover{transform:translateY(-2px)}
 .bz-greet > img.greet-open:focus-visible{outline:3px solid var(--action);outline-offset:3px}
-.greet-badge{position:absolute;left:calc(15px + 150px - 48px);top:calc(50% + 82px - 48px);width:48px;height:48px;border-radius:50%;padding:2px;box-sizing:border-box;
-  background:var(--surface);border:2.5px solid var(--treasure);box-shadow:0 3px 10px rgb(20 30 60 / .25);cursor:pointer;display:grid;place-items:center;pointer-events:auto}
-.greet-badge img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
-.bz-greet > img.greet-open:hover + .greet-badge,.bz-greet > img.greet-open:focus-visible + .greet-badge{transform:scale(1.08)}
-@media (max-width:720px){ .greet-badge{left:calc(15px + 120px - 44px);top:calc(50% + 70px - 44px);width:44px;height:44px} }
 .sc-open{border:0;padding:0;cursor:pointer;font:inherit;color:inherit;transition:transform .15s ease}
 .sc-open:hover{transform:translateY(-2px)}
 .sc-open:focus-visible{outline:3px solid var(--action);outline-offset:3px}

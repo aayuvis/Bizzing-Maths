@@ -45,10 +45,10 @@ ok(stateOf(lion, avatarCtx({ parent: { plan: 'family' } }, k2)).say === 'First: 
 ok(stateOf(lion, avatarCtx({ parent: { plan: 'family' } }, k)).state === 'buy' && TIERS.legendary.price === 500, 'then 500 coins');
 // commons are free to every child; a new child starts on one
 ok(COMMONS.length === 24 && COMMONS.every((id) => stateOf(CATALOGUE.find((a) => a.id === id), avatarCtx(h, k2)).state === 'owned'), 'the 24 Commons are free to everyone');
-ok(COMMONS.includes(newKid('A', '8-10').avatar) && newKid('A', '8-10', 'supernova').avatar === COMMONS[0], 'a new child starts on a Common, never a bought face');
+ok(COMMONS.includes(newKid('A', '8-10').avatar) && newKid('A', '8-10', 'supernova').avatar === 'octo' && newKid('A', '8-10').avatar === 'octo' && COMMONS.includes('octo'), 'a new child starts on a Common — Octo unless they pick another — never a bought face');
 // rivals, cast and old faces still draw
 for (const id of [...RIVALS.map((b) => b.id), ...AVATAR_KEPT]) ok(existsSync(file(id)), `${id}: kept file present`);
-ok(avatarFile('zeus') === COMMONS[0], 'an unknown id falls back to the first Common');
+ok(avatarFile('zeus') === 'octo', 'an unknown id falls back to Octo');
 void TRICKS;
 if (fails) { console.error(`avatars: ${fails} failure(s)`); process.exit(1); }
 console.log(`avatars: ok — validate() = [], 96 in 12 packs of 8, two packs a world, every Legendary a learning milestone`);

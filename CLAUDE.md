@@ -124,8 +124,9 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     `glyph()` draws a data file's emoji as its icon. `test/standard.mjs` counts emoji in controls on every screen.
 24. **Music is composed in code** (`music.js`, `music/CREDITS.md`): a loop per world, Home and the games,
     lazy-loaded on the first tap, ducked under effects and read-aloud, off in Calm mode. No new narration.
-25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, greeting, finishes, empty and error
-    states. Aryabhata stays the ceremony elder. **The logo is ALL of Octo** (`octo-logo.webp`, made by
+25. **Octo is the mascot** (`public/mascot/`, six poses): logo, icon, finishes, empty and error states — and,
+    as Bee's Bizzy is, **a free Common avatar** (Counting Critters, `avatars/octo.webp`, the default face).
+    The hello card shows the child's own face, one picture, never a face badged on Octo (owner, 5 Oct 2026). Aryabhata stays the ceremony elder. **The logo is ALL of Octo** (`octo-logo.webp`, made by
     `tools/art/process.py --logo` from the waving pose), never a crop — `test/standard.mjs` measures the
     logo's edges and fails on a flat cut.
     The avatar ▾ menu is Bee's: every child (✓ on the one playing) · My page — avatar, badges, collection ·

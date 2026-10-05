@@ -1201,17 +1201,16 @@ on('avPeek', (id, ev) => {
   return avCards().then((M) => M.openDeck({ ids: [id], start: id, trigger, refocus: findAgain(trigger), locked: { id, earn: earnWords(id, k) } }),
     () => toast('The cards need the internet once — then they work offline.'));
 });
-/* Home's hello card is the family shell's (rule 16), and its picture stays Octo (rule 25): the
-   shell is not edited. After each draw the picture is made a button that opens the deck, with
-   the child's own face as a small badge on its corner so it is clear what opens. */
+/* Home's hello card is the family shell's (rule 16) and its picture is the child's own face, as
+   in Bee (Octo is one of the faces, and the first one picked). After each draw the picture is
+   made a button that opens the deck. */
 function greetOpens() {
   const k = kid(R.h), img = k && root.querySelector('[data-bz=greet] > img'); if (!img) return;
   const label = `Your avatar cards — ${ownedFaces(k).length} owned`;
   img.tabIndex = 0; img.setAttribute('role', 'button'); img.setAttribute('aria-label', label); img.alt = label; img.title = 'Your avatar cards';
   img.classList.add('greet-open');
-  img.insertAdjacentHTML('afterend', `<span class="greet-badge" aria-hidden="true"><img src="avatars/${escH(avatarFile(k.avatar))}.webp" width="44" height="44" alt=""></span>`);
 }
-root.addEventListener('click', (e) => { if (e.target.closest('[data-bz=greet] > img.greet-open, [data-bz=greet] .greet-badge')) { e.preventDefault(); fire('avDeck', null, e); } });
+root.addEventListener('click', (e) => { if (e.target.closest('[data-bz=greet] > img.greet-open')) { e.preventDefault(); fire('avDeck', null, e); } });
 root.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-bz=greet] > img.greet-open')) { e.preventDefault(); fire('avDeck', null, e); } });
 
 /* The Shop (standard §1, §8): fixed prices through the family engine; nothing random. */

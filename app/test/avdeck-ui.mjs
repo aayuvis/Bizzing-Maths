@@ -57,18 +57,18 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   const { p, ctx, shot } = await open(vp, T, { dark: mode === 'dark' });
   const phone = vp.width < 500;
 
-  // the hello card's picture: a named, focusable button, Octo still in it, the child's face on its corner
+  // the hello card's picture: a named, focusable button showing the child's own face — one
+  // picture, never a face in a face (owner, 5 Oct 2026)
   const g = await p.evaluate(() => {
-    const i = document.querySelector('[data-bz=greet] > img'), b = document.querySelector('[data-bz=greet] .greet-badge');
-    const r = i.getBoundingClientRect(), q = b && b.getBoundingClientRect();
-    return { src: i.getAttribute('src'), role: i.getAttribute('role'), tab: i.tabIndex, label: i.getAttribute('aria-label') || '', badge: b && b.querySelector('img').getAttribute('src'),
-      overlap: q ? Math.max(0, Math.min(r.right, q.right) - Math.max(r.left, q.left)) * Math.max(0, Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top)) / (q.width * q.height) : 0,
+    const i = document.querySelector('[data-bz=greet] > img');
+    return { src: i.getAttribute('src'), role: i.getAttribute('role'), tab: i.tabIndex, label: i.getAttribute('aria-label') || '',
+      pics: document.querySelectorAll('[data-bz=greet] img').length, badge: !!document.querySelector('[data-bz=greet] .greet-badge'),
       cursor: getComputedStyle(i).cursor,
       lazy: performance.getEntriesByType('resource').filter((e) => /avatar-cards/.test(e.name)).length };
   });
-  ok(/mascot\/octo-/.test(g.src), `${T}: the hello card's picture is still Octo (${g.src})`);
+  ok(/avatars\/hexbee\.webp$/.test(g.src), `${T}: the hello card shows the child's own face (${g.src})`);
   ok(g.role === 'button' && g.tab === 0 && g.label === `Your avatar cards — ${OWNED.length} owned` && g.cursor === 'pointer', `${T}: the picture is a named, focusable button (${JSON.stringify(g)})`);
-  ok(/avatars\/hexbee\.webp$/.test(g.badge || '') && g.overlap > 0.5, `${T}: the child's own face sits as a badge on the picture's corner (${g.badge}, overlap ${g.overlap.toFixed(2)})`);
+  ok(g.pics === 1 && !g.badge, `${T}: one picture in the hello card, no badge on it (${g.pics} pictures)`);
   ok(g.lazy === 0, `${T}: the deck's code is not part of Home's first paint (${g.lazy} loaded)`);
   if (mode === 'light') await shot('home');
 
@@ -135,9 +135,9 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
 
   // Escape closes; focus returns to the hello card's picture
   await p.keyboard.press('Escape');
-  const after = await p.evaluate(() => ({ open: !!document.querySelector('.avd-ov'), focus: document.activeElement && document.activeElement.matches('[data-bz=greet] > img'), badge: document.querySelector('[data-bz=greet] .greet-badge img').getAttribute('src') }));
+  const after = await p.evaluate(() => ({ open: !!document.querySelector('.avd-ov'), focus: document.activeElement && document.activeElement.matches('[data-bz=greet] > img'), pic: document.querySelector('[data-bz=greet] > img').getAttribute('src') }));
   ok(!after.open && after.focus, `${T}: Escape closes, and focus returns to the picture (${JSON.stringify(after)})`);
-  ok(/pyrafox/.test(after.badge), `${T}: the badge on the picture is the face now worn (${after.badge})`);
+  ok(/avatars\/pyrafox\.webp$/.test(after.pic), `${T}: the hello card now shows the face just worn (${after.pic})`);
 
   // the keyboard opens it too, on the newly worn face; a tap outside closes it
   await p.focus('[data-bz=greet] > img'); await p.keyboard.press('Enter'); await p.waitForSelector('.avd-ov .avc');

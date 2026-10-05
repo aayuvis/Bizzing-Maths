@@ -307,7 +307,6 @@ export function viewHome() {
   ];
   const c = continueTarget(k), p = c.p, nh = numberOfHour(), mk = MD.count(k), rk = rankOf(k.xp);
   const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
-  const happy = k.last && ['stars', 'land', 'level', 'floor', 'stop'].includes(k.last.what);
   const plain = (html) => String(html).replace(/<[^>]+>/g, '');
   const tip = trickOfHour(k), fact = RANKS[Math.floor(seeded('fact:' + dayKey() + new Date().getHours())() * RANKS.length)];
   /* Bee's home, three rows (standard §6): greeting · daily ring · number of the hour; the next
@@ -316,7 +315,7 @@ export function viewHome() {
   return `<section class="home2">
     ${worldStage(themeOfKid(k), 'home-stage')}
     ${bzHome({
-      greet: { mascot: `mascot/octo-${happy ? 'cheer' : 'wave'}.webp`, hello: `${greet()},`, name: k.name, line: plain(greetingLine(k)) },
+      greet: { mascot: `avatars/${avatarFile(k.avatar)}.webp`, hello: `${greet()},`, name: k.name, line: plain(greetingLine(k)) },
       ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
         foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: p ? `#/journey/${p.level}` : '#/me' } },
       hour: { kicker: 'Five minutes', title: 'Today’s mix', sub: mk.due ? `Facts, a stop, a puzzle — and ${mk.due} mistake${mk.due > 1 ? 's' : ''} due.` : 'Facts picked for you, your next stop and a puzzle.', icon: 'bolt', href: '#/mix' },
