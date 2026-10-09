@@ -6,7 +6,7 @@
    The cards are real stops, by id. A card is never invented for the game: its sums come from
    the stop's own gen, its figure from the stop's own fig and work(q), its algebra from alg. */
 import { icon } from './icons.js';
-import { heroStyle } from './arcade.js';
+import { heroArt } from './arcade.js';
 
 /* the pool, in the order a child usually meets them on the road */
 export const CARD_IDS = ['round-add', 'round-sub', 'times-eleven', 'halve-double', 'square-five', 'nikhilam-100',
@@ -22,5 +22,5 @@ export function machineCard(k) {
   const n = earnedIds(k).length;
   const line = n >= MIN_EARNED ? 'Spot the shortcut before the Long-Way Machine finishes the sum.'
     : `Earn ${MIN_EARNED - n} more trick${MIN_EARNED - n === 1 ? '' : 's'} on the Atlas to race the Long-Way Machine.`;
-  return `<button class="card hero-t machine-t painted" style="${heroStyle('machine')}" data-act="nav" data-arg="machine"><span class="hero-ic" aria-hidden="true">${icon('gear', 52)}</span><span class="kicker">Tricks race</span><b>Beat the Machine</b><span>${line}</span></button>`;
+  return `<button class="card hero-t machine-t painted" data-act="nav" data-arg="machine">${heroArt('machine')}<span class="hero-ic" aria-hidden="true">${icon('gear', 52)}</span><span class="kicker">Tricks race</span><b>Beat the Machine</b><span>${line}</span></button>`;
 }

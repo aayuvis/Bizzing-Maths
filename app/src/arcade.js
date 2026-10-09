@@ -17,5 +17,7 @@ export const GAMES = [
 ];
 
 /* Every hero card is painted, like the game tiles (owner, 9 Oct 2026): the plate full-bleed and a scrim
-   darkening toward the words. Set inline so the url resolves against the page, not the stylesheet. */
+   darkening toward the words, on its own layer (.hero-art) so a dark page can dim the painting and
+   not the words. Set inline so the url resolves against the page, not the stylesheet. */
+export const heroArt = (id) => `<span class="hero-art" style="${heroStyle(id)}" aria-hidden="true"></span>`;
 export const heroStyle = (id) => `background-image:linear-gradient(180deg,rgb(10 12 28 / .08) 0%,rgb(10 12 28 / .3) 38%,rgb(10 12 28 / .86) 78%),url(art/g-${id}.webp)`;

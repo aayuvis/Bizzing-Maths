@@ -333,10 +333,14 @@ details summary{cursor:pointer;font-weight:650;color:var(--action);margin-top:6p
 .hero-ic{position:absolute;top:18px;right:18px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;background:rgb(255 255 255 / .16);color:#fff}
 .hero-ic .ico{width:40px;height:40px}
 /* painted hero cards: the plate full-bleed, a scrim that darkens toward the words at the foot */
-.hero-tiles .hero-t.painted{background-color:#1d2034;background-size:cover;background-position:center;background-repeat:no-repeat;
+.hero-tiles .hero-t.painted{background:#1d2034;
   justify-content:flex-end;min-height:230px;text-shadow:0 1px 3px rgb(0 0 0 / .45);transition:transform .2s ease}
 .hero-tiles .hero-t.painted:hover{transform:translateY(-3px)}
 .hero-tiles .hero-t{margin:0}
+.hero-art{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;transition:transform .35s ease}
+.hero-t.painted > :not(.hero-art){position:relative;z-index:1}
+.hero-t.painted > .hero-ic{position:absolute}
+.hero-t.painted:hover .hero-art{transform:scale(1.04)}
 .hero-tiles .hero-t.painted .hero-ic{background:rgb(10 12 28 / .42);backdrop-filter:blur(4px)}
 .hero-tiles .hero-t.painted .kicker{color:#fff}
 .gtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
