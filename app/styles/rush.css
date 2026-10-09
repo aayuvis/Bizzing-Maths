@@ -4,7 +4,7 @@
 .rush-pick{margin:0 0 12px}
 .g-lv{display:flex;justify-content:center;gap:8px;margin:0 0 6px}
 .g-lvb{min-width:44px;min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:800 18px var(--mono);cursor:pointer}
-.g-lvb.on{border-color:var(--action);background:var(--action);color:#fff}
+.g-lvb.on{border-color:var(--action);background:var(--action);color:var(--action-ink)}
 .g-lvb:focus-visible{outline:3px solid var(--action);outline-offset:2px}
 .g-lvw{margin:0 0 10px;font-weight:700;font-size:14px;color:var(--muted)}
 .rush-calm{display:inline-flex;align-items:center;gap:8px;min-height:44px}
