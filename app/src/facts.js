@@ -298,6 +298,15 @@ function interleave(list, r) {
   return out;
 }
 
+/* The one due list (games spec §3.1, T10): every fact the child is tripping on or that has
+   come due, as keys, traps first then the most overdue. The drill's session builder, Number
+   Rush and the Mock Contest's fact rungs all read k.facts through this idea, so a miss in any
+   of them comes back in all of them. */
+export function dueList(facts, now = Date.now()) {
+  return Object.keys(facts || {}).filter((k) => { const r = facts[k]; return parseKey(k) && r && r.n && (state(r) === 'trap' || r.due <= now); })
+    .sort((x, y) => (state(facts[y]) === 'trap') - (state(facts[x]) === 'trap') || facts[x].due - facts[y].due);
+}
+
 /* ---------- summaries ---------- */
 
 export function tally(facts, op) {

@@ -39,7 +39,7 @@ export const PAPERS = [
 
 /* A mode is `<game>:<mode>`. `how` is its own three-second how-to (games.js HOWTO). */
 export const MODES = [
-  { id: 'rush:mixed', game: 'rush', name: 'Mixed operations', price: 40, blurb: 'All four operations fall at once: + − × ÷.' },
+  { id: 'rush:mixed', game: 'rush', name: 'Inverse', price: 40, blurb: 'Fact families fall together: 7 × 8, 8 × 7, 56 ÷ 7, 56 ÷ 8.' },
   { id: 'rush:squares', game: 'rush', name: 'Squares', price: 50, blurb: 'Square numbers only: 7², 9², 12² — a number times itself.' },
   { id: 'target:five', game: 'target', name: 'Five numbers', price: 50, blurb: 'Five numbers to join instead of four.' },
   { id: 'target:hard', game: 'target', name: 'Hard target', price: 60, blurb: 'Bigger targets that need × or ÷ to reach.' },
