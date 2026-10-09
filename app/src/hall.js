@@ -122,6 +122,7 @@ function viewPaperEnd(P) {
       <h1 class="pe-score">${+sc.points.toFixed(2)} <small>of ${sc.max} points</small></h1>
       <p>${sc.right} right · ${sc.wrong} wrong · ${sc.blank} left blank${P.timeUp ? ' · the time ran out' : ''}</p>
       <div class="pe-tiers">${[3, 4, 5].map((t) => { const x = sc.tiers[t] || { right: 0, n: 0 }; return `<div><b>${x.right}/${x.n}</b><span>${t}-point questions</span></div>`; }).join('')}</div>
+      ${P.pay ? `<p class="c-pay">${icon('coin', 18)} <span>${esc(P.pay.line)}</span></p>` : ''}
       ${sc.wrong ? `<p class="muted small">${sc.wrong} wrong answer${sc.wrong > 1 ? 's' : ''} cost ${+(p.items.filter((q, i) => P.answers[i] != null && P.answers[i] !== q.ans).reduce((a, q) => a + q.pts / 4, 0)).toFixed(2)} points. A blank costs nothing — guess only when you can rule some answers out.</p>` : ''}
       ${nx.length ? `<p class="pe-next"><b>Practise next:</b> ${nx.map((x) => `<button class="hi-stop" data-act="openStop" data-arg="${x.id}">${esc(byId[x.id].title)} <i>×${x.n}</i></button>`).join('')}</p>` : ''}
       <div class="row gap"><button class="btn primary" data-act="paperStart" data-arg="${p.band}|${typeof p.no === 'number' && p.no < FIXED ? p.no + 1 : 'fresh'}">${typeof p.no === 'number' && p.no < FIXED ? `Paper ${p.no + 1}` : 'A fresh paper'}</button><button class="btn" data-act="nav" data-arg="hall">The Contest Hall</button></div>

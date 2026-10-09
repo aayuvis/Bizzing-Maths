@@ -2,8 +2,9 @@
    child sitting a paper would notice:
    - every fixed paper in every band is complete: the right number of questions
      in each of the three sections, and no template twice in one paper;
-   - every question has five different choices, the answer among them, sorted —
-     so the letter never gives it away;
+   - every question has five different choices, the answer among them, at a shuffled
+     position and a balanced rank (games spec §1.2) — so neither the letter nor the
+     middle value gives it away; test/honest.mjs counts the letters over 1,000 papers;
    - every answer is proved again here: the template's own brute-force solve()
      finds exactly that answer and no other;
    - the same paper number is the same paper in every house; two numbers differ;
@@ -47,11 +48,17 @@ for (const band of BAND_IDS) {
   ok(a.items.map((q) => q.text).join() !== c.items.map((q) => q.text).join(), `${band}: papers 7 and 8 are the same`);
 }
 
-/* choices are sorted, numbers by value and fractions by value */
-const ch = choicesFor(12, [3, 30, 7, 100, 12], seeded('x'));
-ok(ch && ch.join() === [...ch].sort((x, y) => x - y).join() && ch.includes('12') && ch.length === 5, 'number choices are sorted by value');
-const fr = choicesFor('1/2', ['1/3', '3/4', '2/5', '5/8'], seeded('y'));
-ok(fr && fr.join() === '1/3,2/5,1/2,5/8,3/4', `fraction choices are sorted by value (${fr})`);
+/* choices (games spec §1.2 changed this promise: sorted by value leaked the answer's position, so
+   the owner's spec replaces "sorted" with a balanced rank and a seeded shuffle of the positions):
+   the same seed gives the same five; the answer is among them; a question about order keeps them
+   sorted by value, fractions included */
+const ch = choicesFor(12, [3, 30, 7, 100, 12], seeded('x'), { pos: seeded('p') });
+ok(ch && ch.includes('12') && ch.length === 5 && new Set(ch).size === 5, `number choices: five, the answer among them (${ch})`);
+ok(JSON.stringify(ch) === JSON.stringify(choicesFor(12, [3, 30, 7, 100, 12], seeded('x'), { pos: seeded('p') })), 'the same seeds give the same choices in the same places');
+const so = choicesFor(12, [3, 30, 7, 100, 12], seeded('x'), { pos: seeded('p'), order: true });
+ok(so && so.join() === [...so].sort((x, y) => x - y).join(), `a question about order keeps its choices sorted (${so})`);
+const fr = choicesFor('1/2', ['1/3', '3/4', '2/5', '5/8'], seeded('y'), { order: true });
+ok(fr && fr.join() === '1/3,2/5,1/2,5/8,3/4', `fraction choices sort by value when the question is about order (${fr})`);
 ok(choicesFor(5, [5, 6, 7], seeded('z')) === null, 'fewer than four wrong answers is refused, not padded');
 
 /* scoring: start with n points; right +pts, wrong −pts/4, blank 0 */

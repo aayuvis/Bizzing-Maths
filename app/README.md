@@ -19,7 +19,9 @@ npm run check      # drives build/ under /Bizzing-Maths/ in Chromium, desktop + 
 | `src/tricks.js` | `WORLDS` (5) and `TRICKS` (27). Each chapter: `hook`, `idea`, `work(q)` steps, `why`, `alg`, `gen(r, lv)`, `q()`, optional `sutra`, `fig`. `drill()`, `correct()`. |
 | `src/facts.js` | `BANK` (434 facts), `tricky()`, `why()`, `ramp()`, Leitner `record()`/`state()`, `session()` (discovery for a new child, then traps → due → ≤4 new → known). |
 | `src/model.js` | Household/kid shape, `RANKS`, `ROUTE`, `frontier()` (skips nodes optional for the child's band or placement), `isOpen()`, `scoreRun()` stars, `RUNGS` + `placeFrom()`. |
-| `src/contest.js` | `RIVALS` (the Bee's ten), the hardness ladder, `playRound()`, `championship()`, `runOut()`. |
+| `src/contest.js` | `RIVALS` (the Bee's ten), the hardness ladder, `playRound()`, `championship()`, `runOut()`; each round's rival times and one tell (`tellOf`); the final from the child's learned tricks (`learnedPool`, `inFinal`). |
+| `src/merit.js` | Contest coins on merit (games spec §1.1): the Mock Contest pays `contest` for round 4 or 4 right, once a day; a paper for half tried and 20 points above its own blank score, once per paper and once a day per band. `test/honest.mjs`. |
+| `styles/stage.css` | The phone fold (§1.5): `html.stage` (main.js `onStage`) and `html.playing` (games.js) hide the tab bar and pack the stage so every key is in the window. `test/honest-ui.mjs`. |
 | `src/games.js` | Overlay frame on a painted plate (`public/art/g-*.webp`), the Family Standard §10 kit (title card + 3-second how-to, pop particles, wobble, a display-only combo meter, a finish screen naming what was practised), shared `keypad()`, `numberRush`, `makeTarget` (+ `solve`, `makePuzzle`), `numberLine`, `sudoku`, `cubeBuilder`. Styles in `styles/games.css`. |
 | `src/cubes.js` | Cube Builder's bank and its solver: three views measured from a stack, every stack they allow found by search, the fewest cubes proved (and checked against a plain brute force in `test/games.mjs`). |
 | `src/figs.js` | SVG figures: `jumps`, `area`, `grid`. |

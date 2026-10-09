@@ -27,7 +27,8 @@ import { readOn } from './model.js';
 import { guideSay, FEEDBACK } from './lines.js';
 import { avatarFile } from './model.js';
 import { newHousehold, newKid, kid, AVATARS, STARTER_AVATARS, tick, payout, trickRec, raiseLevel, noteRun, scoreRun, RUNGS, placeFrom, CHECK_PASS, ROUTE, isOpen, rankOf } from './model.js';
-import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot } from './contest.js';
+import { newContest, childQuestion, playRound, championship, runOut, timeFor, bot, learnedPool } from './contest.js';
+import { payMock, payPaper } from './merit.js';
 import { keypad } from './keypad.js';
 /* the games load when one opens (audit v4 R2: Home never downloads them); until then nothing is active */
 let G = null;
@@ -54,7 +55,7 @@ import { bindShell } from './integration/bizzing-shell.js';
 import { bindFeedKeys } from './integration/bizzing-feed.js';
 import * as FV from './feed-view.js';
 import { pinHash, pinOk } from './pin.js';
-import { GAMES } from './arcade.js';
+import { GAMES, HEROES } from './arcade.js';
 const GAME_IDS = GAMES.map((g) => g.id);
 import { pay as feedPay } from './feed.js';
 
@@ -233,7 +234,17 @@ function go(nav, arg = null, fromHash = false) {
   if (nav === 'arcade') nav = 'play';                       // the tab was renamed; old links still work
   // #/game/<id> is a game's own history entry (games.js): with a game up it is already handled;
   // without one (Forward, a reload) it opens the game from the Play room, as #/play/<id> does
-  if (nav === 'game') { if (gameOn()) return; nav = 'play'; }
+  // (games spec §1.6): every card on Play answers to it — a game (or game:mode), a hero card (the
+  // Mock Contest, the Contest Hall, today's puzzle…) and today's challenge — for the feed and search
+  if (nav === 'game') {
+    if (gameOn()) return;
+    const id = head(arg), hero = HEROES.find((x) => x.id === id);
+    if (hero && hero.act === 'nav') { nav = hero.arg; arg = null; if (fromHash) history.replaceState(null, '', '#/' + nav); }
+    else if (hero || id === 'challenge') {
+      nav = 'play'; arg = null; history.replaceState(null, '', '#/play');
+      const k = kid(R.h); if (k) setTimeout(() => fire(hero ? hero.act : 'challenge', hero && hero.id === 'facts' ? k.prefs.op : hero && hero.arg ? hero.arg : undefined));
+    } else nav = 'play';
+  }
   // the Medals page is the Collection's Medals tab now (Bee's Collection); old links still land on it
   if (nav === 'medals') { nav = 'collection'; arg = 'medals'; if (fromHash) history.replaceState(null, '', '#/collection/medals'); }
   if (nav === 'collection' && arg != null && !V3.COLL_TABS.includes(arg)) { arg = null; if (fromHash) history.replaceState(null, '', '#/collection'); }
@@ -343,6 +354,7 @@ function render() {
   document.documentElement.toggleAttribute('data-bz-dark', document.documentElement.getAttribute('data-mode') === 'dark');   // the avatar glow (§8)
   document.documentElement.toggleAttribute('data-nokid', !kid(R.h));   // no child yet: no empty avatar pill, no tabs (shell.css)
   root.innerHTML = V.shell(screen());
+  document.documentElement.classList.toggle('stage', onStage());   // the phone fold (styles/stage.css)
   for (const i of root.querySelectorAll('.bz-av img')) if (i.complete && i.naturalWidth) i.classList.add('in');   // already in memory: no placeholder flash
   greetOpens();
   if (root.querySelector('img[data-lsrc]')) import('./landing.js').then((m) => m.wire(root));   // the landing's screenshots, as they scroll near
@@ -362,6 +374,15 @@ function render() {
   if (!root.querySelector('.engine-wait')) routeIn();
 }
 R.render = render;
+/* A question is up (games spec §1.5): a contest question, a paper being sat, a run, or any screen
+   drawing the keypad. A game overlay marks itself (html.playing, games.js). */
+function onStage() {
+  const n = R.ui.nav, C = R.contest;
+  return (n === 'contest' && !!C && (C.phase === 'ask' || C.phase === 'champ'))
+    || (n === 'paper' && !!R.paper && !R.paper.over)
+    || (n === 'run' && !!R.run && !R.run.over)
+    || !!root.querySelector('.pad');
+}
 /* an avatar card's picture has arrived: drop its placeholder (shell.css .bz-av img.in). One capturing
    listener for every card the app will ever draw — load does not bubble, but it does capture. */
 document.addEventListener('load', (e) => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest('.bz-av')) t.classList.add('in'); }, true);
@@ -849,7 +870,8 @@ function guidedNext() {
 
 function startContest() {
   const k = kid(R.h); clearConfetti();
-  R.contest = { c: newContest(k.band), phase: 'ask', input: '', last: null };
+  // the final (contest.js finalPool): the last rounds come from the tricks this child has learned on the Atlas
+  R.contest = { c: newContest(k.band, Date.now(), learnedPool(k.tricks)), phase: 'ask', input: '', last: null, met: [], coins: 0 };
   k.contest.runs++; save();
   cAsk();
   go('contest');
@@ -858,21 +880,33 @@ function cAsk(champ = false) {
   const C = R.contest;
   C.q = childQuestion(C.c);
   if (champ) { C.c.rq = 1; C.q = childQuestion(C.c); C.c.rq = 0; }
-  C.phase = champ ? 'champ' : 'ask'; C.input = ''; C.t0 = performance.now();
+  C.phase = champ ? 'champ' : 'ask'; C.input = ''; C.t0 = performance.now(); C.hidAt = null;
   render();
   const k = kid(R.h); if (readOn(k)) say(C.q.say || V.spoken(C.q.text));
 }
+/* The question's clock (games spec §1.6): time counts only while the page is visible. A hidden
+   tab stops the timeout and the bar; coming back shifts the start by the time away. */
 let timerT = null;
 function armTimer() {
   clearTimeout(timerT);
   const C = R.contest;
   if (R.ui.nav !== 'contest' || !C || (C.phase !== 'ask' && C.phase !== 'champ')) return;
   const k = kid(R.h), T = timeFor(k.band, C.q.h) * 1000;
-  const left = T - (performance.now() - C.t0);
+  const hidden = C.hidAt != null;
+  const left = T - ((hidden ? C.hidAt : performance.now()) - C.t0);
   const bar = document.querySelector('.timer i');
-  if (bar) bar.style.animationDelay = `-${((T - left) / 1000).toFixed(2)}s`;
+  if (bar) { bar.style.animationDelay = `-${((T - left) / 1000).toFixed(2)}s`; bar.style.animationPlayState = hidden ? 'paused' : ''; }
+  if (hidden) return;
   timerT = setTimeout(() => { if (R.contest === C && (C.phase === 'ask' || C.phase === 'champ')) cAnswer(''); }, Math.max(0, left));
 }
+document.addEventListener('visibilitychange', () => {
+  const C = R.contest; if (!C || (C.phase !== 'ask' && C.phase !== 'champ')) return;
+  if (document.visibilityState === 'hidden') { if (C.hidAt == null) C.hidAt = performance.now(); clearTimeout(timerT); }
+  else if (C.hidAt != null) { C.t0 += performance.now() - C.hidAt; C.hidAt = null; }
+  armTimer();
+});
+/* how much of this question's time is used, in ms — for the hidden-tab check (test/honest-ui.mjs) */
+const contestUsed = () => { const C = R.contest; return C && C.t0 != null ? (C.hidAt != null ? C.hidAt : performance.now()) - C.t0 : null; };
 function cKey(k) {
   const C = R.contest; if (!C || (C.phase !== 'ask' && C.phase !== 'champ') || C.q.choices) return;
   if (k === '⌫') C.input = C.input.slice(0, -1);
@@ -886,7 +920,11 @@ function cAnswer(given) {
   clearTimeout(timerT);
   const right = given !== '' && correct(C.q, given);
   C.youRight = right; C.given = given;
+  // what you practised (the family standard): every question met, and the missed ones with their answers
+  C.met.push({ text: C.q.text, ans: String(C.q.ans), right, given: given === '' ? null : String(given), final: !!C.q.final });
   if (!right) MD.add(k, C.q, Date.now(), 'Mock contest');
+  // a right answer pays its coin; the contest coins are on merit, at the end (merit.js)
+  if (right) C.coins += earn(k, 'answer', 'a right answer in the Mock Contest') || 0;
   tick(k, right, 2); save();
   right ? sfx.good() : sfx.bad();
   if (C.phase === 'champ') {
@@ -906,7 +944,9 @@ function cNext() {
     C.phase = 'end';
     if (!k.contest.best || c.field.find((f) => f.you).place < k.contest.best) k.contest.best = c.field.find((f) => f.you).place;
     if (c.winner === 'you') { k.contest.wins++; confetti(80); sfx.level(); }
-    k.contest.done = (k.contest.done || 0) + 1; earn(k, 'contest'); medals(k);
+    k.contest.done = (k.contest.done || 0) + 1;
+    C.pay = payMock(k, c, (ev, note) => earn(k, ev, note), { answered: C.coins });
+    medals(k);
     save(); return render();
   }
   if (c.champ) return cAsk(true);
@@ -942,7 +982,9 @@ function finishPaper() {
   const Pp = R.paper, k = kid(R.h); if (!Pp || Pp.over) return;
   stopClock(); Pp.over = true; Pp.sc = P.score(Pp.p, Pp.answers);
   P.record(k, Pp.p, Pp.sc); k.paperDraft = null;
-  earn(k, 'contest'); medals(k); snapshot(k); save();
+  // contest coins on merit (merit.js): half tried, and 20 points above the paper's own blank score
+  Pp.pay = payPaper(k, Pp.p, Pp.sc, P.score(Pp.p, []).points, (ev, note) => earn(k, ev, note), { label: P.BANDS[Pp.p.band].label });
+  medals(k); snapshot(k); save();
   k.last = { what: 'paper', title: typeof Pp.p.no === 'number' ? `Paper ${Pp.p.no}` : 'a fresh paper', at: Date.now() };
   sfx.level(); if (Pp.sc.pct >= 60) confetti(50);
   render(); scrollTo(0, 0);
@@ -1695,4 +1737,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, engineReady, WALK_MS, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
+window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, engineReady, WALK_MS, contestUsed, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
