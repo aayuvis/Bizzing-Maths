@@ -11,7 +11,7 @@ import { TRY } from './landing-try.js';
 import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, state as fstate } from './facts.js';
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
-import { RIVALS, bot, live, timeFor } from './contest.js';
+import { RIVALS, bot, live, timeFor, tellOf } from './contest.js';
 import { keypad } from './keypad.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
@@ -687,15 +687,19 @@ export function viewContest() {
   const field = `<ol class="field">${c.field.map((f) => {
     const b = f.you ? null : bot(f.id);
     const r = C.last && C.last.res[f.id];
-    return `<li class="${cls(f.you && 'you', f.out && 'out', r === true && 'r', r === false && 'w')}" title="${f.you ? esc(k.name) : esc(b.name)}">${av(f.you ? k.avatar : f.id, 40, '')}<span>${f.you ? 'You' : esc(b.name)}</span>${f.out ? '<i>out</i>' : ''}</li>`;
+    const t = C.phase === 'round' && C.last && C.last.times && C.last.times[f.id];
+    return `<li class="${cls(f.you && 'you', f.out && 'out', r === true && 'r', r === false && 'w')}" title="${f.you ? esc(k.name) : esc(b.name)}">${av(f.you ? k.avatar : f.id, 40, '')}<span>${f.you ? 'You' : esc(b.name)}</span>${t ? `<em class="rt mono">${t.toFixed(1)}s</em>` : ''}${f.out ? '<i>out</i>' : ''}</li>`;
   }).join('')}</ol>`;
+  // one rival's tell, every round (games spec §2.1): the field is alive, and it is the Bee's same ten
+  const tl = tellOf(c);
+  const tell = tl ? `<p class="c-tell">${av(tl.id, 28, '')}<span><b>${esc(tl.name)}</b> — ${esc(tl.tell)}</span></p>` : '';
   const head = pageHead(`Round ${C.phase === 'round' ? c.round - 1 : c.round}`, `${live(c).length} still standing`, back('quitContest', 'Leave'));
   if (C.phase === 'ask' || C.phase === 'champ') {
     const q = C.q, T = timeFor(k.band, q.h);
     return `<section class="contest">
-      ${head}${field}
+      ${head}${field}${tell}
       <div class="card qcard contest-q">
-        ${C.phase === 'champ' ? '<p class="chip gold">Championship question — get this and you win</p>' : '<p class="kicker">Your question</p>'}
+        ${C.phase === 'champ' ? '<p class="chip gold">Championship question — get this and you win</p>' : q.final ? '<p class="kicker">The final · a trick from your Atlas</p>' : '<p class="kicker">Your question</p>'}
         <div class="timer"><i style="animation-duration:${T}s;--t:${T}s" data-timer="${T}"></i></div>
         <p class="big-q mono">${esc(q.text)}${q.choices ? '' : ' ='}</p>
         ${q.choices ? `<div class="choice-row big">${q.choices.map((ch, i) => `<button class="btn big" data-act="cChoose" data-arg="${esc(ch)}">${esc(ch)} <kbd>${i + 1}</kbd></button>`).join('')}</div>` : `<p class="answer mono" id="ans">${esc(C.input) || '<span class="caret"></span>'}</p>`}
@@ -737,6 +741,17 @@ function contestLobby(k) {
   </section>`;
 }
 
+/* What you practised (the family standard, games spec §1.6): every question met, and each miss with its answer. */
+function practised(met) {
+  if (!met.length) return '';
+  const got = met.filter((m) => m.right), miss = met.filter((m) => !m.right);
+  return `<div class="card practised">
+    <p class="kicker">What you practised</p>
+    ${got.length ? `<p class="pr-h">${got.length} right</p><ul class="pr-list">${got.map((m) => `<li class="r"><span class="mono">${esc(m.text)}</span> <b class="mono">${esc(m.ans)}</b></li>`).join('')}</ul>` : ''}
+    ${miss.length ? `<p class="pr-h">To look at again</p><ul class="pr-list">${miss.map((m) => `<li class="w"><span class="mono">${esc(m.text)}</span> <b class="mono">${esc(m.ans)}</b><em>${m.given == null ? 'the time ran out' : `you said ${esc(m.given)}`}</em></li>`).join('')}</ul><p class="muted small">Each one is in your mistakes deck, and comes back after a gap.</p>` : ''}
+  </div>`;
+}
+
 function contestEnd(k, C) {
   const c = C.c, you = c.field.find((f) => f.you), win = c.winner === 'you';
   const w = win ? null : bot(c.winner);
@@ -750,8 +765,10 @@ function contestEnd(k, C) {
       ${!win ? `<p>${esc(w.name)} won it, in round ${c.round - 1}.</p>` : `<p>It took ${c.round - 1} rounds.</p>`}
       <div class="podium">${podium.map((f) => `<div class="pod p${f.place}">${av(f.you ? k.avatar : f.id, 56, '')}<b>${f.you ? 'You' : esc(bot(f.id).name)}</b><span>${ordinal(f.place)}</span></div>`).join('')}</div>
       ${k.contest.best ? `<p class="muted">Your best so far: ${ordinal(k.contest.best)} of 11.</p>` : ''}
+      ${C.pay ? `<p class="c-pay">${icon('coin', 18)} <span>${esc(C.pay.line)}</span></p>` : ''}
       <div class="row gap center">${btn('Again', 'startContest', '', 'primary')}${btn('Done', 'quitContest')}</div>
     </div>
+    ${practised(C.met || [])}
   </section>`;
 }
 

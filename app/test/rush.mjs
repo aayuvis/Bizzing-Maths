@@ -155,7 +155,7 @@ for (let n = 2; n <= 20; n++) {
   // the rivals' questions never read the child's record
   ok(questionAt(0.3, seeded('x')).h === questionAt(0.3, seeded('x'), null).h, 'the rivals face the same ladder');
   const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  ok(/newContest\(k\.band, Date\.now\(\), \{ due: F\.dueList\(k\.facts\) \}\)/.test(main), 'T10: main.js opens a Mock Contest with the child\'s due list');
+  ok(/newContest\(k\.band, Date\.now\(\), \{ due: F\.dueList\(k\.facts\)[,\s}]/.test(main), 'T10: main.js opens a Mock Contest with the child\'s due list');
   ok(/if \(C\.q\.fact\) F\.record\(/.test(main), 'T10: a Mock Contest fact is written back to the same record');
   ok(/G\.numberRush\(k, \{[^\n]*F\.record\(k\.facts\[F\.key\(fact\)\]/.test(main), 'T10: Rush writes the same record');
   // Calm IS the Twenty facts run: the same builder, the same run kind, so the same submit(), record and pay

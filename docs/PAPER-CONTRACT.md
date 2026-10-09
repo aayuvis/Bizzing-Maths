@@ -58,8 +58,12 @@ export const TEMPLATES = [
 - `solve(params)` returns exactly `[ans]` — one answer, and it is the stated one — on every one of
   ~300 generated problems per template per band. `solve` must not reuse `make`'s arithmetic: enumerate,
   simulate, or count, so a slip in `make` is caught rather than copied.
-- at least four distinct `wrong` values, none equal to `ans`; the engine picks four and shows the
-  five choices sorted (numbers ascending), so position never leaks the answer;
+- at least four distinct `wrong` values, none equal to `ans`; the engine picks four so the answer's
+  rank among the five values is balanced (adding whole-number near misses on the side that needs them —
+  `solve` proved every other number wrong), then shuffles the five positions with a seeded shuffle
+  (games spec §1.2). A problem about order sets `order: true` and keeps its choices sorted; its
+  balanced rank is then its position. `test/honest.mjs` holds each letter to 20% ± 3% over 1,000
+  papers per band, and "always X" to no more than 2 points above chance;
 - `text` never contains the answer as a separate number, unless the template sets `echo: true`
   with a comment saying why;
 - `why` is one to three sentences a child of that band can follow;

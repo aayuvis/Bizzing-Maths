@@ -18,7 +18,7 @@
      - past SUDDEN_AT rounds the questions stop getting harder and every
        rival's nerve starts to go, so a contest always ends. */
 
-import { TRICKS, byId } from './tricks.js';
+import { TRICKS, byId, WORLDS } from './tricks.js';
 import { BANK, ramp, answer, text as factText, parseKey, key as factKey } from './facts.js';
 import { shuffle, pick, int, seeded } from './rand.js';
 
@@ -37,6 +37,7 @@ export const RIVALS = [
 
 const BASE = 0.84, SPREAD = 1.5, PRESS = 0.55, SPEC = 0.10;
 export const SUDDEN_AT = 14;
+const WORLD_TRACK = Object.fromEntries(WORLDS.map((w) => [w.id, w.track || 'atlas']));
 
 /* Where the field starts, by the child's age band: the same rivals, facing
    questions pitched to the child in front of them. */
@@ -104,15 +105,43 @@ export function rivalGets(bot, q, round, start, r = Math.random) {
 /* ---------------------------------------------------------------- a contest */
 
 /* `due` is the child's due list (facts.js dueList): the child's fact rungs ask those first,
-   each at most once a contest. The rivals' questions never read it. */
-export function newContest(band, seed = Date.now(), { due = [] } = {}) {
+   each at most once a contest. The rivals' questions never read it. `learned` is the child's Atlas
+   tricks, for the final (finalPool). An array as the third argument is `learned` alone. */
+export function newContest(band, seed = Date.now(), opts = {}) {
+  const { due = [], learned = [] } = Array.isArray(opts) ? { learned: opts } : opts;
   const r = seeded(seed);
   const field = shuffle([{ id: 'you', you: true }, ...RIVALS.map((b) => ({ id: b.id }))], r).map((c, i) => ({ ...c, n: i + 1, out: 0 }));
   return {
     band, seed, round: 1, start: START[band] ?? 0.18, field,
     log: [], place: null, over: false, champ: null, winner: null,
     q: null, rq: 0, due: due.filter((k) => parseKey(k)).slice(0, 40), dueAt: {},
+    learned: learned.slice(),             // the child's Atlas tricks, for the final (finalPool)
+    you: { asked: 0, right: 0, round: 0 },   // what the child did — the pay rule reads it (merit.js)
   };
+}
+
+/* THE FINAL (games spec §2.1). Once three or fewer are standing, the child's questions come
+   from the tricks THEY have learned on the Atlas (stars ≥ 1, or the record's learned flag),
+   so a contest rehearses their own learning. Only tricks whose questions the contest can
+   ask — plain text with no picture, a whole answer typed on the digit pad, or choices — and never the
+   Contest Hall's strategy stops. Fewer than three such tricks: the ladder, as before. */
+export const FINAL_AT = 3, FINAL_MIN = 3;
+const askable = (q) => q && !q.html && !q.puzzle && !q.fig && !q.kind && !q.input && !q.choiceHtml && typeof q.text === 'string'
+  && (Array.isArray(q.choices) ? q.choices.length > 1 : /^\d+$/.test(String(q.ans)));
+export function learnedPool(tricks = {}) {
+  return TRICKS.filter((t) => { const x = tricks[t.id]; return x && (x.stars >= 1 || x.learned) && t.gen && !t.draw; })   // a trick drawn as a picture needs the runner, not a contest card
+    .filter((t) => { const w = t.world && WORLD_TRACK[t.world]; return w !== 'contest'; })
+    .filter((t) => { try { const r = seeded('askable:' + t.id); for (let i = 0; i < 6; i++) if (askable(t.gen(r, 2))) return true; } catch (e) {} return false; })
+    .map((t) => t.id);
+}
+export const inFinal = (c) => c.learned.length >= FINAL_MIN && live(c).length <= FINAL_AT && live(c).some((x) => x.you);
+function finalQuestion(c, r) {
+  for (let i = 0; i < 12; i++) {
+    const id = pick(c.learned, r), t = byId[id]; if (!t || t.draw) continue;
+    const q = t.gen(r, 2);
+    if (askable(q)) return { text: q.text, say: q.say, ans: q.ans, choices: q.choices, frac: q.frac, simplest: q.simplest, keys: q.keys || t.keys, trick: id, h: hardness(c), tag: 'final', final: true };
+  }
+  return null;
 }
 
 export const live = (c) => c.field.filter((x) => !x.out);
@@ -136,7 +165,22 @@ export function childQuestion(c) {
     if (k) c.dueAt[k] = qid;
     return k ? parseKey(k) : null;
   } } : null;
-  return questionAt(hardness(c), r, due);
+  return (inFinal(c) && finalQuestion(c, r)) || questionAt(hardness(c), r, due);
+}
+
+/* A rival's moment, for the screen (games spec §2.1): how long they took this round and
+   whether they got it — the same draw the round itself made, so the screen never disagrees
+   with the result. Time is their pace, slower on a harder rung and as the nerve goes. */
+export function rivalTime(b, round, h, r) {
+  const press = Math.min(1, round / 10) * (1 - b.nerve);
+  return Math.round((b.pace * (1 + h * 1.6) * (1 + press * 0.8) * (0.8 + r() * 0.4)) / 100) / 10;
+}
+/* One rival's tell for this round: a live rival, the same in every house for the same round. */
+export function tellOf(c) {
+  const ids = live(c).filter((x) => !x.you).map((x) => x.id);
+  if (!ids.length) return null;
+  const b = bot(pick(ids, seeded(`${c.seed}:tell:${c.round}`)));
+  return { id: b.id, name: b.name, tell: b.tell };
 }
 
 /* Resolve a whole round. `youRight` is the child's result, or null if the
@@ -144,14 +188,16 @@ export function childQuestion(c) {
 export function playRound(c, youRight) {
   const r = seeded(`${c.seed}:r${c.round}:${c.rq}`);
   const h = hardness(c);
-  const res = {};
+  const res = {}, times = {};
+  const tr = seeded(`${c.seed}:t${c.round}:${c.rq}`);   // a separate stream: the times never change who gets what
   for (const x of live(c)) {
     if (x.you) res[x.id] = !!youRight;
-    else res[x.id] = rivalGets(bot(x.id), questionAt(h, r), c.round, c.start, r);
+    else { res[x.id] = rivalGets(bot(x.id), questionAt(h, r), c.round, c.start, r); times[x.id] = rivalTime(bot(x.id), c.round, h, tr); }
   }
+  if (youRight != null && 'you' in res) { c.you.asked++; c.you.right += youRight ? 1 : 0; c.you.round = c.round; }
   const ids = Object.keys(res);
   const missed = ids.filter((id) => !res[id]);
-  const entry = { round: c.round, h, res, out: [] };
+  const entry = { round: c.round, h, res, times, out: [] };
 
   if (c.round === 1) {
     entry.note = 'Round one — nobody sits down in round one.';
@@ -184,6 +230,7 @@ export function playRound(c, youRight) {
 export function championship(c, right) {
   const missed = c.champ && c.champ.missed;
   c.champ = null;
+  if (right != null) { c.you.asked++; c.you.right += right ? 1 : 0; }
   if (right) { out(c, missed, c.log.at(-1)); c.winner = 'you'; }
   else c.log.at(-1).note = 'You missed the championship question — both play on.';
   finish(c);
@@ -214,7 +261,7 @@ function finish(c) {
 export function runOut(c) {
   let guard = 0;
   while (!c.over && guard++ < 400) {
-    if (c.champ) { championship(c, false); continue; }
+    if (c.champ) { championship(c, null); continue; }
     playRound(c, null);
   }
   if (!c.over) {                                     // cannot happen; belt and braces

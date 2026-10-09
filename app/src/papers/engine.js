@@ -37,13 +37,57 @@ const num = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.
 const fracVal = (v) => { const m = /^(-?\d+)\/(\d+)$/.exec(String(v)); return m ? +m[1] / +m[2] : null; };
 const order = (v) => (num(v) ? +v : fracVal(v));
 
-/* The five choices: the answer and four distinct wrong ones, sorted. */
-export function choicesFor(ans, wrong, r) {
-  const pool = shuffle([...new Set(wrong.map(String))].filter((w) => !same(w, ans)), r).slice(0, 4);
+/* The five choices (games spec §1.2). Sorting by value used to leak: the template's wrong
+   answers cluster round the answer, so it sat at B, C or D 88% of the time and "always C"
+   beat chance by 17 points. Now:
+   - the four wrong answers are picked so the answer's RANK among the five values is drawn
+     evenly from 0..4 where the template's wrong answers allow it (some below, some above),
+     and, within that, the spreads on the two sides are matched as closely as the pool allows
+     — so neither "the middle value" nor "the odd one out" finds it;
+   - then the five POSITIONS are a seeded shuffle, so each letter holds a fifth of the answers;
+   - a question about order (`order: true` on the problem) keeps its choices sorted, and the
+     answer's balanced rank IS its position.
+   `r` is the paper's stream and is consumed exactly as before (one shuffle of the wrong
+   answers), so every fixed paper keeps the same problems; `pos` is a separate seeded stream
+   for the rank and the positions. */
+export function choicesFor(ans, wrong, r, { pos = null, order: sorted = false } = {}) {
+  const pool = shuffle([...new Set(wrong.map(String))].filter((w) => !same(w, ans)), r);
   if (pool.length < 4) return null;
-  const all = [String(ans), ...pool];
-  const keyed = all.every((v) => order(v) != null);
-  return keyed ? all.sort((a, b) => order(a) - order(b)) : all.sort((a, b) => a.localeCompare(b));
+  const pr = pos || seeded(`pos:${ans}:${pool.join('|')}`);
+  const a = String(ans), keyed = order(a) != null && pool.every((v) => order(v) != null);
+  const four = keyed ? balanced(a, pool, pr) : pool.slice(0, 4);
+  const all = [a, ...four];
+  if (sorted && keyed) return all.sort((x, y) => order(x) - order(y));
+  return shuffle(all, pr);
+}
+
+/* Four wrong answers with the answer at a balanced rank and the two sides' spreads matched. */
+function balanced(a, pool, pr) {
+  const v = order(a), below = pool.filter((w) => order(w) < v), above = pool.filter((w) => order(w) > v);
+  const want = Math.floor(pr() * 5);
+  // a whole-number answer whose template has too few wrong answers on the side the rank needs gets
+  // near misses there (never below 0): solve() proved the answer is the ONLY one, so any other whole
+  // number is wrong — and a near miss is the most tempting kind of wrong
+  if (/^\d+$/.test(a)) {
+    const have = new Set(pool);
+    for (let d = 1; below.length < want && v - d >= 0 && d <= 12; d++) if (!have.has(String(v - d))) below.push(String(v - d));
+    for (let d = 1; above.length < 4 - want && d <= 12; d++) if (!have.has(String(v + d))) above.push(String(v + d));
+  }
+  const lo = Math.max(0, 4 - above.length), hi = Math.min(4, below.length);
+  const t = Math.min(hi, Math.max(lo, want));
+  // the nearest on each side first, then the template's own preference order (real mistakes first)
+  const near = (side) => side.slice().sort((x, y) => Math.abs(order(x) - v) - Math.abs(order(y) - v));
+  const b = near(below), u = near(above);
+  let best = null;
+  // every way of taking t from below and 4 − t from above among the nearest few: matched spreads win
+  const pickN = (arr, n) => { const out = []; const go = (i, acc) => { if (acc.length === n) return out.push(acc); for (let j = i; j < Math.min(arr.length, 6); j++) go(j + 1, [...acc, arr[j]]); }; go(0, []); return out; };
+  for (const L of pickN(b, t)) for (const U of pickN(u, 4 - t)) {
+    const sl = L.length ? Math.max(...L.map((x) => v - order(x))) : 0, su = U.length ? Math.max(...U.map((x) => order(x) - v)) : 0;
+    const cost = L.length && U.length ? Math.abs(Math.log((sl + 1e-9) / (su + 1e-9))) : 0;
+    const tie = pr();
+    if (!best || cost < best.cost - 1e-9 || (Math.abs(cost - best.cost) < 1e-9 && tie < best.tie)) best = { cost, tie, set: [...L, ...U] };
+  }
+  return best ? best.set : pool.slice(0, 4);
 }
 
 /* Assemble a paper. `no` is 1..FIXED for a fixed paper, or any string for a fresh one. */
@@ -57,7 +101,8 @@ export function paper(band, no, pool = ALL) {
     for (const t of ts) {
       if (taken === B.per) break;
       let q = null, choices = null;
-      for (let tries = 0; tries < 6 && !choices; tries++) { q = t.make(r, band); choices = choicesFor(q.ans, q.wrong || [], r); }
+      const pos = seeded(`pos:${band}:${no}:${items.length}`);
+      for (let tries = 0; tries < 6 && !choices; tries++) { q = t.make(r, band); choices = choicesFor(q.ans, q.wrong || [], r, { pos, order: !!q.order }); }
       if (!choices) continue;
       items.push({ tid: t.id, tier, pts: tier, topic: t.topic, strategy: t.strategy, text: q.text, fig: q.fig || '', why: q.why || '', ans: String(q.ans), choices, params: q.params });
       taken++;

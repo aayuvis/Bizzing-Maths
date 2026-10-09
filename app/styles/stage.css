@@ -1,0 +1,51 @@
+/* stage.css — the phone fold (games spec §1.5, test/honest-ui.mjs T7).
+
+   While a question is up — a Mock Contest question, a paper, a run (Twenty facts, a Tower floor,
+   a drill), any screen drawing the keypad — main.js puts `stage` on <html>; a game overlay puts
+   `playing` there itself (games.js). On a phone the family tab bar and the search row step aside
+   for it, and the stage is packed so every key, ✓ included, sits inside the window and above any
+   fixed bar. A new game inherits all of this by drawing keypad() or opening a game frame. The
+   family's own files (integration/*, bizzing-shell.css) are untouched: this only hides their
+   elements from the app's side, as shell.css does for data-nokid. */
+.contest .c-tell{display:flex;align-items:center;justify-content:center;gap:8px;margin:-4px auto 12px;max-width:620px;font-size:14px;color:var(--muted);text-align:left}
+.contest .c-tell .av{width:28px;height:28px;border-radius:50%;flex:none}
+.contest .c-tell b{color:var(--ink)}
+.field li .rt{font-style:normal;font-size:11px;color:var(--muted);line-height:1}
+.c-pay{display:flex;align-items:flex-start;justify-content:center;gap:8px;margin:12px auto;max-width:46ch;font-weight:650;text-align:left}
+.c-pay svg{flex:none;margin-top:2px;color:var(--treasure)}
+.practised{max-width:620px;margin:14px auto 0}
+.practised .pr-h{font-weight:700;margin:8px 0 4px}
+.pr-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.pr-list li{display:inline-flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:10px;background:var(--surface2);font-size:15px}
+.pr-list li.r b{color:var(--mastered)}
+.pr-list li.w{background:color-mix(in srgb,var(--fix) 10%,var(--surface))}
+.pr-list li.w b{color:var(--fix)}
+.pr-list li em{font-style:normal;font-size:12px;color:var(--muted)}
+
+@media (max-width: 720px) {
+  html.stage [data-bz=tabbar], html.playing [data-bz=tabbar] { display: none; }
+  html.stage [data-bz=search] { display: none; }
+  html.stage [data-bz=content] { padding-top: 10px; padding-bottom: 16px; }
+  html.stage .foot { display: none; }
+  html.stage .phead { margin-bottom: 6px; }
+  html.stage .pad { gap: 6px; margin-top: 8px; }
+  html.stage .pk { height: 50px; }
+  html.stage .qcard { padding: 14px 14px 12px; }
+  html.stage .qcard .answer { font-size: 40px; }
+  html.stage .qcard .hint { margin: 4px 0 0; }
+  html.stage .dots { margin: 0 0 8px; }
+  /* the contest: the field is one row of faces; the names are in the round's result */
+  html.stage .contest .field { flex-wrap: nowrap; gap: 2px; margin-bottom: 6px; }
+  html.stage .contest .field li { width: auto; flex: 1 1 0; min-width: 0; }
+  html.stage .contest .field li > span, html.stage .contest .field li i { display: none; }
+  html.stage .contest .field li .av { width: 30px; height: 30px; border-width: 2px; }
+  html.stage .contest .c-tell { margin: 0 auto 8px; font-size: 13px; }
+  html.stage .contest .big-q { margin: 2px 0 6px; }
+}
+
+/* A game's name on a phone (games spec §1.6): "Number R…" and "Make th…" were cut short once the
+   score filled the bar. The name wraps to two lines instead; its shortest word sets the width. */
+@media (max-width: 560px) {
+  .play .play-bar .play-t { flex: 0 1 auto; min-width: min-content; }
+  .play .play-bar .play-t b { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.05; font-size: 16px; }
+}
