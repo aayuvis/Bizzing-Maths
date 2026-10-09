@@ -17,6 +17,10 @@ function loadHall() {
   if (H) return Promise.resolve();
   return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
 }
+/* Beat the Machine (games spec §2.3) loads on its own route, #/machine (rule 30). */
+let MV = null;
+const loadMachine = () => (MV ? Promise.resolve(MV) : import('./machine-view.js').then((m) => (MV = m)));
+const mctx = () => ({ k: kid(R.h), save, render, earn: (ev, note) => earn(kid(R.h), ev, note), go });
 const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
 import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush, gateActions } from './ui.js';
 import * as J from './journey.js';
@@ -190,7 +194,7 @@ const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked ba
    argument and is given a bad one (#/stop/bad, #/world/bad, #/lib/bad) lands on Home too. */
 export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
   'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
-  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper'];
+  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper', 'machine'];
 const head = (a) => String(a || '').split('|')[0];
 const NEEDS_ARG = { stop: (a) => !!byId[head(a)], world: (a) => !!worldOf(a), lib: (a) => isTool(head(a)) || !!toolById[head(a)], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
 /* DEEP LINKS (owner, 3 Oct 2026): a link goes to the THING, not the room it is in.
@@ -248,6 +252,7 @@ function go(nav, arg = null, fromHash = false) {
   if (nav !== R.ui.nav && !fromHash) R.ui.prev = R.ui.nav;
   R.ui.sheet = false; R.ui.drawer = false; R.ui.wallet = false; closePrint();
   if (nav === 'search' && R.ui.nav !== 'search') { R.ui.q = R.ui.q || ''; R.ui.more = []; }
+  if (nav !== 'machine' && MV) MV.leave();   // the machine's clock stops and its stage comes down
   if (nav !== 'paper' && R.paper) { keepDraft(); stopClock(); R.paper = null; }   // the draft is kept; the clock is a deadline
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
@@ -299,6 +304,9 @@ function screen() {
     case 'hall': case 'paper':
       if (!H) { loadHall().then(render); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the Contest Hall…</p></div></section>'; }
       return n === 'paper' && R.paper ? H.viewPaper() : H.viewHall();
+    case 'machine':
+      if (!MV) { loadMachine().then(() => { if (R.ui.nav === 'machine') render(); }); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the workshop…</p></div></section>'; }
+      return MV.view(mctx());
     case 'me': return V.viewMe();
     case 'shop': return V3.viewShop();
     case 'collection': return V3.viewCollection();
@@ -1496,6 +1504,7 @@ function padKey(k) {
   if (R.ui.nav === 'contest') return cKey(k);
   if (R.ui.nav === 'stop' && R.run && R.run.kind === 'guided') return guidedKey(k);
   if (R.ui.nav === 'run') return typeKey(k);
+  if (R.ui.nav === 'machine' && MV) return MV.pad(k, mctx());
 }
 root.addEventListener('pointerdown', (e) => {
   const b = e.target.closest('.pad [data-k]'); if (!b || gameOn()) return;
@@ -1523,6 +1532,7 @@ addEventListener('keydown', (e) => {
   // the ☰ drawer is the shell's own (bindShell: Esc, focus, Tab); the wallet is ours
   { const d = document.querySelector('[data-bz=drawer]'); if (d && !d.hidden) return; }
   if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }
+  if (R.ui.nav === 'machine' && MV && MV.key(e, mctx())) { e.preventDefault(); return; }
   if (avKey(e)) return;
   if (!engineReady() && !LIGHT_SCREENS.includes(R.ui.nav) && kid(R.h)) return;   // the screen is still waiting for the stops' code
   if (!(e.metaKey || e.ctrlKey || e.altKey) && paperKey(e)) { e.preventDefault(); return; }

@@ -17,7 +17,9 @@ export function fig(spec) {
   return '';
 }
 
-function jumps({ from, jumps: js }) {
+/* `open`: the figure on Beat the Machine's slate (machine.js), drawn BEFORE the child answers, so
+   the landing point is a "?" and no tick is labelled with it (rule 3: never leak the answer). */
+function jumps({ from, jumps: js, open }) {
   const pts = [from]; for (const j of js) pts.push(pts.at(-1) + j);
   const lo = Math.min(...pts), hi = Math.max(...pts);
   const pad = Math.max(1, Math.round((hi - lo) * 0.12));
@@ -28,11 +30,11 @@ function jumps({ from, jumps: js }) {
   for (let v = Math.ceil(a / step) * step; v <= b; v += step) {
     const big = v % 10 === 0;
     s += `<line x1="${X(v)}" y1="${y - (big ? 9 : 5)}" x2="${X(v)}" y2="${y + (big ? 9 : 5)}" class="fg-tick${big ? ' big' : ''}"/>`;
-    if (big) s += `<text x="${X(v)}" y="${y + 28}" class="fg-num">${v}</text>`;
+    if (big && !(open && v === pts.at(-1))) s += `<text x="${X(v)}" y="${y + 28}" class="fg-num">${v}</text>`;
   }
   pts.forEach((v, i) => {
     s += `<circle cx="${X(v)}" cy="${y}" r="6" class="fg-pt${i === 0 ? ' start' : i === pts.length - 1 ? ' end' : ''}"/>`;
-    if (v % 10 !== 0 || i === 0 || i === pts.length - 1) s += `<text x="${X(v)}" y="${y + 28}" class="fg-num strong">${v}</text>`;
+    if (v % 10 !== 0 || i === 0 || i === pts.length - 1) s += `<text x="${X(v)}" y="${y + 28}" class="fg-num strong">${open && i === pts.length - 1 ? '?' : v}</text>`;
   });
   js.forEach((j, i) => {
     const x1 = X(pts[i]), x2 = X(pts[i + 1]), mid = (x1 + x2) / 2, h = Math.min(70, 26 + Math.abs(x2 - x1) * 0.35);

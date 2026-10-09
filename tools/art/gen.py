@@ -306,6 +306,24 @@ GAMES = {
 }
 for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
 
+# Beat the Machine's workshop (games spec §2.3): a day plate and, painted from it, the same room at
+# night. The machine itself is NOT painted — the app draws it as SVG over the plate, so its tape and
+# gears are the app's own (a model asked for a contraption invents dials, and dials carry numerals).
+# The centre stays open floor and wall for the slate, the card rail and the machine.
+MACHINE_ROOM = ("A wide view of a cosy timber workshop interior seen straight on from the middle of the room: honey-coloured "
+                "wooden floorboards, a tall arched window on the far wall, warm oil lamps on brackets, shelves at the far left "
+                "and far right edges holding glass jars of coloured marbles, coils of rope, plain wooden boxes and brass "
+                "pulleys, a few loose cogs and a small oil can on a low bench at the right edge, a potted fern at the left edge. "
+                "No clocks, no dials, no gauges, no rulers, no paper, no books, no chalkboards. The middle of the picture is an "
+                "open, uncluttered stretch of plain plank wall and floor in soft even light. "
+                "Honey wood, brass, deep teal shadows, warm cream.")
+JOBS['g-machine'] = (MACHINE_ROOM + ' ' + STYLE + ' Wide landscape composition.', '16:9')
+JOBS['g-machine-night'] = ("Repaint the attached painting as the SAME workshop at night: keep exactly the same composition, the "
+                           "same viewpoint and every shelf, jar and object in the same place. Deep blue moonlight through the "
+                           "arched window with a few stars outside, the oil lamps glowing warm gold, soft pools of lamplight, "
+                           "the corners in cool blue shadow. Keep the warm hand-painted storybook style. " + STYLE, '16:9',
+                           [os.path.join(RAW, 'g-machine.png')])
+
 
 # Medals: the family medallion (Bizzing Hive's badge prompt, word for word in its
 # frame), so a Maths medal sits on the Hive's shelf beside the others. A medallion
