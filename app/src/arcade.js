@@ -15,3 +15,7 @@ export const GAMES = [
   { id: 'line', title: 'Number Line', blurb: 'Where does 637 go between 0 and 1000? Estimation, the skill contests lean on.', art: 'art-line', keys: '← → and Enter' },
   { id: 'cubes', title: 'Cube Builder', blurb: 'Front, side and top: three views of a stack. Build it, with the fewest cubes you can.', art: 'art-cubes', keys: 'arrows, + − and Enter' },
 ];
+
+/* Every hero card is painted, like the game tiles (owner, 9 Oct 2026): the plate full-bleed and a scrim
+   darkening toward the words. Set inline so the url resolves against the page, not the stylesheet. */
+export const heroStyle = (id) => `background-image:linear-gradient(180deg,rgb(10 12 28 / .08) 0%,rgb(10 12 28 / .3) 38%,rgb(10 12 28 / .86) 78%),url(art/g-${id}.webp)`;

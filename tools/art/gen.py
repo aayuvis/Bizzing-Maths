@@ -312,6 +312,23 @@ GAMES = {
 }
 for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
 
+# The Play tab's hero cards (owner, 9 Oct 2026: "not visual like in other apps"): each painted like the
+# game tiles. Beat the Machine's card reuses g-machine. No people, no lettering, no digits, no clocks.
+HEROES = {
+    'g-hall':    "A wide view of a grand sunlit old hall seen from the doorway: rows of empty polished wooden desks, each with "
+                 "a plain blank sheet of paper and a pencil, tall arched windows letting long golden beams fall across the floor, "
+                 "plain plum and rose coloured banners with no marks hanging from the beams, a brass bell on a stand at the front. "
+                 "No clocks, no boards, no writing anywhere. Warm plum, rose, honey wood, gold light.",
+    'g-contest': "A wide view of a round outdoor arena at dusk seen from the stands: a ring of eleven empty wooden stools on a "
+                 "circular stage under a single warm spotlight, strings of round lanterns overhead, plain blue and violet bunting, "
+                 "a deep blue evening sky with the first stars. No scoreboards, no signs, no writing. Indigo, violet, lantern gold.",
+    'g-daily':   "A wide view of a cosy kitchen breakfast table by a sunny window at sunrise, seen from slightly above: a teapot, "
+                 "four cups, a plate of warm flatbreads, a bowl of oranges, and in the middle four plain blank wooden tiles with "
+                 "nothing on them beside a pencil and a folded plain paper. Potted herbs on the sill, soft morning light. "
+                 "No clocks, no writing, no numbers. Tangerine, saffron, cream, leaf green.",
+}
+for k, v in HEROES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
+
 # Beat the Machine's workshop (games spec §2.3): a day plate and, painted from it, the same room at
 # night. The machine itself is NOT painted — the app draws it as SVG over the plate, so its tape and
 # gears are the app's own (a model asked for a contraption invents dials, and dials carry numerals).

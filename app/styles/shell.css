@@ -433,7 +433,7 @@ html:root, html[data-bz-dark] {
 .foot{padding:26px 0 10px}
 /* the world's own display face: the number of the hour, in the hour tile (typography only, never geometry) */
 .bz-hour h3{font-family:var(--display);line-height:1.1}
-.hero-tiles{grid-template-columns:repeat(3,1fr)}.facts-t{background:linear-gradient(135deg,#178A4C,#2E7FA8);color:#fff}
+.hero-tiles{grid-template-columns:repeat(2,1fr)}.facts-t{background:linear-gradient(135deg,#178A4C,#2E7FA8);color:#fff}
 @media (max-width:820px){.hero-tiles{grid-template-columns:1fr}}
 /* inside Bee's shell, a page head stays small so the thing itself comes first (CLAUDE.md 15) */
 @media (max-width:720px){.phead{margin-bottom:8px;gap:6px}.phead h1{font-size:22px}.stop-page .seg{margin:0 0 8px}.tester{padding:2px 8px;font-size:11px}.bz-content > .tester{margin-bottom:6px}}

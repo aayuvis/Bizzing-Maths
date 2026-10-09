@@ -30,7 +30,7 @@ import { icon, glyph } from './icons.js';
 import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
 import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
 import * as MD from './mistakes.js';
-import { HEROES, GAMES } from './arcade.js';
+import { HEROES, GAMES, heroStyle } from './arcade.js';
 import { machineCard } from './machine-card.js';
 import { timerCard } from './timer-card.js';
 import { challengeOf, doneToday, BONUS_EVENT } from './challenge.js';
@@ -674,7 +674,7 @@ export function viewArcade() {
   return `<section>
     ${pageHead('Play')}
     <div class="hero-tiles">
-      ${HEROES.map((x) => x.id === 'machine' ? machineCard(k) : `<button class="card hero-t ${x.id}-t" data-act="${x.act}"${x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : x.arg ? ` data-arg="${x.arg}"` : ''}><span class="hero-ic" aria-hidden="true">${icon(HERO_ICON[x.id] || 'sparkle', 52)}</span><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
+      ${HEROES.map((x) => x.id === 'machine' ? machineCard(k) : `<button class="card hero-t ${x.id}-t painted" style="${heroStyle(x.id)}" data-act="${x.act}"${x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : x.arg ? ` data-arg="${x.arg}"` : ''}><span class="hero-ic" aria-hidden="true">${icon(HERO_ICON[x.id] || 'sparkle', 52)}</span><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
     </div>
     ${challengeCard(k)}
     <div class="gtiles">
