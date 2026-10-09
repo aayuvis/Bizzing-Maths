@@ -187,14 +187,14 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'chal-desk'], [{ width: 
   if (tag === 'chal-phone') { await ctx.close(); continue; }
   // play it through: right answers by keyboard, one in three wrong — a finish at any score pays
   const s0 = await st(G);
-  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('.run, #ans, .choice-row');
+  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('#ans, .choice-row, #widget');   // a day's set may open on a built answer (widgets.js)
   const run = await G(() => ({ kind: window.__bzm.R.run.kind, title: window.__bzm.R.run.title, n: window.__bzm.R.run.items.length }));
   ok(run.kind === 'challenge' && run.title === name && run.n === 10, `the card starts the named set of ten (${JSON.stringify(run)})`);
   let rights = 0;
   for (let i = 0; i < run.n; i++) {
-    const q = await G(() => { const r = window.__bzm.R.run; return { i: r.i, ans: String(r.items[r.i].ans), ch: r.items[r.i].choices || null }; });
+    const q = await G(() => { const r = window.__bzm.R.run; return { i: r.i, ans: String(r.items[r.i].ans), ch: r.items[r.i].choices || null, w: !!document.getElementById('widget') }; });
     if (i % 3 === 1) { await G((c) => window.__bzm.fire('choose', c), q.ch ? q.ch.find((c) => c !== q.ans) : '99999'); await p.waitForTimeout(80); await G(() => window.__bzm.fire('nextQ')); }
-    else { rights++; if (q.ch) await G((c) => window.__bzm.fire('choose', c), q.ans); else for (const c of q.ans) await p.keyboard.press(c); await p.waitForFunction((n) => !window.__bzm.R.run || window.__bzm.R.run.i > n || window.__bzm.R.run.over, q.i, { timeout: 4000 }); }
+    else { rights++; if (q.ch || q.w) await G((c) => window.__bzm.fire('choose', c), q.ans); else for (const c of q.ans) await p.keyboard.press(c); await p.waitForFunction((n) => !window.__bzm.R.run || window.__bzm.R.run.i > n || window.__bzm.R.run.over, q.i, { timeout: 4000 }); }
     await p.waitForTimeout(60);
   }
   await p.waitForFunction(() => window.__bzm.R.run && window.__bzm.R.run.over, null, { timeout: 4000 });
@@ -213,7 +213,7 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'chal-desk'], [{ width: 
   ok(/Finished today · \d+ of 10 right · bonus paid/.test(await p.locator('.chal').innerText()), 'the card says it is done today, with its score');
   await p.locator('.chal').scrollIntoViewIfNeeded(); await shot('card-done');
   const s2 = await st(G);
-  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('#ans, .choice-row');
+  await p.click('.chal [data-act=challenge]'); await p.waitForSelector('#ans, .choice-row, #widget');
   for (let i = 0; i < 10; i++) { await G(() => window.__bzm.fire('choose', 'nope')); await p.waitForTimeout(40); await G(() => window.__bzm.fire('nextQ')); await p.waitForTimeout(40); }
   await p.waitForFunction(() => window.__bzm.R.run && window.__bzm.R.run.over, null, { timeout: 4000 });
   const s3 = await st(G);
