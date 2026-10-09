@@ -126,7 +126,7 @@ const playFn = main.slice(main.indexOf('function play(arg'), main.indexOf('\n}\n
 const calls = playFn.split('\n').filter((l) => /\bG\.\w+\(/.test(l));
 ok(calls.length === 4 && ['numberRush', 'makeTarget', 'numberLine', 'cubeBuilder'].every((fn) => calls.some((l) => l.includes(`G.${fn}(`))), `play() starts the four Arcade games (${calls.length})`);
 for (const l of calls) ok((l.match(/\bpayout\(k, arg, /g) || []).length === 1 && !/\btick\(/.test(l), `a game is paid through payout(), once, and never by tick() directly: ${l.trim().slice(0, 60)}`);
-ok(/G\.makeTarget\(k, \{ daily: true,[^\n]*onSolve: \(\) => \{ if \(!day\(\)\.shown && !day\(\)\.puzzle\) payout\(k, 'daily', true\)/.test(main), "the daily puzzle is paid through payout('daily'), once, and never after Show me");
+ok(/G\.makeTarget\(k, \{ daily: true,[^\n]*onSolve: \(\) => \{ if \(!day\(\)\.shown\) payout\(k, 'daily', true\)/.test(main), "the daily puzzle is paid through payout('daily') on every clean solve, and never after Show me");
 ok(WAGE.cubes === 5 && WAGE.target === 5 && WAGE.rush === 1 && WAGE.line === 1 && WAGE.daily === 10, `the wage table (${JSON.stringify(WAGE)})`);
 { const a = newKid('W', '8-10', 'cubebot'); payout(a, 'cubes', true); payout(a, 'cubes', false); ok(a.xp === WAGE.cubes, `a solved Cube Builder puzzle pays ${WAGE.cubes} xp and a shown one pays nothing (${a.xp})`);
   let threw = false; try { payout(a, 'nosuch', true); } catch { threw = true; } ok(threw, 'a game with no wage cannot be paid by accident'); }

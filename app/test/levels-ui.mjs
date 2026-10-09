@@ -167,7 +167,7 @@ const skipIntro = async (p) => { await p.keyboard.press('Enter'); await p.waitFo
   await p.click('.play-end [data-g=done]'); await p.waitForTimeout(200);
   await ctx.close();
 }
-{ // a second solve of today's puzzle, without Show me, pays nothing either: the day's puzzle pays once
+{ // a second clean solve of today's puzzle pays again, as it always did (owner, 9 Oct 2026); only Show me stops pay
   const { p, ctx, G } = await open({ width: 1280, height: 800 }, 'daily2');
   const x0 = (await kidNow(G)).xp;
   for (let t = 0; t < 2; t++) {
@@ -176,7 +176,7 @@ const skipIntro = async (p) => { await p.keyboard.press('Enter'); await p.waitFo
     await p.click('.play-end [data-g=done]'); await p.waitForTimeout(200);
   }
   const k = await kidNow(G);
-  ok(k.xp - x0 === 10, `Today's puzzle: solved twice in a day, paid once (${k.xp - x0} xp)`);
+  ok(k.xp - x0 === 20, `Today's puzzle: solved twice in a day without Show me, paid twice (${k.xp - x0} xp)`);
   await ctx.close();
 }
 

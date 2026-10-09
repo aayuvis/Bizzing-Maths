@@ -1086,8 +1086,8 @@ function daily() {
   if (!G) return loadGames().then(daily, () => toast('This needs the internet once — then it works offline.'));
   const k = kid(R.h), d = dayKey(), day = () => k.daily[d] || (k.daily[d] = {});
   // games spec §2.2: after "Show me" the day is recorded as shown, and a later solve of the same
-  // seed is never credited; the day's puzzle pays once
-  G.makeTarget(k, { daily: true, shownToday: !!day().shown, onSolve: () => { if (!day().shown && !day().puzzle) payout(k, 'daily', true); },
+  // seed is never credited; every clean solve pays, as before (owner, 9 Oct 2026)
+  G.makeTarget(k, { daily: true, shownToday: !!day().shown, onSolve: () => { if (!day().shown) payout(k, 'daily', true); },
     onEnd: (solved, shown) => { if (shown) day().shown = true; if (solved && !day().shown) day().puzzle = true; save(); render(); } });
 }
 
