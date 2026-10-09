@@ -134,11 +134,14 @@ for (const m of X.MODES) {
   ok(h && h.practises && h.steps.length === 3 && h.steps.every(([ic, t]) => ic && t.length > 10 && t.length < 70), `${m.id}: a title card with three how-to steps`);
 }
 
-/* Number Rush: mixed has all four operations, squares only squares, right answers right */
+/* Number Rush: mixed is the Inverse mix (games spec §3.1) — whole fact families, the + − ones for
+   the youngest and the × ÷ ones after; squares only squares; right answers right */
 for (const band of ['6-7', '8-10', '11-14']) {
   const kid = newKid('Q', band, 'cubebot');
   const mixed = G.rushPool(kid, 'mixed'), squares = G.rushPool(kid, 'squares'), std = G.rushPool(kid, null);
-  ok(['+', '-', '×', '÷'].every((o) => mixed.some((f) => f.op === o)), `${band} mixed: + − × ÷ all fall`);
+  const ops = band === '6-7' ? ['+', '-'] : ['×', '÷'], famOf = {};
+  for (const f of mixed) (famOf[f.fam] = famOf[f.fam] || []).push(f);
+  ok(ops.every((o) => mixed.some((f) => f.op === o)) && Object.values(famOf).every((m) => ops.every((o) => m.some((f) => f.op === o))), `${band} mixed (Inverse): every family brings ${ops.join(' and ')} together`);
   ok(squares.length >= 9 && squares.every((f) => f.op === '²' && F.answer(f) === f.a * f.a && f.fact && F.key(f.fact) === `${f.a}²2`), `${band} squares: every bubble is n², a real fact in the squares bank`);
   ok(Math.max(...squares.map((f) => f.a)) === (band === '6-7' ? 10 : band === '8-10' ? 12 : 20), `${band} squares reach the band's top`);
   ok(std.every((f) => f.op !== '²'), `${band} the standard game is unchanged by the modes`);

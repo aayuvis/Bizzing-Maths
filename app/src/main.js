@@ -602,7 +602,7 @@ function finishRun() {
     const fresh = run.items.filter((q) => q.fresh).length;
     s.lines.push(fresh ? `You met ${V.nWord(fresh)} new fact${fresh > 1 ? 's' : ''}.` : '');
     s.lines.push(moved ? `${moved} of these are fluent now.` : 'Fluent takes a few days — a fact has to still be quick after a gap.');
-    s.buttons.push(`<button class="btn primary" data-act="startFacts" data-arg="${run.op}">Twenty more</button>`);
+    s.buttons.push(run.calm ? '<button class="btn primary" data-act="startCalm">Another shelf</button>' : `<button class="btn primary" data-act="startFacts" data-arg="${run.op}">Twenty more</button>`);
     k.last = { what: 'facts', title: `${right} of ${n}`, at: Date.now() };
   }
   if (run.kind === 'drill') {
@@ -849,7 +849,7 @@ function guidedNext() {
 
 function startContest() {
   const k = kid(R.h); clearConfetti();
-  R.contest = { c: newContest(k.band), phase: 'ask', input: '', last: null };
+  R.contest = { c: newContest(k.band, Date.now(), { due: F.dueList(k.facts) }), phase: 'ask', input: '', last: null };
   k.contest.runs++; save();
   cAsk();
   go('contest');
@@ -887,6 +887,7 @@ function cAnswer(given) {
   const right = given !== '' && correct(C.q, given);
   C.youRight = right; C.given = given;
   if (!right) MD.add(k, C.q, Date.now(), 'Mock contest');
+  if (C.q.fact) F.record(k.facts[F.key(C.q.fact)] || (k.facts[F.key(C.q.fact)] = F.blank()), right, performance.now() - C.t0, k.band);   // one fact record
   tick(k, right, 2); save();
   right ? sfx.good() : sfx.bad();
   if (C.phase === 'champ') {
@@ -986,10 +987,11 @@ function play(arg, level = null) {
   const k = kid(R.h); clearConfetti();
   // a bonus mode (extras.js) is `<game>:<mode>`, locked until bought; it pays exactly what its game pays
   const [id, mode = null] = String(arg).split(':');
+  if (arg === 'rush:calm') return fire('startCalm');   // Rush · Calm is the free drill in Rush's costume, never a paid mode
   if (mode && !ownsMode(k, arg)) return go('shop');
   const rec = k.games[arg] || (k.games[arg] = { best: null, plays: 0 });
   const onEnd = (score) => { rec.plays++; if (typeof score === 'number' && (rec.best == null || score > rec.best)) rec.best = score; save(); render(); };
-  if (id === 'rush') G.numberRush(k, { mode, onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); payout(k, arg, right); save(); }, onEnd });
+  if (id === 'rush') G.numberRush(k, { mode, onCalm: () => fire('startCalm'), onTick: (right, fact) => { if (fact) F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, right ? 99999 : 0, k.band); payout(k, arg, right); save(); }, onEnd });
   if (id === 'target') G.makeTarget(k, { mode, onSolve: () => { payout(k, arg, true); save(); }, onEnd });
   if (id === 'line') G.numberLine(k, { mode, onTick: (right) => { payout(k, arg, right); save(); }, onEnd });
   if (id === 'cubes') G.cubeBuilder(k, { level, onTick: (right) => { payout(k, arg, right); save(); }, onEnd });
@@ -1107,15 +1109,22 @@ on('openCheck', (wid) => {
   const items = shuffle(ts.flatMap((t) => drill(t, 3, 2).map((q) => ({ ...q, trick: t.id })))).slice(0, 12);
   startRun('check', `Checkpoint · ${worldOf(wid).name}`, items, { world: wid, sub: 'Twelve questions from every stop' });
 });
-on('startFacts', (op) => {
-  const k = kid(R.h); if (op !== 'mix') { k.prefs.op = op; save(); }
+/* Twenty facts — and Number Rush · Calm, which is the SAME run in Rush's costume (games spec §3.1):
+   the same session builder (traps, then due, then new), the same submit() and Leitner record, the
+   same hold on a wrong answer with its why, the same pay. Only the screen differs (views.js calmShelf). */
+function factsRun(op, calm = false) {
+  const k = kid(R.h); if (op !== 'mix' && !calm) { k.prefs.op = op; save(); }
   const list = F.session(k.facts, op, { band: k.band });
   const discover = list.some((f) => f.discover);
   const items = list.map((f) => ({ text: F.text(f), say: V.spoken(F.text(f)), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, fresh: f.fresh, why: F.why(f) }));
   // show times and adding facts either way round: 8 × 7 is the same fact as 7 × 8
   items.forEach((q) => { if ((q.fact.op === '×' || q.fact.op === '+') && Math.random() < 0.5) q.text = `${q.fact.b} ${q.fact.op} ${q.fact.a}`; q.say = V.spoken(q.text); });
-  startRun('facts', op === 'mix' ? 'Mixed facts' : F.OP_NAME[op], items, { op, sub: discover ? 'First, let\'s find out what you already know' : 'Twenty, picked for you' });
-});
+  startRun('facts', calm ? 'Number Rush · Calm' : op === 'mix' ? 'Mixed facts' : F.OP_NAME[op], items, { op, calm, sub: discover ? 'First, let\'s find out what you already know' : calm ? 'No clock, nothing falls — type, and they pop' : 'Twenty, picked for you' });
+}
+on('startFacts', (op) => factsRun(op));
+// Calm serves the op of the child's most pressing due fact (a miss in Rush, the drill or the
+// contest), else the op the child last chose — so whatever slipped anywhere is on the next shelf
+on('startCalm', () => { const k = kid(R.h), d = F.parseKey(F.dueList(k.facts)[0] || ''); factsRun(d ? d.op : k.prefs.op || '×', true); });
 on('startTraps', (op) => {
   const k = kid(R.h);
   const items = F.session(k.facts, op, { only: 'traps' }).map((f) => ({ text: F.text(f), ans: F.answer(f), fact: { op: f.op, a: f.a, b: f.b }, why: F.why(f) }));
@@ -1130,8 +1139,8 @@ on('choose', (c) => { if (R.run && !R.run.fb) submit(c); });
 on('sayQ', () => { const run = R.run, q = run && run.items[run.i]; if (!q) return; if (!R.sound) return toast('Sound is off — turn it on at the top.'); if (run.fb && !run.fb.right) speakFeedback(q, run.fb); else say(q.say || V.spoken(q.text)); });
 on('sayIt', (t) => { if (!R.sound) return toast('Sound is off — turn it on at the top.'); say(t); });
 on('nextQ', () => nextQ());
-on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.kind === 'facts' ? 'facts' : 'home'); });
-on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('quitRun', () => { const r = R.run; R.run = null; hush(); if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.trick && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else go(r && r.kind === 'check' ? 'atlas' : r && r.calm ? 'play' : r && r.kind === 'facts' ? 'facts' : 'home'); });
+on('endRun', () => { const r = R.run; R.run = null; if (r && r.kind === 'mistakes') return go('mistakes'); if (r && r.kind === 'lib') return go('lib', r.lib); if (r && r.kind === 'drill') { R.ui.tab = 'drill'; go('stop', r.trick); } else if (r && r.kind === 'place') go('atlas'); else if (r && ['leveltest', 'landtest', 'levelexam', 'secret'].includes(r.kind)) go('atlas'); else if (r && r.kind === 'check') go('atlas'); else go(r && r.calm ? 'play' : r && r.kind === 'facts' ? 'facts' : 'home'); });
 
 on('startContest', () => startContest());
 on('cChoose', (c) => cAnswer(c));

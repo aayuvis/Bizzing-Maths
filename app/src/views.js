@@ -498,11 +498,11 @@ export function viewRun() {
   return `<section class="runner ${fb ? (fb.right ? 'is-right' : 'is-wrong') : ''}">
     ${pageHead(esc(run.title), esc(run.sub || ''), back('quitRun', 'Stop'))}
     ${run.kind === 'mix' ? mixTicks(run) : ''}
-    <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
+    ${run.calm ? calmShelf(run, q, fb) : `<div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>`}
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
       ${q.bonus ? `<p class="bonus-bar"><span class="chip gold">Bonus ×2 · optional</span> <span class="muted small">Almost next-level hard. Only adds points — it cannot lose you the test.</span> ${fb ? '' : btn('Finish without the bonus', 'skipBonus', '', 'small')}</p>` : ''}
-      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${wid && q.input === 'chart' ? '' : q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
+      ${q.puzzle ? `<p class="pz-q" aria-live="polite">${esc(q.kind === 'pattern' ? '' : q.text)}</p>${q.html || ''}${q.kind === 'pattern' ? `<p class="big-q mono">${esc(q.text)}</p>` : ''}` : `${wid && q.input === 'chart' ? '' : q.html || ''}<p class="${q.text.length > 22 ? 'long-q' : 'big-q mono'}${run.calm ? ' calm-q' : ''}" aria-live="polite">${esc(q.text)}${q.choices || q.text.length > 22 ? '' : ' ='}</p>`}
       <button class="say-btn say-q" data-act="sayQ" aria-label="Read the question aloud" title="Read it aloud (R)">${icon('speaker', 20)}</button>
       ${wid ? W.view(q, run.w, { fb })
         : q.choices
@@ -513,6 +513,24 @@ export function viewRun() {
     ${!fb && !q.choices && !wid ? keypad(q.keys) : ''}
     ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
+}
+
+/* Number Rush · Calm (games spec §3.1): the Twenty facts run, dressed as Rush. The facts sit on a
+   shelf of bubbles — the one to answer now, and the next few waiting — and nothing falls and
+   nothing is timed. A right answer pops the bubble; a wrong one holds it, with its answer and its
+   why underneath, exactly as the drill does. */
+function calmShelf(run, q, fb) {
+  const left = run.items.length - run.i;
+  const next = run.items.slice(run.i + 1, run.i + 5);
+  const hue = (i) => [218, 150, 32, 268, 190][i % 5];
+  return `<div class="calm-shelf" aria-label="${left} facts on the shelf">
+    <div class="cs-row">
+      <span class="cs-b cs-now${fb ? (fb.right ? ' pop' : ' held') : ''}" style="--h:${hue(run.i)};--n:${Math.max(5, q.text.length)}" aria-hidden="true"><b class="mono">${esc(q.text)}</b></span>
+      ${next.map((x, j) => `<span class="cs-b cs-wait" style="--h:${hue(run.i + j + 1)};--n:${Math.max(5, x.text.length)}" aria-hidden="true"><b class="mono">${esc(x.text)}</b></span>`).join('')}
+    </div>
+    <div class="cs-ledge" aria-hidden="true"></div>
+    <p class="cs-left muted small">${left === 1 ? 'The last one on the shelf' : `${left} on the shelf`} · ${run.results.filter((r) => r.right).length} popped</p>
+  </div>`;
 }
 
 /* A hint for the youngest (audit E6): before a 6–7-year-old gets one wrong, they may ask for

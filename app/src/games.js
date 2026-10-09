@@ -12,6 +12,8 @@
    `tick()` every drill uses. */
 
 import { ramp, key as fkey, answer, text as ftext, state as fstate } from './facts.js';
+import * as RU from './rush.js';
+import { setLevel, verdictLine } from './game-level.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
 import { esc, sfx, confetti, music } from './ui.js';
 import { icon } from './icons.js';
@@ -215,14 +217,14 @@ export const HOWTO = {
   cubes: { practises: 'reading a shape from its front, side and top', steps: [['▦', 'Three views show a stack of cubes: front, side, top.'], ['▲', 'Pick a square, then raise or lower its tower.'], ['✓', 'Match all three views. Fewest cubes earns a third star.']] },
   sudoku: { practises: 'logic: every row, column and box once', steps: [['▢', 'Pick an empty square.'], ['✎', 'Fill it in, by tap or by key.'], ['✓', 'No row, column or box may repeat one.']] },
   // the bonus modes (extras.js): each its own how-to, the same keys and pad as its game
-  'rush:mixed': { practises: 'all four operations, at speed', steps: [['±', 'Adding, taking away, times and sharing — all falling at once.'], ['⌨', 'Type the answer on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
-  'rush:squares': { practises: 'square numbers, at speed', steps: [['▢', 'Every bubble is a number times itself.'], ['⌨', 'Type the square on the keys or the pad.'], ['✦', 'Right pops it. Three landings and it ends.']] },
+  'rush:mixed': { practises: 'fact families: 7 × 8, 8 × 7, 56 ÷ 7, 56 ÷ 8', steps: [['⇄', 'A whole fact family falls together: 7 × 8, 8 × 7, 56 ÷ 8, 56 ÷ 7.'], ['⌨', 'Type each answer on the keys or the pad.'], ['✦', 'Know one and you know the family. Three landings ends it.']] },
+  'rush:squares': { practises: 'square numbers, at speed', steps: [['▢', 'Every bubble is a number times itself, the trickiest last.'], ['⌨', 'Type the square on the keys or the pad.'], ['✦', 'A miss shows why: n² is (n − 1)², plus 2n, take 1.']] },
   'target:five': { practises: 'joining five numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'Five numbers this time: keys 1 to 5.'], ['◎', 'Use every number to make the target.']] },
   'target:hard': { practises: 'reaching big targets with × and ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['×', 'Adding alone will not get there: you need × or ÷.'], ['◎', 'Use every number to make the target.']] },
   'line:fractions': { practises: 'where a fraction sits between 0 and 1', steps: [['½', 'A fraction appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Halves first, then quarters. The closer, the more points.']] },
   'line:negatives': { practises: 'numbers below nought', steps: [['0', 'Nought is in the middle; below it, the negatives.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
 };
-const MODE_NAME = { 'rush:mixed': 'Mixed operations', 'rush:squares': 'Squares', 'target:five': 'Five numbers', 'target:hard': 'Hard target', 'line:fractions': 'Fractions', 'line:negatives': 'Negatives' };
+const MODE_NAME = { 'rush:mixed': 'Inverse', 'rush:squares': 'Squares', 'target:five': 'Five numbers', 'target:hard': 'Hard target', 'line:fractions': 'Fractions', 'line:negatives': 'Negatives' };
 const modeKey = (game, mode) => (mode && HOWTO[game + ':' + mode] ? game + ':' + mode : null);
 const titled = (t, mk) => (mk ? `${t} · ${MODE_NAME[mk]}` : t);
 export const INTRO_MS = 3000;
@@ -309,43 +311,39 @@ export { keypad };   // the number pad lives on its own: the runner needs it, th
 
 /* ============================================================ NUMBER RUSH */
 
-/* Facts fall; type the answer to pop one. The facts are the child's OWN —
-   the ones they have met, weighted to the ones not yet fluent — so the game
-   is fact practice at speed. Lives, not a clock: three misses and it ends. */
-/* What falls. The standard game serves the child's own facts for their band; "mixed"
-   serves all four operations; "squares" serves the squares bank (facts.js '²', the
-   squares the app asks every child to know), up to 10² / 12² / 20² by band. */
-export function rushPool(kid, mode = null) {
-  if (mode === 'squares') {
-    const top = kid.band === '6-7' ? 10 : kid.band === '8-10' ? 12 : 20;
-    return ramp('²').filter((f) => f.a >= 2 && f.a <= top).map((f) => ({ fact: f, ...f }));
-  }
-  const ops = mode === 'mixed' ? ['+', '-', '×', '÷'] : kid.band === '6-7' ? ['+', '-'] : kid.band === '8-10' ? ['×', '+', '-', '÷'] : ['×', '÷'];
-  const pool = [];
-  for (const op of ops) {
-    const r = ramp(op).filter((f) => f.a > 0 && f.b > 0);
-    const met = r.filter((f) => kid.facts[fkey(f)] && kid.facts[fkey(f)].n);
-    const edge = r.filter((f) => !met.includes(f)).slice(0, 12);
-    pool.push(...(met.length > 8 ? met : r.slice(0, 30)), ...edge);
-  }
-  return pool.map((f) => ({ fact: f, a: f.a, b: f.b, op: f.op }));
-}
+/* Facts fall; type the answer to pop one. What falls, in what order, when a typed number
+   pops a bubble and how far the sky moves in a frame are rush.js's rules (games spec §1.3,
+   §3.1), held by test/rush.mjs; this is the sky. The standard game has the owner's level
+   ladder 1–5 (a chip on the title card, the child's last level by default) and climbs inside
+   the round; Squares and Inverse are the paid modes. Lives, not a clock: three landings and
+   it ends. Rush · Calm is the Twenty facts drill in Rush's costume — main.js runs it, on the
+   drill's own engine, from the title card's Calm button (onCalm). */
+export const rushPool = RU.rushPool;
 /* How fast the bubbles fall (audit v4 G8). A gentle rise with the run of pops in a row —
    3% a pop, at most +30% — on top of the slow climb with the score (12% every five pops,
    never more than double). A landing or a wrong Enter ends the run, so a child who is
    struggling gets the slower sky back at once. The run of pops in a row is the game's own count, never
-   the combo meter, and it only sets a speed: it pays nothing. */
+   the combo meter, and it only sets a speed: it pays nothing. A level's pace multiplies it. */
 export const RUSH_BASE = 0.05;
 export function rushSpeed(score, inARow) {
   return RUSH_BASE * Math.min(2, 1.12 ** Math.floor(score / 5)) * (1 + 0.03 * Math.min(10, Math.max(0, inARow)));
 }
-export function numberRush(kid, { onTick, onEnd, mode = null }) {
-  const mk = modeKey('rush', mode);
-  const pool = rushPool(kid, mk ? mode : null);
-  const ops = uniq(pool.map((x) => x.op));
-  const f = frame(titled('Number Rush', mk), mode === 'squares' && mk ? 'Pop each square: a number times itself' : 'Type the answer to pop a bubble', () => g.quit(), 'rush', mk || 'rush');
+/* Dot patterns for the pre-readers' level, in a bubble of radius 1: dice faces to five, a
+   ten-frame (a row of five, then the rest) from six to ten — the two shapes children are
+   taught to see without counting. */
+export function dotLayout(n) {
+  const D = { 1: [[0, 0]], 2: [[-0.42, 0], [0.42, 0]], 3: [[0, -0.42], [-0.42, 0.34], [0.42, 0.34]],
+    4: [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]], 5: [[-0.42, -0.42], [0.42, -0.42], [0, 0], [-0.42, 0.42], [0.42, 0.42]] };
+  if (n <= 5) return D[n] || [];
+  return Array.from({ length: n }, (_, i) => [-0.72 + (i % 5) * 0.36, i < 5 ? -0.22 : 0.22]);
+}
+export function numberRush(kid, { onTick, onEnd, mode = null, onCalm = null }) {
+  const mk = modeKey('rush', mode), std = !mk;
+  let lv = std ? RU.rushLevel(kid) : null;
+  const f = frame(titled('Number Rush', mk), mode === 'squares' && mk ? 'Pop each square: a number times itself' : mode === 'mixed' && mk ? 'A whole fact family falls together' : 'Type the answer to pop a bubble', () => g.quit(), 'rush', mk || 'rush');
   const g = { f, tune: 'bright' };
-  let raf = 0, bubbles = [], input = '', score = 0, inARow = 0, lives = 3, t0 = 0, last = 0, spawnAt = 0, speed = rushSpeed(0, 0), over = false;
+  let raf = 0, bubbles = [], input = '', score = 0, inARow = 0, lives = 3, t0 = 0, last = 0, gt = 0, spawnAt = 0, over = false, resync = false;
+  let pool = [], fams = null, start = 0, pace = 1, served = 0, spawned = 0, recent = [], recentFam = [], queue = [], lastLane = -1, speed = rushSpeed(0, 0);
   const popped = [], landed = [];
   let cv, ctx, typed, stage, inp, W = 0, H = 0, combo;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -354,9 +352,16 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
     cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  const hud = () => { f.hud.innerHTML = `<span class="chip">Score <b>${score}</b></span><span class="chip lives">${'♥'.repeat(lives)}${'<i>♥</i>'.repeat(3 - lives)}</span>`; };
+  const hud = () => { f.hud.innerHTML = `${std ? `<span class="chip rush-lv">Level <b>${lv}</b></span>` : ''}<span class="chip">Score <b>${score}</b></span><span class="chip lives">${'♥'.repeat(lives)}${'<i>♥</i>'.repeat(3 - lives)}</span>`; };
+  // a hidden tab stops the sky: the next frame after it comes back moves nothing (T9)
+  const onVis = () => { if (!document.hidden) resync = true; };
 
   function begin() {
+    pool = RU.rushPool(kid, mk ? mode : null, lv);
+    fams = mode === 'mixed' && mk ? RU.families(kid.band) : null;
+    start = std ? RU.startAt(kid, pool, lv) : 0;
+    pace = std ? RU.LEVELS[lv].pace : 1;
+    speed = rushSpeed(0, 0) * pace;
     f.body.innerHTML = `<div class="rush">
         <div class="rush-stage"><canvas class="rush-c" aria-hidden="true"></canvas></div>
         <div class="rush-in" aria-live="assertive"><span class="rush-typed"></span><span class="rush-caret"></span></div>
@@ -365,7 +370,7 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     cv = f.body.querySelector('canvas'); ctx = cv.getContext('2d');
     typed = f.body.querySelector('.rush-typed'); stage = f.body.querySelector('.rush-stage'); inp = f.body.querySelector('.rush-in');
     combo = comboMeter(g);
-    size(); addEventListener('resize', size);
+    size(); addEventListener('resize', size); document.addEventListener('visibilitychange', onVis);
     hud();
     f.body.querySelector('.pad').addEventListener('pointerdown', (e) => {
       const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); press(b.dataset.k);
@@ -380,26 +385,56 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     raf = requestAnimationFrame(loop);
   }
 
-  function spawn(now) {
-    const { fact, ...q } = pick(pool);
-    const g = (q.op === '×' || q.op === '+') && Math.random() < 0.5 ? { ...q, a: q.b, b: q.a } : q;
+  function spawn() {
+    let it;
+    if (fams) {
+      // Inverse: a whole family is queued at once and falls together, member by member
+      if (!queue.length) { const fam = RU.nextFamily(fams, { served: spawned, recent: recentFam }); recentFam = [fam.id, ...recentFam].slice(0, 3); queue = shuffle(fam.members); }
+      it = queue.shift();
+    } else it = RU.nextItem(pool, { start, served: spawned, due: RU.dueIn(kid, pool), recent });
+    recent = [it.text, ...recent].slice(0, 4); spawned++;
+    // times and adding either way round — never a family member or a missing number, whose order is the point
+    const text = !it.fam && !it.missing && (it.op === '×' || it.op === '+') && Math.random() < 0.5 ? ftext({ op: it.op, a: it.b, b: it.a }) : it.text;
     // big enough to read at arm's length on a phone (audit v4 G5), and born WHOLE inside the stage:
     // a bubble half-hidden behind the bar read as cut, so it swells in where it starts instead
-    const r = (W < 500 ? 46 : 52) + Math.min(8, ftext(g).length);
+    const r = (W < 500 ? 46 : 52) + Math.min(8, it.op === 'dots' ? 8 : text.length);
     const lanes = Math.max(2, Math.floor(W / (r * 2.3)));
-    const lane = int(0, lanes - 1);
-    bubbles.push({ fact, text: ftext(g), ans: answer(g), x: (lane + 0.5) * (W / lanes), y: r + 2, r, hue: pick([218, 150, 32, 268, 190]), born: now });
+    let lane = int(0, lanes - 1); if (lane === lastLane) lane = (lane + 1) % lanes; lastLane = lane;
+    bubbles.push({ fact: it.fact, item: it, text, ans: it.ans, dots: it.op === 'dots' ? it.n : 0, x: (lane + 0.5) * (W / lanes), y: r + 2, r, hue: pick([218, 150, 32, 268, 190]), born: performance.now(), shown: false });
+  }
+  /* A miss teaches (§1.3): the sum flashes with its answer for one second — and in Squares,
+     why the square is what it is. */
+  function flash(b) {
+    const old = stage.querySelector('.rush-flash'); if (old) old.remove();
+    const el = document.createElement('div');
+    el.className = 'rush-flash'; el.setAttribute('role', 'status');
+    const sq = b.item && b.item.op === '²';
+    el.innerHTML = `<b class="mono">${esc(b.dots ? `${b.dots} dots = ${b.ans}` : `${b.text} = ${b.ans}`)}</b>${sq ? `<small class="mono">${esc(RU.squareWhy(b.item.a))}</small>` : ''}`;
+    stage.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
   }
   function popIt(b) {
-    bubbles = bubbles.filter((x) => x !== b);
+    bubbles = bubbles.filter((x) => x !== b); served++;
     score++; inARow++; combo.hit(); sfx.pop(); sfx.good();
-    speed = rushSpeed(score, inARow);
-    popped.push(b.text);
+    speed = rushSpeed(score, inARow) * pace;
+    popped.push(b.dots ? `${b.dots} dots` : b.text);
     pop(g, stage, b.x, b.y, '+1');
     splash(stage, b);
     fly(g, stage, b.x, b.y, String(b.ans));
     onTick(true, b.fact);
     hud();
+  }
+  // a bubble whose answer was already shown, typed now: it goes, and scores nothing
+  function clearIt(b) {
+    bubbles = bubbles.filter((x) => x !== b); served++;
+    sfx.click(); splash(stage, b);
+  }
+  // Enter on a number no bubble has: the bubble it was aimed at shows its answer and is
+  // recorded as a miss; it stays in the sky, worth nothing now, until it is typed or lands
+  function wrongEnter() {
+    sfx.bad(); inARow = 0; speed = rushSpeed(score, inARow) * pace; combo.miss(); wobble(g, inp);
+    const b = RU.aimedAt(input, bubbles.filter((x) => !x.shown));
+    if (b) { b.shown = true; flash(b); landed.push(b.dots ? `${b.dots} dots = ${b.ans}` : `${b.text} = ${b.ans}`); onTick(false, b.fact); }
   }
 
   function draw() {
@@ -411,32 +446,44 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     const face = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'ui-monospace, monospace'; // the theme's digits
     const t = performance.now(), still = calm();
     for (const b of bubbles) {
-      // bold and solid, so a real bubble never reads as one of the plate's painted ones
-      const R0 = still ? b.r : b.r * Math.min(1, 0.55 + (t - b.born) / 400);
+      // bold and solid, so a real bubble never reads as one of the plate's painted ones; a shown one greys
+      const R0 = still ? b.r : b.r * Math.min(1, 0.55 + (t - b.born) / 400), sat = b.shown ? 8 : 1;
       ctx.save(); ctx.shadowColor = 'rgba(16,22,44,.28)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
       const gr = ctx.createRadialGradient(b.x - R0 * .35, b.y - R0 * .4, R0 * .1, b.x, b.y, R0);
-      gr.addColorStop(0, `hsl(${b.hue} 95% 96%)`); gr.addColorStop(.55, `hsl(${b.hue} 85% 84%)`); gr.addColorStop(1, `hsl(${b.hue} 70% 62%)`);
+      gr.addColorStop(0, `hsl(${b.hue} ${95 / sat}% 96%)`); gr.addColorStop(.55, `hsl(${b.hue} ${85 / sat}% 84%)`); gr.addColorStop(1, `hsl(${b.hue} ${70 / sat}% 62%)`);
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, R0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      ctx.strokeStyle = `hsl(${b.hue} 60% 34%)`; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(b.x, b.y, R0 - 1.75, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = `hsl(${b.hue} ${60 / sat}% 34%)`; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(b.x, b.y, R0 - 1.75, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, R0 - 5, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.ellipse(b.x - R0 * .4, b.y - R0 * .47, R0 * .2, R0 * .11, -0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0b1020';
+      if (b.dots) {
+        // the pre-readers' bubble: dots, drawn, never a glyph
+        const dr = R0 * (b.dots > 5 ? 0.12 : 0.15), s = R0 * 0.68;
+        for (const [dx, dy] of dotLayout(b.dots)) { ctx.beginPath(); ctx.arc(b.x + dx * s, b.y + dy * s, dr, 0, Math.PI * 2); ctx.fill(); }
+        continue;
+      }
       // size the sum to fit INSIDE its bubble: a monospace glyph is ~0.6em wide
       const fs = Math.min(R0 * 0.52, (R0 * 1.6) / (b.text.length * 0.6));
-      ctx.fillStyle = '#0b1020'; ctx.font = `800 ${Math.round(fs)}px ${face}`;
+      ctx.font = `800 ${Math.round(fs)}px ${face}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.text, b.x, b.y + 1);
     }
   }
 
   function loop(now) {
     if (over) return;
-    if (!t0) { t0 = now; last = now; spawnAt = now + 300; }
-    const dt = Math.min(34, now - last); last = now;
-    if (now >= spawnAt) { spawn(now); spawnAt = now + Math.max(900, 2600 - score * 45); }
+    if (!t0) { t0 = now; last = now; spawnAt = 300; }
+    if (document.hidden || resync) { last = now; resync = false; }
+    // wall-clock time, clamped for a returning tab: the same seconds to land at 60 or 12 fps (§1.3)
+    const dt = RU.stepMs(last, now); last = now; gt += dt;
+    if (gt >= spawnAt) { spawn(); spawnAt = gt + (queue.length ? 650 : Math.max(900, 2600 - score * 45) / pace); }
     for (const b of bubbles) b.y += speed * dt * (H / 520);
     for (const b of bubbles.slice()) {
       if (b.y - b.r > H - 20) {
-        bubbles = bubbles.filter((x) => x !== b);
-        lives--; inARow = 0; speed = rushSpeed(score, inARow); combo.miss(); sfx.drop(); landed.push(`${b.text} = ${b.ans}`); onTick(false, b.fact); hud();
+        bubbles = bubbles.filter((x) => x !== b); served++;
+        lives--; inARow = 0; speed = rushSpeed(score, inARow) * pace; combo.miss(); sfx.drop();
+        // a bubble whose answer was already shown was recorded as a miss then, not twice
+        if (!b.shown) { landed.push(b.dots ? `${b.dots} dots = ${b.ans}` : `${b.text} = ${b.ans}`); onTick(false, b.fact); flash(b); }
+        hud();
         pop(g, stage, b.x, H - 14);
         wobble(g, f.hud.querySelector('.lives'));
         if (lives <= 0) return finish();
@@ -445,36 +492,83 @@ export function numberRush(kid, { onTick, onEnd, mode = null }) {
     draw();
     raf = requestAnimationFrame(loop);
   }
-  function setInput(v) {
+  /* A bubble pops only on Enter, or without Enter only when no other bubble's answer starts
+     with what is typed (rush.js decide): "12" never pops "1" on the way. */
+  function setInput(v, enter = false) {
     input = v.slice(0, 4); typed.textContent = input;
-    const hit = bubbles.filter((b) => String(b.ans) === input).sort((a, b) => b.y - a.y)[0];
-    if (hit) { popIt(hit); input = ''; typed.textContent = ''; }
+    const d = RU.decide(input, bubbles.map((b) => b.ans), enter);
+    if (d === 'pop') {
+      const hit = bubbles.filter((b) => String(b.ans) === input).sort((a, b) => a.shown - b.shown || b.y - a.y)[0];
+      if (hit.shown) clearIt(hit); else popIt(hit);
+      input = ''; typed.textContent = '';
+    } else if (d === 'wrong') { wrongEnter(); input = ''; typed.textContent = ''; }
   }
   function press(k) {
     if (over) return;
     if (k === '⌫') setInput(input.slice(0, -1));
-    // Enter on an answer that popped nothing: it was wrong for every bubble up
-    else if (k === '✓') { if (input) { sfx.bad(); inARow = 0; speed = rushSpeed(score, inARow); combo.miss(); wobble(g, inp); setInput(''); } }
+    else if (k === '✓') { if (input) setInput(input, true); }      // ✓ on the pad is Enter
     else if (/^\d$/.test(k)) { sfx.click(); setInput(input + k); }
   }
   function finish() {
     over = true; cancelAnimationFrame(raf);
     const stars = score >= 30 ? 3 : score >= 15 ? 2 : score >= 5 ? 1 : 0;
+    // the owner's level rule: right = bubbles popped, out of the bubbles served
+    const v = std ? RU.rushVerdict(kid, score, Math.max(served, score)) : null;
     onEnd(score, stars);
+    const said = mode === 'squares' && mk ? 'square numbers, at speed' : fams ? 'fact families, at speed' : lv === 1 ? 'seeing how many dots, and adding to ten, at speed' : rushSkill(uniq(pool.map((x) => x.op)));
     resultCard(g, {
       title: score ? `${score} popped` : 'The bubbles won that one',
-      practised: { skill: mode === 'squares' && mk ? 'square numbers, at speed' : rushSkill(ops), items: uniq(popped).slice(0, 12), again: uniq(landed).slice(0, 6) },
+      practised: { skill: said, items: uniq(popped).slice(0, 12), again: uniq(landed).slice(0, 6) },
       best: combo.best,
-      lines: [score >= 15 ? 'That is real speed.' : 'The ones you know best go fastest. Keep playing and more of them will be.'],
-      stars, again: () => { g.quit(); numberRush(kid, { onTick, onEnd, mode }); }, done: () => g.quit(),
+      lines: [score >= 15 ? 'That is real speed.' : 'The ones you know best go fastest. Keep playing and more of them will be.',
+        ...(v ? [`<span class="rush-verdict">${esc(verdictLine(v))}</span>${v.offer ? ` <button class="btn small" data-g="up">Play Level ${v.offer}</button>` : ''}`] : [])],
+      stars, again: () => { g.quit(); numberRush(kid, { onTick, onEnd, mode, onCalm }); }, done: () => g.quit(),
     });
+    const up = f.body.querySelector('[data-g=up]');
+    if (up && v) up.onclick = () => { setLevel(kid, RU.GAME, v.offer); restart(() => { g.quit(); numberRush(kid, { onTick, onEnd, mode, onCalm }); }); };
   }
-  g.stop = () => { over = true; cancelAnimationFrame(raf); removeEventListener('resize', size); };
+  g.stop = () => { over = true; cancelAnimationFrame(raf); removeEventListener('resize', size); document.removeEventListener('visibilitychange', onVis); };
   g.quit = () => end(g);
-  g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), bubbles: () => bubbles.map((b) => ({ x: b.x, y: b.y, r: b.r })), finish: () => !over && finish() };
+  // the headless walk's window on the sky (never read by the app); inject() puts a known sum up, for the prefix check
+  g.probe = { answers: () => bubbles.filter((b) => b.y > 0).map((b) => String(b.ans)), bubbles: () => bubbles.map((b) => ({ x: b.x, y: b.y, r: b.r, text: b.text, ans: b.ans, dots: b.dots, shown: b.shown })),
+    state: () => ({ lv, score, lives, served, gt, start, pool: pool.length, over }), finish: () => !over && finish(),
+    inject: (items) => { for (const [text, ans, fact = null] of items) bubbles.push({ fact, item: { op: 'x', text }, text, ans, dots: 0, x: W * (0.25 + 0.5 * (bubbles.length % 2)), y: 80, r: 50, hue: 218, born: 0, shown: false }); } };
   current = g;
   intro(g, titled('Number Rush', mk), mk || 'rush', begin);
+  if (std) levelPicker();
   return g;
+
+  /* The title card's level chip (§1.4) and the way into Calm. Picking a level holds the card
+     (the three-second start waits for Play); keys 1–5 pick too. */
+  function levelPicker() {
+    const card = f.body.querySelector('.g-card'); if (!card) return;
+    const el = document.createElement('div');
+    el.className = 'rush-pick';
+    const paint = () => {
+      el.innerHTML = `<div class="g-lv" role="radiogroup" aria-label="Level">${[1, 2, 3, 4, 5].map((l) => `<button role="radio" class="g-lvb${l === lv ? ' on' : ''}" aria-checked="${l === lv}" data-rl="${l}" aria-label="Level ${l}: ${esc(RU.LEVELS[l].name)}">${l}</button>`).join('')}</div>
+        <p class="g-lvw">${esc(RU.LEVELS[lv].words)}</p>
+        ${onCalm ? `<button class="btn rush-calm" data-g="calm">${icon('leaf', 18)}<span>Calm: no clock, nothing falls</span></button>` : ''}`;
+    };
+    paint();
+    card.insertBefore(el, card.querySelector('.g-bar'));
+    const hold = () => { clearTimeout(g.introT); card.classList.add('held'); };
+    const choose = (l) => { lv = l; setLevel(kid, RU.GAME, l); hold(); paint(); const b = el.querySelector(`[data-rl="${l}"]`); if (b) b.focus({ preventScroll: true }); };
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const b = e.target.closest('[data-rl]'); if (b) return choose(+b.dataset.rl);
+      if (e.target.closest('[data-g=calm]')) toCalm();
+    });
+    // Calm is a screen of the app, not an overlay: close the game, let its history entry go, then open it
+    const toCalm = () => { g.quit(); const t0 = Date.now(), t = setInterval(() => { if (!backPending || Date.now() - t0 > 1500) { clearInterval(t); setTimeout(onCalm, 40); } }, 16); };
+    const base = g.intro;
+    g.intro = (e) => {
+      if (/^[1-5]$/.test(e.key)) { choose(+e.key); return true; }
+      const a = document.activeElement;
+      if ((e.key === 'Enter' || e.key === ' ') && a && el.contains(a)) { if (a.dataset.g === 'calm') toCalm(); else choose(+a.dataset.rl); return true; }
+      if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && a && a.dataset.rl) { choose(Math.min(5, Math.max(1, +a.dataset.rl + (e.key === 'ArrowRight' ? 1 : -1)))); return true; }
+      return base(e);
+    };
+  }
 }
 
 /* ======================================================= MAKE THE TARGET */

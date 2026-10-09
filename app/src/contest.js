@@ -19,7 +19,7 @@
        rival's nerve starts to go, so a contest always ends. */
 
 import { TRICKS, byId } from './tricks.js';
-import { BANK, ramp, answer, text as factText } from './facts.js';
+import { BANK, ramp, answer, text as factText, parseKey, key as factKey } from './facts.js';
 import { shuffle, pick, int, seeded } from './rand.js';
 
 export const RIVALS = [
@@ -47,11 +47,11 @@ const STEP = 0.045;
    fact bank or a question from a trick's own generator — the contest invents
    no maths of its own. */
 const LADDER = [
-  { h: 0.00, tag: 'facts', f: (r) => factAt('+', 0.0, 0.45, r) },
-  { h: 0.08, tag: 'facts', f: (r) => factAt(pick(['+', '-'], r), 0.35, 0.8, r) },
-  { h: 0.16, tag: 'facts', f: (r) => factAt('×', 0.0, 0.4, r) },
-  { h: 0.24, tag: 'facts', f: (r) => factAt(pick(['×', '-'], r), 0.4, 0.8, r) },
-  { h: 0.32, tag: 'facts', f: (r) => factAt(pick(['×', '÷'], r), 0.7, 1.0, r) },
+  { h: 0.00, tag: 'facts', f: (r, d) => factAt('+', 0.0, 0.45, r, d) },
+  { h: 0.08, tag: 'facts', f: (r, d) => factAt(pick(['+', '-'], r), 0.35, 0.8, r, d) },
+  { h: 0.16, tag: 'facts', f: (r, d) => factAt('×', 0.0, 0.4, r, d) },
+  { h: 0.24, tag: 'facts', f: (r, d) => factAt(pick(['×', '-'], r), 0.4, 0.8, r, d) },
+  { h: 0.32, tag: 'facts', f: (r, d) => factAt(pick(['×', '÷'], r), 0.7, 1.0, r, d) },
   { h: 0.40, tag: 'split', f: (r) => trickQ(pick(['tens-then-ones', 'times-twelve', 'times-nine'], r), 2, r) },
   { h: 0.48, tag: 'split', f: (r) => trickQ(pick(['times-eleven', 'round-add', 'round-sub'], r), 2, r) },
   { h: 0.56, tag: 'split', f: (r) => trickQ(pick(['split-multiply', 'times-25', 'halve-double'], r), 2, r) },
@@ -62,22 +62,26 @@ const LADDER = [
   { h: 0.96, tag: 'squares', f: (r) => trickQ(pick(['square-five', 'diff-squares', 'percent-swap', 'crosswise'], r), 3, r) },
 ];
 
-function factAt(op, lo, hi, r) {
+function factAt(op, lo, hi, r, due = null) {
   const list = ramp(op).filter((f) => f.b !== 0 && f.a !== 0);
-  const f = list[Math.floor((lo + r() * (hi - lo)) * (list.length - 1))];
+  // one fact record (games spec T10): a fact the child has due, at this rung's place on the ramp
+  // or a little below it, is asked before a random one — the climb keeps its rung and its op
+  const at = (f) => list.findIndex((x) => factKey(x) === factKey(f)) / (list.length - 1);
+  const d = due && due.pick((f) => f.op === op && at(f) >= Math.max(0, lo - 0.15) && at(f) <= hi);
+  const f = d || list[Math.floor((lo + r() * (hi - lo)) * (list.length - 1))];
   // times and adding are stored sorted; ask them either way round
   const g = (op === '×' || op === '+') && r() < 0.5 ? { ...f, a: f.b, b: f.a } : f;
-  return { text: factText(g), ans: answer(g) };
+  return { text: factText(g), ans: answer(g), fact: { op: f.op, a: f.a, b: f.b } };
 }
 function trickQ(id, lv, r) {
   const t = byId[id]; const q = t.gen(r, lv);
   return { text: q.text, say: q.say, ans: q.ans, choices: q.choices, frac: q.frac, simplest: q.simplest, keys: q.keys || t.keys, trick: id };
 }
 
-export function questionAt(h, r = Math.random) {
+export function questionAt(h, r = Math.random, due = null) {
   let rung = LADDER[0];
   for (const x of LADDER) if (x.h <= h + 1e-9) rung = x;
-  const q = rung.f(r);
+  const q = rung.f(r, due);
   return { ...q, h: rung.h, tag: rung.tag };
 }
 
@@ -99,13 +103,15 @@ export function rivalGets(bot, q, round, start, r = Math.random) {
 
 /* ---------------------------------------------------------------- a contest */
 
-export function newContest(band, seed = Date.now()) {
+/* `due` is the child's due list (facts.js dueList): the child's fact rungs ask those first,
+   each at most once a contest. The rivals' questions never read it. */
+export function newContest(band, seed = Date.now(), { due = [] } = {}) {
   const r = seeded(seed);
   const field = shuffle([{ id: 'you', you: true }, ...RIVALS.map((b) => ({ id: b.id }))], r).map((c, i) => ({ ...c, n: i + 1, out: 0 }));
   return {
     band, seed, round: 1, start: START[band] ?? 0.18, field,
     log: [], place: null, over: false, champ: null, winner: null,
-    q: null, rq: 0,
+    q: null, rq: 0, due: due.filter((k) => parseKey(k)).slice(0, 40), dueAt: {},
   };
 }
 
@@ -120,8 +126,17 @@ export function hardness(c) {
 /* The child's question for this round. Seeded per round so a reload does not
    hand them a new one. */
 export function childQuestion(c) {
-  const r = seeded(`${c.seed}:${c.round}:${c.rq}`);
-  return questionAt(hardness(c), r);
+  const r = seeded(`${c.seed}:${c.round}:${c.rq}`), qid = `${c.round}:${c.rq}`;
+  // a due fact belongs to the question it was first asked in, so asking again (a re-render, the
+  // championship's pair) gives the same question and a due fact is never asked twice
+  const due = c.due && c.due.length ? { pick: (ok) => {
+    const mine = Object.keys(c.dueAt || {}).find((k) => c.dueAt[k] === qid);
+    if (mine) return parseKey(mine);
+    const k = c.due.find((x) => !(x in c.dueAt) && ok(parseKey(x)));
+    if (k) c.dueAt[k] = qid;
+    return k ? parseKey(k) : null;
+  } } : null;
+  return questionAt(hardness(c), r, due);
 }
 
 /* Resolve a whole round. `youRight` is the child's result, or null if the
