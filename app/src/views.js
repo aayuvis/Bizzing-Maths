@@ -81,7 +81,7 @@ export function spoken(t) {
 
 /* ------------------------------------------------------------- the shell */
 
-const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: null, journey: 'atlas', goals: null, grownups: null, game: 'play', contest: 'play', hall: 'play', paper: null,
+const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: null, journey: 'atlas', goals: null, grownups: null, game: 'play', machine: 'play', contest: 'play', hall: 'play', paper: null,
   shop: null, collection: null, medals: null, settings: null, help: null, mistakes: null, search: null, privacy: null, who: null, start: null, welcome: null };
 export { icon };
 

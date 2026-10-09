@@ -323,6 +323,8 @@ details summary{cursor:pointer;font-weight:650;color:var(--action);margin-top:6p
 .hero-t .kicker{color:rgb(255 255 255 / .8)}
 .contest-t{background:linear-gradient(135deg,#1E43A8,#2D5BD8 55%,#6C4FE0)}
 .daily-t{background:linear-gradient(135deg,#C2410C,#E0673A 60%,#F0B429)}
+/* Beat the Machine (machine-card.js): brass */
+.machine-t{background:linear-gradient(135deg,#5E3A0C,#8A5716 55%,#A8741F)}
 /* the Contest Hall's tile shares a class name with the hall's own title (hall.css .hall-t): give it
    its colour and give the type back, or it is white text on a white card */
 .hero-t.hall-t{background:linear-gradient(135deg,#7A2E8E,#A8459C 55%,#D9677A);font:inherit;margin:0}
