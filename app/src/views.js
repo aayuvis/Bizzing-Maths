@@ -935,8 +935,19 @@ function report(c) {
         ${lapsed.length ? `<p class="muted small">Slipped since they were fluent: ${lapsed.slice(0, 8).map((f) => esc(ftext(f))).join(', ')}. That is normal — it comes back quickly.</p>` : ''}</div>
     </div>
     ${goalsReport(c)}
+    ${timerReport(c)}
     <p class="muted small">Talk about it: ask ${esc(c.name)} to show you one trick and explain <i>why</i> it works. Explaining it is the best practice there is.</p>
   </div>`;
+}
+
+/* Beat the Timer, for a grown-up: theme · level · best · target per window, in words (games spec §3.7).
+   The grade is a curriculum setting the child picks, so it is never reported as theirs; time is never a score. */
+let TT = null, ttLoading = false;   // the catalogue loads with the first report that needs it, never with Home
+function timerReport(c) {
+  if (!c.timer || !Object.keys({ ...c.timer.lv, ...c.timer.best }).length) return '';
+  if (!TT) { if (!ttLoading) { ttLoading = true; import('./timer-themes.js').then((m) => { TT = m; R.render && R.render(); }, () => { ttLoading = false; }); } return ''; }
+  const ls = TT.parentLines(c);
+  return ls.length ? `<div class="rc-timer"><p class="kicker">${icon('timer', 16)} Beat the Timer</p>${ls.map((l) => `<p class="small">${esc(l)}</p>`).join('')}</div>` : '';
 }
 
 /* ------------------------------------------------------------- privacy */

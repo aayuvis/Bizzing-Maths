@@ -332,6 +332,9 @@ MEDAL = {
     'medal-paper':      "a neat stack of blank paper sheets with a pencil lying across them and a small hourglass beside. Teal and gold.",
     'medal-paper-half': "a round sand hourglass with the top half and bottom half of sand perfectly equal, a laurel sprig beside it. Plum purple and gold.",
     'medal-contest':    "a plain golden trophy cup with two handles and laurel leaves. Navy and gold.",
+    'medal-timer-first': "a round brass stopwatch with a single hand, and a small pennant flag planted on a bright finishing line beside it. Teal and gold.",
+    'medal-timer-five':  "a brass stopwatch at the top of a curving staircase of chunky stone steps that climbs up towards it from the bottom of the badge. Deep green and gold.",
+    'medal-timer-beat':  "a golden comet rising upward and to the right, just overtaking a faint dotted outline of itself, with a small brass stopwatch also inside the badge beneath it. Everything sits inside the round rim. Coral orange and gold.",
 }
 for k, v in MEDAL.items(): JOBS[k] = (MEDAL_STYLE + v, '1:1')
 

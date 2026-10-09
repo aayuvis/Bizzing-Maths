@@ -17,6 +17,8 @@ const fluent = (k) => OPS.reduce((a, o) => a + tally(k.facts, o).fluent, 0);
 const tests = (k) => Object.entries((k.journey || {}).tests || {}).filter(([, r]) => r.passed);
 const floors = (k) => Object.values(k.quest || {}).filter((q) => q.passed).length;
 const finds = (k) => Object.values((k.journey || {}).finds || {}).reduce((a, f) => a + Object.values(f).filter(Boolean).length, 0);
+// Beat the Timer (timer.js): targets hit, the highest level reached in a theme, the biggest gain on a best
+const tm = (k) => k.timer || {};
 const puzzlesRight = (k) => Object.values(k.puzzles || {}).reduce((a, p) => a + (p.right || 0), 0);
 
 export const MEDALS = [
@@ -33,6 +35,9 @@ export const MEDALS = [
   { id: 'explorer', name: 'Explorer', desc: 'Find three secrets along your road.', did: 'Three secrets found along your road.', need: 3, have: finds },
   { id: 'paper', name: 'Paper sat', desc: 'Finish a contest-style paper.', did: 'You finished a contest-style paper.', need: 1, have: (k) => ((k.papers || {}).log || []).length },
   { id: 'paper-half', name: 'Half marks', desc: 'Score half the points on a contest-style paper.', did: 'Half the points on a contest-style paper.', need: 1, have: (k) => (((k.papers || {}).log || []).some((x) => x.points * 2 >= x.max) ? 1 : 0) },
+  { id: 'timer-first', name: 'On the clock', desc: 'Hit a Beat the Timer target.', did: 'You hit your first Beat the Timer target.', need: 1, have: (k) => Object.keys(tm(k).hit || {}).length },
+  { id: 'timer-five', name: 'Level five', desc: 'Reach level 5 in a Beat the Timer theme.', did: 'Level 5 in a Beat the Timer theme.', need: 5, have: (k) => Math.max(1, ...Object.values(tm(k).lv || {})) },
+  { id: 'timer-beat', name: 'Five better', desc: 'Beat your own best by 5 in Beat the Timer.', did: 'You beat your own best by five.', need: 5, have: (k) => tm(k).beat || 0 },
   { id: 'contest', name: 'Contender', desc: 'Finish a mock contest.', did: 'You finished a mock contest.', need: 1, have: (k) => (k.contest || {}).done || 0 },
 ];
 export const medalById = Object.fromEntries(MEDALS.map((m) => [m.id, m]));
