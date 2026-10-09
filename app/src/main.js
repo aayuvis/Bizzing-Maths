@@ -224,6 +224,7 @@ function deepen(nav, arg) {
   return arg;
 }
 
+const FACTS_LINK = { id: 'facts', act: 'startFacts' };
 function go(nav, arg = null, fromHash = false) {
   // #/continue — the Hive's deep link — goes wherever Home's Continue would
   if (nav === 'continue') {
@@ -247,7 +248,7 @@ function go(nav, arg = null, fromHash = false) {
   // Mock Contest, the Contest Hall, today's puzzle…) and today's challenge — for the feed and search
   if (nav === 'game') {
     if (gameOn()) return;
-    const id = head(arg), hero = HEROES.find((x) => x.id === id);
+    const id = head(arg), hero = HEROES.find((x) => x.id === id) || (id === 'facts' ? FACTS_LINK : null);   // Twenty facts left Play for Rush · Calm; its old links still start it
     if (hero && hero.act === 'nav') { nav = hero.arg; arg = null; if (fromHash) history.replaceState(null, '', '#/' + nav); }
     else if (hero || id === 'challenge') {
       nav = 'play'; arg = null; history.replaceState(null, '', '#/play');
