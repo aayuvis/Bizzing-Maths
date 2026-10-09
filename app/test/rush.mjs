@@ -165,5 +165,11 @@ for (let n = 2; n <= 20; n++) {
   ok(/if \(arg === 'rush:calm'\) return fire\('startCalm'\)/.test(main), '#/game/rush:calm opens Calm, free, before any mode lock');
 }
 
+// T10 under load: a child with sixty older traps still meets today's Rush miss in the contest's 40
+{ const facts = {}, t = Date.now(), bank = F.ramp('×');
+  for (const f of bank.slice(0, 60)) F.record(facts[F.key(f)] = F.blank(), false, 4000, '8-10', t - 5 * 864e5);
+  const fresh = F.key(bank[70]); F.record(facts[fresh] = F.blank(), false, 4000, '8-10', t);
+  ok(newContest('8-10', 1, { due: F.dueList(facts, t) }).due.includes(fresh), 'T10: the freshest miss leads the due list, so the contest\'s capped pool always holds it'); }
+
 console.log(`${fails ? 'FAIL' : 'ok'} rush — the prefix, the wall clock, five levels by tricky(), the level rule, Squares and Inverse, one fact record`);
 process.exit(fails ? 1 : 0);

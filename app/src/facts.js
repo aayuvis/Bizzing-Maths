@@ -304,7 +304,9 @@ function interleave(list, r) {
    of them comes back in all of them. */
 export function dueList(facts, now = Date.now()) {
   return Object.keys(facts || {}).filter((k) => { const r = facts[k]; return parseKey(k) && r && r.n && (state(r) === 'trap' || r.due <= now); })
-    .sort((x, y) => (state(facts[y]) === 'trap') - (state(facts[x]) === 'trap') || facts[x].due - facts[y].due);
+    // traps first, the freshest slip leading (a Rush miss must reach the next contest's capped pool), then by due date
+    .sort((x, y) => { const tx = state(facts[x]) === 'trap', ty = state(facts[y]) === 'trap';
+      return (ty - tx) || (tx && ty ? (facts[y].last || 0) - (facts[x].last || 0) : facts[x].due - facts[y].due); });
 }
 
 /* ---------- summaries ---------- */
