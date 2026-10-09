@@ -424,7 +424,9 @@ async function run(vp, tag) {
   await shot('18-target');
   // find a solution the game's own way (whole numbers, never below nought) and play it by keyboard
   const tgt = +(await page.locator('.mt-target b').innerText());
-  const OPS = { '+': (a, b) => a + b, '-': (a, b) => (a >= b ? a - b : null), '*': (a, b) => a * b, '/': (a, b) => (b && a % b === 0 ? a / b : null) };
+  // only the keys this level shows (games spec §2.2: each level has its own keys)
+  const shown = await page.$$eval('.mt-op', (bs) => bs.map((b) => ({ '+': '+', '−': '-', '×': '*', '÷': '/' })[b.dataset.o]));
+  const OPS = Object.fromEntries(Object.entries({ '+': (a, b) => a + b, '-': (a, b) => (a >= b ? a - b : null), '*': (a, b) => a * b, '/': (a, b) => (b && a % b === 0 ? a / b : null) }).filter(([o]) => shown.includes(o)));
   const find = (xs) => {
     if (xs.length === 1) return xs[0] === tgt ? [] : null;
     for (let i = 0; i < xs.length; i++) for (let k = 0; k < xs.length; k++) {

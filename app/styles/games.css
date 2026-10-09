@@ -207,14 +207,28 @@
 .cb-msg{min-height:1.6em;font-weight:650;text-align:center;background:color-mix(in srgb,var(--surface) 94%,transparent);color:var(--ink);border-radius:12px;padding:4px 12px}
 .cb.lock .cb-cell,.cb.lock .cb-ctl{pointer-events:none}
 @media (max-width:560px){
-  .cb{padding:8px 16px 14px;gap:8px}
+  .cb{padding:8px 12px 14px;gap:8px}
   .cb-vg{grid-template-columns:repeat(var(--c),15px);gap:2px}.cb-vg i{width:15px;height:15px;border-radius:3px}
   .cb-ax{font-size:10px}
   .cb-view{padding:6px 8px 4px}
   .cb-grid{grid-template-columns:repeat(var(--n),56px)}.cb-cell{width:56px;height:56px}
   .cb-iso{width:150px}
   .cb-ctl .pk{width:44px;height:44px}
+  .cb-ctl{gap:4px;padding:4px}.cb-ud{min-width:44px}   /* 0…4 with ▼ and ▲ on one row at 390px (levels 3 and 5) */
   .play .cb .mt-keys{display:none}
 }
 :root[data-motion=reduced] .cb-cell.born{animation:none}
 @media (prefers-reduced-motion:reduce){.cb-cell.born{animation:none}}
+
+/* ---------------------------------------------------------- the level chip (games spec §1.4) */
+.g-lv{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 6px}
+.g-lvb{min-width:48px;min-height:48px;padding:0 12px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:800 18px var(--sans, inherit);cursor:pointer}
+.g-lvb.on{background:var(--action);border-color:var(--action);color:var(--action-ink)}
+.g-lvb:focus-visible{outline:3px solid var(--focus, var(--action));outline-offset:2px}
+.g-lvw{font-weight:700;margin:0 0 12px;min-height:1.4em}
+.chip-held .g-bar i{animation-play-state:paused}
+.mt-block{margin:-4px 0 8px;font-weight:700;color:var(--ink)}
+.play-end p .btn{margin-left:8px;vertical-align:middle}
+.nl-tick.unit i{width:2px;height:12px;margin-top:6px;opacity:.55}
+.nl-ph{margin:2px 0 0;font-size:14px;font-weight:600}
+.play.has-art .nl-ph{background:color-mix(in srgb,var(--surface) 94%,transparent);color:var(--ink);border-radius:10px;padding:2px 10px;display:inline-block}

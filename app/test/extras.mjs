@@ -152,6 +152,7 @@ for (const band of ['6-7', '8-10', '11-14']) for (let i = 0; i < 120; i++) {
   const five = G.makePuzzle(band, seeded('five' + band + i), 'five');
   ok(five.nums.length === (band === '6-7' ? 4 : 5) && evalSol(five.sol) === five.target, `${band} five: ${five.nums} → ${five.target} by ${five.sol}`);
   ok(five.sol.match(/\d+/g).map(Number).sort((a, b) => a - b).join() === five.nums.slice().sort((a, b) => a - b).join(), `${band} five: the solution uses every number once (${five.sol})`);
+  ok(G.fiveHolds(five.nums, five.target), `${band} five: every card is needed, and + and − alone cannot make it (${five.nums} → ${five.target})`);
   const hard = G.makePuzzle(band, seeded('hard' + band + i), 'hard');
   const [lo, hi] = band === '6-7' ? [21, 60] : band === '8-10' ? [61, 200] : [151, 600];
   ok(hard.target >= lo && hard.target <= hi && evalSol(hard.sol) === hard.target, `${band} hard: ${hard.nums} → ${hard.target} in ${lo}–${hi}`);
@@ -159,19 +160,26 @@ for (const band of ['6-7', '8-10', '11-14']) for (let i = 0; i < 120; i++) {
 }
 ok(G.makePuzzle('8-10', seeded('x'), null).nums.length === 4, 'the standard puzzle is unchanged by the modes');
 
-/* Number Line: fractions are proper fractions on 0–1 (never ½); negatives straddle nought */
-for (const band of ['6-7', '8-10', '11-14']) {
-  const fr = G.lineSpec(band, 'fractions'), ng = G.lineSpec(band, 'negatives'), sd = G.lineSpec(band, null);
-  const r = seeded('line' + band); let negs = 0;
+/* Number Line (games spec §3.2): fractions climb halves → quarters → thirds → eighths → mixed by
+   level (halves on 0–4 and quarters on 0–2, so no half is ever just the middle); negatives straddle
+   nought, with every fifth tick labelled at levels 1–2 */
+for (const band of ['6-7', '8-10', '11-14']) for (let lv = 1; lv <= 5; lv++) {
+  const r = seeded('line' + band + lv); let negs = 0;
+  const dens = new Set();
   for (let i = 0; i < 300; i++) {
-    const a = fr.pick(r), [n, d] = a.label.split('/').map(Number);
-    ok(fr.lo === 0 && fr.hi === 1 && a.v > 0 && a.v < 1 && Math.abs(a.v - n / d) < 1e-12 && a.v !== 0.5, `${band} fractions: ${a.label} sits on 0–1 at ${a.v}`);
-    const b = ng.pick(r); if (b.v < 0) negs++;
-    ok(b.v > ng.lo && b.v < ng.hi && b.v !== 0 && Number.isInteger(b.v) && (b.v < 0 ? b.label === `−${-b.v}` : b.label === String(b.v)), `${band} negatives: ${b.label} on ${ng.lo}–${ng.hi}`);
+    const a = G.linePlacement(band, 'fractions', lv, i % 8, r), [n, d] = a.label.split('/').map(Number);
+    dens.add(d);
+    ok(a.lo === 0 && a.v > 0 && a.v < a.hi && Math.abs(a.v - n / d) < 1e-12 && a.v !== a.hi / 2, `${band} fractions L${lv}: ${a.label} sits on ${a.range} at ${a.v}, never the middle`);
+    const b = G.linePlacement(band, 'negatives', lv, i % 8, r); if (b.v < 0) negs++;
+    ok(b.v > b.lo && b.v < b.hi && b.v !== 0 && Number.isInteger(b.v) && (b.v < 0 ? b.label === `−${-b.v}` : b.label === String(b.v)), `${band} negatives L${lv}: ${b.label} on ${b.lo}–${b.hi}`);
+    if (lv <= 2 && b.phase === 'labelled') ok(b.drawn.length === (2 * b.hi) / 5 - 1 && b.drawn.every((t) => t.v % 5 === 0 && t.label), `${band} negatives L${lv}: every fifth tick labelled`);
   }
-  ok(ng.lo < 0 && ng.hi === -ng.lo && negs > 60, `${band} negatives: nought in the middle and plenty below it (${negs}/300)`);
-  ok(sd.lo === 0 && sd.hi === (band === '6-7' ? 20 : band === '8-10' ? 100 : 1000), `${band} the standard line is unchanged`);
+  const want = { 1: [2], 2: [4], 3: [3], 4: [8] }[lv];
+  if (want) ok([...dens].join() === want.join(), `${band} fractions L${lv}: only ${['', 'halves', 'quarters', 'thirds', 'eighths'][lv]} (${[...dens]})`);
+  else ok(dens.size >= 3, `${band} fractions L5: mixed denominators (${[...dens]})`);
+  ok(negs > 100, `${band} negatives L${lv}: plenty below nought (${negs}/300)`);
 }
+ok(G.linePlacement('8-10', null, 2, 0).hi === 100 && G.linePlacement('8-10', null, 3, 0).hi === 1000, 'the standard line is the level\'s');
 
 console.log(`${fails ? 'FAIL' : 'ok'} extras — 6 road skins, ${X.PAPERS.length} paper skins and 6 game modes at printed prices, bought once through the wallet, xp untouched, every mode solved and taught`);
 if (fails) process.exit(1);
