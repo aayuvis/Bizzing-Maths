@@ -21,7 +21,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 13;
+export const SCHEMA = 14;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -126,6 +126,19 @@ const STEPS = {
     for (const k of h.kids) {
       k.avatar = swap(k.avatar); if (k.starter) k.starter = swap(k.starter);
       if (k.shop && Array.isArray(k.shop.avatars)) k.shop.avatars = [...new Set(k.shop.avatars.map(swap))];
+    }
+    return h;
+  },
+  // v14: the games spec (9 Oct 2026). A level per free game (game-level.js), Beat the Timer's
+  // ladder and bests (timer.js), Beat the Machine's record (machine.js), and the once-a-day
+  // contest pay on merit. Everyone starts at level 1 with no bests; nothing they had changes.
+  13: (h) => {
+    h.v = 14;
+    for (const k of h.kids) {
+      k.gameLv = k.gameLv || {};
+      k.timer = k.timer || { grade: null, lv: {}, best: {}, hit: {} };
+      k.machine = k.machine || { lv: 1, foe: 0, heats: 0, won: 0, seen: {} };
+      k.payDay = k.payDay || {};
     }
     return h;
   },

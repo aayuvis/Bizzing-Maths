@@ -62,7 +62,7 @@ ok(X.ledgerWords('skin:stones') === 'bought the Stepping stones road' && X.ledge
 { const h = newHousehold(); h.kids.push(k); h.active = k.id; h.v = SCHEMA;
   Store.saveNow(h); const back = Store.loadHousehold().kids.find((x) => x.id === k.id);
   ok(X.ownsMode(back, 'rush:squares') && X.ownsSkin(back, 'stones') && X.skinOf(back) === 'stones', 'what was bought is still owned after a reload'); }
-ok(SCHEMA === 13, `the store is at v13 (got ${SCHEMA})`);
+ok(SCHEMA === 14, `the store is at v14 (got ${SCHEMA})`);
 { const old = migrate({ v: 10, kids: [{ id: 'a', shop: { owned: ['gold'], worn: { frame: 'gold' }, avatars: ['cubebot'], worlds: [3] } }], parent: {} });
   const s = old.kids[0].shop;
   ok(old.v === SCHEMA && Array.isArray(s.skins) && !s.skins.length && Array.isArray(s.modes) && !s.modes.length && s.worn.skin === null, 'v10 → v11 adds empty skins and modes and the plain road');

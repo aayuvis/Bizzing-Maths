@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 13, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
+export function newHousehold() { return { v: 14, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -100,6 +100,10 @@ export function newKid(name, band, avatar) {
     tricks: {},           // trick id → { stars, best, learned, runs }
     checks: {},           // world id → { best, passed }
     games: {},            // game id → { best, plays }
+    gameLv: {},           // game id → { lv, best: {lv: pct} } — the level rule (game-level.js)
+    timer: { grade: null, lv: {}, best: {}, hit: {} },   // Beat the Timer (timer.js): theme → level; theme·level·window → best; theme·level → target hit
+    machine: { lv: 1, foe: 0, heats: 0, won: 0, seen: {} },   // Beat the Machine (machine.js)
+    payDay: {},           // dayKey → { contest: true, … } — once-a-day pay on merit
     contest: { best: null, runs: 0, wins: 0 },
     stories: {},          // trick id → true once the story has been read to the end
     puzzles: {},          // family id → { right, tries }; sudoku → { solved: {size: n} }
