@@ -23,7 +23,7 @@
 
 /* Arcade tiles: the same plates the games are played on (set inline by viewArcade,
    so the path is relative to the page, like every other plate) */
-.gart.art-rush,.gart.art-target,.gart.art-line{background-size:cover;background-position:center}
+.gart.art-rush,.gart.art-target,.gart.art-line,.gart.art-timer{background-size:cover;background-position:center}
 .gart.art-line{background-position:center 55%}
 .gart.art-line::after{content:none}
 .gtile .gart{transition:transform .35s ease}

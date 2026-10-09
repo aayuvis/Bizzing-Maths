@@ -370,7 +370,7 @@ async function run(vp, tag) {
   // practised; keyboard AND touch.
   await nav('play'); await page.waitForSelector('.gtiles');
   await shot('16-arcade');
-  ok(await page.evaluate(() => { const t = [...document.querySelectorAll('.gtile .gart')]; return t.length === 4 && t.every((e) => /g-(rush|target|line|cubes)\.webp/.test(e.style.backgroundImage)); }), 'every Arcade tile (four) is painted, not a CSS circle');
+  ok(await page.evaluate(() => { const t = [...document.querySelectorAll('.gtile .gart')]; return t.length === 5 && t.every((e) => /g-(rush|target|line|cubes|timer)\.webp/.test(e.style.backgroundImage)); }), 'every Arcade tile (five, with Beat the Timer) is painted, not a CSS circle');
   const G = (fn) => page.evaluate(fn);
   const juice = () => G(() => +document.querySelector('.play').dataset.juice);
   const combo = () => G(() => +(document.querySelector('.gcombo').dataset.n || 0));

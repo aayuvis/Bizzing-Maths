@@ -303,6 +303,12 @@ GAMES = {
                 "towers and staircases at the left and right edges, a woven cotton rug, a low shelf with potted plants, a window "
                 "letting soft morning light fall across the boards. The centre is open plain floorboards in soft even light. "
                 "Calm and uncluttered. Honey wood, soft teal, warm cream, leaf green.",
+    # Beat the Timer (games spec §3.7): time without a clock face — a clock carries numerals
+    'g-timer':  "A wide view of a sunny seaside garden terrace in the morning: two large glass hourglasses with brass frames "
+                "and pale golden sand running through them stand on low stone plinths at the left and right edges, pots of "
+                "sunflowers and lavender, a low whitewashed wall, the calm sea and a soft blue sky with a few gulls beyond. "
+                "No clocks, no dials, no signs. The centre is an open stretch of plain pale flagstones and sky in soft even light. "
+                "Calm and uncluttered. Sand gold, sea blue, sunflower yellow, lavender.",
 }
 for k, v in GAMES.items(): JOBS[k] = (v + ' ' + STYLE + ' Wide landscape composition.', '16:9')
 
