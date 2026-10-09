@@ -3,9 +3,12 @@
 export const HEROES = [
   { id: 'hall', act: 'nav', arg: 'hall', kicker: 'Contest prep', title: 'The Contest Hall', blurb: 'Thirty ways into hard problems, and contest-style papers against the clock.', route: '#/hall' },
   { id: 'contest', act: 'nav', arg: 'contest', kicker: 'The main event', title: 'Mock Contest', blurb: 'You and ten rivals. One question each, every round. Miss and you sit down.', route: '#/contest' },
-  { id: 'facts', act: 'startFacts', kicker: '5 minutes', title: 'Twenty facts', blurb: 'Picked for you: your traps first, then what is due, then a few new ones.', route: '#/facts' },
+  { id: 'machine', act: 'nav', arg: 'machine', kicker: 'Tricks race', title: 'Beat the Machine', blurb: 'Spot the shortcut before the Long-Way Machine finishes the sum.', route: '#/machine' },
   { id: 'daily', act: 'daily', kicker: "Today's puzzle", title: 'Make the target', blurb: 'The same puzzle in every house today. Compare notes at breakfast.', route: '#/play' },
 ];
+/* Twenty facts left the Play tab for Number Rush · Calm (games spec §4: one in, one out) — same
+   drill, same pay, same due list; #/facts and Home's mix still start it. Beat the Timer is the
+   owner's ninth card, drawn by timer-card.js after these. */
 export const GAMES = [
   { id: 'rush', title: 'Number Rush', blurb: 'Facts fall. Type the answer to pop them before they land.', art: 'art-rush', keys: 'digits + Enter' },
   { id: 'target', title: 'Make the Target', blurb: 'Four numbers, one target, + − × ÷. Use every number.', art: 'art-target', keys: '1–4 and + − × ÷' },

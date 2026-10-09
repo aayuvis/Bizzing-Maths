@@ -38,6 +38,10 @@ import { keypad } from './keypad.js';
 let G = null;
 const loadGames = () => (G ? Promise.resolve(G) : import('./games.js').then((m) => (G = m)));
 const gameOn = () => !!(G && G.active());
+/* Beat the Timer (timer.js) loads on its own route, like the games: its own chunk, never Home's */
+let TM = null;
+const loadTimer = () => (TM ? Promise.resolve(TM) : import('./timer.js').then((m) => (TM = m)));
+const timerOn = () => !!(TM && TM.active());
 import { dayKey, shuffle } from './rand.js';
 import * as V from './views.js';
 import * as V2 from './views2.js';
@@ -196,7 +200,7 @@ const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked ba
    argument and is given a bad one (#/stop/bad, #/world/bad, #/lib/bad) lands on Home too. */
 export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
   'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
-  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper', 'machine'];
+  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper', 'machine', 'timer'];
 const head = (a) => String(a || '').split('|')[0];
 const NEEDS_ARG = { stop: (a) => !!byId[head(a)], world: (a) => !!worldOf(a), lib: (a) => isTool(head(a)) || !!toolById[head(a)], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
 /* DEEP LINKS (owner, 3 Oct 2026): a link goes to the THING, not the room it is in.
@@ -266,6 +270,7 @@ function go(nav, arg = null, fromHash = false) {
   if (nav === 'search' && R.ui.nav !== 'search') { R.ui.q = R.ui.q || ''; R.ui.more = []; }
   if (nav !== 'machine' && MV) MV.leave();   // the machine's clock stops and its stage comes down
   if (nav !== 'paper' && R.paper) { keepDraft(); stopClock(); R.paper = null; }   // the draft is kept; the clock is a deadline
+  if (timerOn()) TM.quit(true);   // leaving the screen (Back, a link) ends a timed run unscored
   if (nav !== 'run' && R.run && R.run.kind !== 'guided') R.run = null;
   if (nav !== 'stop' && R.run && R.run.kind === 'guided') R.run = null;
   if (nav === 'grownups' && R.ui.nav !== 'grownups') { R.ui.gate = false; R.ui.gateIn = ''; }
@@ -319,6 +324,9 @@ function screen() {
     case 'machine':
       if (!MV) { loadMachine().then(() => { if (R.ui.nav === 'machine') render(); }); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening the workshop…</p></div></section>'; }
       return MV.view(mctx());
+    case 'timer':
+      if (!TM) { loadTimer().then(render, () => toast('This needs the internet once — then it works offline.')); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening Beat the Timer…</p></div></section>'; }
+      return TM.viewTimer(k, R.ui.tmr || (R.ui.tmr = {}));
     case 'me': return V.viewMe();
     case 'shop': return V3.viewShop();
     case 'collection': return V3.viewCollection();
@@ -370,7 +378,7 @@ function render() {
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.setSelectionRange && el.value != null) el.setSelectionRange(el.value.length, el.value.length); } }
   armTimer();
   syncMusic();
-  if (R.ui.cels.length) { const b = root.querySelector('.cel .btn'); if (b && document.activeElement !== b) b.focus(); }
+  if (R.ui.cels.length && !timerOn()) { const b = root.querySelector('.cel .btn'); if (b && document.activeElement !== b) b.focus(); }
   // a world board opens scrolled to the stop you are standing on (phones pan it)
   const sc = root.querySelector('.board-scroll[data-autoscroll]');
   if (sc && R.ui.scrolled !== R.ui.arg + ':' + R.ui.pick) {
@@ -1221,6 +1229,15 @@ on('cNext', () => cNext());
 on('quitContest', () => { clearTimeout(timerT); R.contest = null; go('contest'); });
 
 on('play', (id) => play(id));
+/* Beat the Timer: a setup choice redraws the screen; Start opens the stage (timer.js owns it until it closes) */
+on('tmr', (arg) => {
+  if (!TM) return loadTimer().then(() => fire('tmr', arg));
+  const k = kid(R.h), ui = R.ui.tmr || (R.ui.tmr = {});
+  if (arg !== 'start') { if (TM.choose(k, ui, arg)) { save(); render(); } return; }
+  clearConfetti(); hush();
+  TM.start({ k, save, render, earn: (ev, note) => earn(k, ev, note), medals: () => medals(k), calm: () => !!R.dev.calm,
+    record: (fact, right, ms) => F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, ms, k.band) }, ui);
+});
 on('cubesPlay', (l) => play('cubes', [1, 2, 3].includes(+l) ? +l : null));
 on('daily', () => daily());
 
@@ -1603,6 +1620,7 @@ function avKey(e) {
 }
 addEventListener('keydown', (e) => {
   if (gameOn()) { if (G.gameKey(e)) e.preventDefault(); return; }
+  if (timerOn()) { if (TM.onKey(e)) e.preventDefault(); return; }
   // the ☰ drawer is the shell's own (bindShell: Esc, focus, Tab); the wallet is ours
   { const d = document.querySelector('[data-bz=drawer]'); if (d && !d.hidden) return; }
   if (e.key === 'Escape' && R.ui.wallet) { e.preventDefault(); return fire('wallet'); }

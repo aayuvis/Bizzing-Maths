@@ -116,6 +116,11 @@ ok(!/Family\.(earn|spend)/.test(code('../src/challenge.js')) && !/\bxp\b|tick\(/
 const h = newHousehold(); h.kids.push(k); h.active = k.id; R.h = h; R.ui = { nav: 'play' };
 const play = V.viewArcade(), today = CH.challengeOf(k);
 ok(/class="card chal/.test(play) && play.includes(today.name) && /data-act="challenge"/.test(play), 'the Play tab carries today’s challenge card, named');
+// T16 (games spec §4): one in, one out — Twenty facts became Rush · Calm, Beat the Machine took its
+// hero card, and the owner's Beat the Timer is the ninth. Nine cards, no more.
+{ const heroes = (play.match(/class="card hero-t /g) || []).length, tiles = (play.match(/class="gtile[ "]/g) || []).length;
+  ok(heroes === 4 && tiles === 5 && heroes + tiles === 9, `T16: Play shows 9 cards — 4 heroes and 5 games (got ${heroes} + ${tiles})`);
+  ok(!/Twenty facts/.test(play) && /Beat the Machine/.test(play) && /Beat the Timer/.test(play), 'T16: Twenty facts is out; Beat the Machine and Beat the Timer are in'); }
 ok(play.indexOf('class="card chal') > play.indexOf('hero-tiles') && play.indexOf('class="card chal') < play.indexOf('class="gtiles"'), 'it sits at the top of the games, under the heroes');
 ok(/Finish it for 5 coins, once today/.test(play) || /Finished today/.test(play), 'the card prints the fixed bonus');
 const home = src('../src/views.js'), hv = home.slice(home.indexOf('export function viewHome('), home.indexOf('function trickOfHour('));

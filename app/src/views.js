@@ -31,6 +31,8 @@ import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
 import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
 import * as MD from './mistakes.js';
 import { HEROES, GAMES } from './arcade.js';
+import { machineCard } from './machine-card.js';
+import { timerCard } from './timer-card.js';
 import { challengeOf, doneToday, BONUS_EVENT } from './challenge.js';
 import { ownsAvatar, byAvatar } from './avatars.js';
 import { TIERS } from './integration/bizzing-avatars.js';
@@ -662,7 +664,7 @@ export function viewFacts() {
 
 /* ------------------------------------------------------------- arcade */
 
-const HERO_ICON = { hall: 'medal', contest: 'trophy', facts: 'bolt', daily: 'target' };
+const HERO_ICON = { hall: 'medal', contest: 'trophy', machine: 'gear', daily: 'target' };
 export function viewArcade() {
   const k = kid(R.h), g = (id) => k.games[id] || {};
   const puzzleDone = k.daily[dayKey()] && k.daily[dayKey()].puzzle;
@@ -672,11 +674,12 @@ export function viewArcade() {
   return `<section>
     ${pageHead('Play')}
     <div class="hero-tiles">
-      ${HEROES.map((x) => `<button class="card hero-t ${x.id}-t" data-act="${x.act}"${x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : x.arg ? ` data-arg="${x.arg}"` : ''}><span class="hero-ic" aria-hidden="true">${icon(HERO_ICON[x.id] || 'sparkle', 52)}</span><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
+      ${HEROES.map((x) => x.id === 'machine' ? machineCard(k) : `<button class="card hero-t ${x.id}-t" data-act="${x.act}"${x.id === 'facts' ? ` data-arg="${k.prefs.op}"` : x.arg ? ` data-arg="${x.arg}"` : ''}><span class="hero-ic" aria-hidden="true">${icon(HERO_ICON[x.id] || 'sparkle', 52)}</span><span class="kicker">${esc(x.kicker)}</span><b>${x.id === 'daily' && puzzleDone ? 'Solved' : esc(x.title)}</b><span>${esc(x.blurb)}</span></button>`).join('')}
     </div>
     ${challengeCard(k)}
     <div class="gtiles">
       ${GAMES.map((x) => tile(x.id, esc(x.title), esc(x.blurb), x.art, esc(x.keys))).join('')}
+      ${timerCard(k)}
     </div>
     ${arcadeModes(k)}
   </section>`;
@@ -990,8 +993,19 @@ function report(c) {
         ${lapsed.length ? `<p class="muted small">Slipped since they were fluent: ${lapsed.slice(0, 8).map((f) => esc(ftext(f))).join(', ')}. That is normal — it comes back quickly.</p>` : ''}</div>
     </div>
     ${goalsReport(c)}
+    ${timerReport(c)}
     <p class="muted small">Talk about it: ask ${esc(c.name)} to show you one trick and explain <i>why</i> it works. Explaining it is the best practice there is.</p>
   </div>`;
+}
+
+/* Beat the Timer, for a grown-up: theme · level · best · target per window, in words (games spec §3.7).
+   The grade is a curriculum setting the child picks, so it is never reported as theirs; time is never a score. */
+let TT = null, ttLoading = false;   // the catalogue loads with the first report that needs it, never with Home
+function timerReport(c) {
+  if (!c.timer || !Object.keys({ ...c.timer.lv, ...c.timer.best }).length) return '';
+  if (!TT) { if (!ttLoading) { ttLoading = true; import('./timer-themes.js').then((m) => { TT = m; R.render && R.render(); }, () => { ttLoading = false; }); } return ''; }
+  const ls = TT.parentLines(c);
+  return ls.length ? `<div class="rc-timer"><p class="kicker">${icon('timer', 16)} Beat the Timer</p>${ls.map((l) => `<p class="small">${esc(l)}</p>`).join('')}</div>` : '';
 }
 
 /* ------------------------------------------------------------- privacy */
