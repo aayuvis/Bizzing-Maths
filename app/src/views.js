@@ -12,6 +12,7 @@ import { OPS, OP_NAME, tally, grid, parseKey, why, text as ftext, STATE_LABEL, s
 import { GUIDE, guideSay } from './lines.js';
 import { BANDS, AVATARS, STARTER_AVATARS, AVATAR_PACKS, AVATAR_NAME, avatarFile, RANKS, rankOf, kid, ROUTE, isOpen, frontier, nodeDone, trickRec, atlasSummary, PASS, readOn } from './model.js';
 import { RIVALS, bot, live, timeFor } from './contest.js';
+import { roundWords } from './duel.js';
 import { keypad } from './keypad.js';
 import { fig } from './figs.js';
 import { storyTab, goalsReport } from './views2.js';
@@ -499,6 +500,7 @@ export function viewRun() {
     ${pageHead(esc(run.title), esc(run.sub || ''), back('quitRun', 'Stop'))}
     ${run.kind === 'mix' ? mixTicks(run) : ''}
     <div class="dots" aria-label="Question ${run.i + 1} of ${run.items.length}">${run.items.map((_, i) => `<i class="${i < run.results.length ? (run.results[i].right ? 'r' : 'w') : i === run.i ? 'c' : ''}"></i>`).join('')}</div>
+    ${run.duel ? duelPanel(run) : ''}
     <div class="card qcard">
       ${q.fresh ? '<span class="chip new">New fact</span>' : ''}
       ${q.bonus ? `<p class="bonus-bar"><span class="chip gold">Bonus ×2 · optional</span> <span class="muted small">Almost next-level hard. Only adds points — it cannot lose you the test.</span> ${fb ? '' : btn('Finish without the bonus', 'skipBonus', '', 'small')}</p>` : ''}
@@ -511,8 +513,26 @@ export function viewRun() {
       ${fb ? feedback(q, fb, run) : hintFor(run, q)}${fb || q.choices || wid ? '' : `<p class="hint">${run.kind === 'facts' && q.fresh && q.why ? `<span class="why-chip">${esc(q.why)}</span>` : 'Type the answer, then Enter.'}</p>`}
     </div>
     ${!fb && !q.choices && !wid ? keypad(q.keys) : ''}
-    ${fb && (!fb.right || q.puzzle) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
+    ${fb && (!fb.right || q.puzzle || run.duel) ? `<div class="row center">${btn('Next <kbd>Enter</kbd>', 'nextQ', '', 'primary big')}</div>` : ''}
   </section>`;
+}
+
+/* The rival duel (games spec §3.6, duel.js): the rival's face, their tell, and their thinking time
+   running on screen. Whether they were right is shown only after the child has answered. */
+function duelPanel(run) {
+  const k = kid(R.h), D = run.duel, d = D.d, b = bot(d.rival), t = D.turn || { think: 1 }, fb = run.fb, x = fb ? d.rounds.at(-1) : null;
+  const gone = Math.max(0, Math.round(performance.now() - (D.at || performance.now())));
+  const st = fb ? (x.them.right ? `right, in ${(t.think / 1000).toFixed(1)} s` : 'missed it') : gone >= t.think ? 'has an answer' : 'is thinking…';
+  return `<div class="duel" data-you="${d.you}" data-them="${d.them}">
+    <p class="duel-score" aria-label="You ${d.you}, ${esc(b.name)} ${d.them}"><span>${mine(k, 32, '')} You <b>${d.you}</b></span><span class="muted">first to two</span><span><b>${d.them}</b> ${esc(b.name)}</span></p>
+    <div class="duel-rival${fb || gone >= t.think ? ' done' : ''}${fb ? (x.them.right ? ' right' : ' wrong') : ''}" data-think="${t.think}">
+      ${av(b.id, 56, b.name)}
+      <div class="dr-t"><p><b>${esc(b.name)}</b> <span class="dr-st" aria-live="polite">${st}</span></p>
+        <p class="tell">${esc(b.tell[0].toUpperCase() + b.tell.slice(1))}.</p>
+        <span class="dr-bar" aria-hidden="true"><i style="animation-duration:${t.think}ms;animation-delay:-${Math.min(gone, t.think)}ms${fb ? ';animation-play-state:paused' : ''}"></i></span></div>
+    </div>
+    ${fb ? `<p class="duel-round ${x.who || 'none'}">${esc(roundWords(d, x, b.name))}</p>` : ''}
+  </div>`;
 }
 
 /* A hint for the youngest (audit E6): before a 6–7-year-old gets one wrong, they may ask for

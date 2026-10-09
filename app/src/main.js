@@ -38,7 +38,8 @@ import * as V from './views.js';
 import * as V2 from './views2.js';
 import { toolById, SHELF, isTool, loadTool } from './library/index.js';
 import { STORIES, storiesReady, loadStories } from './stories.js';
-import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel } from './puzzles.js';
+import { floorSet, familySet, famOf, isBoss, floorLevel, FLOOR_PASS, sudokuSize, bandLevel, sudokuXP, puzzlePay, puzzlePayEnd } from './puzzles.js';
+import * as DU from './duel.js';
 import { THEMES, themeOf, isTheme, applyTheme, syncThemeColor, byTheme, worldIsOpen } from './themes.js';
 import * as V3 from './views3.js';
 import * as MD from './mistakes.js';
@@ -444,6 +445,7 @@ function ask() {
   const run = R.run; if (!run || run.over) return;
   run.t0 = performance.now(); run.input = ''; run.fb = null;
   run.w = W.init(run.items[run.i]);   // a question answered by building (widgets.js) starts empty
+  if (run.duel) duelAsk(run);
   render();
   const k = kid(R.h), q = run.items[run.i];
   if (readOn(k)) say(q.say || V.spoken(q.text));
@@ -487,7 +489,10 @@ function submit(given) {
   if (q.fact) F.record(k.facts[F.key(q.fact)] || (k.facts[F.key(q.fact)] = F.blank()), right, ms, k.band);
   if (run.kind !== 'place' && run.kind !== 'leveltest') tick(k, right, run.kind === 'facts' ? 1 : 2);
   // a right answer in PRACTICE earns 1 coin; tests and placement pay on passing, not per answer
-  if (right && PRACTICE.includes(run.kind)) earn(k, 'answer');
+  // the Puzzles tab (games spec §3.5): a typed right pays at once, a picked one only once the next is right too
+  if (run.kind === 'puzzle') { for (let c = puzzlePay(run.pay || (run.pay = {}), { mc: !!q.choices, right }); c > 0; c--) earn(k, 'answer', 'a puzzle on the Puzzles tab'); }
+  else if (right && PRACTICE.includes(run.kind)) earn(k, 'answer');
+  if (run.duel) duelSettle(run, right, ms);
   // the level test grows as it goes: each answer decides the next question's level
   if (run.kind === 'leveltest' && J.answer(run.st, right)) run.items.push(J.question(run.st));
   save();
@@ -499,7 +504,7 @@ function submit(given) {
   // the auto-advance belongs to THIS answer: if the child moved on with Enter and has already
   // answered the next question, a stale timer must not skip that one unseen
   const fb = run.fb;
-  if (right && !q.puzzle) setTimeout(() => { if (R.run === run && run.fb === fb) nextQ(); }, fast ? 420 : 650);
+  if (right && !q.puzzle && !run.duel) setTimeout(() => { if (R.run === run && run.fb === fb) nextQ(); }, fast ? 420 : 650);
   // placement stops after two misses in a row
   if (run.kind === 'place' && !right && run.results.length >= 2 && !run.results.at(-2).right) setTimeout(() => { if (R.run === run) finishRun(); }, 1400);
 }
@@ -588,8 +593,22 @@ const PRACTICE = ['facts', 'drill', 'puzzle', 'lib', 'secret', 'mistakes', 'warm
 
 function nextQ() {
   const run = R.run; if (!run) return;
+  if (run.duel) { clearTimeout(run.duel.timer); if (run.duel.d.over) return finishRun(); if (run.i + 1 >= run.items.length) run.items.push(...J.secretItems(kid(R.h), run.land, 'duel').slice(0, 1)); }
   if (run.i + 1 >= run.items.length) return finishRun();
   run.i++; ask();
+}
+
+/* The rival's go (duel.js): drawn as the question is asked, by contest.js rivalGets; their
+   thinking runs on screen and they "have an answer" when it is done. Nothing about it is shown as
+   right or wrong until the child has answered. */
+function duelAsk(run) {
+  const D = run.duel; clearTimeout(D.timer);
+  D.turn = DU.rivalTurn(D.d, run.items[run.i]); D.at = performance.now();
+  D.timer = setTimeout(() => { if (R.run === run && !run.fb) { const el = document.querySelector('.duel-rival'); if (el) el.classList.add('done'); const st = document.querySelector('.duel-rival .dr-st'); if (st) st.textContent = 'has an answer'; } }, D.turn.think);
+}
+function duelSettle(run, right, ms) {
+  const D = run.duel; clearTimeout(D.timer);
+  D.last = DU.settle(D.d, { right, ms }, D.turn);
 }
 
 function finishRun() {
@@ -687,6 +706,7 @@ function finishRun() {
     }
   }
   if (run.kind === 'puzzle') {
+    if (puzzlePayEnd(run.pay || {}, right >= FLOOR_PASS)) earn(k, 'answer', 'a puzzle on the Puzzles tab');
     s.stars = right === n ? 3 : right >= n - 2 ? 2 : right >= 2 ? 1 : 0;
     s.lines.push(right === n ? 'Every one. That is contest thinking.' : 'Each puzzle showed its rule afterwards — the next set will feel easier.');
     if (run.floor) {
@@ -712,15 +732,16 @@ function finishRun() {
     else s.lines.push(right === n ? 'Every one.' : 'Try another set — it gets easier every time.');
   }
   if (run.kind === 'secret') {
-    const need = run.secret === 'duel' ? 2 : 1, won = right >= need;
-    s.head = run.secret === 'duel' ? `You ${right} · ${bot(run.rival).name} ${n - right}` : won ? 'Found it!' : 'Not this time';
+    const d = run.duel && run.duel.d, won = d ? DU.duelWon(d) : right >= 1;
+    s.head = d ? `You ${d.you} · ${bot(run.rival).name} ${d.them}` : won ? 'Found it!' : 'Not this time';
+    if (d) s.lines.push(`<span class="duel-log">${d.rounds.map((x, i) => `Round ${i + 1}: ${escapeHtml(DU.roundWords(d, x, bot(run.rival).name))}`).join('<br>')}</span>`);
     if (won) {
       const first = J.secretFound(k, run.land, run.secret);
       s.lines.push(run.secret === 'duel' ? `<b>You win the clearing.</b> ${escapeHtml(bot(run.rival).name)} tips their hat.` : run.secret === 'wisp' ? `<b>Right — and here is why:</b> ${escapeHtml(run.items[0].why || '')}` : '<b>The chest swings open.</b>');
       const p = J.progress(k), n2 = p && p.level;
       if (first && n2 && J.emblem(k, n2, run.land)) s.lines.push('🏅 <b>Land fully explored</b> — every secret found and its gate passed.');
       confetti(first ? 50 : 20);
-    } else s.lines.push(run.secret === 'duel' ? 'Two out of three wins it. Have another go whenever you like — the rival waits.' : 'It stays hidden for now. Come back and try again any time.');
+    } else s.lines.push(d ? (d.you === d.them ? 'Level — nobody wins the clearing yet. Have another go whenever you like; the rival waits.' : `${escapeHtml(bot(run.rival).name)} takes the clearing this time. Two rounds wins it — have another go whenever you like.`) : 'It stays hidden for now. Come back and try again any time.');
     s.buttons.push('<button class="btn primary" data-act="nav" data-arg="atlas">Back to the map</button>');
   }
   if (run.kind === 'landtest' || run.kind === 'levelexam') {
@@ -1046,7 +1067,8 @@ function speakBeat() {
 on('beatNext', () => beat(1));
 on('beatBack', () => beat(-1));
 on('storyRead', () => { R.ui.storyRead = !R.ui.storyRead; if (!R.ui.storyRead) hush(); render(); speakBeat(); });
-const sdkDone = (k, n, lv, hints) => { const p = k.puzzles.sudoku || (k.puzzles.sudoku = { right: 0, tries: 0, solved: {} }); p.tries++; p.solved[n] = (p.solved[n] || 0) + 1; tick(k, true, 5 * lv); };
+// XP is the squares the child placed (games spec §3.5): a hint explains and places nothing
+const sdkDone = (k, n, lv, hints, placed) => { const p = k.puzzles.sudoku || (k.puzzles.sudoku = { right: 0, tries: 0, solved: {} }); p.tries++; p.solved[n] = (p.solved[n] || 0) + 1; tick(k, true, sudokuXP(placed)); };
 on('pickFloor', (f) => { R.ui.floor = +f; render(); });
 on('shutFloor', () => toast('Clear the floor below first.'));
 on('climb', (f) => {
@@ -1055,8 +1077,9 @@ on('climb', (f) => {
   if (!k.quest) k.quest = {};
   if (isBoss(f)) {
     const n = sudokuSize(k.band, lv);
-    return G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => {
-      if (solved) { sdkDone(k, n, lv, hints); const q = k.quest[f] || (k.quest[f] = { stars: 0 }); q.stars = Math.max(q.stars, stars); if (stars >= 2 && !q.passed) { q.passed = true; confetti(60); toast(`Floor ${f} cleared — the stairs are open.`); } }
+    return G.sudoku(k, n, lv, { onEnd: (solved, stars, hints, placed) => {
+      // a boss floor pays `stop` on its first clear, like every other floor (games spec §3.5)
+      if (solved) { sdkDone(k, n, lv, hints, placed); const q = k.quest[f] || (k.quest[f] = { stars: 0 }); q.stars = Math.max(q.stars, stars); if (stars >= 2 && !q.passed) { q.passed = true; confetti(60); toast(`Floor ${f} cleared — the stairs are open.`); earn(k, 'stop', `floor ${f} of the Puzzle Tower`); k.last = { what: 'floor', title: `floor ${f}`, at: Date.now() }; } }
       save(); render(); } });
   }
   startRun('puzzle', `Floor ${f}`, floorSet(f, k.band), { floor: f, lv, sub: 'The Puzzle Tower · six puzzles, all kinds' });
@@ -1068,7 +1091,7 @@ on('practise', (a) => {
 on('sudokuPlay', (l) => {
   if (!G) return loadGames().then(() => fire('sudokuPlay', l), () => toast('This needs the internet once — then it works offline.'));
   const k = kid(R.h), lv = +l || 1, n = sudokuSize(k.band, lv);
-  G.sudoku(k, n, lv, { onEnd: (solved, stars, hints) => { if (solved) sdkDone(k, n, lv, hints); save(); render(); } });
+  G.sudoku(k, n, lv, { onEnd: (solved, stars, hints, placed) => { if (solved) sdkDone(k, n, lv, hints, placed); save(); render(); } });
 });
 on('lib', (a) => {
   const id = R.ui.arg, tool = toolById[id]; if (!tool) return;
@@ -1359,7 +1382,7 @@ on('secret', (a) => {
   let items = J.secretItems(k, landId, kind);
   if (kind === 'chest') { const fam = ['patterns', 'balance', 'space'][Math.floor(Math.random() * 3)]; items = familySet(fam, bandLevel(k.band), 1); }
   const title = kind === 'duel' ? `${bot(rival).name} challenges you!` : s.name;
-  startRun('secret', title, items, { secret: kind, land: landId, rival, sub: kind === 'duel' ? 'Best of three — win two' : s.blurb });
+  startRun('secret', title, items, { secret: kind, land: landId, rival, sub: kind === 'duel' ? 'Best of three — win two' : s.blurb, duel: kind === 'duel' ? { d: DU.newDuel(k.band, rival), turn: null, timer: 0 } : null });
 });
 on('atlasView', (v) => { R.ui.atlasView = v; go('atlas'); });
 on('jlv', (n) => { R.ui.jlv = +n; render(); });
@@ -1558,7 +1581,7 @@ addEventListener('keydown', (e) => {
   if (alt && ['run', 'stop', 'contest'].includes(nav)) { e.preventDefault(); return padKey(alt); }
   if (e.key === 'Backspace') { e.preventDefault(); return padKey('⌫'); }
   if (e.key === 'Enter') {
-    if (nav === 'run' && run && run.fb && (!run.fb.right || run.items[run.i].puzzle)) { e.preventDefault(); return nextQ(); }
+    if (nav === 'run' && run && run.fb && (!run.fb.right || run.items[run.i].puzzle || run.duel)) { e.preventDefault(); return nextQ(); }
     if (nav === 'contest' && R.contest && R.contest.phase === 'round') { e.preventDefault(); return cNext(); }
     if (nav === 'stop' && run && run.kind === 'guided' && run.si >= run.steps.length) { e.preventDefault(); return guidedNext(); }
     if (['run', 'contest', 'grownups'].includes(nav) || (nav === 'stop' && run)) { e.preventDefault(); return padKey('✓'); }

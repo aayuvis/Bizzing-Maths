@@ -768,6 +768,8 @@ svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .sc.bad{color:#fff;background:var(--fix)}
 .sdk-nums{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:560px}
 .sdk-nums .pk{width:52px;height:52px}
+.sc.hint{background:color-mix(in srgb,var(--treasure) 35%,var(--surface));box-shadow:inset 0 0 0 3px var(--treasure)}
+.sdk-tip{max-width:520px;margin:0;padding:10px 14px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);border-left:4px solid var(--treasure);line-height:1.45}
 
 /* ================================================================ the puzzle tower */
 .tower-wrap{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;margin-bottom:10px}
@@ -1139,3 +1141,16 @@ div.jcard{cursor:default}
 .ms-part{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--surface2)}
 .ms-n{flex:none;min-width:54px;font:600 15px var(--mono);color:var(--muted)}.ms-n b{font-size:24px;color:var(--ink)}
 .ms-t{display:flex;flex-direction:column}.ms-t small{color:var(--muted);font-size:13px}
+
+/* the rival duel (games spec §3.6): their face, their tell, their thinking time */
+.duel{display:flex;flex-direction:column;gap:8px;margin:0 auto 10px;max-width:640px;width:100%}
+.duel-score{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0;font-size:var(--fs-label)}
+.duel-score>span{display:inline-flex;align-items:center;gap:6px} .duel-score b{font-size:1.4em}
+.duel-rival{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:var(--r-lg);padding:10px 14px;box-shadow:var(--sh)}
+.duel-rival .dr-t{flex:1;min-width:0} .duel-rival p{margin:2px 0} .duel-rival .tell{color:var(--muted);font-style:italic;font-size:var(--fs-label)}
+.dr-bar{display:block;height:6px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden;margin-top:6px}
+.dr-bar i{display:block;height:100%;background:var(--action);transform-origin:left;transform:scaleX(1);animation:dr-think linear both}
+@keyframes dr-think{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.duel-rival.right .dr-st{color:var(--good,#1a7f37);font-weight:600} .duel-rival.wrong .dr-st{color:var(--muted)}
+.duel-round{margin:0;text-align:center;font-weight:600}
+@media (max-width:500px){.duel{gap:4px;margin-bottom:6px}.duel-rival{padding:6px 10px;gap:10px}.duel-rival .av{width:40px;height:40px}.duel-rival .tell{font-size:.8rem;line-height:1.25}.dr-bar{margin-top:3px}}
