@@ -169,7 +169,9 @@ const bot = (G, pops) => G((n) => {
   await p.waitForTimeout(900);
   // a wrong answer HOLDS, with the answer and its why
   const i0 = await G(() => window.__bzm.R.run.i);
-  await p.keyboard.press('9'); await p.keyboard.press('9'); await p.keyboard.press('9'); await p.keyboard.press('Enter'); await p.waitForTimeout(1500);
+  // a wrong answer that no prefix of can be right: the answer plus one (typing 999 is RIGHT when the fact is 81 ÷ 9)
+  const wrong = await G(() => String(Number(window.__bzm.R.run.items[window.__bzm.R.run.i].ans) + 1));
+  for (const ch of wrong) await p.keyboard.press(ch); await p.keyboard.press('Enter'); await p.waitForTimeout(1500);
   ok(await G(() => window.__bzm.R.run.i) === i0 && await p.locator('.fb.bad').count() === 1 && await p.locator('.cs-now.held').count() === 1, 'Calm: a wrong answer holds — it does not move on by itself');
   ok(/It is/.test(await p.locator('.fb.bad').innerText()) && await p.locator('.qcard .why-chip').count() === 1, 'and shows the answer and its why');
   await shot('calm-held');
