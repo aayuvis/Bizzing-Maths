@@ -3,7 +3,7 @@
    every game has a title card and a three-step how-to, the combo moves only with
    right answers, and the combo can never reach a score, a wage or a star. */
 import { readFileSync } from 'node:fs';
-import { makePuzzle, solve, comboNext, HOWTO, INTRO_MS, rushSkill, rushSpeed, RUSH_BASE, lineSpec, lineStep } from '../src/games.js';
+import { makePuzzle, solve, comboNext, HOWTO, INTRO_MS, rushSkill, rushSpeed, RUSH_BASE } from '../src/games.js';
 import * as G from '../src/games.js';
 import { seeded } from '../src/rand.js';
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; if (fails < 20) console.error('  ✗ ' + m); } };
@@ -54,7 +54,13 @@ const C = await import('../src/cubes.js');
 function brute(v, hmax) {
   // plain enumeration of every stack; the views are compared by hand in loops (not viewsOf) so
   // that this proof shares no code with the thing it proves, and so 2 million stacks take a moment
+  // On the 4 × 4 floor (level 4) every height in every square is 4^16 stacks; there, a square the
+  // top view leaves empty is held at nought and every OTHER square still takes every height 1…hmax —
+  // the top view only, never a bound from the front or side.
   const n = v.n, N = n * n, h = new Array(N).fill(0), top = v.top, front = v.front, side = v.side;
+  const lo = (i) => (n > 3 ? top[i] : 0), hi = (i) => (n > 3 && !top[i] ? 0 : hmax);
+  for (let i = 0; i < N; i++) h[i] = lo(i);
+  const least = new Array(N).fill(Infinity), most = new Array(N).fill(-Infinity);
   const fits = () => {
     for (let i = 0; i < N; i++) if ((h[i] > 0 ? 1 : 0) !== top[i]) return false;
     for (let c = 0; c < n; c++) { let m = 0; for (let r = 0; r < n; r++) if (h[r * n + c] > m) m = h[r * n + c]; if (m !== front[c]) return false; }
@@ -66,16 +72,18 @@ function brute(v, hmax) {
     if (fits()) {
       let s = 0; for (let i = 0; i < N; i++) s += h[i];
       ways++; if (s > max) max = s; if (s < min) { min = s; nmin = 1; } else if (s === min) nmin++;
+      for (let j = 0; j < N; j++) { if (h[j] < least[j]) least[j] = h[j]; if (h[j] > most[j]) most[j] = h[j]; }
     }
-    let i = 0; while (i < N && h[i] === hmax) h[i++] = 0;
+    let i = 0; while (i < N && h[i] === hi(i)) { h[i] = lo(i); i++; }
     if (i === N) break;
     h[i]++;
   }
-  return { ways, min, max, nmin };
+  const free = least.map((x, j) => (x < most[j] ? j : -1)).filter((j) => j >= 0);
+  return { ways, min, max, nmin, free };
 }
 const waysBy = {};
 let proved = 0;
-for (const lv of [1, 2, 3]) {
+for (const lv of [1, 2, 3, 4, 5]) {
   const L = C.LEVELS[lv], bank = C.BANK[lv];
   ok(bank.length >= 10, `cubes level ${lv}: a bank of at least ten (${bank.length})`);
   ok(new Set(bank.map((h) => JSON.stringify(C.viewsOf(h, L.n)))).size === bank.length, `cubes level ${lv}: no two puzzles share their views`);
@@ -87,6 +95,7 @@ for (const lv of [1, 2, 3]) {
     ok(C.sameViews(C.viewsOf(p.answer, L.n), p.views), `${tag}: the bank's stack has the puzzle's views`);
     ok(s.ways >= 1 && s.ways === b.ways, `${tag}: the solver and the brute force agree on how many stacks fit (${s.ways} vs ${b.ways})`);
     ok(s.min === b.min && s.max === b.max && s.mins.length === b.nmin, `${tag}: …and on the fewest and the most (${s.min}/${s.max}/${s.mins.length} vs ${b.min}/${b.max}/${b.nmin})`);
+    ok(s.free.join() === b.free.join(), `${tag}: …and on which towers the views leave free (${s.free} vs ${b.free})`);
     ok(p.min === b.min && C.count(p.answer) === b.min, `${tag}: the fewest cubes the game claims (${p.min}) is the fewest the search finds (${b.min})`);
     ok(s.mins.some((m) => m.join() === p.answer.join()), `${tag}: the stack "Show me" builds is one of the fewest`);
     ok(C.levelHolds(lv, s), `${tag}: level ${lv}'s promise holds (${s.ways} ways, ${s.min}–${s.max} cubes, ${s.mins.length} fewest)`);
@@ -94,9 +103,14 @@ for (const lv of [1, 2, 3]) {
     waysBy[lv].push(b.ways); proved++;
   }
 }
-// difficulty is trickiness, not size: every level-2 puzzle leaves more open than any level-1, and so on
-ok(Math.max(...waysBy[1]) < Math.min(...waysBy[2]) && Math.max(...waysBy[2]) < Math.min(...waysBy[3]), `cubes: each level leaves strictly more stacks open than the one before (${[1, 2, 3].map((l) => `${Math.min(...waysBy[l])}–${Math.max(...waysBy[l])}`).join(' | ')})`);
-ok(new Set([1, 2, 3].map((l) => C.LEVELS[l].n)).size === 1, 'cubes: the grid is the same size at every level — the ramp is trickiness');
+// difficulty is trickiness, not size: every level-2 puzzle leaves more open than any level-1, and so on.
+// Games spec §3.3 (owner, 9 Oct 2026) adds level 4, a 4 × 4 floor with ONE hidden tower — the one
+// level that is bigger, by the owner's decision — and level 5, the most open 3 × 3 of all, where only
+// the fewest solves it. So the ladder of open stacks is 1 < 2 < 3 < 5, and the grid is 3 × 3 except at 4.
+ok(Math.max(...waysBy[1]) < Math.min(...waysBy[2]) && Math.max(...waysBy[2]) < Math.min(...waysBy[3]) && Math.min(...waysBy[5]) >= 100, `cubes: each level leaves strictly more stacks open than the one before (${[1, 2, 3, 5].map((l) => `${Math.min(...waysBy[l])}–${Math.max(...waysBy[l])}`).join(' | ')})`);
+ok(new Set([1, 2, 3, 5].map((l) => C.LEVELS[l].n)).size === 1 && C.LEVELS[4].n === 4, 'cubes: the grid is the same size at every level but 4 (the 4 × 4 floor the spec asks for)');
+ok(C.LEVELS[5].fewestOnly && ![1, 2, 3, 4].some((l) => C.LEVELS[l].fewestOnly), 'cubes: only level 5 makes the fewest a requirement');
+ok([1, 2, 3, 4, 5].every((l) => /^Level \d · \w/.test(C.levelName(l))), 'cubes: each level is said in words');
 ok(C.bandLevel('6-7') === 1 && C.bandLevel('8-10') === 2 && C.bandLevel('11-14') === 3, 'cubes: the level follows the age band');
 // views no stack can have are refused, not served
 ok(C.solve({ n: 3, front: [2, 0, 1], side: [1, 2, 0], top: [1, 1, 0, 0, 0, 0, 0, 0, 0] }).ways === 0, 'cubes: a top view with a square where the front shows nothing has no stack');
@@ -112,7 +126,7 @@ const playFn = main.slice(main.indexOf('function play(arg'), main.indexOf('\n}\n
 const calls = playFn.split('\n').filter((l) => /\bG\.\w+\(/.test(l));
 ok(calls.length === 4 && ['numberRush', 'makeTarget', 'numberLine', 'cubeBuilder'].every((fn) => calls.some((l) => l.includes(`G.${fn}(`))), `play() starts the four Arcade games (${calls.length})`);
 for (const l of calls) ok((l.match(/\bpayout\(k, arg, /g) || []).length === 1 && !/\btick\(/.test(l), `a game is paid through payout(), once, and never by tick() directly: ${l.trim().slice(0, 60)}`);
-ok(/G\.makeTarget\(k, \{ daily: true, onSolve: \(\) => \{ payout\(k, 'daily', true\)/.test(main), "the daily puzzle is paid through payout('daily')");
+ok(/G\.makeTarget\(k, \{ daily: true,[^\n]*onSolve: \(\) => \{ if \(!day\(\)\.shown && !day\(\)\.puzzle\) payout\(k, 'daily', true\)/.test(main), "the daily puzzle is paid through payout('daily'), once, and never after Show me");
 ok(WAGE.cubes === 5 && WAGE.target === 5 && WAGE.rush === 1 && WAGE.line === 1 && WAGE.daily === 10, `the wage table (${JSON.stringify(WAGE)})`);
 { const a = newKid('W', '8-10', 'cubebot'); payout(a, 'cubes', true); payout(a, 'cubes', false); ok(a.xp === WAGE.cubes, `a solved Cube Builder puzzle pays ${WAGE.cubes} xp and a shown one pays nothing (${a.xp})`);
   let threw = false; try { payout(a, 'nosuch', true); } catch { threw = true; } ok(threw, 'a game with no wage cannot be paid by accident'); }
@@ -131,18 +145,10 @@ ok(/data-i[^]*?onclick = \(\) => act\('sel'/.test(cb) && /data-a[^]*?onclick = \
   ok(rushSpeed(3, 99) === rushSpeed(3, 10) && rushSpeed(3, 10) / rushSpeed(3, 0) <= 1.3 + 1e-9, 'pops in a row add at most 30%');
   ok(rushSpeed(999, 999) <= RUSH_BASE * 2 * 1.3 + 1e-12, 'never more than 2.6× the start, however long the game');
   ok(rushSpeed(12, 0) < rushSpeed(12, 6), 'a landing (the run of pops back to nought) gives the slower sky back');
-  for (const band of ['6-7', '8-10', '11-14']) for (const mode of [null, 'negatives']) {
-    const w = [0, 1, 2].map((s) => lineSpec(band, mode, s)), span = (x) => x.hi - x.lo;
-    ok(span(w[0]) < span(w[2]) && span(w[0]) <= span(w[1]) && span(w[1]) <= span(w[2]), `${band}/${mode}: the line widens step by step (${w.map(span)})`);
-    ok(span(w[0]) === span(lineSpec(band, mode)), `${band}/${mode}: it starts on the band's own line, unchanged`);
-    for (const x of w) for (let i = 0; i < 60; i++) { const p = x.pick(seeded(band + mode + i)); ok(p.v > x.lo && p.v < x.hi && p.v !== (x.lo + x.hi) / 2, `${band}: every target is a real point inside its line`); }
-  }
-  const steps = [0, 1, 2, 3, 4, 5, 8].map(lineStep);
-  ok(steps.join() === '0,0,1,1,2,2,2', `the line widens only after correct (close) answers, two at a time (${steps})`);
-  ok(steps.every((v, i) => !i || v >= steps[i - 1]), 'it never narrows');
+  // The Number Line no longer widens inside a game (audit v4 G8): games spec §3.2 replaces that ramp
+  // with the level ladder and labelled → bare → no ticks inside a round. test/levels-play.mjs holds it.
   const src2 = readFileSync(new URL('../src/games.js', import.meta.url), 'utf8');
-  ok(/close\.length/.test(src2.slice(src2.indexOf('const widen'), src2.indexOf('const widen') + 200)), 'the Number Line game widens from its close answers');
   ok(/speed = rushSpeed\(score, inARow\)/.test(src2), 'Number Rush sets its speed from rushSpeed'); }
 
-console.log(`${fails ? 'FAIL' : 'ok'} games — 750 puzzles solved and checked; ${proved} Cube Builder puzzles proved by solver AND brute force; one wage path; Rush and Line ramp gently inside a game; title cards, combo and finish screens`);
+console.log(`${fails ? 'FAIL' : 'ok'} games — 750 puzzles solved and checked; ${proved} Cube Builder puzzles proved by solver AND brute force; one wage path; Rush ramps gently inside a game; title cards, combo and finish screens`);
 if (fails) process.exit(1);

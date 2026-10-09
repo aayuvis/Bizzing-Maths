@@ -125,8 +125,10 @@ const skip = async (p) => { await p.waitForSelector('.g-intro'); await p.keyboar
     const box = await p.locator('.nl-track').boundingBox(); await p.tap('.nl-track', { position: { x: box.width * 0.2, y: box.height / 2 } });
     const v2 = +(await p.locator('.nl-track').getAttribute('aria-valuenow'));
     await p.tap('[data-n=place]'); await p.waitForSelector('.nl-true');
-    if (id === 'line:fractions') ok(/^\d+\/\d+$/.test(q) && ends.join() === '0,1' && v0 === 0.5 && Math.abs(v1 - 0.51) < 1e-9 && v2 < 0.3, `Fractions: ${q} on a 0–1 line; arrows step a hundredth (${v0} → ${v1}), a tap moves it (${v2})`);
-    else ok(/^−?\d+$/.test(q) && ends.join() === '−50,0,50' && v0 === 0 && v1 === 1 && v2 < -20, `Negatives: ${q} on −50…50 with nought marked; arrows (${v0} → ${v1}), a tap (${v2})`);
+    // games spec §3.2: each mode has a ladder, and a first-time player starts on its level 1 —
+    // halves on 0–4 (labelled 1, 2, 3), and −10…10 with every fifth tick labelled
+    if (id === 'line:fractions') ok(/^\d+\/2$/.test(q) && ends.join() === '0,4,1,2,3' && v0 === 2 && Math.abs(v1 - 2.04) < 1e-9 && v2 < 1.2, `Fractions: ${q} on a 0–4 line; arrows step a hundredth of it (${v0} → ${v1}), a tap moves it (${v2})`);
+    else ok(/^−?\d+$/.test(q) && ends.join() === '−10,10,−5,0,5' && v0 === 0 && v1 === 1 && v2 < -4, `Negatives: ${q} on −10…10 with every fifth tick marked; arrows (${v0} → ${v1}), a tap (${v2})`);
     ok((await st(G)).xp - x0 <= 1, `${id}: a placement pays at most the standard 1`);
     await shot(id.replace(':', '-'));
     await G(() => window.__bzmGames.active().quit()); await p.waitForTimeout(150);
@@ -399,7 +401,7 @@ for (const dark of [false, true]) {
   ok(/Best:? 6/.test(await p.locator('.gtile[data-arg=cubes]').innerText())   /* the house wording is "Best: 6" (audit v4 G2) */, `${tag}: the Play tile shows the best score`);
   // the Puzzle Tower offers it too, at all three levels, and search finds it
   await nav(p, G, 'puzzles', '[data-act=cubesPlay]');
-  ok(await p.locator('[data-act=cubesPlay]').count() === 3, `${tag}: the Puzzle Tower offers Cube Builder at three levels`);
+  ok(await p.locator('[data-act=cubesPlay]').count() === 5, `${tag}: the Puzzle Tower offers Cube Builder at its five levels (games spec §3.3)`);
   await p.tap('[data-act=cubesPlay] >> nth=0'); await skip(p); await p.waitForSelector('.cb-grid');
   ok((await probe('level')) === 1, `${tag}: and a level chosen there is the level played`);
   await G(() => window.__bzmGames.active().quit()); await p.waitForTimeout(150);

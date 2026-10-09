@@ -13,12 +13,12 @@
 
 import { ramp, key as fkey, answer, text as ftext, state as fstate } from './facts.js';
 import * as RU from './rush.js';
-import { setLevel, verdictLine } from './game-level.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
+import { levelOf, setLevel, afterRound, verdictLine } from './game-level.js';
 import { esc, sfx, confetti, music } from './ui.js';
 import { icon } from './icons.js';
 import { makeSudoku, conflicts, SUDOKU, sudokuHint, SUDOKU_HINTS } from './puzzles.js';
-import { cubePuzzle, viewsOf, sameViews, count as cubeCount, LEVELS as CUBE_LEVELS, BANK as CUBE_BANK, bandLevel as cubeLevel } from './cubes.js';
+import { cubePuzzle, viewsOf, sameViews, count as cubeCount, LEVELS as CUBE_LEVELS, BANK as CUBE_BANK, bandLevel as cubeLevel, levelName as cubeLevelName } from './cubes.js';
 
 /* ------------------------------------------------------------ the frame */
 
@@ -219,23 +219,33 @@ export const HOWTO = {
   // the bonus modes (extras.js): each its own how-to, the same keys and pad as its game
   'rush:mixed': { practises: 'fact families: 7 × 8, 8 × 7, 56 ÷ 7, 56 ÷ 8', steps: [['⇄', 'A whole fact family falls together: 7 × 8, 8 × 7, 56 ÷ 8, 56 ÷ 7.'], ['⌨', 'Type each answer on the keys or the pad.'], ['✦', 'Know one and you know the family. Three landings ends it.']] },
   'rush:squares': { practises: 'square numbers, at speed', steps: [['▢', 'Every bubble is a number times itself, the trickiest last.'], ['⌨', 'Type the square on the keys or the pad.'], ['✦', 'A miss shows why: n² is (n − 1)², plus 2n, take 1.']] },
-  'target:five': { practises: 'joining five numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'Five numbers this time: keys 1 to 5.'], ['◎', 'Use every number to make the target.']] },
+  'target:five': { practises: 'joining five numbers with + − × ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['⊕', 'Five numbers, keys 1 to 5. Every one is needed.'], ['◎', 'Use every number to make the target.']] },
   'target:hard': { practises: 'reaching big targets with × and ÷', steps: [['☝', 'Tap a number, then + − × or ÷, then another.'], ['×', 'Adding alone will not get there: you need × or ÷.'], ['◎', 'Use every number to make the target.']] },
-  'line:fractions': { practises: 'where a fraction sits between 0 and 1', steps: [['½', 'A fraction appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Halves first, then quarters. The closer, the more points.']] },
+  'line:fractions': { practises: 'where a fraction sits between 0 and 1', steps: [['½', 'A fraction appears above the line.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Halves, quarters, thirds, eighths: one a level.']] },
   'line:negatives': { practises: 'numbers below nought', steps: [['0', 'Nought is in the middle; below it, the negatives.'], ['↔', 'Drag, tap, or use ← → to move the marker.'], ['▼', 'Place it. The closer, the more points.']] },
 };
 const MODE_NAME = { 'rush:mixed': 'Inverse', 'rush:squares': 'Squares', 'target:five': 'Five numbers', 'target:hard': 'Hard target', 'line:fractions': 'Fractions', 'line:negatives': 'Negatives' };
 const modeKey = (game, mode) => (mode && HOWTO[game + ':' + mode] ? game + ':' + mode : null);
 const titled = (t, mk) => (mk ? `${t} · ${MODE_NAME[mk]}` : t);
 export const INTRO_MS = 3000;
+/* THE LEVEL CHIP (games spec §1.4) rides on the title card: a game that has levels sets
+   g.chip = { levels, lv, name(l), short?(l), pick(l) } before intro(). It defaults to the level
+   last played; each level is said in words ("Level 3 · one × needed"). Touching it holds the
+   card — the three-second start waits for Play — so a child is never started before they chose.
+   Keys on the card: 1–5 choose, ← → step, anything else plays. */
+function chipHtml(c) {
+  return `<div class="g-lv" role="radiogroup" aria-label="Level">${c.levels.map((l) => `<button class="g-lvb${l === c.lv ? ' on' : ''}" role="radio" aria-checked="${l === c.lv}" data-lv="${l}" aria-label="${esc(c.name(l))}"><b>${esc(c.short ? c.short(l) : String(l))}</b></button>`).join('')}</div>
+        <p class="g-lvw" aria-live="polite">${esc(c.name(c.lv))}</p>`;
+}
 function intro(g, title, id, begin) {
-  const h = HOWTO[id];
+  const h = HOWTO[id], c = g.chip;
   g.f.el.classList.add('intro-on');
   g.f.body.innerHTML = `<div class="g-intro" role="group" aria-label="How to play ${esc(title)}">
       <div class="g-card">
         <p class="kicker">Practises ${esc(h.practises)}</p>
         <h2>${esc(title)}</h2>
         <ol class="g-how">${h.steps.map(([ic, t], i) => `<li style="--i:${i}"><span class="g-ico" aria-hidden="true">${ic}</span><span>${esc(t)}</span></li>`).join('')}</ol>
+        ${c ? chipHtml(c) : ''}
         <div class="g-bar" aria-hidden="true"><i style="animation-duration:${INTRO_MS}ms"></i></div>
         <button class="btn primary big" data-g="go">Play <kbd>Enter</kbd></button>
         <p class="g-skip">Starts by itself · tap or press any key to start now</p>
@@ -250,7 +260,22 @@ function intro(g, title, id, begin) {
     begin();
   };
   g.f.body.querySelector('.g-intro').addEventListener('click', go);
-  g.intro = (e) => { if (e.key === 'Escape') { g.quit(); return true; } if (/^(Tab|Shift|Control|Alt|Meta)$/.test(e.key)) return false; go(); return true; };
+  const choose = (l) => {
+    if (!c || !c.levels.includes(l)) return;
+    clearTimeout(g.introT); g.f.el.classList.add('chip-held');
+    const skip = g.f.body.querySelector('.g-skip'); if (skip) skip.textContent = 'Press Play when you are ready';
+    c.lv = l; c.pick(l); sfx.click();
+    g.f.body.querySelectorAll('.g-lvb').forEach((b) => { const on = +b.dataset.lv === l; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+    g.f.body.querySelector('.g-lvw').textContent = c.name(l);
+  };
+  if (c) g.f.body.querySelectorAll('.g-lvb').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); choose(+b.dataset.lv); }));
+  g.intro = (e) => {
+    if (e.key === 'Escape') { g.quit(); return true; }
+    if (/^(Tab|Shift|Control|Alt|Meta)$/.test(e.key)) return false;
+    if (c && /^[1-9]$/.test(e.key)) { choose(+e.key); return true; }
+    if (c && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { const i = c.levels.indexOf(c.lv) + (e.key === 'ArrowRight' ? 1 : -1); if (i >= 0 && i < c.levels.length) choose(c.levels[i]); return true; }
+    go(); return true;
+  };
   g.introT = setTimeout(go, INTRO_MS);
   g.f.body.querySelector('button[data-g=go]').focus({ preventScroll: true });
 }
@@ -261,7 +286,7 @@ function intro(g, title, id, begin) {
    numbers placed — so a child (and a grown-up looking over a shoulder) can see
    the learning, not just a number. `practised.items` are what went well,
    `practised.again` what to come back to. Enter plays again, Escape leaves. */
-function resultCard(g, { title, lines, stars, again, done, practised, best }) {
+function resultCard(g, { title, lines, stars, again, done, practised, best, doneOnly = false }) {
   const f = g.f;
   g.ended = true;
   music.stop();
@@ -281,13 +306,14 @@ function resultCard(g, { title, lines, stars, again, done, practised, best }) {
       ${best > 1 ? `<p class="muted">Longest run: <b>${best}</b> right in a row.</p>` : ''}
       ${lines.map((l) => `<p>${l}</p>`).join('')}
       <div class="row gap center">
-        <button class="btn primary" data-g="again">Play again <kbd>Enter</kbd></button>
-        <button class="btn" data-g="done">Back <kbd>Esc</kbd></button>
+        ${doneOnly ? '<button class="btn primary" data-g="done">Done <kbd>Enter</kbd></button>' : `<button class="btn primary" data-g="again">Play again <kbd>Enter</kbd></button>
+        <button class="btn" data-g="done">Back <kbd>Esc</kbd></button>`}
       </div></div>`;
-  f.body.querySelector('[data-g=again]').onclick = () => restart(again);
+  if (!doneOnly) f.body.querySelector('[data-g=again]').onclick = () => restart(again);
   f.body.querySelector('[data-g=done]').onclick = done;
-  f.body.querySelector('[data-g=again]').focus({ preventScroll: true });
+  f.body.querySelector(doneOnly ? '[data-g=done]' : '[data-g=again]').focus({ preventScroll: true });
   g.key = (e) => {
+    if (doneOnly && (e.key === 'Enter' || e.key === ' ')) { done(); return true; }
     if (e.key === 'Enter' || e.key === ' ') { restart(again); return true; }
     if (e.key === 'Escape' || e.key === 'Backspace') { done(); return true; }
     return false;
@@ -606,21 +632,156 @@ export function solve(nums, target, ops = OPS) {
 
 /* adding and taking away only: a "hard target" is one these cannot reach */
 const ADD_ONLY = { '+': OPS['+'], '−': OPS['−'] };
-/* Modes (extras.js): "five" serves one more number than the band's standard game;
-   "hard" serves a bigger target that + and − alone cannot make from these numbers —
-   proved by the solver run with only + and −. Either way the puzzle is solved first. */
-export function makePuzzle(band, r = Math.random, mode = null) {
+const opsOf = (chars) => Object.fromEntries([...chars].map((o) => [o, OPS[o]]));
+
+/* EVERY way to make every number from a hand of cards (games spec §2.2). `reach(nums)` returns
+   Map<value, Map<way, expression>>, where a WAY is the multiset of operations used, written as
+   its symbols sorted ("+×" is one + and one ×). Each card is used exactly once; a − never goes
+   below nought and a ÷ always comes out whole, as in the game. `sub(xs)` answers the same for any
+   part of the hand, which is how "every card is needed" is proved. */
+export function reacher(ops = OPS) {
+  const memo = new Map();
+  const go = (xs) => {
+    xs = xs.slice().sort((a, b) => a - b);
+    const key = xs.join(',');
+    if (memo.has(key)) return memo.get(key);
+    const out = new Map(), n = xs.length;
+    if (n === 1) out.set(xs[0], new Map([['', String(xs[0])]]));
+    else for (let m = 1; m < (1 << n) - 1; m++) {
+      if (!(m & 1)) continue;                       // the part holding card 0 is A: each split once
+      const A = [], B = [];
+      for (let i = 0; i < n; i++) (m >> i & 1 ? A : B).push(xs[i]);
+      const ra = go(A), rb = go(B);
+      for (const [va, wa] of ra) for (const [vb, wb] of rb) for (const o in ops) {
+        for (const [x, y, wx, wy] of (o === '+' || o === '×') ? [[va, vb, wa, wb]] : [[va, vb, wa, wb], [vb, va, wb, wa]]) {
+          const v = ops[o](x, y); if (v == null || v > 10000) continue;
+          let mv = out.get(v); if (!mv) out.set(v, (mv = new Map()));
+          for (const [sx, ex] of wx) for (const [sy, ey] of wy) {
+            const w = [...sx, ...sy, o].sort().join('');
+            if (!mv.has(w)) mv.set(w, `(${ex} ${o} ${ey})`);
+          }
+        }
+      }
+    }
+    memo.set(key, out);
+    return out;
+  };
+  return go;
+}
+/* the ways (op multisets) that make `target` from ALL of `nums`, with one expression each */
+export function waysTo(nums, target, ops = OPS) {
+  const m = reacher(ops)(nums).get(target);
+  return m ? new Map([...m].map(([w, e]) => [w, e.replace(/^\((.*)\)$/, '$1')])) : new Map();
+}
+/* the way a child's own expression used: its operations, sorted */
+export const wayOf = (expr) => (String(expr).match(/[+−×÷]/g) || []).sort().join('');
+const OPWORD = ['zero', 'one', 'two', 'three', 'four'];
+/* "one × and two +" — a way, said in words */
+export function wayWords(w) {
+  const c = {}; for (const o of w) c[o] = (c[o] || 0) + 1;
+  const parts = ['×', '÷', '+', '−'].filter((o) => c[o]).map((o) => `${OPWORD[c[o]] || c[o]} ${o}`);
+  return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] || 'no operation';
+}
+
+/* THE LEVEL LADDER (§2.2). Each level names the operations on its keys and the promise its
+   puzzles keep; `targetHolds` is the promise, and every puzzle served is checked against it. */
+export const TARGET_LEVELS = {
+  1: { ops: '+', words: 'adding only', say: 'Add them all up.' },
+  2: { ops: '+−', words: 'add and take away', say: 'Adding everything never makes it: something is taken away.' },
+  3: { ops: '+−×', words: 'one × needed', say: 'Adding and taking away cannot make it: you need one ×.' },
+  4: { ops: '+−×÷', words: '÷ needed', say: 'It cannot be made without ÷.' },
+  5: { ops: '+−×÷', words: '× and ÷ both needed', say: 'Two steps: it needs a × and a ÷.' },
+};
+/* the level a new child starts on, before they have chosen one */
+export const targetStart = (band) => (band === '6-7' ? 2 : band === '8-10' ? 3 : 4);
+const sum = (xs) => xs.reduce((s, v) => s + v, 0);
+const without = (ways, o) => [...ways.keys()].filter((w) => !w.includes(o));
+/* the promise, proved over EVERY way the cards allow with the level's own keys */
+export function targetHolds(lv, nums, target) {
+  if (nums.includes(target)) return false;
+  const ways = waysTo(nums, target, opsOf(TARGET_LEVELS[lv].ops));
+  if (!ways.size) return false;
+  if (lv === 1) return target === sum(nums);
+  if (target === sum(nums)) return false;                 // level 2 and up: never the plain sum
+  if (lv === 2) return true;
+  if (lv === 3) return without(ways, '×').length === 0 && [...ways.keys()].some((w) => w.split('×').length === 2);
+  if (lv === 4) return without(ways, '÷').length === 0;
+  return without(ways, '÷').length === 0 && without(ways, '×').length === 0;
+}
+/* Five numbers (paid): every card NEEDED — no smaller part of the hand makes the target with any
+   keys, so there is no spare card and no free ×1, ÷1 or +0 — and + and − alone cannot make it. */
+export function fiveHolds(nums, target) {
+  const go = valuesFrom(OPS), n = nums.length;
+  if (!go(nums).has(target)) return false;
+  for (let m = 1; m < (1 << n) - 1; m++) if (go(nums.filter((_, i) => m >> i & 1)).has(target)) return false;
+  return !valuesFrom(ADD_ONLY)(nums).has(target);
+}
+/* every value a hand (or any part of it) can make, without the ways: the fast half of reacher() */
+function valuesFrom(ops) {
+  const memo = new Map();
+  const go = (xs) => {
+    xs = xs.slice().sort((a, b) => a - b);
+    const key = xs.join(',');
+    if (memo.has(key)) return memo.get(key);
+    const out = new Set(), n = xs.length;
+    if (n === 1) out.add(xs[0]);
+    else for (let m = 1; m < (1 << n) - 1; m++) {
+      if (!(m & 1)) continue;
+      const A = [], B = [];
+      for (let i = 0; i < n; i++) (m >> i & 1 ? A : B).push(xs[i]);
+      const ra = go(A), rb = go(B);
+      for (const a of ra) for (const b of rb) for (const o in ops) {
+        const v1 = ops[o](a, b); if (v1 != null && v1 <= 10000) out.add(v1);
+        if (o === '−' || o === '÷') { const v2 = ops[o](b, a); if (v2 != null && v2 <= 10000) out.add(v2); }
+      }
+    }
+    memo.set(key, out);
+    return out;
+  };
+  return go;
+}
+const SIZE = { '6-7': { n: 3, hi: 9, lo: 5, top: 20 }, '8-10': { n: 4, hi: 10, lo: 10, top: 60 }, '11-14': { n: 4, hi: 13, lo: 10, top: 150 } };
+/* A puzzle at a level, sized to a band. A target is built by combining the cards at random with
+   the level's keys, then KEPT only if the level's promise holds over every way there is. */
+export function levelPuzzle(band, lv, r = Math.random) {
+  const S = SIZE[band] || SIZE['8-10'], L = TARGET_LEVELS[lv], keys = [...L.ops];
+  for (let tries = 0; tries < 4000; tries++) {
+    const nums = Array.from({ length: S.n }, () => int(1, S.hi, r));
+    let items = nums.slice();
+    while (items.length > 1) {
+      items = shuffle(items, r);
+      const a = items.pop(), b = items.pop();
+      const ok = keys.filter((o) => OPS[o](a, b) != null);
+      // the harder levels lean on the key they promise, so the search finds them quickly
+      const want = lv >= 4 && ok.includes('÷') && r() < 0.6 ? '÷' : lv >= 3 && ok.includes('×') && r() < 0.5 ? '×' : pick(ok, r);
+      items.push(OPS[want](a, b));
+    }
+    const target = items[0];
+    if (target < S.lo || target > S.top) continue;
+    if (!targetHolds(lv, nums, target)) continue;
+    const ways = waysTo(nums, target, opsOf(L.ops));
+    return { nums, target, sol: ways.values().next().value, lv, ops: L.ops };
+  }
+  return null;   // test/levels-play.mjs proves this is never reached over thousands of seeds
+}
+
+/* Modes (extras.js): "five" serves one more number than the band's standard game, every one of
+   them needed (fiveHolds); "hard" serves a bigger target that + and − alone cannot make from these
+   numbers — proved by the solver run with only + and −. Either way the puzzle is solved first.
+   With no mode, the puzzle is the level's (the band's starting level when none is given). */
+export function makePuzzle(band, r = Math.random, mode = null, lv = null) {
+  if (!mode) return levelPuzzle(band, lv || targetStart(band), r) || { nums: [2, 3, 4, 6], target: 24, sol: '(6 × 4) × (3 − 2)', lv: 3, ops: '+−×' };
   const n = (band === '6-7' ? 3 : 4) + (mode === 'five' ? 1 : 0);
   const hi = band === '6-7' ? 9 : band === '8-10' ? 10 : 13;
-  const hard = mode === 'hard';
-  for (let tries = 0; tries < (mode ? 3000 : 400); tries++) {
-    const nums = Array.from({ length: n }, () => int(1, hi, r));
+  const hard = mode === 'hard', five = mode === 'five';
+  for (let tries = 0; tries < 3000; tries++) {
+    const nums = Array.from({ length: n }, () => int(five ? 2 : 1, hi, r));
     // build a target by combining the numbers at random
     let items = nums.slice();
     while (items.length > 1) {
       items = shuffle(items, r);
       const a = items.pop(), b = items.pop();
-      const ops = Object.keys(OPS).filter((o) => OPS[o](a, b) != null && !(band === '6-7' && !hard && (o === '×' || o === '÷')));
+      const ops = Object.keys(OPS).filter((o) => OPS[o](a, b) != null && !(band === '6-7' && !hard && !five && (o === '×' || o === '÷')));
       items.push(OPS[pick(ops, r)](a, b));
     }
     const target = items[0];
@@ -628,45 +789,74 @@ export function makePuzzle(band, r = Math.random, mode = null) {
     const top = hard ? (band === '6-7' ? 60 : band === '8-10' ? 200 : 600) : band === '6-7' ? 20 : band === '8-10' ? 60 : 150;
     if (target < lo || target > top || nums.includes(target)) continue;
     if (hard && solve(nums, target, ADD_ONLY)) continue;
+    if (five && !fiveHolds(nums, target)) continue;
     const sol = solve(nums, target);
-    if (sol) return { nums, target, sol };
+    if (sol) return { nums, target, sol, ops: '+−×÷' };
   }
-  // never reached in practice (test/games.mjs walks hundreds of seeds); still solved, never typed
-  const fb = mode === 'five' ? [[2, 3, 4, 6, 1], 24] : hard ? (band === '6-7' ? [[7, 8, 9], 47] : band === '8-10' ? [[7, 8, 9, 3], 159] : [[7, 8, 9, 3], 501]) : null;
-  if (fb) return { nums: fb[0], target: fb[1], sol: solve(fb[0], fb[1]) };
-  return { nums: [2, 3, 4, 6], target: 24, sol: '(6 × 4) × (3 − 2)' };
+  // never reached in practice (test/extras.mjs walks hundreds of seeds); still solved, never typed
+  const fb = five ? (band === '6-7' ? [[4, 6, 5, 4], 12] : [[2, 6, 9, 9, 3], 44]) : band === '6-7' ? [[7, 8, 9], 47] : band === '8-10' ? [[7, 8, 9, 3], 159] : [[7, 8, 9, 3], 501];
+  return { nums: fb[0], target: fb[1], sol: solve(fb[0], fb[1]), ops: '+−×÷' };
 }
 
-export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) {
+/* The round (games spec §2.2): five puzzles, the first two one level below the chosen level and
+   the rest at it, so the round climbs. A CLEAN solve (no "Show me") is what counts as right for
+   the level rule; a puzzle shown is recorded "shown" and never counts. */
+export const TARGET_ROUNDS = 5;
+export const targetRampLv = (lv, round) => (round <= 2 ? Math.max(1, lv - 1) : lv);
+export const targetRight = (results) => results.filter((x) => x === 'clean').length;
+/* Today's puzzle comes in two sizes from ONE seed, so siblings of different ages share it */
+export const DAILY_SIZES = { 2: { band: '6-7', name: 'Smaller' }, 4: { band: '8-10', name: 'Bigger' } };
+export const dailyPuzzle = (size, day = dayKey()) => levelPuzzle(DAILY_SIZES[size].band, size, seeded('daily:' + day));
+export const targetName = (l) => `Level ${l} · ${TARGET_LEVELS[l].words}`;
+
+export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null, shownToday = false }) {
   const mk = daily ? null : modeKey('target', mode);
   const title = daily ? "Today's puzzle" : titled('Make the Target', mk);
   const f = frame(title, daily ? 'The same puzzle in every house today' : 'Use every number to hit the target', () => g.quit(), 'target', daily ? 'daily' : mk || 'target');
   const g = { f, tune: 'calm' };
   let round = 0, solved = 0, puzzle, cards, pickA = null, op = null, history = [], shown = false, born = null, combo;
-  const made = [], showed = [];
-  const ROUNDS = daily ? 1 : 5;
+  let challenge = null;            // the second-way challenge: { r, blocked } while it is being played
+  const made = [], showed = [], results = [];
+  const ROUNDS = daily ? 1 : TARGET_ROUNDS;
   const strip = (s) => s.replace(/^\((.*)\)$/, '$1');
+  // the level chip: the free game has five levels; today's puzzle has its two sizes; a paid mode has neither
+  const hasLv = !daily && !mk;
+  const rec = kid.gameLv && kid.gameLv.target;
+  if (hasLv) g.chip = { levels: [1, 2, 3, 4, 5], lv: rec ? levelOf(kid, 'target') : targetStart(kid.band), name: targetName, pick: (l) => setLevel(kid, 'target', l) };
+  if (daily) g.chip = { levels: [2, 4], lv: kid.band === '6-7' ? 2 : 4, short: (l) => DAILY_SIZES[l].name, name: (l) => `${DAILY_SIZES[l].name} · Level ${l} · ${TARGET_LEVELS[l].words}`, pick: () => {} };
+  const keys = () => (puzzle && puzzle.ops) || '+−×÷';
 
+  function deal() {
+    if (daily) return dailyPuzzle(g.chip.lv);
+    if (mk) return makePuzzle(kid.band, Math.random, mode);
+    return levelPuzzle(kid.band, targetRampLv(g.chip.lv, round)) || makePuzzle(kid.band, Math.random, null, targetRampLv(g.chip.lv, round));
+  }
   function next() {
     round++; shown = false;
-    puzzle = daily ? makePuzzle(kid.band, seeded('daily:' + dayKey())) : makePuzzle(kid.band, Math.random, mk ? mode : null);
+    puzzle = deal();
+    fresh();
+  }
+  function fresh() {
     cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) }));
     pickA = null; op = null; history = []; born = null;
     draw();
   }
   function draw(msg = '') {
-    f.hud.innerHTML = daily ? '' : `<span class="chip">Puzzle <b>${round}</b> of ${ROUNDS}</span><span class="chip">Solved <b>${solved}</b></span>`;
+    const lvChip = puzzle.lv && !daily ? `<span class="chip">Level <b>${puzzle.lv}</b></span>` : '';
+    f.hud.innerHTML = challenge ? `<span class="chip">Another way</span>` : daily ? '' : `<span class="chip">Puzzle <b>${round}</b> of ${ROUNDS}</span>${lvChip}<span class="chip">Solved <b>${solved}</b></span>`;
+    const ops = Object.keys(OPS).filter((o) => keys().includes(o));
     f.body.innerHTML = `<div class="mt">
       <div class="mt-target" aria-label="Target ${puzzle.target}"><span>Target</span><b>${puzzle.target}</b></div>
+      ${challenge ? `<p class="mt-block">Not with ${esc(wayWords(challenge.blocked))} this time.</p>` : ''}
       <div class="mt-cards">${cards.map((c, i) => `<button class="mt-card${pickA === c.id ? ' on' : ''}${born === c.id ? ' born' : ''}" data-c="${c.id}" aria-label="Number ${c.v}, key ${i + 1}"><b>${c.v}</b><i>${i + 1}</i></button>`).join('')}</div>
-      <div class="mt-ops">${Object.keys(OPS).map((o) => `<button class="mt-op${op === o ? ' on' : ''}" data-o="${o}" aria-label="${o}">${o}</button>`).join('')}</div>
-      <div class="mt-msg" aria-live="polite">${msg || (pickA == null ? 'Pick a number.' : op == null ? 'Now pick + − × or ÷.' : 'Now pick another number.')}</div>
+      <div class="mt-ops">${ops.map((o) => `<button class="mt-op${op === o ? ' on' : ''}" data-o="${o}" aria-label="${o}">${o}</button>`).join('')}</div>
+      <div class="mt-msg" aria-live="polite">${msg || (pickA == null ? 'Pick a number.' : op == null ? `Now pick ${ops.join(' ')}.` : 'Now pick another number.')}</div>
       <div class="mt-tools">
         <button class="btn" data-t="undo" ${history.length ? '' : 'disabled'}>Undo <kbd>⌫</kbd></button>
         <button class="btn" data-t="reset">Start again <kbd>R</kbd></button>
         <button class="btn ghost" data-t="show">Show me <kbd>S</kbd></button>
       </div>
-      <p class="mt-keys">Keys: <kbd>1</kbd>–<kbd>${cards.length}</kbd> numbers · <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> operations</p>
+      <p class="mt-keys">Keys: <kbd>1</kbd>–<kbd>${cards.length}</kbd> numbers · ${ops.map((o) => `<kbd>${{ '+': '+', '−': '-', '×': '*', '÷': '/' }[o]}</kbd>`).join(' ')} operations</p>
     </div>`;
     f.body.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => pickCard(+b.dataset.c));
     f.body.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => pickOp(b.dataset.o));
@@ -689,62 +879,129 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) 
     pickA = cards.length > 1 ? nc.id : null; op = null; born = nc.id; sfx.pop();
     juice(g);                       // the new card is born with a pop (CSS .born)
     if (cards.length === 1) {
-      if (v === puzzle.target) return win(nc);
+      if (v === puzzle.target) {
+        // the second-way challenge refuses the child's first way: the SAME multiset of operations
+        if (challenge && wayOf(nc.s) === challenge.blocked) {
+          sfx.bad();
+          draw(`That is the same way: ${esc(wayWords(challenge.blocked))}. Undo, and find another.`);
+          return wobble(g, f.body.querySelector('.mt-target'));
+        }
+        return win(nc);
+      }
       sfx.bad(); combo.miss();
       draw(`That makes ${v}, not ${puzzle.target}. Undo, or start again.`);
       return wobble(g, f.body.querySelector('.mt-card'));
     }
     draw();
   }
-  function pickOp(o) { if (shown || pickA == null) return; op = op === o ? null : o; sfx.click(); born = null; draw(); }
+  function pickOp(o) { if (shown || pickA == null || !keys().includes(o)) return; op = op === o ? null : o; sfx.click(); born = null; draw(); }
   function tool(t) {
     if (t === 'undo' && history.length) { cards = history.pop(); pickA = null; op = null; born = null; sfx.click(); draw(); }
     if (t === 'reset') { cards = puzzle.nums.map((v, i) => ({ id: i, v, s: String(v) })); history = []; pickA = null; op = null; born = null; sfx.click(); draw(); }
     if (t === 'show' && !shown) {
-      shown = true; combo.miss(); showed.push(`${puzzle.sol} = ${puzzle.target}`);
+      shown = true; combo.miss();
+      if (challenge) {
+        // another way, shown: a way the child's first one is not. No star.
+        const other = [...waysTo(puzzle.nums, puzzle.target, opsOf(keys()))].find(([w]) => w !== challenge.blocked);
+        f.body.querySelector('.mt-msg').innerHTML = `Another way: <b class="mono">${esc(other[1])} = ${puzzle.target}</b>`;
+        challenge.r.second = 'shown';
+        wobble(g, f.body.querySelector('.mt-target'));
+        setTimeout(() => current === g && (challenge = null, finish()), 3200);
+        return;
+      }
+      showed.push(`${puzzle.sol} = ${puzzle.target}`); results.push('shown');
       f.body.querySelector('.mt-msg').innerHTML = `One way: <b class="mono">${esc(puzzle.sol)} = ${puzzle.target}</b>`;
       wobble(g, f.body.querySelector('.mt-target'));
       setTimeout(() => (current === g && !daily ? (round < ROUNDS ? next() : finish()) : 0), 3200);
-      if (daily) { onEnd(false); f.body.querySelector('.mt-tools').innerHTML = '<button class="btn primary" data-t="done">Done</button>'; f.body.querySelector('[data-t=done]').onclick = () => resultCard(g, { title: "Today's puzzle", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: [], again: showed }, lines: ['Tomorrow brings a new one. Everybody in your house gets the same puzzle.'], stars: 0, again: () => g.quit(), done: () => g.quit() }); }
+      if (daily) { onEnd(false, true); f.body.querySelector('.mt-tools').innerHTML = '<button class="btn primary" data-t="done">Done</button>'; f.body.querySelector('[data-t=done]').onclick = () => resultCard(g, { title: "Today's puzzle", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: [], again: showed }, lines: ['You saw the answer today, so today’s puzzle is done. Tomorrow brings a new one, and everybody in your house gets the same puzzle.'], stars: 0, doneOnly: true, again: () => g.quit(), done: () => g.quit() }); }
     }
   }
   function win(nc) {
-    solved++; combo.hit(); sfx.level(); onSolve();
+    if (challenge) {
+      // a second way: worth a star on the finish card (never a wage: the puzzle was paid once)
+      const r = challenge.r; r.second = 'won'; r.secondExpr = `${strip(nc.s)} = ${puzzle.target}`;
+      combo.hit(); sfx.level();
+      draw(`<b>Another way to ${puzzle.target}!</b>`);
+      const tg = f.body.querySelector('.mt-target'); tg.classList.add('won');
+      const [x, y] = centre(tg, f.body.querySelector('.mt')); pop(g, f.body.querySelector('.mt'), x, y, '+★');
+      setTimeout(() => current === g && (challenge = null, finish()), 1100);
+      return;
+    }
+    solved++; combo.hit(); sfx.level();
+    const credit = !(daily && shownToday);
+    if (credit) onSolve();
+    results.push('clean');
     made.push(`${strip(nc.s)} = ${puzzle.target}`);
+    clean.push({ puzzle, way: wayOf(nc.s), expr: strip(nc.s) });
     draw(`<b>You made ${puzzle.target}!</b>`);
     const tg = f.body.querySelector('.mt-target'); tg.classList.add('won');
     const [x, y] = centre(tg, f.body.querySelector('.mt'));
     pop(g, f.body.querySelector('.mt'), x, y);
     if (daily) {
-      onEnd(true);
-      setTimeout(() => current === g && resultCard(g, { title: "Today's puzzle — solved", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made }, lines: ['Tomorrow brings a new one. Everybody in your house gets the same puzzle.'], stars: 3, again: () => g.quit(), done: () => g.quit() }), 1100);
+      onEnd(true, false);
+      setTimeout(() => current === g && resultCard(g, { title: "Today's puzzle — solved", practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made }, lines: [credit ? 'Tomorrow brings a new one. Everybody in your house gets the same puzzle.' : 'Solved — but you saw the answer earlier today, so this one is for fun. Tomorrow’s counts.'], stars: credit ? 3 : 0, doneOnly: true, again: () => g.quit(), done: () => g.quit() }), 1100);
       return;
     }
     setTimeout(() => current === g && (round < ROUNDS ? next() : finish()), 1100);
   }
+  const clean = [];
+  let verdict = null, cand = null, ended = false;
+  /* The challenge on offer: the last clean solve that has ANOTHER way, proved by listing every way */
+  function secondCandidate() {
+    for (let i = clean.length - 1; i >= 0; i--) {
+      const r = clean[i], ways = waysTo(r.puzzle.nums, r.puzzle.target, opsOf(r.puzzle.ops || '+−×÷'));
+      if ([...ways.keys()].some((w) => w !== r.way)) return r;
+    }
+    return null;
+  }
   function finish() {
-    const stars = solved >= 5 ? 3 : solved >= 3 ? 2 : solved >= 1 ? 1 : 0;
-    onEnd(solved, stars);
+    const base = solved >= 5 ? 3 : solved >= 3 ? 2 : solved >= 1 ? 1 : 0;
+    if (!ended) {
+      ended = true;
+      onEnd(solved, base);
+      if (hasLv) verdict = afterRound(kid, 'target', targetRight(results), ROUNDS);
+      cand = secondCandidate();
+    }
+    const r = cand, bonus = r && r.second === 'won' ? 1 : 0, stars = Math.min(3, base + bonus);
+    const lines = [];
+    if (verdict) lines.push(esc(verdictLine(verdict)));
+    if (r && r.second === 'won') lines.push(`Another way: <b class="mono">${esc(r.secondExpr)}</b> — a star for it.`);
+    else if (r && r.second === 'shown') lines.push('There was another way: next time, try before you ask.');
+    else if (r) lines.push(`You made ${r.puzzle.target} with ${esc(wayWords(r.way))}. Can you make it another way? <button class="btn" data-g="second">Another way <kbd>W</kbd></button>`);
+    if (verdict && verdict.offer) lines.push(`<button class="btn" data-g="up">Try Level ${verdict.offer} <kbd>U</kbd></button>`);
+    lines.push('There is usually more than one way. The one "Show me" gives is just one of them.');
+    const again = () => { g.quit(); makeTarget(kid, { onSolve, onEnd, mode }); };
     resultCard(g, { title: `${solved} of ${ROUNDS} made`, practised: { skill: 'Joining numbers with + − × ÷ to make a target', items: made, again: showed }, best: combo.best,
-      lines: ['There is usually more than one way. The one "Show me" gives is just one of them.'], stars,
-      again: () => { g.quit(); makeTarget(kid, { onSolve, onEnd, mode }); }, done: () => g.quit() });
+      lines, stars, again, done: () => g.quit() });
+    const second = () => { challenge = { r, blocked: r.way }; puzzle = r.puzzle; shown = false; g.ended = false; g.key = playKey; if (!musicOff && g.tune) music.start(g.tune); fresh(); };
+    const up = () => { setLevel(kid, 'target', verdict.offer); restart(again); };
+    const bs = f.body.querySelector('[data-g=second]'); if (bs) bs.onclick = second;
+    const bu = f.body.querySelector('[data-g=up]'); if (bu) bu.onclick = up;
+    const endKey = g.key;
+    g.key = (e) => {
+      if (bs && (e.key === 'w' || e.key === 'W')) { second(); return true; }
+      if (bu && (e.key === 'u' || e.key === 'U')) { up(); return true; }
+      return endKey(e);
+    };
+  }
+  function playKey(e) {
+    if (e.key === 'Escape') { g.quit(); return true; }
+    const i = +e.key; if (i >= 1 && i <= cards.length) { pickCard(cards[i - 1].id); return true; }
+    const map = { '+': '+', '-': '−', '*': '×', 'x': '×', 'X': '×', '/': '÷' };
+    if (map[e.key]) { pickOp(map[e.key]); return true; }
+    if (e.key === 'Backspace') { tool('undo'); return true; }
+    if (e.key === 'r' || e.key === 'R') { tool('reset'); return true; }
+    if (e.key === 's' || e.key === 'S') { tool('show'); return true; }
+    return false;
   }
   function begin() {
     combo = comboMeter(g);
-    g.key = (e) => {
-      if (e.key === 'Escape') { g.quit(); return true; }
-      const i = +e.key; if (i >= 1 && i <= cards.length) { pickCard(cards[i - 1].id); return true; }
-      const map = { '+': '+', '-': '−', '*': '×', 'x': '×', 'X': '×', '/': '÷' };
-      if (map[e.key]) { pickOp(map[e.key]); return true; }
-      if (e.key === 'Backspace') { tool('undo'); return true; }
-      if (e.key === 'r' || e.key === 'R') { tool('reset'); return true; }
-      if (e.key === 's' || e.key === 'S') { tool('show'); return true; }
-      return false;
-    };
+    if (hasLv) setLevel(kid, 'target', g.chip.lv);
+    g.key = playKey;
     next();
   }
   g.quit = () => end(g);
-  g.probe = { finish: () => !g.ended && finish() };
+  g.probe = { finish: () => !g.ended && finish(), puzzle: () => puzzle && { ...puzzle }, results: () => results.slice(), level: () => (g.chip ? g.chip.lv : null), challenge: () => challenge && { blocked: challenge.blocked } };
   current = g;
   intro(g, title, mk || 'target', begin);
   return g;
@@ -754,65 +1011,117 @@ export function makeTarget(kid, { daily = false, onSolve, onEnd, mode = null }) 
 
 /* Where does it go? Estimation is the number sense contests lean on and
    drills never train. Drag, tap, or arrow keys; Enter to place. Scored on
-   how close, never on speed. */
-/* The line a round is played on. Standard: 0 to 20 / 100 / 1000 by band. "fractions":
-   0 to 1, placing a proper fraction (halves and quarters for the youngest, then thirds,
-   fifths, eighths, tenths; twelfths for the oldest). "negatives": −N to N with nought in
-   the middle. Every target is a real point on its line, and a round never asks for the
-   exact middle (that is the one place anybody can put a marker without thinking). */
+   how close, never on speed.
+
+   THE LEVEL LADDER (games spec §3.2). The standard line: 1 = 0–20 · 2 = 0–100 · 3 = 0–1000 ·
+   4 = 0–1 in hundredths · 5 = a mix of those lines. Fractions (paid): halves → quarters → thirds →
+   eighths → mixed — halves on 0–4 and quarters on 0–2, so a half is never just the middle of the
+   line. Negatives (paid): −10…10 up to −500…500, with every fifth tick labelled at levels 1–2.
+   THE ROUND RAMP: placements 1–3 have labelled ticks, 4–6 ticks with no numbers, 7–8 no ticks.
+   A number is never on a labelled tick, never the exact middle, and a whole-number target never
+   sits within 6% of the middle (the one place anybody can put a marker without thinking).
+   "Right" — for the level rule and the wage — is within 5% of the line. */
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-/* The line widens as a child gets them close (audit v4 G8). A round starts on the band's own line
-   (0–20 / 0–100 / 0–1000, unchanged); after 2 close answers (four points or more) it is the second
-   width, after 4 the third. It never narrows inside a game, and the points are a share of the line,
-   so a longer line is harder to place on but never worth less. */
-export const LINE_WIDTHS = { '6-7': [20, 50, 100], '8-10': [100, 500, 1000], '11-14': [1000, 5000, 10000] };
-export const NEG_WIDTHS = { '6-7': [10, 20, 50], '8-10': [50, 100, 200], '11-14': [500, 1000, 5000] };
-export const lineStep = (closeCount) => Math.min(2, Math.floor(Math.max(0, closeCount) / 2));
-export function lineSpec(band, mode = null, step = 0) {
+export const LINE_ROUNDS = 8;
+export const LINE_CLOSE = 0.05;
+export const lineRight = (err) => err <= LINE_CLOSE + 1e-9;
+export const linePhase = (i) => (i < 3 ? 'labelled' : i < 6 ? 'plain' : 'none');   // i: placement 0…7
+export const LINE_LEVELS = {
+  standard: { 1: '0 to 20', 2: '0 to 100', 3: '0 to 1000', 4: '0 to 1, in decimals', 5: 'mixed lines' },
+  fractions: { 1: 'halves', 2: 'quarters', 3: 'thirds', 4: 'eighths', 5: 'mixed fractions' },
+  negatives: { 1: '−10 to 10', 2: '−20 to 20', 3: '−50 to 50', 4: '−100 to 100', 5: '−500 to 500' },
+};
+export const lineStart = (band) => (band === '6-7' ? 1 : band === '8-10' ? 2 : 3);
+export const lineName = (mode, l) => `Level ${l} · ${LINE_LEVELS[mode || 'standard'][l]}`;
+const NEG_M = { 1: 10, 2: 20, 3: 50, 4: 100, 5: 500 };
+const MIXED = [20, 100, 1000, 'dec'];
+const fracLabel = (n, d) => { const g0 = gcd(n, d); n /= g0; d /= g0; return d === 1 ? String(n) : `${n}/${d}`; };
+const minus = (v) => (v < 0 ? `−${-v}` : String(v));
+
+/* One placement: its line, its ticks (with their labels, if any) and its number.
+   `lv` is the level, `i` the placement in the round (0–7), `r` the random source. */
+export function linePlacement(band, mode, lv, i, r = Math.random) {
+  const phase = linePhase(i);
+  let L;
   if (mode === 'fractions') {
-    const dens = band === '6-7' ? [2, 4] : band === '8-10' ? [2, 3, 4, 5, 8, 10] : [3, 4, 5, 6, 8, 10, 12];
-    return { lo: 0, hi: 1, snap: 100, ends: ['0', '1'], skill: 'Placing fractions between 0 and 1',
-      pick(r = Math.random) {
-        for (;;) { const d = dens[int(0, dens.length - 1, r)], n = int(1, d - 1, r); if (gcd(n, d) === 1 && 2 * n !== d) return { v: n / d, label: `${n}/${d}` }; }
-      } };
+    const hi = lv === 1 ? 4 : lv === 2 ? 2 : 1;
+    const dens = lv === 1 ? [2] : lv === 2 ? [4] : lv === 3 ? [3] : lv === 4 ? [8] : band === '6-7' ? [3, 4, 8] : band === '8-10' ? [3, 4, 5, 6, 8, 10] : [3, 4, 5, 6, 8, 10, 12];
+    const q = [1, 2, 3].map((t) => (hi * t) / 4);
+    L = { lo: 0, hi, snap: 100, ends: ['0', String(hi)], skill: lv === 1 ? 'Placing halves between 0 and 4' : lv === 2 ? 'Placing quarters between 0 and 2' : 'Placing fractions between 0 and 1',
+      ticks: q.map((v) => ({ v, label: fracLabel(Math.round(v * 4), 4) })), unit: null,
+      pick() { for (;;) { const d = dens[int(0, dens.length - 1, r)], n = int(1, hi * d - 1, r); if (gcd(n, d) === 1 && 2 * n !== hi * d) return { v: n / d, label: `${n}/${d}` }; } } };
+  } else if (mode === 'negatives') {
+    const m = NEG_M[lv];
+    const fives = lv <= 2;          // every fifth tick labelled at levels 1–2 (§3.2)
+    const ticks = fives ? Array.from({ length: (2 * m) / 5 - 1 }, (_, t) => -m + 5 * (t + 1)).map((v) => ({ v, label: minus(v) })) : [-m / 2, 0, m / 2].map((v) => ({ v, label: minus(v) }));
+    L = { lo: -m, hi: m, snap: 1, ends: [`−${m}`, String(m)], skill: `Placing numbers between −${m} and ${m}`, ticks, unit: fives ? 1 : null,
+      pick() { for (;;) { const v = int(-m + 1, m - 1, r); if (v !== 0 && Math.abs(v) >= m * 0.06) return { v, label: minus(v) }; } } };
+  } else {
+    let w = lv === 1 ? 20 : lv === 2 ? 100 : lv === 3 ? 1000 : lv === 4 ? 'dec' : MIXED[int(0, MIXED.length - 1, r)];
+    if (w === 'dec') {
+      L = { lo: 0, hi: 1, snap: 100, ends: ['0', '1'], skill: 'Placing decimals between 0 and 1', ticks: [0.25, 0.5, 0.75].map((v) => ({ v, label: String(v) })), unit: null,
+        pick() { for (;;) { const n = int(1, 99, r); if (Math.abs(n - 50) >= 6) return { v: n / 100, label: (n / 100).toFixed(2) }; } } };
+    } else {
+      L = { lo: 0, hi: w, snap: w <= 20 ? 2 : 1, ends: ['0', String(w)], skill: `Estimating where a number sits between 0 and ${w}`, ticks: [1, 2, 3].map((t) => ({ v: (w * t) / 4, label: String((w * t) / 4) })), unit: null,
+        pick() { let v; do { v = int(1, w - 1, r); } while (Math.abs(v - w / 2) < w * 0.06); return { v, label: String(v) }; } };
+    }
   }
-  const max = LINE_WIDTHS[band in LINE_WIDTHS ? band : '8-10'][Math.max(0, Math.min(2, step))];
-  if (mode === 'negatives') {
-    const m = NEG_WIDTHS[band in NEG_WIDTHS ? band : '8-10'][Math.max(0, Math.min(2, step))];
-    return { lo: -m, hi: m, snap: m <= 10 ? 2 : 1, ends: [`−${m}`, String(m)], mid: '0', skill: `Placing numbers between −${m} and ${m}`,
-      pick(r = Math.random) { for (;;) { const v = int(-m + 1, m - 1, r); if (v !== 0 && Math.abs(v) >= m * 0.06) return { v, label: v < 0 ? `−${-v}` : String(v) }; } } };
-  }
-  return { lo: 0, hi: max, snap: max <= 20 ? 2 : 1, ends: ['0', String(max)], skill: `Estimating where a number sits between 0 and ${max}`,
-    pick(r = Math.random) { let v; do { v = int(1, max - 1, r); } while (Math.abs(v - max / 2) < max * 0.06); return { v, label: String(v) }; } };
+  L.range = `${L.ends[0]}–${L.ends[1]}`;
+  L.phase = phase;
+  // a number is never ON a tick whose label is showing (that would be reading, not estimating)
+  const span = L.hi - L.lo;
+  let p;
+  do p = L.pick(); while (phase === 'labelled' && L.ticks.some((t) => Math.abs(t.v - p.v) < span * 0.02 - 1e-12));
+  // the ticks drawn: all labelled, all bare, or none
+  L.drawn = phase === 'none' ? [] : L.ticks.map((t) => ({ v: t.v, label: phase === 'labelled' ? t.label : '' }));
+  return { ...L, v: p.v, label: p.label };
 }
+
+/* The best placement on each line: a personal record ("Your best on 0–1000: 4 away"), kept on
+   the game's own level record; it never resets and is never a streak. */
+export function lineBest(k, game, range, off) {
+  const g = (k.gameLv || (k.gameLv = {}))[game] || (k.gameLv[game] = { lv: 1, best: {} });
+  const e = g.err || (g.err = {});
+  const isNew = !(e[range] <= off);
+  if (isNew) e[range] = off;
+  return { best: e[range], isNew };
+}
+
 export function numberLine(kid, { onTick, onEnd, mode = null }) {
-  const mk = modeKey('line', mode), FULL = lineSpec(kid.band, mk ? mode : null);
-  const f = frame(titled('Number Line', mk), `Place the number between ${FULL.ends[0]} and ${FULL.ends[1]}`, () => g.quit(), 'line', mk || 'line');
+  const mk = modeKey('line', mode), m = mk ? mode : null, game = mk ? 'line:' + mode : 'line';
+  const f = frame(titled('Number Line', mk), 'Place the number on the line', () => g.quit(), 'line', mk || 'line');
   const g = { f, tune: 'sea' };
-  const ROUNDS = 8;
-  const close = [], far = [];
-  // the line for this round: it widens with the close answers so far (lineStep), never narrows
-  let L, lo, hi, span, mid;
-  const widen = () => { L = lineSpec(kid.band, mk ? mode : null, lineStep(close.length)); ({ lo, hi } = L); span = hi - lo; mid = (lo + hi) / 2; };
-  widen();
-  let round = 0, total = 0, target = 0, label = '', pos = mid, placed = false, combo;
+  const ROUNDS = LINE_ROUNDS;
+  const close = [], far = [], seen = new Map();
+  const rec = kid.gameLv && kid.gameLv[game];
+  g.chip = { levels: [1, 2, 3, 4, 5], lv: rec ? levelOf(kid, game) : m ? 1 : lineStart(kid.band), name: (l) => lineName(m, l), pick: (l) => setLevel(kid, game, l) };
+  let L, lo = 0, hi = 1, span = 1, mid = 0.5;
+  let round = 0, total = 0, right = 0, target = 0, label = '', pos = mid, placed = false, combo;
 
   function next() {
-    const was = hi; widen();
-    round++; placed = false; pos = mid;
-    const sub = f.el.querySelector('.play-t span'); if (sub) sub.textContent = hi !== was ? `The line grows: now ${L.ends[0]} to ${L.ends[1]}` : `Place the number between ${L.ends[0]} and ${L.ends[1]}`;
-    ({ v: target, label } = L.pick());
+    const was = L && L.range;
+    round++; placed = false;
+    L = linePlacement(kid.band, m, g.chip.lv, round - 1);
+    ({ lo, hi } = L); span = hi - lo; mid = (lo + hi) / 2; pos = mid;
+    const sub = f.el.querySelector('.play-t span');
+    if (sub) sub.textContent = was && was !== L.range ? `A new line: ${L.ends[0]} to ${L.ends[1]}` : `Place the number between ${L.ends[0]} and ${L.ends[1]}`;
+    ({ v: target, label } = L);
     draw();
   }
   function pct(v) { return ((v - lo) / span) * 100; }
   function draw(msg = '') {
-    const ticks = [0, 1, 2, 3, 4].map((i) => lo + (span * i) / 4);
-    f.hud.innerHTML = `<span class="chip">Round <b>${round}</b> of ${ROUNDS}</span><span class="chip">Points <b>${total}</b></span>`;
-    f.body.innerHTML = `<div class="nl">
+    const unit = L.unit && L.phase !== 'none' ? Array.from({ length: Math.round(span / L.unit) - 1 }, (_, t) => lo + L.unit * (t + 1)).filter((v) => !L.drawn.some((d) => d.v === v)) : [];
+    const ph = { labelled: 'Ticks with numbers', plain: 'Ticks, no numbers', none: 'No ticks' }[L.phase];
+    f.hud.innerHTML = `<span class="chip">Round <b>${round}</b> of ${ROUNDS}</span><span class="chip">Level <b>${g.chip.lv}</b></span><span class="chip">Points <b>${total}</b></span>`;
+    f.body.innerHTML = `<div class="nl" data-phase="${L.phase}">
       <p class="nl-q">Where does <b class="mono">${esc(label)}</b> go?</p>
+      <p class="nl-ph muted">${ph}</p>
       <div class="nl-track" role="slider" tabindex="0" aria-label="Position" aria-valuemin="${lo}" aria-valuemax="${hi}" aria-valuenow="${+pos.toFixed(2)}">
         <div class="nl-line"></div>
-        ${ticks.map((t, i) => `<span class="nl-tick" style="left:${pct(t)}%"><i></i>${i === 0 ? L.ends[0] : i === 4 ? L.ends[1] : i === 2 && L.mid ? L.mid : ''}</span>`).join('')}
+        <span class="nl-tick end" style="left:0%"><i></i>${esc(L.ends[0])}</span>
+        <span class="nl-tick end" style="left:100%"><i></i>${esc(L.ends[1])}</span>
+        ${L.drawn.map((t) => `<span class="nl-tick${t.label ? '' : ' bare'}" style="left:${pct(t.v)}%"><i></i>${esc(t.label)}</span>`).join('')}
+        ${unit.map((v) => `<span class="nl-tick unit" style="left:${pct(v)}%"><i></i></span>`).join('')}
         <div class="nl-mark${placed ? ' set' : ''}" style="left:${pct(pos)}%"><span>▼</span></div>
         ${placed ? `<div class="nl-true" style="left:${pct(target)}%"><span>${esc(label)}</span></div>` : ''}
       </div>
@@ -830,22 +1139,25 @@ export function numberLine(kid, { onTick, onEnd, mode = null }) {
   }
   function move(v) {
     pos = Math.max(lo, Math.min(hi, Math.round(v * L.snap) / L.snap));
-    const m = f.body.querySelector('.nl-mark'); if (m) m.style.left = pct(pos) + '%';
+    const mm = f.body.querySelector('.nl-mark'); if (mm) mm.style.left = pct(pos) + '%';
     const tr = f.body.querySelector('.nl-track'); if (tr) tr.setAttribute('aria-valuenow', +pos.toFixed(2));
   }
+  const fmtOff = (off) => (off < 1e-9 ? 'bang on' : `${+off.toFixed(span <= 4 ? 2 : 1)} away`);
   function place() {
     placed = true;
-    const err = Math.abs(pos - target) / span;
+    const off = Math.abs(pos - target), err = off / span;
     const pts = err <= 0.02 ? 10 : err <= 0.05 ? 7 : err <= 0.1 ? 4 : err <= 0.2 ? 1 : 0;
-    total += pts;
-    onTick(pts >= 4);
-    const off = Math.abs(pos - target), offs = `${label} — ${off < 1e-9 ? 'bang on' : `${+off.toFixed(span <= 1 ? 2 : 1)} away`}`;
-    (pts >= 4 ? close : far).push(offs);
-    draw(pts === 10 ? 'Bang on.' : pts >= 7 ? 'Very close.' : pts >= 4 ? 'Close.' : `It was here — ${Math.round(err * 100)} hundredths of the line away.`);
+    const ok = lineRight(err);
+    total += pts; if (ok) right++;
+    onTick(ok);
+    const b = lineBest(kid, game, L.range, +off.toFixed(4));
+    seen.set(L.range, { ...b, span });
+    (ok ? close : far).push(`${label} — ${fmtOff(off)}`);
+    draw((pts === 10 ? 'Bang on.' : ok ? 'Very close.' : pts >= 4 ? `Close — ${Math.round(err * 100)} hundredths of the line away.` : `It was here — ${Math.round(err * 100)} hundredths of the line away.`) + (b.isNew && off > 1e-9 ? ' Your best on this line.' : ''));
     sfx.place();
     const tr = f.body.querySelector('.nl-track');
-    if (pts >= 4) {
-      combo.hit(); pts >= 7 ? sfx.good() : sfx.click();
+    if (ok) {
+      combo.hit(); pts >= 10 ? sfx.good() : sfx.click();
       pop(g, tr, (pct(target) / 100) * tr.clientWidth, 70, `+${pts}`);
     } else {
       combo.miss(); pts ? sfx.click() : sfx.bad();
@@ -856,12 +1168,23 @@ export function numberLine(kid, { onTick, onEnd, mode = null }) {
   function finish() {
     const stars = total >= 60 ? 3 : total >= 40 ? 2 : total >= 20 ? 1 : 0;
     onEnd(total, stars);
-    resultCard(g, { title: `${total} points`, practised: { skill: L.skill, items: close, again: far }, best: combo.best,
-      lines: [mode === 'fractions' && mk ? 'Find the half first, then the quarters: every fraction sits beside one of them.' : 'Halfway, then quarters: find those first and the rest falls between them.'], stars,
-      again: () => { g.quit(); numberLine(kid, { onTick, onEnd, mode }); }, done: () => g.quit() });
+    const v = afterRound(kid, game, right, ROUNDS);
+    const bests = [...seen].map(([range, b]) => `Your best on ${range}: ${b.best < 1e-9 ? 'bang on' : `${+b.best.toFixed(b.span <= 4 ? 2 : 1)} away`}.`);
+    const lines = [esc(verdictLine(v)), ...bests.map(esc),
+      m === 'fractions' ? 'Find the half first, then the quarters: every fraction sits beside one of them.' : 'Halfway, then quarters: find those first and the rest falls between them.'];
+    if (v.offer) lines.splice(1, 0, `<button class="btn" data-g="up">Try Level ${v.offer} <kbd>U</kbd></button>`);
+    const again = () => { g.quit(); numberLine(kid, { onTick, onEnd, mode }); };
+    resultCard(g, { title: `${total} points`, practised: { skill: L.skill, items: close, again: far }, best: combo.best, lines, stars, again, done: () => g.quit() });
+    const bu = f.body.querySelector('[data-g=up]');
+    if (bu) {
+      const up = () => { setLevel(kid, game, v.offer); restart(again); };
+      bu.onclick = up;
+      const endKey = g.key; g.key = (e) => ((e.key === 'u' || e.key === 'U') ? (up(), true) : endKey(e));
+    }
   }
   function begin() {
     combo = comboMeter(g);
+    setLevel(kid, game, g.chip.lv);
     g.key = (e) => {
       if (e.key === 'Escape') { g.quit(); return true; }
       const step = e.shiftKey ? span / 10 : 1 / L.snap > span / 100 ? 1 / L.snap : span / 100;
@@ -873,7 +1196,7 @@ export function numberLine(kid, { onTick, onEnd, mode = null }) {
     next();
   }
   g.quit = () => end(g);
-  g.probe = { target: () => target, place: (v) => { move(v); place(); }, finish: () => !g.ended && finish() };
+  g.probe = { target: () => target, line: () => L && { lo: L.lo, hi: L.hi, range: L.range, phase: L.phase, drawn: L.drawn }, level: () => g.chip.lv, place: (v) => { move(v); place(); }, finish: () => !g.ended && finish() };
   current = g;
   intro(g, titled('Number Line', mk), mk || 'line', begin);
   return g;
@@ -1025,23 +1348,32 @@ function cubeTop(want, have, n, sel) {
   return `<figure class="cb-view${want.join() === have.join() ? ' match' : ''}" data-view="top"><div class="cb-vg" style="--c:${n}">${want.map((w, i) => `<i class="${w && have[i] ? 'ok' : w ? 'miss' : have[i] ? 'extra' : ''}${i === sel ? ' hi' : ''}"></i>`).join('')}</div><figcaption>${want.join() === have.join() ? icon('check', 16) : ''}Top</figcaption></figure>`;
 }
 
+/* The level chip (games spec §3.3): the old three are 1–3, 4 is a 4 × 4 floor with one hidden
+   tower, 5 accepts only the fewest cubes. The round climbs: its first puzzle is one level below. */
+export const cubeRampLv = (lv, round) => (round === 1 ? Math.max(1, lv - 1) : lv);
 export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
-  const lv = level || cubeLevel(kid.band), L = CUBE_LEVELS[lv];
-  const f = frame('Cube Builder', `${L.name}: ${L.blurb}`, () => g.quit(), 'cubes', 'cubes');
+  const rec = kid.gameLv && kid.gameLv.cubes;
+  const f = frame('Cube Builder', 'Build the stack the three views show', () => g.quit(), 'cubes', 'cubes');
   const g = { f, tune: 'calm' };
-  const order = shuffle(CUBE_BANK[lv].map((_, i) => i)).slice(0, CUBE_ROUNDS);
-  let round = 0, score = 0, p, h, sel = 0, phase = 'build', born = -1, combo, nextT = 0;
+  g.chip = { levels: [1, 2, 3, 4, 5], lv: level || (rec ? levelOf(kid, 'cubes') : cubeLevel(kid.band)), name: cubeLevelName, pick: (l) => setLevel(kid, 'cubes', l) };
+  let lv = g.chip.lv, L = CUBE_LEVELS[lv];
+  const used = {};
+  let round = 0, score = 0, right = 0, p, h, sel = 0, phase = 'build', born = -1, combo, nextT = 0;
   const made = [], again = [];
 
   function next() {
-    round++; p = cubePuzzle(lv, order[round - 1]);
+    round++;
+    const pl = cubeRampLv(lv, round), bank = CUBE_BANK[pl], u = used[pl] || (used[pl] = []);
+    const i = shuffle(bank.map((_, j) => j).filter((j) => !u.includes(j)))[0]; u.push(i);
+    p = cubePuzzle(pl, i); L = CUBE_LEVELS[pl];
+    const sub = f.el.querySelector('.play-t span'); if (sub) sub.textContent = `${L.name}: ${L.blurb}`;
     h = new Array(p.n * p.n).fill(0); sel = Math.floor(p.n * p.n / 2); phase = 'build'; born = -1;
     draw();
   }
   const views = () => viewsOf(h, p.n);
   function draw(msg = '') {
     const v = views(), n = p.n, r = Math.floor(sel / n), c = sel % n, total = cubeCount(h);
-    f.hud.innerHTML = `<span class="chip">Puzzle <b>${round}</b> of ${CUBE_ROUNDS}</span><span class="chip">Stars <b>${score}</b></span>`;
+    f.hud.innerHTML = `<span class="chip">Puzzle <b>${round}</b> of ${CUBE_ROUNDS}</span><span class="chip">Level <b>${p.lv}</b></span><span class="chip">Stars <b>${score}</b></span>`;
     const lock = phase === 'won' || phase === 'shown';
     f.body.innerHTML = `<div class="cb${lock ? ' lock' : ''}">
       <div class="cb-views">
@@ -1062,9 +1394,9 @@ export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
         ${Array.from({ length: p.hmax + 1 }, (_, x) => `<button class="pk cb-h${h[sel] === x ? ' on' : ''}" data-a="set" data-v="${x}" aria-label="Height ${x}">${x}</button>`).join('')}
         <button class="btn cb-ud" data-a="up" aria-label="Raise the tower (plus key)">${icon('up', 22)}</button>
       </div>
-      <div class="cb-msg" aria-live="polite">${msg || (phase === 'matched' ? `All three views match, with <b>${total}</b> cubes. It can be done with fewer: take some away, or press Done.` : `<b>${total}</b> cube${total === 1 ? '' : 's'} so far. Make all three views match.`)}</div>
+      <div class="cb-msg" aria-live="polite">${msg || (phase === 'matched' ? (L.fewestOnly ? `All three views match, with <b>${total}</b> cubes — but at this level only the fewest solves it. Take some away.` : `All three views match, with <b>${total}</b> cubes. It can be done with fewer: take some away, or press Done.`) : `<b>${total}</b> cube${total === 1 ? '' : 's'} so far. Make all three views match${L.fewestOnly ? ', with the fewest cubes' : ''}.`)}</div>
       <div class="mt-tools">
-        ${phase === 'matched' ? `<button class="btn primary" data-a="done">Done with ${total} <kbd>Enter</kbd></button>` : `<button class="btn" data-a="done" ${lock ? 'disabled' : ''}>Check <kbd>Enter</kbd></button>`}
+        ${phase === 'matched' && !L.fewestOnly ? `<button class="btn primary" data-a="done">Done with ${total} <kbd>Enter</kbd></button>` : `<button class="btn" data-a="done" ${lock ? 'disabled' : ''}>Check <kbd>Enter</kbd></button>`}
         <button class="btn" data-a="clear" ${lock ? 'disabled' : ''}>Clear <kbd>C</kbd></button>
         <button class="btn ghost" data-a="show" ${lock ? 'disabled' : ''}>Show me <kbd>S</kbd></button>
       </div>
@@ -1095,7 +1427,8 @@ export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
     }
     if (a === 'clear') { h.fill(0); born = -1; sfx.click(); phase = 'build'; return draw(); }
     if (a === 'done') {
-      if (phase === 'matched') return solved(2);
+      if (phase === 'matched' && !L.fewestOnly) return solved(2);
+      if (phase === 'matched') { sfx.bad(); combo.miss(); draw(`The views match, but ${cubeCount(h)} is not the fewest. Level 5 needs the fewest cubes.`); return wobble(g, f.body.querySelector('.cb-iso')); }
       // a check before the views match: the first view that does not, wobbles
       sfx.bad(); combo.miss();
       const v = views(), bad = ['front', 'side', 'top'].find((k) => p.views[k].join() !== v[k].join());
@@ -1118,7 +1451,7 @@ export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
     if (match && was !== 'matched') { sfx.good(); const iso = f.body.querySelector('.cb-iso'), [x, y] = centre(iso, f.body.querySelector('.cb')); pop(g, f.body.querySelector('.cb'), x, y); }
   }
   function solved(stars) {
-    phase = 'won'; score += stars; combo.hit(); sfx.level(); onTick(true);
+    phase = 'won'; score += stars; right++; combo.hit(); sfx.level(); onTick(true);
     made.push(`Puzzle ${round}: ${cubeCount(h)} cubes${stars === 3 ? ', the fewest' : ''}`);
     if (stars < 3) again.push(`Puzzle ${round}: the fewest was ${p.min}`);
     draw(stars === 3 ? `<b>Solved, with the fewest cubes: ${p.min}.</b>` : `<b>Solved</b> with ${cubeCount(h)} cubes. The fewest was ${p.min}.`);
@@ -1130,12 +1463,22 @@ export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
     clearTimeout(nextT);
     const stars = cubeStars(score);
     onEnd(score, stars);
+    const v = afterRound(kid, 'cubes', right, CUBE_ROUNDS);
+    const lines = [esc(verdictLine(v)), 'Start with the tallest towers the views need, where a front peak and a side peak meet: one tower can stand for both.'];
+    if (v.offer) lines.splice(1, 0, `<button class="btn" data-g="up">Try Level ${v.offer} <kbd>U</kbd></button>`);
+    const replay = () => { g.quit(); cubeBuilder(kid, { onTick, onEnd }); };
     resultCard(g, { title: `${score} of ${CUBE_ROUNDS * 3} stars`, practised: { skill: 'Reading a solid from its front, side and top views', items: made, again }, best: combo.best,
-      lines: ['Start with the tallest towers the views need, where a front peak and a side peak meet: one tower can stand for both.'], stars,
-      again: () => { g.quit(); cubeBuilder(kid, { onTick, onEnd, level }); }, done: () => g.quit() });
+      lines, stars, again: replay, done: () => g.quit() });
+    const bu = f.body.querySelector('[data-g=up]');
+    if (bu) {
+      const up = () => { setLevel(kid, 'cubes', v.offer); restart(replay); };
+      bu.onclick = up;
+      const endKey = g.key; g.key = (e) => ((e.key === 'u' || e.key === 'U') ? (up(), true) : endKey(e));
+    }
   }
   function begin() {
     combo = comboMeter(g);
+    lv = g.chip.lv; setLevel(kid, 'cubes', lv);
     g.key = (e) => {
       if (e.key === 'Escape') { g.quit(); return true; }
       const mv = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
@@ -1153,7 +1496,7 @@ export function cubeBuilder(kid, { onTick, onEnd, level = null }) {
   }
   g.stop = () => clearTimeout(nextT);
   g.quit = () => end(g);
-  g.probe = { answer: () => p && p.answer.slice(), build: () => h && h.slice(), level: () => lv, puzzle: () => p, finish: () => !g.ended && finish() };
+  g.probe = { answer: () => p && p.answer.slice(), build: () => h && h.slice(), level: () => lv, puzzle: () => p, right: () => right, finish: () => !g.ended && finish() };
   current = g;
   intro(g, 'Cube Builder', 'cubes', begin);
   return g;

@@ -1084,8 +1084,11 @@ function play(arg, level = null) {
 
 function daily() {
   if (!G) return loadGames().then(daily, () => toast('This needs the internet once — then it works offline.'));
-  const k = kid(R.h), d = dayKey();
-  G.makeTarget(k, { daily: true, onSolve: () => { payout(k, 'daily', true); }, onEnd: (solved) => { (k.daily[d] || (k.daily[d] = {})).puzzle = !!solved || !!(k.daily[d] && k.daily[d].puzzle); save(); render(); } });
+  const k = kid(R.h), d = dayKey(), day = () => k.daily[d] || (k.daily[d] = {});
+  // games spec §2.2: after "Show me" the day is recorded as shown, and a later solve of the same
+  // seed is never credited; the day's puzzle pays once
+  G.makeTarget(k, { daily: true, shownToday: !!day().shown, onSolve: () => { if (!day().shown && !day().puzzle) payout(k, 'daily', true); },
+    onEnd: (solved, shown) => { if (shown) day().shown = true; if (solved && !day().shown) day().puzzle = true; save(); render(); } });
 }
 
 /* ------------------------------------------------------------- actions */
@@ -1239,7 +1242,7 @@ on('tmr', (arg) => {
   TM.start({ k, save, render, earn: (ev, note) => earn(k, ev, note), medals: () => medals(k), calm: () => !!R.dev.calm,
     record: (fact, right, ms) => F.record(k.facts[F.key(fact)] || (k.facts[F.key(fact)] = F.blank()), right, ms, k.band) }, ui);
 });
-on('cubesPlay', (l) => play('cubes', [1, 2, 3].includes(+l) ? +l : null));
+on('cubesPlay', (l) => play('cubes', [1, 2, 3, 4, 5].includes(+l) ? +l : null));
 on('daily', () => daily());
 
 /* onboarding: one question per screen (views.js viewWelcome) */
