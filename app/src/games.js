@@ -17,7 +17,7 @@ import { setLevel, verdictLine } from './game-level.js';
 import { int, pick, shuffle, seeded, dayKey } from './rand.js';
 import { esc, sfx, confetti, music } from './ui.js';
 import { icon } from './icons.js';
-import { makeSudoku, conflicts, SUDOKU } from './puzzles.js';
+import { makeSudoku, conflicts, SUDOKU, sudokuHint, SUDOKU_HINTS } from './puzzles.js';
 import { cubePuzzle, viewsOf, sameViews, count as cubeCount, LEVELS as CUBE_LEVELS, BANK as CUBE_BANK, bandLevel as cubeLevel } from './cubes.js';
 
 /* ------------------------------------------------------------ the frame */
@@ -894,23 +894,27 @@ export function sudoku(kid, n, lv, { onEnd }) {
   const p = makeSudoku(n, lv);
   const given = p.grid.map(Boolean);
   const cur = p.grid.slice();
-  let sel = cur.findIndex((v) => !v), hints = 0, done = false, born = -1;
+  let sel = cur.findIndex((v) => !v), hints = 0, done = false, born = -1, tip = null;
   const { br, bc } = SUDOKU[n];
+  const at = (i) => `Row ${Math.floor(i / n) + 1}, column ${(i % n) + 1}`;
+  const clashed = new Map(), hinted = new Set();   // for the finish card: what clashed, and where a hint helped
 
   function draw() {
     const bad = conflicts(cur, n);
     const selV = cur[sel];
-    f.hud.innerHTML = `<span class="chip">Hints <b>${hints}</b></span>`;
+    const left = SUDOKU_HINTS - hints;
+    f.hud.innerHTML = `<span class="chip">Hints left <b>${left}</b></span>`;
     f.body.innerHTML = `<div class="sdk-wrap">
       <div class="sdk n${n}" role="grid" style="--n:${n}">${cur.map((v, i) => {
         const r = Math.floor(i / n), c = i % n;
         const edge = `${c % bc === bc - 1 && c < n - 1 ? ' er' : ''}${r % br === br - 1 && r < n - 1 ? ' eb' : ''}`;
         const same = selV && v === selV && i !== sel ? ' same' : '';
         const peer = sel >= 0 && (Math.floor(sel / n) === r || sel % n === c) ? ' peer' : '';
-        return `<button class="sc${given[i] ? ' given' : ''}${i === sel ? ' sel' : ''}${bad.has(i) ? ' bad' : ''}${i === born && v ? ' born' : ''}${edge}${same}${peer}" data-i="${i}" aria-label="Row ${r + 1}, column ${c + 1}${v ? ', ' + v : ', empty'}">${v || ''}</button>`;
+        return `<button class="sc${given[i] ? ' given' : ''}${tip && tip.i === i ? ' hint' : ''}${i === sel ? ' sel' : ''}${bad.has(i) ? ' bad' : ''}${i === born && v ? ' born' : ''}${edge}${same}${peer}" data-i="${i}" aria-label="Row ${r + 1}, column ${c + 1}${v ? ', ' + v : ', empty'}">${v || ''}</button>`;
       }).join('')}</div>
       <div class="sdk-nums">${Array.from({ length: n }, (_, i) => `<button class="pk" data-v="${i + 1}">${i + 1}</button>`).join('')}<button class="pk del" data-v="0" aria-label="Clear">⌫</button></div>
-      <div class="row gap center"><button class="btn ghost" data-t="hint">Hint <kbd>H</kbd></button></div>
+      ${tip ? `<p class="sdk-tip" role="status">${esc(tip.text)}</p>` : ''}
+      <div class="row gap center"><button class="btn ghost" data-t="hint"${left ? '' : ' disabled'}>${left ? `Hint <kbd>H</kbd> <span class="muted">${left} left</span>` : 'No hints left'}</button></div>
       <p class="mt-keys">Keys: arrows move · <kbd>1</kbd>–<kbd>${n}</kbd> fill · <kbd>⌫</kbd> clear · <kbd>H</kbd> hint</p>
     </div>`;
     f.body.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sel = +b.dataset.i; born = -1; draw(); });
@@ -920,17 +924,27 @@ export function sudoku(kid, n, lv, { onEnd }) {
   function put(v) {
     if (done || sel < 0 || given[sel] || v > n) return;
     cur[sel] = v; born = sel;
+    if (tip && tip.i === sel) tip = null;   // the hinted square is the child's to fill; once filled, the hint has done its job
+    if (v && conflicts(cur, n).has(sel) && clashed.size < 6) clashed.set(sel, `${at(sel)}: a ${v} clashed with its ${clashWith(sel, v)}`);
     if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
     draw();
     juice(g);                       // the number lands with a pop (CSS .born)
     if (v && conflicts(cur, n).has(sel)) { sfx.bad(); wobble(g, f.body.querySelector('.sc.sel')); } else sfx.place();
   }
+  function clashWith(i, v) {
+    const r = Math.floor(i / n), c = i % n;
+    for (let k = 0; k < n; k++) if (r * n + k !== i && cur[r * n + k] === v) return 'row';
+    for (let k = 0; k < n; k++) if (k * n + c !== i && cur[k * n + c] === v) return 'column';
+    return 'box';
+  }
+  /* A hint EXPLAINS and never fills (games spec §3.5): it picks a square, highlights it, and says
+     why only one number fits there — never which (puzzles.js sudokuHint). The child places it.
+     Three per grid. */
   function hint() {
-    if (done) return;
-    let i = sel >= 0 && !given[sel] && cur[sel] !== p.solution[sel] ? sel : cur.findIndex((v, j) => v !== p.solution[j]);
-    if (i < 0) return;
-    cur[i] = p.solution[i]; given[i] = true; hints++; sel = i; born = i; sfx.coin(); juice(g);
-    if (cur.every(Boolean) && conflicts(cur, n).size === 0) return win();
+    if (done || hints >= SUDOKU_HINTS) return;
+    const h = sudokuHint(cur, n, p.solution, sel);
+    if (!h) return;
+    hints++; tip = h; sel = h.i; born = -1; hinted.add(h.i); sfx.coin(); juice(g);
     draw();
   }
   function win() {
@@ -938,8 +952,13 @@ export function sudoku(kid, n, lv, { onEnd }) {
     const grid = f.body.querySelector('.sdk'), wrap = f.body.querySelector('.sdk-wrap');
     const [x, y] = centre(grid, wrap); pop(g, wrap, x, y);
     const stars = hints === 0 ? 3 : hints <= 2 ? 2 : 1;
-    onEnd(true, stars, hints);
-    setTimeout(() => current === g && resultCard(g, { title: 'Solved!', practised: { skill: `Logic: a ${n}×${n} grid where every row, column and box holds 1 to ${n} once`, items: [] },
+    const placed = given.filter((x) => !x).length;   // every empty square was filled by the child: a hint fills none
+    onEnd(true, stars, hints, placed);
+    // what was practised (games spec §1.6): the squares placed, the rules used, and — now it is solved —
+    // the squares a hint pointed at, with their numbers, and any number that clashed on the way
+    const items = [`${placed} square${placed === 1 ? '' : 's'} placed by you`, `Rows, columns and ${br} × ${bc} boxes: each holds 1 to ${n} once`];
+    const again = [...[...hinted].map((i) => `${at(i)} is ${p.solution[i]} (a hint explained why)`), ...clashed.values()];
+    setTimeout(() => current === g && resultCard(g, { title: 'Solved!', practised: { skill: `Logic: a ${n}×${n} grid where every row, column and box holds 1 to ${n} once`, items, again },
       lines: [hints ? `With ${hints} hint${hints > 1 ? 's' : ''}. Try the next one with none.` : 'No hints at all — pure logic.'], stars,
       again: () => { g.quit(); sudoku(kid, n, lv, { onEnd }); }, done: () => g.quit() }), 700);
   }

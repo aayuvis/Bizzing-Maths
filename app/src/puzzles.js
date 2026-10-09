@@ -199,6 +199,78 @@ export function conflicts(g, n) {
   return bad;
 }
 
+/* A hint EXPLAINS; it never fills (games spec §3.5, T11). It points at one square and says, in
+   words, why only one number can go there — which numbers its row, column and box already hold —
+   and never prints the number itself (rule 3): the child places it. Reasoning is on the grid as the
+   child has it, with any square that disagrees with the (unique, proved) solution set aside first;
+   a wrong number is pointed at before anything else, because nothing reasoned around it is true.
+   Returns { i, kind, text, groups } — `groups` lists what the text says each group holds, so a test
+   can check the answer is in none of them. Never returns the answer. */
+export const SUDOKU_HINTS = 3;
+const say = (xs) => (xs.length < 2 ? String(xs[0]) : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+function groupsOf(n, i) {
+  const { br, bc } = SUDOKU[n]; const r = Math.floor(i / n), c = i % n, r0 = r - (r % br), c0 = c - (c % bc);
+  const box = []; for (let a = 0; a < br; a++) for (let b = 0; b < bc; b++) box.push((r0 + a) * n + c0 + b);
+  return [
+    { kind: 'row', name: `Row ${r + 1}`, cells: [...Array(n).keys()].map((k) => r * n + k) },
+    { kind: 'col', name: `column ${c + 1}`, cells: [...Array(n).keys()].map((k) => k * n + c) },
+    { kind: 'box', name: 'its box', cells: box },
+  ];
+}
+export function sudokuHint(cur, n, solution, prefer = -1) {
+  const N = n * n, at = (i) => `Row ${Math.floor(i / n) + 1}, column ${(i % n) + 1}`;
+  const wrong = [...Array(N).keys()].filter((i) => cur[i] && cur[i] !== solution[i]);
+  if (wrong.length) {
+    const i = wrong.includes(prefer) ? prefer : wrong[0];
+    return { i, kind: 'wrong', groups: [], text: `${at(i)}: the number here cannot stay — the finished grid needs a different one. Clear it, then look at its row, column and box again.` };
+  }
+  const g = cur.slice(), empty = [...Array(N).keys()].filter((i) => !g[i]);
+  if (!empty.length) return null;
+  // a square with only one number left: say what its row, column and box already hold
+  const singles = empty.filter((i) => candidates(g, n, i).length === 1);
+  if (singles.length) {
+    const i = singles.includes(prefer) ? prefer : singles[0];
+    const seen = new Set(), groups = [];
+    for (const grp of groupsOf(n, i)) {
+      const has = grp.cells.map((j) => g[j]).filter((v) => v && !seen.has(v)).sort((a, b) => a - b);
+      has.forEach((v) => seen.add(v));
+      if (has.length) groups.push({ kind: grp.kind, name: grp.name, has });
+    }
+    const parts = groups.map((x, k) => `${x.name} ${k ? 'has' : 'already has'} ${say(x.has)}`);
+    const text = `${parts.length > 1 ? `${parts.slice(0, -1).join(', ')}, and ${parts.at(-1)}` : parts[0]}, so only one number is left for this square. Which is it?`;
+    return { i, kind: 'single', groups, text: text[0].toUpperCase() + text.slice(1) };
+  }
+  // a number a row, column or box still needs that only one of its squares can take
+  for (const pass of [prefer >= 0 && !g[prefer] ? [prefer] : [], empty]) for (const i of pass) for (const grp of groupsOf(n, i)) {
+    for (const v of candidates(g, n, i)) {
+      if (grp.cells.some((j) => g[j] === v)) continue;
+      if (grp.cells.filter((j) => !g[j] && candidates(g, n, j).includes(v)).length === 1) {
+        const where = grp.kind === 'box' ? 'This box' : grp.name[0].toUpperCase() + grp.name.slice(1), inn = grp.kind === 'row' ? 'row' : grp.kind === 'col' ? 'column' : 'box';
+        return { i, kind: 'only-place', groups: [], text: `${where} still needs a number that only this square can take: every other empty square in the ${inn} already sees it in its own row, column or box. Which number is it?` };
+      }
+    }
+  }
+  // nothing forced by one look: the square with the fewest choices left, without naming them
+  const i = empty.reduce((a, b) => (candidates(g, n, b).length < candidates(g, n, a).length ? b : a));
+  return { i, kind: 'few', groups: [], text: `${at(i)}: its row, column and box leave only ${['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][candidates(g, n, i).length]} numbers for this square. Try one — if anything turns red, think again.` };
+}
+/* XP for a solved grid is the squares the child placed — one each (games spec §3.5): a 9×9 with
+   fifty empty squares is worth more than a 4×4 with eight, and a hint (which places nothing) adds none. */
+export const sudokuXP = (placed) => Math.max(0, placed | 0);
+
+/* Tower pay (games spec §3.5, T12). A typed right answer pays its coin at once. A multiple-choice
+   right answer is HELD until the next answer on the floor is right too, so a lone lucky guess pays
+   nothing; the floor's last answer, which has no next, is confirmed by the floor itself being passed.
+   `p` is the run's own pay record; each call returns the coins to pay now. */
+export function puzzlePay(p, { mc, right }) {
+  let pay = 0;
+  if (right && p.held) pay++;            // the held guess is confirmed by this right answer
+  p.held = 0;
+  if (right) { if (mc) p.held = 1; else pay++; }
+  return pay;
+}
+export const puzzlePayEnd = (p, passed) => { const pay = p.held && passed ? 1 : 0; p.held = 0; return pay; };
+
 /* ================================================================ patterns */
 
 const RULES = [

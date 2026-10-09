@@ -295,8 +295,18 @@ async function run(vp, tag) {
   ok(/Sudoku/.test(await page.locator('.g-card h2').innerText()), 'sudoku opens on its title card');
   await page.keyboard.press('Enter'); await page.waitForSelector('.sdk');
   await shot('24-sudoku');
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('1');
-  for (let i = 0; i < 90 && await page.locator('.sdk').count() && !(await page.locator('.play-end').count()); i++) await page.keyboard.press('h');
+  // games spec §3.5 changed this: a hint EXPLAINS and never fills (it used to fill a square, and this
+  // check solved the grid by pressing H). Now: one hint by key leaves its square empty, then the grid is
+  // solved by placing numbers, as a child does — the numbers from a plain solver run on the screen's grid.
+  const sdkCells = () => page.evaluate(() => [...document.querySelectorAll('.sdk .sc')].map((b) => +b.textContent || 0));
+  const g0 = await sdkCells();
+  await page.keyboard.press('h');
+  const hc = await page.evaluate(() => { const c = document.querySelector('.sdk .sc.hint'); return c ? { i: +c.dataset.i, t: c.textContent, tip: (document.querySelector('.sdk-tip') || {}).textContent || '' } : null; });
+  ok(hc && hc.t === '' && hc.tip.length > 20 && JSON.stringify(await sdkCells()) === JSON.stringify(g0), 'a sudoku hint by key explains a square and leaves it empty');
+  const sol = await page.evaluate((g) => { const n = Math.round(Math.sqrt(g.length)), [br, bc] = { 4: [2, 2], 6: [2, 3], 9: [3, 3] }[n], s = g.slice();
+    const fits = (i, v) => { const r = Math.floor(i / n), c = i % n; for (let k = 0; k < n; k++) if (s[r * n + k] === v || s[k * n + c] === v) return false; const r0 = r - (r % br), c0 = c - (c % bc); for (let a = 0; a < br; a++) for (let b = 0; b < bc; b++) if (s[(r0 + a) * n + c0 + b] === v) return false; return true; };
+    const go = (i) => { if (i === s.length) return true; if (s[i]) return go(i + 1); for (let v = 1; v <= n; v++) if (fits(i, v)) { s[i] = v; if (go(i + 1)) return true; } s[i] = 0; return false; }; go(0); return s; }, g0);
+  for (let i = 0; i < sol.length && !(await page.locator('.play-end').count()); i++) if (!g0[i]) { await page.click(`.sdk .sc[data-i="${i}"]`); await page.keyboard.press(String(sol[i])); }
   await page.waitForSelector('.play-end', { timeout: 30000 });
   ok(/Logic/.test(await page.locator('.g-practised').innerText()), 'the sudoku finish names the skill practised');
   ok(true, 'sudoku solves'); await page.keyboard.press('Escape');

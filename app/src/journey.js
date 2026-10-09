@@ -311,7 +311,7 @@ export function secretItems(k, landId, kind, r = Math.random) {
   const pick = () => land.steps[Math.floor(r() * land.steps.length)];
   const q = (s, lv) => { const t = byId[s.stop]; return { ...dress(t, t.gen(r, lv)), trick: s.stop }; };
   if (kind === 'wisp') { const s = pick(); return [{ ...q(s, Math.min(3, s.lv + 1)), why: byId[s.stop].idea }]; }
-  if (kind === 'duel') return [0, 1, 2].map(() => { const s = pick(); return q(s, s.lv); });
+  if (kind === 'duel') return [0, 1, 2].map(() => { const s = pick(); return { ...q(s, s.lv), lv: s.lv }; });   // lv: how hard, for the rival (duel.js)
   return null;   // the chest is a puzzle: main.js asks puzzles.js
 }
 function findLand(k, landId) { for (const L of LEVELS) for (const l of landsOf(L.n)) if (l.id === landId) return l; return null; }
