@@ -118,6 +118,11 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
 21. **The Hive's feed is written by the drop-in only** (`Family.track`, `Family.milestone`); the
     report card (`report.js`) reads it for TIME and never counts minutes as learning.
+    **The daily goal is Bee's three measures** (owner, 10 Oct 2026; `daylog.js`): App time (visible and someone
+    there), Practise time (a question up), Right answers (`k.days`), against targets the grown-up sets behind the PIN.
+    Time is TIME: only `daylog.js` touches `k.dayLog`, and `test/coach.mjs` proves hours move no rank, medal, goal or
+    coin. **"Coach speaks →"** (`#/coach`, lazy: `coach.js` + `coach-view.js`) is Bee's coach desk: every line a rule
+    over the record carrying its evidence, ONE next action that links to the exact thing, never a streak.
 
 22. **Six worlds (§7)** — `themes.js` + `.wstage` in `styles/shell.css`: a painted day plate AND a separately
     painted night (`art/world-<id>-{day,night}[-s].webp`), three ambient layers, paused when hidden, frozen under

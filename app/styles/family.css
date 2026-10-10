@@ -233,3 +233,14 @@
 @media (prefers-reduced-motion:reduce){ .avd-ov,.avd-live{animation:none!important} .avc::after{display:none} .bz-greet > img.greet-open,.sc-open{transition:none} }
 :root[data-motion=reduced] :is(.avd-ov,.avd-live){animation:none!important}
 :root[data-motion=reduced] .avc::after{display:none}
+/* the daily goal, day by day (views.js goalWeek): Bee's three measures, the same record as the ring */
+.rc-goal{margin:4px 0 14px}
+.rc-gscroll{overflow-x:auto;max-width:100%}
+.rc-gt{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.rc-gt th,.rc-gt td{padding:6px 7px;text-align:center;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.rc-gt thead th{font-weight:700;color:var(--muted);font-size:12px}
+.rc-gt tbody th{text-align:left;font-weight:750}
+.rc-gt tbody th i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.rc-gt tbody th small{color:var(--muted);font-weight:600}
+.rc-gt td.met{font-weight:800;color:var(--ink)}
+.rc-gt td{color:var(--muted)}

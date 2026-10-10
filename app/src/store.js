@@ -21,7 +21,7 @@ import * as A from './integration/bizzing-avatars.js';
 
 const KEY = 'bzm_household';
 const DEV = 'bzm_device';
-export const SCHEMA = 14;
+export const SCHEMA = 15;
 
 /* The family layer v2 (standard §7–§8), as a function: written with || throughout, so
    running it twice changes nothing — step 8 runs it again for the households an
@@ -139,6 +139,22 @@ const STEPS = {
       k.timer = k.timer || { grade: null, lv: {}, best: {}, hit: {} };
       k.machine = k.machine || { lv: 1, foe: 0, heats: 0, won: 0, seen: {} };
       k.payDay = k.payDay || {};
+    }
+    return h;
+  },
+  // v15: Bizzing Bee's daily goal and coach (owner, 10 Oct 2026). The ring measures app time, practise
+  // time and right answers (daylog.js); time is kept per day in k.dayLog, in seconds. The grown-up's old
+  // targets were right answers, stops and today's puzzle: right answers carry over when they chose a
+  // number other than the old default of 20, every other target follows the age band until they choose.
+  // The contest day (the coach's phase, Bee's "Bee day") starts unset. Nothing a child had changes.
+  14: (h) => {
+    h.v = 15;
+    for (const k of h.kids) {
+      k.dayLog = k.dayLog || {};
+      k.prefs = k.prefs || {};
+      const t = k.prefs.targets || {};
+      if (!('app' in t)) k.prefs.targets = { app: null, prac: null, right: t.answers && t.answers !== 20 ? t.answers : null };
+      if (k.prefs.contest === undefined) k.prefs.contest = null;
     }
     return h;
   },

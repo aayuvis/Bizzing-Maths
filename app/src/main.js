@@ -10,6 +10,7 @@ import { applySkin } from './extras-actions.js';
 import { ownsMode } from './extras.js';
 import * as CH from './challenge.js';
 import { snapshot } from './report.js';
+import * as DL from './daylog.js';
 /* The Contest Hall and its problem banks load on the hall's own route — 133 proved
    templates are not part of a first screen (the family budget, standard §11). */
 let H = null, P = null, hallLoading = null;
@@ -17,12 +18,15 @@ function loadHall() {
   if (H) return Promise.resolve();
   return hallLoading || (hallLoading = Promise.all([import('./hall.js'), import('./papers/engine.js')]).then(([h, p]) => { H = h; P = p; }));
 }
+/* The coach ("Coach speaks", Bizzing Bee's coach desk) loads on its own route, #/coach (rule 30). */
+let CV = null;
+const loadCoach = () => (CV ? Promise.resolve(CV) : import('./coach-view.js').then((m) => (CV = m)));
 /* Beat the Machine (games spec §2.3) loads on its own route, #/machine (rule 30). */
 let MV = null;
 const loadMachine = () => (MV ? Promise.resolve(MV) : import('./machine-view.js').then((m) => (MV = m)));
 const mctx = () => ({ k: kid(R.h), save, render, earn: (ev, note) => earn(kid(R.h), ev, note), go });
 const whenHall = (fn) => (...a) => (H ? fn(...a) : loadHall().then(() => fn(...a)));
-import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush, gateActions } from './ui.js';
+import { esc as escH, on, fire, bindRoot, sfx, setSound, toast, confetti, clearConfetti, say, hush, gateActions, canSay } from './ui.js';
 import * as J from './journey.js';
 import { TRICKS, byId, drill, correct, stepRight, tricksIn, worldOf, learnCases, loadEngine, engineReady } from './tricks.js';
 import * as F from './facts.js';
@@ -170,13 +174,6 @@ function libCtx(id) {
   };
 }
 
-/* Stars earned today — the gold ring on Home. Kept for a week, never more. */
-function starToday(k, n) {
-  if (!n) return;
-  const d = dayKey(); const m = k.dayStops || (k.dayStops = {});
-  m[d] = (m[d] || 0) + n;
-  for (const key of Object.keys(m)) if (key < dayKey(new Date(Date.now() - 7 * 864e5))) delete m[key];
-}
 
 /* ------------------------------------------------------------- routing */
 
@@ -200,7 +197,7 @@ const TRANSIENT = ['run', 'paper'];     // screens that cannot be deep-linked ba
    argument and is given a bad one (#/stop/bad, #/world/bad, #/lib/bad) lands on Home too. */
 export const ROUTES = ['home', 'atlas', 'world', 'stories', 'puzzles', 'library', 'lib', 'goals', 'journey', 'intro', 'stop', 'facts',
   'arcade', 'play', 'contest', 'me', 'who', 'grownups', 'privacy', 'welcome', 'start', 'run', 'continue', 'shop', 'collection', 'medals',
-  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper', 'machine', 'timer'];
+  'settings', 'help', 'mistakes', 'search', 'wallet', 'feed', 'hall', 'paper', 'machine', 'timer', 'coach'];
 const head = (a) => String(a || '').split('|')[0];
 const NEEDS_ARG = { stop: (a) => !!byId[head(a)], world: (a) => !!worldOf(a), lib: (a) => isTool(head(a)) || !!toolById[head(a)], intro: (a) => !!(worldOf(a) && worldOf(a).intro) };
 /* DEEP LINKS (owner, 3 Oct 2026): a link goes to the THING, not the room it is in.
@@ -330,6 +327,10 @@ function screen() {
     case 'timer':
       if (!TM) { loadTimer().then(render, () => toast('This needs the internet once — then it works offline.')); return '<section class="narrow"><div class="card center-card"><p class="muted">Opening Beat the Timer…</p></div></section>'; }
       return TM.viewTimer(k, R.ui.tmr || (R.ui.tmr = {}));
+    case 'coach':
+      if (!CV) { loadCoach().then(() => { if (R.ui.nav === 'coach') render(); }); return '<section class="narrow"><div class="card center-card"><p class="muted">Octo is reading your practice…</p></div></section>'; }
+      CV.setReader(() => CV.spokenRead(CV.C.read(k)));
+      return CV.view(k, { canSay: canSay() });
     case 'me': return V.viewMe();
     case 'shop': return V3.viewShop();
     case 'collection': return V3.viewCollection();
@@ -350,12 +351,12 @@ function screen() {
    screen, and every action, waits for the code. It starts coming on the first touch or key,
    so by the time the tap lands it is usually here. Offline before it was ever fetched, the
    screen says so instead of hanging (the service worker keeps it after one visit). */
-const LIGHT_SCREENS = ['home', 'welcome', 'start', 'grownups', 'privacy', 'help', 'me', 'shop', 'collection', 'medals', 'settings', 'who', 'wallet'];
+const LIGHT_SCREENS = ['home', 'welcome', 'start', 'grownups', 'privacy', 'help', 'me', 'shop', 'collection', 'medals', 'settings', 'who', 'wallet', 'coach'];
 let ENGINE_FAIL = false, engineWait = false;
 const engine = () => loadEngine().then(() => { ENGINE_FAIL = false; }, (e) => { ENGINE_FAIL = true; throw e; });   // Home's worked example joins it on its next draw — never a forced re-render, which would close a drawer the same tap opened
 /* actions that only move between screens or change a setting: they never wait for the code */
 const SAFE_ACTS = ['nav', 'back', 'obStart', 'obLand', 'obBack', 'obNext', 'draftBand', 'draftAv', 'obTheme', 'createKid', 'avEdit', 'setAv', 'buyAv', 'buyWorld',
-  'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
+  'shopTab', 'wallet', 'setDev', 'setRate', 'setMode', 'setText', 'searchOpen', 'taAll', 'setTarget', 'setContest', 'coachSay', 'switchKid', 'sheet', 'celDone', 'buyFrame', 'wearFrame',
   'addKid', 'sound', 'mode', 'theme', 'themes', 'testerOff', 'lock', 'toggle', 'setBand', 'delKid', 'backup', 'restore', 'cert', 'avDeck', 'avPeek', 'collTab', 'printCards'];
 gateActions({ ready: engineReady, wait: engine, safe: new Set(SAFE_ACTS), failed: () => toast('This needs the internet once — then it works offline.') });
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { if (!engineReady()) engine().catch(() => {}); }, { capture: true, passive: true, once: true });
@@ -390,6 +391,9 @@ function render() {
     sc.scrollLeft = Math.max(0, x);
   }
   walkOn();
+  // the coach reads its first line aloud once per opening — only where read-aloud is on, never in Calm mode
+  if (R.ui.nav === 'coach' && CV && !R.ui.coachSaid) { R.ui.coachSaid = true; const k = kid(R.h); if (k && readOn(k) && !R.dev.calm) setTimeout(() => { if (R.ui.nav === 'coach') say(CV.C.read(k).lines[0].text); }, 400); }
+  if (R.ui.nav !== 'coach') R.ui.coachSaid = false;
   // the "Opening…" placeholder is not the screen: the fade waits for the screen itself to draw
   if (!root.querySelector('.engine-wait')) routeIn();
 }
@@ -669,7 +673,6 @@ function finishRun() {
     const t = byId[run.trick];
     const budget = (4000 + 2500 * t.work(run.items[0]).length) * (k.band === '6-7' ? 1.5 : 1);
     const res = scoreRun(k, run.trick, right, n, avg <= budget);
-    starToday(k, res.gained);
     // where the drill opens next time comes from the last runs' accuracy (audit v4 E7)
     const wasLv = trickRec(k, run.trick).lvNext || 1, nr = noteRun(k, run.trick, run.lv, res.pct, avg <= budget);
     if (nr.lv < wasLv) s.lines.push(`<span class="muted">Next time this stop opens at ${['', 'Warm-up', 'Stretch', 'Champion'][nr.lv]} — a step back to make it stick.</span>`);
@@ -898,7 +901,6 @@ function guidedNext() {
   if (g.i + 1 < g.items.length) { setGuided(g.i + 1); return render(); }
   const k = kid(R.h), r = trickRec(k, g.trick);
   const first = !r.learned;
-  if (!r.stars) starToday(k, 1);
   r.learned = true; r.stars = Math.max(r.stars, 1);
   tick(k, true, 3); save();
   R.run = null; R.ui.tab = 'drill';
@@ -1070,7 +1072,9 @@ function play(arg, level = null) {
   const k = kid(R.h); clearConfetti();
   // a bonus mode (extras.js) is `<game>:<mode>`, locked until bought; it pays exactly what its game pays
   const [id, mode = null] = String(arg).split(':');
-  if (arg === 'rush:calm') return fire('startCalm');   // Rush · Calm is the free drill in Rush's costume, never a paid mode
+  // Rush · Calm is the free drill in Rush's costume, never a paid mode. Not RETURNED: when this action was
+  // queued behind the stops' code (ui.js fire), returning the nested fire would make it wait on itself
+  if (arg === 'rush:calm') { fire('startCalm'); return; }
   if (mode && !ownsMode(k, arg)) return go('shop');
   const rec = k.games[arg] || (k.games[arg] = { best: null, plays: 0 });
   const onEnd = (score) => { rec.plays++; if (typeof score === 'number' && (rec.best == null || score > rec.best)) rec.best = score; save(); render(); };
@@ -1420,9 +1424,16 @@ on('cert', async (a) => {
   const [cid, id] = String(a).split('|'), c = R.h.kids.find((x) => x.id === cid); if (!c || !R.ui.gate) return;
   if (await makeCert(c, id)) toast('Saved as a picture on this device.');
 });
+/* the daily goal's three targets (daylog.js), the grown-up's to set — behind the PIN, as Bee's are */
 on('setTarget', (a) => {
-  const k = kid(R.h), [key, n] = String(a).split('|'); if (!k || !R.ui.gate || !['answers', 'stops'].includes(key)) return;
-  k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 }; k.prefs.targets[key] = +n; save(); render();
+  const k = kid(R.h), [key, n] = String(a).split('|'); if (!k || !R.ui.gate || !DL.CHOICES[key] || !DL.CHOICES[key].includes(+n)) return;
+  const t = k.prefs.targets && 'app' in k.prefs.targets ? k.prefs.targets : (k.prefs.targets = { app: null, prac: null, right: null });
+  t[key] = +n; save(); render();
+});
+/* the coach's contest day (Bee's "Bee day"): a number of weeks from today, or off — no typing */
+on('setContest', (a) => {
+  const k = kid(R.h); if (!k || !R.ui.gate) return;
+  const w = +a; k.prefs.contest = w > 0 ? DL.daysAgo(Date.now(), -7 * w) : null; save(); render();
 });
 on('createKid', () => {
   const d = R.ui.draft; if (!d || !d.name.trim() || !d.band) return;
@@ -1568,7 +1579,6 @@ on('toggle', (key) => {
   if (key === 'tester') R.h.parent.tester = !R.h.parent.tester;
   if (key === 'feed' && R.ui.gate) R.h.parent.feedOff = !R.h.parent.feedOff;
   if (key === 'plan' && R.ui.gate) R.h.parent.plan = R.h.parent.plan === 'family' ? 'free' : 'family';
-  if (key === 'puzzleTarget' && k && R.ui.gate) { k.prefs.targets = k.prefs.targets || { answers: 20, stops: 1, puzzle: 1 }; k.prefs.targets.puzzle = k.prefs.targets.puzzle === 0 ? 1 : 0; }
   if (key === 'sound') return fire('sound');
   if (key === 'read' && k) k.prefs.read = !readOn(k);
   save(); render();
@@ -1804,4 +1814,27 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/localhost
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-window.__bzm = { R, go, render, fire, J, DEMO, tricksIn, startRun, engineReady, WALK_MS, contestUsed, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
+/* ---------- the daily goal's clock (Bizzing Bee's metricTick, daylog.js). It counts only while the page
+   is visible AND someone has touched or typed in the last five minutes, so a tab left open overnight
+   invents nothing. Each step adds the time that actually passed. Practise time is the part of it with a
+   question up: a run, a game, Beat the Timer, the Machine, a contest question, a paper. It is TIME:
+   nothing here writes xp, stars, facts, medals, goals or coins (rule 21, test/coach.mjs). */
+function practising() {
+  const el = document.documentElement;
+  return gameOn() || timerOn() || onStage() || el.classList.contains('stage-on') || el.classList.contains('playing') || (R.ui.nav === 'stop' && !!R.run);
+}
+let clockAt = null, lastInput = performance.now(), clockSaved = 0;
+function clockTick() {
+  const now = performance.now(), visible = document.visibilityState === 'visible', k = kid(R.h);
+  if (clockAt != null && k && now - lastInput < DL.IDLE_MS) {
+    DL.addTime(k, Math.min(now - clockAt, 2 * DL.TICK_MS) / 1000, practising());
+    if (now - clockSaved > 30000 || !visible) { clockSaved = now; save(); }
+  }
+  clockAt = visible ? now : null;
+}
+for (const ev of ['pointerdown', 'keydown', 'touchstart', 'wheel']) addEventListener(ev, () => { if (performance.now() - lastInput >= DL.IDLE_MS) clockAt = performance.now(); lastInput = performance.now(); }, { capture: true, passive: true });
+document.addEventListener('visibilitychange', clockTick);
+setInterval(clockTick, DL.TICK_MS);
+clockTick();
+
+window.__bzm = { R, go, render, fire, practising, clockTick, J, DEMO, tricksIn, startRun, engineReady, WALK_MS, contestUsed, feedGroups: () => ({ loaded: FV.groupsLoaded().sort(), needed: FV.sessionGroups() }) };   // for the headless checks, never for the app
