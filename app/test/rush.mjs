@@ -162,7 +162,8 @@ for (let n = 2; n <= 20; n++) {
   const fr = main.slice(main.indexOf('function factsRun('), main.indexOf("on('startCalm'"));
   ok(/F\.session\(k\.facts, op/.test(fr) && /startRun\('facts', calm \?/.test(fr) && /on\('startFacts', \(op\) => factsRun\(op\)\)/.test(main) && /on\('startCalm', \(\) => \{[^\n]*factsRun\(d \? d\.op : [^\n]*, true\)/.test(main), 'Calm and Twenty facts are one run: factsRun(op, calm) → startRun(\'facts\')');
   ok(/const PRACTICE = \[[^\]]*'facts'/.test(main) && /tick\(k, right, run\.kind === 'facts' \? 1 : 2\)/.test(main), 'so Calm pays exactly what Twenty facts pays: answer 1 per right, through the same tick');
-  ok(/if \(arg === 'rush:calm'\) return fire\('startCalm'\)/.test(main), '#/game/rush:calm opens Calm, free, before any mode lock');
+  // (fired, not returned: a returned nested fire deadlocked when the action was queued behind the stops' code — coach-ui)
+  ok(/if \(arg === 'rush:calm'\) \{ fire\('startCalm'\); return; \}/.test(main) && main.indexOf("arg === 'rush:calm'") < main.indexOf('ownsMode(k, arg)'), '#/game/rush:calm opens Calm, free, before any mode lock');
 }
 
 // T10 under load: a child with sixty older traps still meets today's Rush miss in the contest's 40

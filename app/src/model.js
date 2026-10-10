@@ -81,7 +81,7 @@ export function rankOf(xp) {
 
 /* ---------------------------------------------------------------- kids */
 
-export function newHousehold() { return { v: 14, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
+export function newHousehold() { return { v: 15, kids: [], active: null, parent: { pinHash: null, tester: false, plan: 'free', feedOff: false } }; }
 
 /* Read-aloud: a choice a grown-up made wins; until one is made it follows the
    band — on for 6–7, on tap for everyone older. Decided at read time, so no
@@ -121,8 +121,9 @@ export function newKid(name, band, avatar) {
     placed: null,         // index into the stop order the child may start from
     daily: {},            // dayKey → { puzzle: bool }
     days: {},             // dayKey → { q, ok } — answers per day, for the grown-up's week
+    dayLog: {},           // dayKey → { app, prac } — seconds on screen and with a question up (daylog.js); TIME, never learning
     created: Date.now(),
-    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: null, targets: { answers: 20, stops: 1, puzzle: 1 } },   // read: null follows the band (readOn); targets: the grown-up's daily ring
+    prefs: { op: band === '6-7' ? '+' : '×', timer: true, read: null, targets: { app: null, prac: null, right: null }, contest: null },   // read: null follows the band (readOn); targets: the grown-up's daily goal, null follows the band (daylog.js); contest: the coach's contest day
   };
 }
 

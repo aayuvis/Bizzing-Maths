@@ -68,7 +68,9 @@ ok(Object.keys(mem).sort().join() === keysBefore, 'building the sample wrote not
   ok(walletOk(s), 'the sample wallet is earned from its own answers and stops, at standard amounts, under the daily cap');
   ok(!walletOk({ ...s, sampleWallet: [...s.sampleWallet, { a: 'maths', t: Date.now(), n: 50, why: 'gift' }] }), 'BROKEN: a gifted line is caught');
   const td = dayKey();
-  ok(s.days[td] && s.days[td].ok > 0 && s.dayStops[td] >= 1 && s.daily[td] && s.daily[td].puzzle === false, 'today\'s ring is part-way round in the sample');
+  // the daily goal is Bee's three measures now (daylog.js): the sample's right answers are part-way round
+  { const DM = (await import('../src/daylog.js')).metrics(s, td);
+    ok(s.days[td] && s.days[td].ok > 0 && DM.right === s.days[td].ok && DM.p.right > 0 && DM.p.right < 1 && s.daily[td] && s.daily[td].puzzle === false, `today's daily goal is part-way round in the sample (${DM.right}/${DM.t.right} right)`); }
 }
 
 /* the guide is Octo, the mascot — never one of the ten rival children (owner, 3 Oct 2026) */

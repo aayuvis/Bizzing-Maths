@@ -74,10 +74,9 @@ export function sampleHousehold(now = Date.now()) {
   // medals the evidence supports, dated a few days back and already celebrated
   for (const m of award(k, now - 3 * DAY)) k.medals[m.id].seen = true;
 
-  // today, part-way round the ring (audit A5): a short sitting this morning, one stop passed
+  // today, part-way round the daily goal (audit A5): a short sitting this morning — its right answers
   const td = dayKey(new Date(now));
   k.days[td] = { q: 14, ok: 12 }; k.xp += 12;
-  k.dayStops = { ...(k.dayStops || {}), [td]: 1 };
   k.daily = { ...(k.daily || {}), [td]: { ...((k.daily || {})[td] || {}), puzzle: false } };
 
   // the wallet, earned from the same evidence at the family's standard amounts and daily cap:

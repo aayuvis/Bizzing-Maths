@@ -15,7 +15,7 @@ import { RIVALS, bot, live, timeFor, tellOf } from './contest.js';
 import { roundWords } from './duel.js';
 import { keypad } from './keypad.js';
 import { fig } from './figs.js';
-import { storyTab, goalsReport } from './views2.js';
+import { storyTab } from './views2.js';
 import { summary } from './objectives.js';
 import { greetingLine } from './greeting.js';
 import { seeded, int, dayKey } from './rand.js';
@@ -25,7 +25,7 @@ import { Family } from './store.js';
 import { MEDALS, medalStates, earnedCount, medalById } from './medals.js';
 import { FRAMES, owns, worn } from './shop.js';
 import { arcadeModes } from './extras-view.js';
-import { reportCard } from './report.js';
+import * as DL from './daylog.js';
 import { icon, glyph } from './icons.js';
 import { walletSheet, octo, worldStage, HIVE as HIVE3 } from './views3.js';
 import { shell as bzShell, home as bzHome } from './integration/bizzing-shell.js';
@@ -83,7 +83,7 @@ export function spoken(t) {
 
 /* ------------------------------------------------------------- the shell */
 
-const NAV_OF = { facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: null, journey: 'atlas', goals: null, grownups: null, game: 'play', machine: 'play', contest: 'play', hall: 'play', paper: null,
+const NAV_OF = { coach: null, facts: 'library', lib: 'library', stop: 'atlas', check: 'atlas', world: 'atlas', stories: 'library', intro: 'atlas', run: null, me: null, journey: 'atlas', goals: null, grownups: null, game: 'play', machine: 'play', contest: 'play', hall: 'play', paper: null,
   shop: null, collection: null, medals: null, settings: null, help: null, mistakes: null, search: null, privacy: null, who: null, start: null, welcome: null };
 export { icon };
 
@@ -264,13 +264,26 @@ export function numberFacts(n) {
    number and the trick of the hour and the honest progress panel. */
 /* What Octo says is about the child, from their own record (greeting.js, audit v4 B1/B5). */
 function ring(parts) {
-  // concentric rings, one per part of today; each fills to its own goal
+  // Bee's three nested rings (app3.js ringsSVG): no numbers inside, and past the target a second
+  // lap in the lighter shade rather than stopping at full
   const R0 = 46, W = 9;
   return `<svg class="ring" viewBox="0 0 120 120" aria-hidden="true">${parts.map((p, i) => {
-    const r = R0 - i * (W + 3), c = 2 * Math.PI * r, f = Math.min(1, p.v / p.goal);
-    return `<circle cx="60" cy="60" r="${r}" class="rg-bg" style="stroke:${p.tint}"/><circle cx="60" cy="60" r="${r}" class="rg-fg" style="stroke:${p.col};stroke-dasharray:${(c * f).toFixed(1)} ${c.toFixed(1)}"/>`;
+    const r = R0 - i * (W + 3), c = 2 * Math.PI * r, v = p.goal ? p.v / p.goal : 0, f = Math.min(1, v), over = Math.max(0, Math.min(1, v - 1));
+    return `<circle cx="60" cy="60" r="${r}" class="rg-bg" style="stroke:${p.col};stroke-opacity:.18"/>`
+      + (f > 0 ? `<circle cx="60" cy="60" r="${r}" class="rg-fg" style="stroke:${p.col};stroke-dasharray:${(c * f).toFixed(1)} ${c.toFixed(1)}"/>` : '')
+      + (over > 0 ? `<circle cx="60" cy="60" r="${r}" class="rg-fg rg-over" style="stroke:${p.lite};stroke-dasharray:${(c * over).toFixed(1)} ${c.toFixed(1)}"/>` : '');
   }).join('')}</svg>`;
 }
+/* The daily goal, in Bee's three measures (daylog.js): app time, practise time, right answers. */
+export function ringParts(k) {
+  const m = DL.metrics(k);
+  return { m, parts: [
+    { id: 'app', n: DL.LABEL.app, s: 'App', v: m.app, goal: m.t.app * 60, show: `${DL.fmtMins(m.app)}/${m.t.app}m`, col: DL.RING_COL.app[0], lite: DL.RING_COL.app[1] },
+    { id: 'prac', n: DL.LABEL.prac, s: 'Practise', v: m.prac, goal: m.t.prac * 60, show: `${DL.fmtMins(m.prac)}/${m.t.prac}m`, col: DL.RING_COL.prac[0], lite: DL.RING_COL.prac[1] },
+    { id: 'right', n: DL.LABEL.right, s: 'Right', v: m.right, goal: m.t.right, show: `${m.right}/${m.t.right}`, col: DL.RING_COL.right[0], lite: DL.RING_COL.right[1] },
+  ] };
+}
+export const ringSVG = ring;
 
 /* Where Continue goes — Home's card and the Hive's #/continue deep link share it. */
 export function continueTarget(k) {
@@ -299,15 +312,7 @@ function continueCard(k) {
 }
 
 export function viewHome() {
-  const k = kid(R.h), d = dayKey(), today = k.days[d] || { q: 0, ok: 0 };
-  const puzzleDone = k.daily[d] && k.daily[d].puzzle;
-  const stopsToday = (k.dayStops || {})[d] || 0;
-  const tg = (k.prefs && k.prefs.targets) || { answers: 20, stops: 1, puzzle: 1 };
-  const parts = [
-    { n: 'Right answers', s: 'Right', v: today.ok, goal: tg.answers || 20, col: 'var(--action)', tint: 'color-mix(in srgb,var(--action) 14%,transparent)' },
-    { n: 'Stops passed', s: 'Stops', v: stopsToday, goal: tg.stops || 1, col: '#F0B429', tint: 'rgb(240 180 41 / .2)' },
-    ...(tg.puzzle ? [{ n: 'Today’s puzzle', s: 'Puzzle', v: puzzleDone ? 1 : 0, goal: 1, col: '#178A4C', tint: 'rgb(23 138 76 / .15)' }] : []),
-  ];
+  const k = kid(R.h), { m, parts } = ringParts(k);
   const c = continueTarget(k), p = c.p, nh = numberOfHour(), mk = MD.count(k), rk = rankOf(k.xp);
   const floors = Object.values(k.quest || {}).filter((x) => x.passed).length;
   const plain = (html) => String(html).replace(/<[^>]+>/g, '');
@@ -319,7 +324,9 @@ export function viewHome() {
     ${worldStage(themeOfKid(k), 'home-stage')}
     ${bzHome({
       greet: { mascot: `avatars/${avatarFile(k.avatar)}.webp`, hello: `${greet()},`, name: k.name, line: plain(greetingLine(k)) },
-      ring: { html: `<div class="ring-in">${ring(parts)}<div><b class="ct">Today’s ring</b><ul class="legend2">${parts.map((x) => `<li><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${Math.min(x.v, x.goal)}/${x.goal}</b></li>`).join('')}</ul><p class="muted small">Nothing expires. A day off costs nothing.</p></div></div>`,
+      /* Bee's card: the rings and their three lines are ONE link to the coach ("Coach speaks →"); the
+         level strip along the foot is the other. Neither is inside the other. */
+      ring: { html: `<a class="ring-in coach-go" href="#/coach" data-coach-go title="Coach speaks — what Octo makes of today">${ring(parts)}<span class="rg-t"><b class="ct">Daily goal${m.all ? ' ✓' : ''}</b><span class="legend2" role="list">${parts.map((x) => `<span class="rg-row" role="listitem" data-ring="${x.id}"><i style="background:${x.col}"></i><span class="lg-l">${x.n}</span><span class="lg-s">${x.s}</span><b class="mono">${x.show}</b></span>`).join('')}</span><span class="coach-cta">${m.all ? 'All three rings closed — Coach speaks →' : 'Coach speaks →'}</span></span></a>`,
         foot: { kicker: p ? 'Your level' : 'Your rank', title: p ? `Level ${p.level} · ${p.L.name}` : `Rank ${rk.i + 1} · ${rk.n}`, href: p ? `#/journey/${p.level}` : '#/me' } },
       hour: { kicker: 'Five minutes', title: 'Today’s mix', sub: mk.due ? `Facts, a stop, a puzzle — and ${mk.due} mistake${mk.due > 1 ? 's' : ''} due.` : 'Facts picked for you, your next stop and a puzzle.', icon: 'bolt', href: '#/mix' },
       next: { plate: c.world ? `art/w-${c.world}.webp` : 'art/atlas.webp', icon: 'path', chip: p ? `stop ${Math.min(p.done + 1, p.total)} of ${p.total}` : 'ten levels',
@@ -935,9 +942,7 @@ export function viewGrownups() {
       <div class="card">
         <p class="kicker">Settings${k ? ` for ${esc(k.name)}` : ''}</p>
         ${k ? `<div class="set"><span>Age band</span><span class="chips">${BANDS.map((b) => `<button class="chip-btn small${k.band === b.id ? ' on' : ''}" data-act="setBand" data-arg="${b.id}">${b.label}</button>`).join('')}</span></div>
-        <div class="set"><span>Daily ring: right answers</span><span class="chips">${[10, 20, 30].map((n) => `<button class="chip-btn small${(k.prefs.targets || {}).answers === n ? ' on' : ''}" data-act="setTarget" data-arg="answers|${n}">${n}</button>`).join('')}</span></div>
-        <div class="set"><span>Daily ring: stops</span><span class="chips">${[1, 2, 3].map((n) => `<button class="chip-btn small${(k.prefs.targets || {}).stops === n ? ' on' : ''}" data-act="setTarget" data-arg="stops|${n}">${n}</button>`).join('')}</span></div>
-        <div class="set"><span>Daily ring: today’s puzzle <span class="muted small">the shared Make the Target</span></span>${toggle('puzzleTarget', (k.prefs.targets || {}).puzzle !== 0)}</div>
+        ${goalSettings(k)}
         <div class="set"><span>Read questions aloud <span class="muted small">on by itself for 6–7; the speaker button on any question for everyone</span></span>${toggle('read', readOn(k))}</div>
         <div class="set"><span>World <span class="muted small">the child can change it too, among the open ones</span></span><span class="chips">${THEMES.filter((t) => worldIsOpen(h, k, t.n)).map((t) => `<button class="chip-btn small${themeOf(k, h) === t.id ? ' on' : ''}" data-act="theme" data-arg="${t.id}">${esc(t.name)}</button>`).join('')}</span></div>
         <div class="set"><span>Sound on this device</span>${toggle('sound', R.sound)}</div>
@@ -958,55 +963,16 @@ export function viewGrownups() {
   </section>`;
 }
 
+/* The report cards and the daily goal's settings load with the grown-ups' page — never with Home
+   (grownups-view.js; the first-load budget, test/family-ui.mjs). Until they arrive the page says so. */
+let GV = null, gvLoading = false;
+function goalView(fn, c) {
+  if (!GV) { if (!gvLoading) { gvLoading = true; import('./grownups-view.js').then((m) => { GV = m; R.render && R.render(); }, () => { gvLoading = false; }); } return fn === 'report' ? '<div class="card"><p class="muted">Opening the report…</p></div>' : ''; }
+  return GV[fn](c);
+}
+const goalSettings = (k) => goalView('goalSettings', k), report = (c) => goalView('report', c);
+
 const toggle = (key, on) => `<button class="tog${on ? ' on' : ''}" role="switch" aria-checked="${!!on}" data-act="toggle" data-arg="${key}"><i></i></button>`;
-
-/* The report card, in the family's three measures (report.js): TIME, PROGRESS,
-   MASTERY — then the detail a grown-up can act on. Weekly bars for the trend,
-   one bar per strand for where the learning is. Never usage as achievement. */
-function report(c) {
-  const rc = reportCard(c, c.sampleFeed || Family.feed());
-  const learned = TRICKS.filter((t) => (c.tricks[t.id] || {}).stars >= 2);
-  const lapsed = Object.entries(c.facts).filter(([, r]) => r.lapsed).map(([k2]) => parseKey(k2)).filter(Boolean);
-  const traps = Object.entries(c.facts).filter(([, r]) => fstate(r) === 'trap').map(([k2]) => parseKey(k2)).filter(Boolean);
-  const wk = rc.weeks, maxM = Math.max(10, ...wk.map((w) => w.minutes)), maxF = Math.max(5, ...wk.map((w) => w.fluent || 0));
-  const bars = (vals, max, cls) => `<span class="rc-bars ${cls}">${vals.map((v, i) => `<i style="height:${Math.round(100 * (v || 0) / max)}%" title="${v || 0}"${i === vals.length - 1 ? ' class="now"' : ''}></i>`).join('')}</span>`;
-  const day = (t) => new Date(t + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const whenTot = rc.time.when.morning + rc.time.when.afternoon + rc.time.when.evening;
-  return `<div class="card report rc" data-report='${esc(JSON.stringify({ v: rc.v, app: rc.app, who: rc.who, time: rc.time.week, progress: rc.progress.stations, mastery: rc.mastery.fluent }))}'>
-    <div class="row gap">${av(c.avatar, 48, '')}<div><h2>${esc(c.name)}${c.sample ? ' <span class="chip-s">Sample</span>' : ''}</h2><p class="muted">Age ${esc(c.band.replace('-', '–'))} · rank ${esc(rankOf(c.xp).n)}</p></div></div>
-    <div class="rc-three">
-      <div class="rc-cell"><p class="kicker">Time</p><b class="rc-big">${rc.time.week}<small> min this week</small></b>
-        ${bars(wk.map((w) => w.minutes), maxM, 'time')}<span class="rc-axis"><span>${day(wk[0].wk)}</span><span>this week</span></span>
-        <p class="muted small">${whenTot ? `Mostly in the ${Object.entries(rc.time.when).sort((x, y) => y[1] - x[1])[0][0]}. ` : ''}Active minutes only — the app stops counting when nobody is touching it.</p></div>
-      <div class="rc-cell"><p class="kicker">Progress</p><b class="rc-big">${rc.progress.level ? `Level ${rc.progress.level}` : '—'}<small>${rc.progress.level ? ` · ${rc.progress.stations} of ${rc.progress.total} stops` : ''}</small></b>
-        ${rc.progress.total ? `<span class="meter"><i style="width:${Math.round(100 * rc.progress.stations / rc.progress.total)}%"></i></span>` : ''}
-        <p class="muted small">${esc(rc.progress.label)}. ${rc.progress.lands} land test${rc.progress.lands === 1 ? '' : 's'} and ${rc.progress.levels} level test${rc.progress.levels === 1 ? '' : 's'} passed.</p></div>
-      <div class="rc-cell"><p class="kicker">Mastery</p><b class="rc-big">${rc.mastery.fluent}<small> facts fluent</small></b>
-        ${bars(wk.map((w) => w.fluent), maxF, 'mast')}<span class="rc-axis"><span>${day(wk[0].wk)}</span><span>this week</span></span>
-        <p class="muted small">${rc.mastery.mastered} stops mastered · ${rc.mastery.goals} of ${rc.mastery.goalsTotal} goals. Fluent means still fast after a gap of days.</p></div>
-    </div>
-    <div class="rc-strands"><p class="kicker">Where the learning is — goals met, by strand</p>
-      ${rc.mastery.strands.map((st) => `<div class="rc-st"><span>${glyph(st.glyph, 16)} ${esc(st.name)}</span><span class="bar"><i style="width:${st.total ? Math.round(100 * st.met / st.total) : 0}%"></i></span>${st.started ? `<b class="mono">${st.met}/${st.total}</b>` : '<b class="rc-none muted small">not started yet</b>'}</div>`).join('')}</div>
-    <div class="rep-grid">
-      <div><p class="kicker">Tricks mastered</p><p>${learned.length ? learned.map((t) => esc(t.title)).join(' · ') : 'None yet.'}</p></div>
-      <div><p class="kicker">Worth a hand with</p><p>${traps.length ? traps.slice(0, 8).map((f) => `<span class="mono">${esc(ftext(f))}</span>`).join(', ') : 'Nothing is tripping them up right now.'}</p>
-        ${lapsed.length ? `<p class="muted small">Slipped since they were fluent: ${lapsed.slice(0, 8).map((f) => esc(ftext(f))).join(', ')}. That is normal — it comes back quickly.</p>` : ''}</div>
-    </div>
-    ${goalsReport(c)}
-    ${timerReport(c)}
-    <p class="muted small">Talk about it: ask ${esc(c.name)} to show you one trick and explain <i>why</i> it works. Explaining it is the best practice there is.</p>
-  </div>`;
-}
-
-/* Beat the Timer, for a grown-up: theme · level · best · target per window, in words (games spec §3.7).
-   The grade is a curriculum setting the child picks, so it is never reported as theirs; time is never a score. */
-let TT = null, ttLoading = false;   // the catalogue loads with the first report that needs it, never with Home
-function timerReport(c) {
-  if (!c.timer || !Object.keys({ ...c.timer.lv, ...c.timer.best }).length) return '';
-  if (!TT) { if (!ttLoading) { ttLoading = true; import('./timer-themes.js').then((m) => { TT = m; R.render && R.render(); }, () => { ttLoading = false; }); } return ''; }
-  const ls = TT.parentLines(c);
-  return ls.length ? `<div class="rc-timer"><p class="kicker">${icon('timer', 16)} Beat the Timer</p>${ls.map((l) => `<p class="small">${esc(l)}</p>`).join('')}</div>` : '';
-}
 
 /* ------------------------------------------------------------- privacy */
 
@@ -1014,7 +980,7 @@ export function viewPrivacy() {
   return `<section class="narrow">
     ${pageHead('Privacy', 'The short version: nothing leaves this device.', back('nav', 'Back', 'home'))}
     <div class="card prose">
-      <p>Bizzing Maths keeps a child's first name, age band, chosen avatar and progress in this browser's local storage, on this device. That is all it stores.</p>
+      <p>Bizzing Maths keeps a child's first name, age band, chosen avatar and progress in this browser's local storage, on this device — progress includes, for the daily goal, how many minutes a day the app was open and in use and how many of them had a question up. That is all it stores.</p>
       <p>${PRIVACY_LINE} The app makes no network requests about your child. The pages themselves are served by GitHub Pages, which, like any web host, sees the request for the page.</p>
       <p>We never ask for a surname, a birthday, an email, a photo or a location. </p>
       <p>Read-aloud uses your device's own voice, on the device. Nothing is downloaded for it and nothing is sent.</p>

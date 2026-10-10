@@ -372,7 +372,7 @@ html[data-bz-dark] .bz-plate,:root[data-mode="dark"] .bz-plate{filter:brightness
 @media (max-width:700px){
   .legend2 .lg-l{display:none}.legend2 .lg-s{display:inline}
   .h-grid > .today{grid-template-columns:56px 1fr}.h-grid > .today .ring{width:56px;height:56px}
-  .h-grid > .today .ct{font-size:14px}.legend2{margin:2px 0 0;padding:0}.legend2 li{gap:5px;font-size:12px!important;line-height:1.5}
+  .h-grid > .today .ct{font-size:14px}.legend2{margin:2px 0 0;padding:0}.legend2 li,.legend2 .rg-row{gap:5px;font-size:12px!important;line-height:1.5}
 }
 .lib-today{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:6px}
 .lib-today .card{margin:0}.nod-day .nod-n{display:block;font-size:40px;color:var(--action);margin:4px 0}.nod-day ul{margin:0;padding-left:18px;font-size:14px;color:var(--muted)}
@@ -428,6 +428,18 @@ html:root, html[data-bz-dark] {
 @media (max-width:720px){.home2 .wstage{height:220px}}
 .ring-in{display:flex;gap:14px;align-items:center}.ring-in .ring{width:110px;height:110px;flex:none}
 .ring-in .ct{font:800 20px var(--bz-display)}.ring-in .legend2{margin:6px 0 4px}.ring-in .muted{margin:0}
+/* Bee's daily-goal card: the rings and their three lines are one link to the coach (app3.js openCoachDesk) */
+.bz-ringcard > :first-child:has(> .coach-go){padding:0;display:flex}
+.coach-go{flex:1;padding:15px;color:inherit;text-decoration:none;border-radius:15px 15px 0 0;cursor:pointer}
+.coach-go:hover .coach-cta{text-decoration:underline}
+.coach-go:focus-visible{outline:3px solid var(--action);outline-offset:-3px}
+.coach-go .rg-t{min-width:0;flex:1;display:flex;flex-direction:column}
+.coach-go .legend2 .rg-row{display:flex;align-items:center;gap:8px;font-weight:750}
+.coach-go .legend2 .lg-l{color:var(--muted);display:inline!important}.coach-go .legend2 .lg-s{display:none!important}   /* Bee names all three in full, on a phone too */
+.coach-go .legend2 i{border-radius:3px}
+.coach-go .legend2 b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.coach-cta{display:block;margin-top:6px;color:var(--action);font:800 14px var(--bz-body)}
+.rg-over{stroke-width:5}
 .bz-greet > img{filter:drop-shadow(0 6px 10px rgb(20 30 60 / .16))}
 .bz-content > .hive-chip,.bz-content > .demo-bar,.bz-content > .tester{margin:0 0 12px}
 .foot{padding:26px 0 10px}
