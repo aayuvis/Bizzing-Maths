@@ -159,6 +159,12 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     level's road (main.js `deepen()`; a tool opens an item with `openItem()` or its `act('open')`). Each card
     also carries `where` and `more`, cut from the corpus like its words. `test/feed.mjs` fails a generic link. `test/feed.mjs` and
     `test/feed-ui.mjs` hold it.
+    **Doubled** (owner, 10 Oct 2026): `tools/feed-more.mjs` cuts a second set AFTER the first, so no first-cut card changes —
+    fresh contest-style problems proved by their template's `solve()` (never a fixed paper's), Beat the Machine's "which
+    trick fits", a land's curious question, Explorer divisibility, missing-number and Beat the Timer forms (`#/timer/<theme>`),
+    balance scales, word meanings, goals, medals, and more of each stop's questions and working. `test/lib/feed-more.mjs`
+    proves each; nothing a card SHOWS (title, body, more, where, cta) may carry its answer. The quick number questions
+    live in their own lazy group, `drill`; floor: 9,114 cards.
 
 29. **The landing is Bee's shape, with REAL screenshots** (owner, 4 Oct 2026): `viewWelcome` + `src/landing.js` (lazy).
     Screenshots are captured from the built app by `tools/shots.mjs` — re-run it when a pictured screen changes —

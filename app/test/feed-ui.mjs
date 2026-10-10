@@ -29,7 +29,7 @@ const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - 
 for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, height: 844 }, 'phone']]) {
   for (const mode of ['light', 'dark']) {
     const { ctx, p } = await open(vp, mode);
-    const reqs = []; p.on('request', (r) => { if (/\/assets\/g-(L\d+|any)-/.test(r.url())) reqs.push(r.url()); });
+    const reqs = []; p.on('request', (r) => { if (/\/assets\/g-(L\d+|any|drill)-/.test(r.url())) reqs.push(r.url()); });
     await p.goto(BASE); await p.waitForSelector('.home2');
     ok(!reqs.length, `${tag} ${mode}: no feed data on the first screen`);
     const tabs = await p.$$eval(vp.width < 500 ? '[data-bz=tabbar] a' : '[data-bz=tabs] [data-bz=tab]', (as) => as.map((a) => [a.getAttribute('href'), a.textContent.trim(), !!a.querySelector('svg')]));
@@ -111,6 +111,19 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'keyboard'], [{ width: 3
   // scrolling earns nothing
   const c0 = await coins(p); await p.mouse.wheel(0, 4000); await p.waitForTimeout(300);
   ok(await coins(p) === c0, `${tag}: scrolling earns nothing`);
+  await ctx.close();
+}
+
+/* a Beat the Timer card's link opens ITS theme, at the theme's own grade (main.js deepen, timer.js) — not the
+   child's default grade's first theme; and a Number Explorer card's opens the Explorer on its number */
+{
+  const { ctx, p } = await open({ width: 1280, height: 800 });
+  await p.goto(BASE); await p.waitForSelector('.home2');
+  await p.goto(BASE + '#/timer/pow'); await p.waitForSelector('.tmr-theme.on', { timeout: 15000 });
+  const on = await p.$eval('.tmr-theme.on b', (e) => e.textContent);
+  ok(on === 'Powers', `#/timer/pow opens Beat the Timer on Powers, grade 7, for a grade-3 child (${on})`);
+  await p.goto(BASE + '#/lib/explorer|845'); await p.waitForSelector('.t-explorer-big', { timeout: 15000 });
+  ok((await p.$eval('.t-explorer-big', (e) => e.textContent)) === '845', '#/lib/explorer|845 opens the Explorer on 845');
   await ctx.close();
 }
 

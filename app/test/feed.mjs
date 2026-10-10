@@ -19,7 +19,7 @@ const BODIES = {};
 for (const g of GROUPS) Object.assign(BODIES, (await import(`../src/feed/g-${g}.js`)).BODY);
 const ITEMS = INDEX.map((x) => ({ ...BODIES[x.id], ...x, play: BODIES[x.id].play }));
 import { feedFor, order, feedCard } from '../src/integration/bizzing-feed.js';
-import { session, options, markSeen, feedLevel, levelName, pay, showOpts, PER_STOP, stopOf, GENERIC_WHY } from '../src/feed.js';
+import { session, options, markSeen, feedLevel, levelName, pay, showOpts, PER_STOP, stopOf, GENERIC_WHY, DRILL_KINDS } from '../src/feed.js';
 import { TRICKS, byId, worldOf, learnCases, correct, parseNum } from '../src/tricks.js';
 import { STORIES } from '../src/story-data.js';
 import { LEVELS } from '../src/levels.js';
@@ -33,6 +33,7 @@ import * as DICT from '../src/library/dictionary.js';
 import * as FORM from '../src/library/formulas.js';
 import * as VED from '../src/library/vedic.js';
 import * as CHI from '../src/library/chinese.js';
+import { resolveMore, routeMore, moreMore, showsFixedPaper, FIXED_ONE } from './lib/feed-more.mjs';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; if (fails < 40) console.error('  ✗ ' + m); } };
@@ -48,13 +49,19 @@ const canon = (o) => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && 
 const fresh = cut();
 ok(canon(fresh) === canon(ITEMS), 'src/feed/ is today\'s cut of the corpus — run node tools/build-feed.mjs');
 ok(canon(fresh.map(indexOf)) === canon(INDEX) && INDEX.every((x) => !('title' in x) && !('body' in x)), 'the index carries the ranking fields and no words');
-ok(fresh.every((c) => BODIES[c.id] && groupOf(c) === GROUPS.find((g) => (g === 'any' ? c.level == null : g === 'L' + c.level))), 'every card\'s words are in its level\'s group');
+const IN_GROUP = {};
+for (const g of GROUPS) for (const id of Object.keys((await import(`../src/feed/g-${g}.js`)).BODY)) IN_GROUP[id] = g;
+// a card's words are in its level's group — or, with no level, 'drill' for the quick number questions and 'any' for the rest
+ok(fresh.every((c) => IN_GROUP[c.id] === groupOf(c) && groupOf(c) === (c.level != null ? 'L' + c.level : DRILL_KINDS.includes(c.kind) ? 'drill' : 'any')), 'every card\'s words are in its level\'s group');
 const m = manifest(ITEMS);
-ok(m.total >= 1300, `at least 1,300 cards (${m.total})`);
+ok(m.total >= 9114, `at least 9,114 cards — twice the 4,557 of 9 Oct 2026 (owner, 10 Oct 2026: "double the feed cards") (${m.total})`);
 // near-duplicates: no two cards' words are ≥ 80% the same
 const nd = nearDups(ITEMS);
 ok(nd.length === 0, `no near-duplicates (${nd.slice(0, 3).map((p) => p.join(' ~ ')).join(', ')})`);
 ok(nearDups([...ITEMS.slice(0, 50), { ...ITEMS[3], id: 'copy', body: ITEMS[3].body + ' again' }]).some(([, b]) => b === 'copy'), 'the near-duplicate check catches a card copied with one word added');
+// the Contest Hall's fixed papers stay the papers: no card shows one of their problems (feed cards are made fresh)
+ok(!ITEMS.some(showsFixedPaper), `no card shows a fixed paper's problem (${ITEMS.filter(showsFixedPaper).map((c) => c.id).slice(0, 3).join(', ')})`);
+ok(showsFixedPaper({ ...ITEMS.find((c) => c.kind === 'paper'), play: { ...ITEMS.find((c) => c.kind === 'paper').play, q: FIXED_ONE } }), 'the fixed-paper check catches a card carrying a fixed paper\'s problem');
 for (const L of LEVELS) ok((m.byLevel[L.n] || 0) >= 100, `Level ${L.n} has ≥ 100 cards (${m.byLevel[L.n] || 0})`);
 ok(m.agnostic >= 300, `≥ 300 level-agnostic cards (${m.agnostic})`);
 ok(new Set(ITEMS.map((c) => c.id)).size === ITEMS.length, 'card ids are unique');
@@ -68,6 +75,7 @@ const STONE = { vedic: VED.JOURNEY, chinese: CHI.JOURNEY };
 export function routeOk(r) {
   const mm = /^#\/([a-z]+)(?:\/(.+))?$/.exec(r || ''); if (!mm || !KNOWN_ROUTES.includes(mm[1])) return false;
   const [, nav, arg] = mm, [a, b, c] = String(arg || '').split('|');
+  const more = routeMore(nav, arg, a); if (more !== null) return more;
   if (nav === 'stop') {
     const t = byId[a]; if (!t) return false; if (!b) return true;
     if (b === 'learn') return c === undefined || +c < learnCases(t).length;
@@ -92,6 +100,9 @@ export function routeOk(r) {
 /* and it is the SPECIFIC thing the card is about (owner, 3 Oct 2026): never the generic tool */
 function specific(c) {
   const [kind] = c.src.split(':'), rest = c.src.slice(kind.length + 1), [obj, part] = rest.split('#');
+  // the second cut's kinds check their own route in resolveMore (the strategy stop, the trick, the number, the theme…)
+  if (['paper', 'machine', 'explorer', 'curious', 'balance', 'missing', 'timer', 'medal', 'goal'].includes(kind)) return '';
+  if (kind === 'work') return c.route === `#/stop/${obj.split('@')[0]}|learn` ? '' : 'not the Learn tab';
   if (kind === 'stop' || kind === 'story') {
     const tab = c.route.split('|')[1];
     if (kind === 'story') { const beat = +String(part).replace(/^beat/, '') || 0; return c.route === `#/stop/${obj}|story|${part === 'open' ? 0 : beat}` ? '' : 'not the story beat'; }
@@ -113,6 +124,7 @@ function specific(c) {
 /* MORE and WHERE are cut from the corpus too: a stop card's second line is the stop's idea, its
    algebra or the idea's own note; a word's or formula's names the stops that teach it */
 function moreOk(c) {
+  const mo = moreMore(c); if (mo !== null) return mo;
   const [kind] = c.src.split(':'), rest = c.src.slice(kind.length + 1), [obj, part] = rest.split('#');
   const st = (kind === 'stop' || kind === 'story') ? byId[obj] : null;
   if (st) {
@@ -132,11 +144,12 @@ function playOk(c) {
   const p = c.play; if (!p) return '';
   if (!Array.isArray(p.opts) || p.opts.length < 2 || new Set(p.opts.map(String)).size !== p.opts.length) return 'options are not distinct';
   if (order(c.id, p.opts.length).length !== p.opts.length) return 'order()';
-  if (leaks(`${c.title} ${c.body || ''} ${p.q}`, p.opts[0])) return `the answer ${p.opts[0]} is on the card before it is given`;
+  if (leaks([c.title, c.body, p.q, c.more, c.where, c.cta, c.badge && c.badge.label].filter(Boolean).join(' '), p.opts[0])) return `the answer ${p.opts[0]} is on the card before it is given`;
   return '';
 }
 /* resolve: the object a card came from, and the card's words in it. Returns '' or what is wrong. */
 export function resolve(c) {
+  const mr = resolveMore(c); if (mr !== null) return mr;
   const [kind, rest] = [c.src.split(':')[0], c.src.slice(c.src.indexOf(':') + 1)];
   if (kind === 'level') { const L = LEVELS[+rest - 1]; return L && c.level === L.n && c.title.includes(L.name) && c.body === L.blurb ? '' : 'level'; }
   if (kind === 'land') { const L = LEVELS[c.level - 1], ld = L && L.lands.find((x) => x.id === rest); return ld && c.title === `${ld.name} — in ${worldOf(ld.world).name}` && ld.steps.every((x) => c.body.includes(byId[x.stop].title)) && c.body.startsWith(`${ld.steps.length} stops`) ? '' : 'land'; }
@@ -356,7 +369,38 @@ const broken = [
   ['a stop card placed in the wrong world', { ...first('trick'), where: 'Nowhere · Level 1' }],
   ['a pattern whose answer is wrong', { ...ITEMS.find((c) => c.src.startsWith('pattern:')), play: { ...ITEMS.find((c) => c.src.startsWith('pattern:')).play, opts: ['1', '2', '3'] } }],
 ];
-for (const [what, c] of broken) ok(!!bad(c), `the check catches ${what}`);
+/* the second cut's kinds (owner, 10 Oct 2026), each broken the way it could go wrong */
+const swap0 = (c, v) => ({ ...c, play: { ...c.play, opts: [v, ...c.play.opts.slice(1)] } });
+const rot = (c) => ({ ...c, play: { ...c.play, opts: [c.play.opts[1], c.play.opts[0], ...c.play.opts.slice(2)] } });
+const MIS = first('missing'), MF = F.parseKey(MIS.src.slice(8).split('|')[0]);
+broken.push(
+  ['a contest-style question whose answer solve() does not give', rot(first('paper'))],
+  ['a contest-style question not labelled contest-style', { ...first('paper'), badge: undefined }],
+  ['a contest-style question open to a band younger than its paper', { ...ITEMS.find((c) => c.kind === 'paper' && /\/g(56|78)#/.test(c.src)), bands: ['6-7', '8-10', '11-14'] }],
+  ['a contest-style question linked to a stop that is not its way in', { ...first('paper'), route: '#/stop/make-ten|learn' }],
+  ['the way in, worked, with a solution that is not the template\'s', { ...first('paper-way'), body: first('paper-way').body + ' Easy.' }],
+  ['a Beat the Machine card whose right card does not fit', rot(first('machine'))],
+  ['a Beat the Machine decoy said to be a trick', rot(ITEMS.find((c) => c.kind === 'machine' && /#d/.test(c.src)))],
+  ['a Beat the Machine card whose words after are not the game\'s', { ...first('machine'), play: { ...first('machine').play, after: 'Because.' } }],
+  ['an Explorer card whose right number does not divide', rot(first('explorer'))],
+  ['an Explorer card whose reasons are not the Explorer\'s', { ...first('explorer'), play: { ...first('explorer').play, after: first('explorer').play.after.replace(/Yes|No/, (x) => (x === 'Yes' ? 'No' : 'Yes')) } }],
+  ['a worked example that is not the stop\'s working (fresh)', { ...ITEMS.find((c) => c.src.startsWith('work:')), body: ITEMS.find((c) => c.src.startsWith('work:')).body.replace(/→ (\d+)/, (x, d) => `→ ${+d + 1}`) }],
+  ['a curious question placed in another land', { ...first('curious'), where: 'Somewhere · Level 1' }],
+  ['a balance puzzle whose answer the scales do not give', swap0(first('balance'), String(+first('balance').play.opts[0] + 1))],
+  ['a missing number whose answer is wrong', swap0(MIS, String(+MIS.play.opts[0] + 1))],
+  ['a missing number whose gap a wrong option also fills', { ...MIS, play: { ...MIS.play, opts: [MIS.play.opts[0], `${MIS.play.opts[0]}.0`, MIS.play.opts[2]] } }],
+  ['a missing number that names the fact that answers it', { ...MIS, cta: `${F.text(MF)} on the facts grid` }],
+  ['a Beat the Timer card linked to another theme', { ...first('timer'), route: '#/timer/pow' }],
+  ['a Beat the Timer card whose answer is wrong', swap0(first('timer'), String(+first('timer').play.opts[0] + 1))],
+  ['a timer theme that does not exist', { ...first('timer'), route: '#/timer/nosuch' }],
+  ['a medal in words medals.js does not say', { ...first('medal'), body: 'Play every day.' }],
+  ['a goal in words objectives.js does not say', { ...first('goal'), body: 'I can do anything.' }],
+  ['a formula notepad sum that adds up wrong', { ...first('formula-moment'), body: first('formula-moment').body.replace(/= ([\d.]+)$/, (x, d) => `= ${+d + 1}`) }],
+  ['a meaning question whose wrong meaning shares its topic', ((c) => { const e = DICT.entry(c.src.slice(11, -5)), same = DICT.ENTRIES.find((x) => x.topic === e.topic && x.word !== e.word); return { ...c, play: { ...c.play, opts: [c.play.opts[0], same.def, c.play.opts[2]] } }; })(first('wordmean'))],
+  ['an Explorer link to a number past a million', { ...first('explorer'), route: '#/lib/explorer|2000000' }],
+  ['an answer shown in a card\'s place line', ((c) => ({ ...c, where: `${c.where} · ${c.play.opts[0]}` }))(ITEMS.find((c) => c.kind === 'paper' && String(c.play.opts[0]).length > 1))],
+);
+for (const [what, c] of broken) { ok(!!bad(c), `the check catches ${what}`); if (process.env.WHY) console.log(what, "=>", bad(c)); }
 { const L = 3, items = ITEMS.map((c) => (c.id === 'level-10' ? c : c)); const leak = feedFor({ items: [...items, { ...first('trick'), id: 'x-far', level: 9 }], level: L, band: '8-10', now: NOW });
   ok(!leak.some((x) => x.id === 'x-far'), 'the engine drops a card two levels up'); }
 

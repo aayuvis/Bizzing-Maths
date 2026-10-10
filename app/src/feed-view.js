@@ -3,7 +3,7 @@
    an index and one group per level (src/feed/, built by tools/build-feed.mjs), so none of it is on the first screen. */
 import { R } from './runtime.js';
 import { feedCard, feedEnd, feedHead } from './integration/bizzing-feed.js';
-import { session, markSeen, dayNo, feedLevel, levelName, showOpts } from './feed.js';
+import { session, markSeen, dayNo, feedLevel, levelName, showOpts, feedGroup } from './feed.js';
 import { kid } from './model.js';
 import { continueTarget } from './views.js';
 import { octoState } from './views3.js';
@@ -18,7 +18,7 @@ export function loadFeed() {
   if (DATA) return Promise.resolve(DATA);
   return loading || (loading = import('./feed/index.js').then((m) => { DATA = m.INDEX; return DATA; }));
 }
-const GROUP_OF = (x) => (x.level == null ? 'any' : 'L' + x.level);
+const GROUP_OF = feedGroup;
 const LOAD = (g) => import(`./feed/g-${g}.js`);
 function needGroups(list, then) {
   const want = [...new Set(list.map((x) => GROUP_OF(INDEX_BY[x.id])))].filter((g) => !have.has(g));

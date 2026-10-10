@@ -330,7 +330,8 @@ export function playRandom(th, lv, mins, { k, r, earned = [] }) {
 
 /* #/timer: grade, theme, level, window — then Start. `ui` is R.ui.tmr (per screen, not saved). */
 export function viewTimer(k, ui) {
-  const g = ui.grade || gradeOf(k), list = themesFor(g), earned = earnedSutras(k);
+  // a link names a theme (#/timer/<theme>, main.js deepen): it opens at that theme's own grade
+  const g = ui.grade || (themeOf(ui.theme) && themeOf(ui.theme).grade[0]) || gradeOf(k), list = themesFor(g), earned = earnedSutras(k);
   const locked = (th) => th.kind === 'vedic' && !earned.length;
   let th = themeOf(ui.theme); if (!th || !th.grade.includes(g) && th.id !== mixedId(g)) th = list.find((x) => !locked(x));
   const cur = levelIn(k, th.id), lv = Math.min(cur, ui.lv || cur);

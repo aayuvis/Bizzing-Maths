@@ -27,6 +27,11 @@ import { META } from './library/shelf.js';
 import { medalStates } from './medals.js';
 
 export const DAY = 864e5;
+/* The lazy group a card's words live in (tools/build-feed.mjs writes them, feed-view.js loads them):
+   its journey level's, or with no level 'any' — except the quick number questions, which are many
+   and short and go together in 'drill', so a session that shows none of them never downloads them. */
+export const DRILL_KINDS = ['fact', 'missing', 'timer'];
+export const feedGroup = (c) => (c.level == null ? (DRILL_KINDS.includes(c.kind) ? 'drill' : 'any') : `L${c.level}`);
 export const dayNo = (now = Date.now()) => Math.floor(now / DAY);
 export const feedLevel = (k) => (k.journey && k.journey.level) || J.startLevel(k.band);
 export const levelName = (n) => (LEVELS[n - 1] ? `Level ${n} · ${LEVELS[n - 1].name}` : `Level ${n}`);
@@ -111,16 +116,21 @@ export function options(h, k, items, now = Date.now()) {
 /* ONE STOP IS NOT A SESSION (audit v4, V4: 7 of a Level 1 session's 20 cards were one stop).
    The engine ranks and picks; a stop past PER_STOP has its lowest-placed extra cards set aside and
    the engine asked again, so the gap fills from the next-ranked cards under all the engine's own
-   rules (kinds, tiers, questions). Each pass sets more aside, so it ends. */
+   rules (kinds, tiers, questions). Each pass sets more aside, so it ends. A stop found over its cap
+   has ALL its other cards set aside at once (any of them the engine reached for next would only be
+   set aside in a later pass), so a feed of ten thousand cards needs two or three passes, not dozens. */
 export const PER_STOP = 4;
 export const stopOf = (it) => (it && it.key && it.key.startsWith('stop:') ? it.key : null);
 export function capStops(o, per = PER_STOP) {
   const byId = Object.fromEntries(o.items.map((it) => [it.id, it])), aside = new Set(), skip = o.skip;
   const opts = { ...o, skip: (it) => aside.has(it.id) || (!!skip && skip(it)) };
+  let by = null; const ofStop = () => by || (by = o.items.reduce((m, it) => { const s = stopOf(it); if (s) (m[s] ||= []).push(it.id); return m; }, {}));
   for (let pass = 0; pass < 50; pass++) {
     const out = feedFor(opts), n = {};
     let over = false;
-    for (const x of out) { const s = stopOf(byId[x.id]); if (!s) continue; n[s] = (n[s] || 0) + 1; if (n[s] > per) { aside.add(x.id); over = true; } }
+    const kept = {};
+    for (const x of out) { const s = stopOf(byId[x.id]); if (!s) continue; n[s] = (n[s] || 0) + 1; if (n[s] <= per) (kept[s] ||= new Set()).add(x.id); else over = true; }
+    for (const s of Object.keys(n)) if (n[s] > per) for (const id of ofStop()[s]) if (!kept[s].has(id)) aside.add(id);
     if (!over) return out;
   }
   return feedFor(opts).filter((x, i, out) => { const s = stopOf(byId[x.id]); return !s || out.slice(0, i).filter((y) => stopOf(byId[y.id]) === s).length < per; });
@@ -131,7 +141,7 @@ export function capStops(o, per = PER_STOP) {
    the stop or the word's stop on the child's road, a fact by name, a medal within reach — and
    leaves every other line as the engine wrote it. Never edits the engine: it rewrites its output. */
 /* a word or a formula is taught at the stops its Dictionary or Formula Book entry names */
-const TAUGHT = /^(word|wordq|formula|formula-why|formula-story|formula-try)$/;
+const TAUGHT = /^(word|wordq|wordmean|formula|formula-why|formula-story|formula-try|formula-moment)$/;
 export const GENERIC_WHY = /^(For Level \d+|You are in |To keep: from Level \d+|Coming up on Level \d+)/;
 export function nameWhy(x, it, k, medals, level) {
   if (!it || !GENERIC_WHY.test(x.why)) return x.why;
@@ -142,6 +152,8 @@ export function nameWhy(x, it, k, medals, level) {
   const taught = !stop && TAUGHT.test(it.kind || '') && (it.topics || []).map((t) => (t.startsWith('stop:') ? byId[t.slice(5)] : null)).find(Boolean);
   const t = stop || taught;
   if (it.kind === 'fact' && it.key) { const f = F.parseKey(it.key.slice(5)); if (f) return `Worth knowing by heart: ${F.text(f)}`; }
+  // a fact with a gap is never named by its fact: "7 × 8" would be the answer to "? × 8 = 56"
+  if (it.kind === 'missing') { const op = (it.topics || []).find((t) => t.startsWith('op:')); if (op && F.OP_NAME[op.slice(3)]) return `Worth knowing by heart: ${F.OP_NAME[op.slice(3)]}`; }
   if (!t) return x.why;
   const what = stop ? t.title : `Taught at ${t.title}`;
   if (/^You are in /.test(x.why)) return `${what} — ${x.why.replace(/^You are in /, 'in ')}, where you are`;

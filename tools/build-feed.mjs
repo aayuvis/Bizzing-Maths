@@ -59,13 +59,16 @@ import * as FORM from '../app/src/library/formulas.js';
 import * as VED from '../app/src/library/vedic.js';
 import * as CHI from '../app/src/library/chinese.js';
 import { LAND_N, LAND_PASS, LAND_BONUS } from '../app/src/journey.js';
+import { feedGroup } from '../app/src/feed.js';
+import { cutMore } from './feed-more.mjs';
 
 const BAND_IDS = BANDS.map((b) => b.id);
 export const bandsFrom = (b) => BAND_IDS.slice(Math.max(0, BAND_IDS.indexOf(b)));
 const NAME = Object.fromEntries(RIVALS.map((r) => [r.id, r.name]));
 const plain = (s) => String(s).replace(/<[^>]+>/g, '');
-export const GROUPS = [...LEVELS.map((L) => `L${L.n}`), 'any'];
-export const groupOf = (c) => (c.level == null ? 'any' : `L${c.level}`);
+export const GROUPS = [...LEVELS.map((L) => `L${L.n}`), 'any', 'drill'];
+/* the lazy group a card's words live in: its level's, or with no level 'any' — or 'drill' for the quick number questions (feed.js) */
+export const groupOf = feedGroup;
 
 /* ---------------------------------------------------------------- near-duplicates */
 /* words and the maths signs: "3 + 4" and "4 × 3" are not the same card */
@@ -79,12 +82,12 @@ export const WALKS = {};
 /* the first journey level that may show a stop's algebra (audit v4, V3: "The algebra behind…" reached Level 1) */
 export const ALGEBRA_FROM = 4;
 for (const L of LEVELS) for (const s of L.steps) (WALKS[s.stop] = WALKS[s.stop] || []).push({ level: L.n, lv: s.lv });
-const topicsOf = (id) => { const t = byId[id]; return [`stop:${id}`, `world:${t.world}`, `concept:${CONCEPT_OF[id]}`]; };
+export const topicsOf = (id) => { const t = byId[id]; return [`stop:${id}`, `world:${t.world}`, `concept:${CONCEPT_OF[id]}`]; };
 
 /* A question a card may ask, with text alone: a prompt that points at a picture is left to its screen. */
 export const NEEDS_PICTURE = /\bthis\b|\bthese\b|clock show|shaded|graph shows|Votes for|Each ★|highlighted|marked angle|scatter graph|☐|on the suanpan|goes in the square/i;
 export const leaks = (text, ans) => String(ans).length > 1 && plain(text).split(/[^0-9./]/).map((x) => x.replace(/^\.+|\.+$/g, '')).includes(String(ans));
-const asQ = (text) => `${text}${/[?.]$/.test(text) ? '' : ' = ?'}`;
+export const asQ = (text) => `${text}${/[?.]$/.test(text) ? '' : ' = ?'}`;
 
 /* ---------------------------------------------------------------- wrong options (audit v4, V7/E11)
    A wrong option is a slip a child really makes, never a number nobody would write. The old cut
@@ -127,7 +130,7 @@ export function opSlips(expr) {
   return out;
 }
 /* place, digit and column slips of a positive whole or decimal answer */
-function numberSlips(want, sh) {
+export function numberSlips(want, sh) {
   const out = [];
   const s = sh.int ? String(Math.abs(want)) : Math.abs(want).toFixed(sh.dp), sign = want < 0 ? -1 : 1;
   if (!sh.int || Math.abs(want) >= 20) out.push(want * 10, want / 10);                 // a place slip (7 + 9 is never offered as 160)
@@ -140,7 +143,7 @@ function numberSlips(want, sh) {
   for (const k of [10, 100]) if (Math.abs(want) >= k * u) out.push(want + k * u, want - k * u);   // one column out
   return out;
 }
-const nearMisses = (want, u) => [1, 2, 3, 4, 5, 6].flatMap((d) => [want + d * u, want - d * u]);
+export const nearMisses = (want, u) => [1, 2, 3, 4, 5, 6].flatMap((d) => [want + d * u, want - d * u]);
 
 /* choose n wrong options from candidates [{s, tier}] so that the answer's rank is drawn from the seed */
 export function pick(ans, cands, n, seedKey, { check = () => true, keep = plausible } = {}) {
@@ -181,8 +184,8 @@ export function wrongs(q, steps, n = 2, seedKey = `${q.text}|${q.ans}`, extra = 
 }
 
 /* one question from a generator — a stop's, a stone's — seeded, text-only, never leaking */
-export function askFrom(t, seedKey, lv) {
-  for (let i = 0; i < 40; i++) {
+export function askFrom(t, seedKey, lv, from = 0, tries = 40) {
+  for (let i = from; i < from + tries; i++) {
     const q = t.gen(seeded(`${seedKey}#${i}`), lv);
     if (!q || q.text == null || NEEDS_PICTURE.test(q.text) || (!t.echo && leaks(q.text, q.ans))) continue;
     if (q.choices) {
@@ -323,7 +326,9 @@ export function cut() {
     const title = `${st.title}${st.sutra ? ` — ${st.sutra.sa}` : ''}`;
     st.cards.forEach((p, j) => put({ ...base, id: `stone-${tool}-${st.id}${j ? '-' + j : ''}`, kind: j ? 'stone-step' : 'stone', src: `${base.src}#${j}`, title: j ? `${st.title} (${j + 1} of ${st.cards.length})` : title, body: p }, at()));
     if (st.gen) {
-      const qq = askFrom(st, `feed:${tool}:${st.id}`, 2);
+      // never a question whose answer the card already shows — in its place line ("stone 12 of 14") or its link
+      let qq = askFrom(st, `feed:${tool}:${st.id}`, 2);
+      while (qq && leaks(`${base.where} ${base.cta} ${st.title}`, qq.q.ans)) qq = askFrom(st, `feed:${tool}:${st.id}`, 2, qq.i + 1);
       if (qq) put({ ...base, id: `stone-try-${tool}-${st.id}`, kind: 'stone-try', src: `${base.src}#gen${qq.i}`, title: `${st.title} — try it`,
         play: { q: qq.q.choices ? qq.q.text : asQ(qq.q.text), opts: qq.opts.map(String), after: st.kicker } }, at());
     }
@@ -360,31 +365,39 @@ export function cut() {
   for (const g of GAMES) agnostic.push({ id: `game-${g.id}`, kind: 'game', src: `arcade:${g.id}`, bands: BAND_IDS, topics: [`game:${g.id}`], title: g.title, body: g.blurb, more: `Keys: ${g.keys}`, art: `art/g-${g.id}.webp`, route: `#/play/${g.id}`, cta: `Play ${g.title}` });
   for (const f of FAMILIES) agnostic.push({ id: `puzzle-${f.id}`, kind: 'puzzle', src: `puzzles:${f.id}`, bands: BAND_IDS, topics: ['puzzles', `puzzle:${f.id}`], title: f.name, body: f.blurb, route: `#/puzzles/${f.id}`, cta: `Six ${f.name} puzzles` });
   const seenP = new Set();
-  for (const lv of [1, 2, 3]) for (let i = 0, n = 0; n < 40 && i < 400; i++) {
-    const q = patternQuestion(lv, seeded(`feed:pattern:${lv}:${i}`));
-    if (seenP.has(q.text)) continue; seenP.add(q.text);
-    /* the slips: carry on by the last gap as if it were adding, one term too far, the first gap again, then near misses */
-    const t = q.text.replace(', …', '').split(', ').map(Number);
-    const cands = [...[2 * t[4] - t[3], q.ans + (q.ans - t[4]), t[4] + (t[1] - t[0])].map((v) => ({ s: String(v), tier: 0 })), ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))];
-    const w = pick(q.ans, cands, 2, `pattern:${lv}:${i}`, { check: (c) => !t.includes(+c) }); if (!w) continue;
-    const opts = [String(q.ans), ...w];
-    agnostic.push({ id: `pattern-${lv}-${i}`, kind: 'pattern', src: `pattern:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:patterns'],
-      title: 'What comes next?', route: '#/puzzles/patterns', cta: 'More pattern puzzles', play: { q: q.text, opts, after: q.explain } }); n++;
-  }
-  for (const lv of [1, 2, 3]) for (let i = 0, n = 0; n < 10 && i < 300; i++) {
-    const q = magicQuestion(lv, seeded(`feed:magic:${lv}:${i}`)); if (!magicSolvable(q)) continue;
-    const rows = [0, 3, 6].map((j) => q.grid.slice(j, j + 3).map((v, x) => (j + x === q.blanks[0] ? '?' : q.blanks.includes(j + x) ? '·' : v)).join('  ')).join('  /  ');
-    if (leaks(rows + q.text, q.ans)) continue;
-    /* the slips: the number for another blank (the wrong square), one step of the square's own spacing out, then near misses */
-    const step = lv === 3 ? Math.min(...q.grid.map((v, x) => Math.abs(v - q.grid[(x + 1) % 9])).filter((v) => v > 0)) : 1;
-    const w = pick(q.ans, [...q.blanks.slice(1).map((x) => ({ s: String(q.grid[x]), tier: 0 })), ...[q.ans + step, q.ans - step, q.ans + 2 * step, q.ans - 2 * step].map((v) => ({ s: String(v), tier: 1 })),
-      ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))], 2, `magic:${lv}:${i}`); if (!w) continue;
-    agnostic.push({ id: `magic-${lv}-${i}`, kind: 'magic', src: `magic:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:logic'],
-      title: 'A magic square', body: rows, route: '#/puzzles/logic', cta: 'More logic puzzles', play: { q: q.text, opts: [String(q.ans), ...w], after: q.explain } }); n++;
-  }
+  for (const lv of [1, 2, 3]) for (let i = 0, n = 0; n < 40 && i < 400; i++) { const c = patternCard(lv, i, seenP); if (c) { agnostic.push(c); n++; } }
+  for (const lv of [1, 2, 3]) for (let i = 0, n = 0; n < 10 && i < 300; i++) { const c = magicCard(lv, i); if (c) { agnostic.push(c); n++; } }
   for (const c of agnostic) add(c);
+  /* MORE (owner, 10 Oct 2026: "look for additional content and double the feed cards"): tools/feed-more.mjs, after
+     everything above, so every card above is cut exactly as before and a new card that says the same thing is the one dropped */
+  for (const c of cutMore(items)) add(c);
   const drop = new Set(nearDups(items, true).map(([, b]) => b));
   return showSlots(items.filter((c) => !drop.has(c.id)));
+}
+
+/* a Puzzle Room pattern, as the room makes it (seeded), with the slips a child makes as its wrong options */
+export function patternCard(lv, i, seenP = new Set()) {
+  const q = patternQuestion(lv, seeded(`feed:pattern:${lv}:${i}`));
+  if (seenP.has(q.text)) return null; seenP.add(q.text);
+  /* the slips: carry on by the last gap as if it were adding, one term too far, the first gap again, then near misses */
+  const t = q.text.replace(', …', '').split(', ').map(Number);
+  const cands = [...[2 * t[4] - t[3], q.ans + (q.ans - t[4]), t[4] + (t[1] - t[0])].map((v) => ({ s: String(v), tier: 0 })), ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))];
+  const w = pick(q.ans, cands, 2, `pattern:${lv}:${i}`, { check: (c) => !t.includes(+c) }); if (!w) return null;
+  const opts = [String(q.ans), ...w];
+  return { id: `pattern-${lv}-${i}`, kind: 'pattern', src: `pattern:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:patterns'],
+    title: 'What comes next?', route: '#/puzzles/patterns', cta: 'More pattern puzzles', play: { q: q.text, opts, after: q.explain } };
+}
+/* a magic square, proved solvable as the room proves it, written as its three rows */
+export function magicCard(lv, i) {
+  const q = magicQuestion(lv, seeded(`feed:magic:${lv}:${i}`)); if (!magicSolvable(q)) return null;
+  const rows = [0, 3, 6].map((j) => q.grid.slice(j, j + 3).map((v, x) => (j + x === q.blanks[0] ? '?' : q.blanks.includes(j + x) ? '·' : v)).join('  ')).join('  /  ');
+  if (leaks(rows + q.text, q.ans)) return null;
+  /* the slips: the number for another blank (the wrong square), one step of the square's own spacing out, then near misses */
+  const step = lv === 3 ? Math.min(...q.grid.map((v, x) => Math.abs(v - q.grid[(x + 1) % 9])).filter((v) => v > 0)) : 1;
+  const w = pick(q.ans, [...q.blanks.slice(1).map((x) => ({ s: String(q.grid[x]), tier: 0 })), ...[q.ans + step, q.ans - step, q.ans + 2 * step, q.ans - 2 * step].map((v) => ({ s: String(v), tier: 1 })),
+    ...nearMisses(q.ans, 1).map((v) => ({ s: String(v), tier: 2 }))], 2, `magic:${lv}:${i}`); if (!w) return null;
+  return { id: `magic-${lv}-${i}`, kind: 'magic', src: `magic:${lv}:${i}`, bands: bandsFrom(BAND_IDS[lv - 1]), topics: ['puzzles', 'puzzle:logic'],
+    title: 'A magic square', body: rows, route: '#/puzzles/logic', cta: 'More logic puzzles', play: { q: q.text, opts: [String(q.ans), ...w], after: q.explain } };
 }
 
 /* WHERE the right option is shown (audit v4, V7): the family's card writes the options in an order
@@ -445,12 +458,32 @@ export const indexOf = (c) => {
   return x;
 };
 
+/* The index is the first thing #/feed downloads, and ten thousand cards repeat a few hundred sets
+   of topics and bands. So it is written as tables and rows, and the module unpacks itself into
+   exactly the objects indexOf() made: [id, kind, bands, topics, level, key, play, stone] by number. */
+export function packIndex(rows) {
+  const tab = (f) => { const all = [], at = new Map(); return { all, of: (v) => { const k = JSON.stringify(v); if (!at.has(k)) { at.set(k, all.length); all.push(v); } return at.get(k); } }; };
+  const K = tab(), B = tab(), T = tab();
+  const packed = rows.map((x) => [x.id, K.of(x.kind), B.of(x.bands), T.of(x.topics), x.level ?? null, x.key ?? null, x.play ? 1 : 0, x.stone ?? null]);
+  return `const K = ${JSON.stringify(K.all)}, B = ${JSON.stringify(B.all)}, T = ${JSON.stringify(T.all)};
+const ROWS = ${JSON.stringify(packed)};
+export const INDEX = ROWS.map(([id, k, b, t, level, key, play, stone]) => {
+  const x = { id, kind: K[k], bands: B[b], topics: T[t] };
+  if (level != null) x.level = level;
+  if (key != null) x.key = key;
+  if (play) x.play = 1;
+  if (stone != null) x.stone = stone;
+  return x;
+});
+`;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const items = cut(), m = manifest(items);
   const dir = new URL('../app/src/feed/', import.meta.url);
   rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
   const head = (what) => `/* ${what} — GENERATED by tools/build-feed.mjs from the corpus. Never edit by hand; rerun it. */\n`;
-  writeFileSync(new URL('index.js', dir), `${head(`feed/index.js: the ${m.total} cards' ranking fields, no words (${m.total - m.agnostic} on the ten levels, ${m.agnostic} level-agnostic)`)}export const INDEX = ${JSON.stringify(items.map(indexOf))};\n`);
+  writeFileSync(new URL('index.js', dir), `${head(`feed/index.js: the ${m.total} cards' ranking fields, no words (${m.total - m.agnostic} on the ten levels, ${m.agnostic} level-agnostic)`)}${packIndex(items.map(indexOf))}`);
   for (const g of GROUPS) {
     const body = Object.fromEntries(items.filter((c) => groupOf(c) === g).map((c) => { const { bands, topics, key, stone, ...rest } = c; void bands; void topics; void key; void stone; return [c.id, rest]; }));
     writeFileSync(new URL(`g-${g}.js`, dir), `${head(`feed/g-${g}.js: the words of ${Object.keys(body).length} cards`)}export const BODY = ${JSON.stringify(body)};\n`);

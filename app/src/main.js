@@ -209,6 +209,7 @@ const NEEDS_ARG = { stop: (a) => !!byId[head(a)], world: (a) => !!worldOf(a), li
      #/facts/<op>[|<fact>]        the facts grid for an operation, with one fact picked
      #/journey/<n>                one level's road
      #/play/<game>  #/puzzles/<family>   straight into that game, or six puzzles of that family
+     #/timer/<theme>              Beat the Timer set up on that theme, at its own grade (nothing saved)
    Returns the bare arg the screen expects; the rest is state set here. */
 const TABS = ['story', 'learn', 'turn', 'drill'];
 function deepen(nav, arg) {
@@ -221,6 +222,7 @@ function deepen(nav, arg) {
   if (nav === 'lib' && b) { R.ui.libOpen = { id: a, item: parts.slice(1).join('|') }; return a; }
   if (nav === 'facts') { if (F.OPS.includes(a)) { R.ui.factOp = a; R.ui.cell = b || null; } return null; }
   if (nav === 'journey') { const n = +a; if (n >= 1 && n <= 10) R.ui.jlv = n; return null; }
+  if (nav === 'timer') { if (/^[a-z0-9]+$/.test(a)) R.ui.tmr = { ...(R.ui.tmr || {}), grade: null, theme: a, lv: null }; return null; }   // timer.js opens it at the theme's own grade
   return arg;
 }
 
