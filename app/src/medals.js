@@ -11,6 +11,10 @@
 
 import { TRICKS } from './tricks.js';
 import { OPS, tally } from './facts.js';
+import { PAPER_BEAT, MOCK_ROUND, MOCK_RIGHT } from './merit.js';
+/* a paper in the log counts as sat when half was tried and it beat the blank paper (its question
+   count, under the ¼ penalty) by PAPER_BEAT — paperMerit's own test, read from the log */
+const paperSat = (x) => { const n = x.right + x.wrong + x.blank; return (x.right + x.wrong) * 2 >= n && x.points - n >= PAPER_BEAT; };
 
 const stopsAt = (k, stars) => TRICKS.filter((t) => ((k.tricks[t.id] || {}).stars || 0) >= stars).length;
 const fluent = (k) => OPS.reduce((a, o) => a + tally(k.facts, o).fluent, 0);
@@ -33,12 +37,13 @@ export const MEDALS = [
   { id: 'puzzler', name: 'Puzzler', desc: 'Solve 30 puzzles.', did: 'Thirty puzzles solved.', need: 30, have: puzzlesRight },
   { id: 'stories', name: 'Story keeper', desc: 'Read ten stories to the end.', did: 'Ten stories read to the end.', need: 10, have: (k) => Object.keys(k.stories || {}).length },
   { id: 'explorer', name: 'Explorer', desc: 'Find three secrets along your road.', did: 'Three secrets found along your road.', need: 3, have: finds },
-  { id: 'paper', name: 'Paper sat', desc: 'Finish a contest-style paper.', did: 'You finished a contest-style paper.', need: 1, have: (k) => ((k.papers || {}).log || []).length },
+  // evidence, not finishing (rule 19; owner, 10 Oct 2026): the same bar contest coins ask for (merit.js)
+  { id: 'paper', name: 'Paper sat', desc: `Try half a contest-style paper and beat a blank one by ${PAPER_BEAT} points.`, did: 'A contest-style paper, properly sat.', need: 1, have: (k) => ((k.papers || {}).log || []).filter(paperSat).length },
   { id: 'paper-half', name: 'Half marks', desc: 'Score half the points on a contest-style paper.', did: 'Half the points on a contest-style paper.', need: 1, have: (k) => (((k.papers || {}).log || []).some((x) => x.points * 2 >= x.max) ? 1 : 0) },
   { id: 'timer-first', name: 'On the clock', desc: 'Hit a Beat the Timer target.', did: 'You hit your first Beat the Timer target.', need: 1, have: (k) => Object.keys(tm(k).hit || {}).length },
   { id: 'timer-five', name: 'Level five', desc: 'Reach level 5 in a Beat the Timer theme.', did: 'Level 5 in a Beat the Timer theme.', need: 5, have: (k) => Math.max(1, ...Object.values(tm(k).lv || {})) },
   { id: 'timer-beat', name: 'Five better', desc: 'Beat your own best by 5 in Beat the Timer.', did: 'You beat your own best by five.', need: 5, have: (k) => tm(k).beat || 0 },
-  { id: 'contest', name: 'Contender', desc: 'Finish a mock contest.', did: 'You finished a mock contest.', need: 1, have: (k) => (k.contest || {}).done || 0 },
+  { id: 'contest', name: 'Contender', desc: `Reach round ${MOCK_ROUND} of a mock contest, or get ${MOCK_RIGHT} right.`, did: `You reached round ${MOCK_ROUND} of a mock contest, or got ${MOCK_RIGHT} right.`, need: 1, have: (k) => (k.contest || {}).merit || 0 },
 ];
 export const medalById = Object.fromEntries(MEDALS.map((m) => [m.id, m]));
 

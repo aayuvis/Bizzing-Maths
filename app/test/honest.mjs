@@ -231,5 +231,15 @@ t2();
   ok(leaks === 0, `under three learned tricks the final falls back to the ladder (${leaks})`);
 }
 
+/* rule 19 (owner, 10 Oct 2026): Paper sat and Contender come from evidence, the same bar as the coins */
+{ const MD = await import('../src/medals.js'), PE = await import('../src/papers/engine.js');
+  const have = (k, id) => MD.medalById[id].have(k);
+  const p = PE.paper(BAND_IDS[1], 1), kb = { papers: { best: {}, log: [] } }, kg = { papers: { best: {}, log: [] } };
+  PE.record(kb, p, PE.score(p, []));
+  PE.record(kg, p, PE.score(p, p.items.map((q) => String(q.ans))));
+  ok(have(kb, 'paper') === 0, 'a blank paper is not a paper sat');
+  ok(have(kg, 'paper') === 1, 'a paper answered right is a paper sat');
+  ok(have({ contest: { done: 9 } }, 'contest') === 0 && have({ contest: { done: 1, merit: 1 } }, 'contest') === 1, 'Contender counts contests on merit, not contests finished'); }
+
 if (fails) { console.error(`honest: ${fails} failure(s)`); process.exit(1); }
 console.log(`ok honest — T1 (masher, blank paper, pay on merit once a day), T2 (${PAPERS} papers × ${BAND_IDS.length} bands: letters, always-X, value rank, order questions), the final and the tells`);

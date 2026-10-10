@@ -47,6 +47,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
    label. Both test suites check it; it caught `144 ÷ 12 → "what times 12?"` and the halves
    `28 − 14`. Right answers are accepted the moment they are typed; wrong ones wait for Enter,
    so a child is never told "wrong" halfway through typing 56.
+   One exception (owner, 10 Oct 2026): Beat the Timer's one-digit themes judge on Enter with a two-second
+   freeze for a miss, because a random key is right one time in ten (`timer.js` `enterOnly`, BT1 in `test/timer.mjs`).
 4. **Fluent needs a gap.** A fact climbs a Leitner box only when it is right, fast, *and due*.
    Five fast answers in one sitting are repetition, not memory. A miss drops ONE box and is
    reported as a lapse — never hidden, never a reset to zero.
@@ -110,7 +112,8 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
     (owner, 4 Oct 2026). **The daily challenge** pays a small fixed bonus once a day through a standard event
     (owner, 4 Oct 2026) — never a streak, never a nag, and a missed day costs nothing.
     The wallet history says every line in words (`k.coinNotes`).
-19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days.
+19. **Medals come from evidence** (`medals.js`), each celebrated once (`seen`). Never for time or days. Never for
+    finishing either (owner, 10 Oct 2026): Contender and Paper sat ask the same bar as contest coins (`merit.js`).
 20. **`?demo` and `?demo=try` never touch storage** — store.js has no `localStorage` in demo mode,
     and `Family.*` are no-ops. The sample is built by driving the engine (`demo.js`), never typed.
 21. **The Hive's feed is written by the drop-in only** (`Family.track`, `Family.milestone`); the

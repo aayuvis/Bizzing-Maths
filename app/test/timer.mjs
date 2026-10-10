@@ -144,14 +144,15 @@ for (const th of every) {
       ok(mean < 0.1, `BT1 ${th.id} L${lv}: a random typer scores under 10% of the target (${(mean * 100).toFixed(1)}%)`);
       if (mean >= 0.05) over5.push(`${th.id} L${lv} ${(mean * 100).toFixed(1)}%`);
     } else {
-      ok(max2 < 1, `BT1 ${th.id} L${lv}: a random typer never hits the target in 2 minutes or more`);
-      ok(mean < 0.5, `BT1 ${th.id} L${lv}: a random typer scores under half the target (${(mean * 100).toFixed(1)}%)`);
+      // one-digit themes judge on Enter with a two-second freeze for a miss (owner, 10 Oct 2026): the spec's 5% holds
+      ok(max < 1, `BT1 ${th.id} L${lv}: a random typer never hits the target, in any window (best ${maxAt})`);
+      ok(mean < 0.05, `BT1 ${th.id} L${lv}: a random typer scores under the spec's 5% of the target (${(mean * 100).toFixed(1)}%)`);
     }
   }
 }
 { const sh = share.filter((x) => x.short), worst = sh.reduce((a, b) => (b.mean > a.mean ? b : a), { mean: 0 }), lg = share.filter((x) => !x.short);
   console.log(`  BT1: ${lg.length - over5.length} of ${lg.length} long-answer levels are under the spec's 5% (over: ${over5.join(', ') || 'none'})`);
-  console.log(`  BT1: one-digit themes (${[...new Set(sh.map((x) => x.id))].join(', ')}) average ${(100 * sh.reduce((a, b) => a + b.mean, 0) / sh.length).toFixed(0)}% of the target, worst ${(worst.mean * 100).toFixed(0)}% (${worst.id} L${worst.lv}) — owner decision`); }
+  console.log(`  BT1: one-digit themes (${[...new Set(sh.map((x) => x.id))].join(', ')}) average ${(100 * sh.reduce((a, b) => a + b.mean, 0) / sh.length).toFixed(0)}% of the target, worst ${(worst.mean * 100).toFixed(0)}% (${worst.id} L${worst.lv}) — Enter and a two-second freeze (owner, 10 Oct 2026)`); }
 
 /* ---- the run: the clock, a wrong answer, a skip, Precision, a hidden page ---- */
 {

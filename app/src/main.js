@@ -987,6 +987,7 @@ function cNext() {
     if (c.winner === 'you') { k.contest.wins++; confetti(80); sfx.level(); }
     k.contest.done = (k.contest.done || 0) + 1;
     C.pay = payMock(k, c, (ev, note) => earn(k, ev, note), { answered: C.coins });
+    if (C.pay.merit) k.contest.merit = (k.contest.merit || 0) + 1;   // the Contender medal's evidence (medals.js)
     medals(k);
     save(); return render();
   }

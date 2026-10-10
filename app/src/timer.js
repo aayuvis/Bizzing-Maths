@@ -202,7 +202,12 @@ export const MAX_IN = 9;
 export function newRun({ th, lv, mins, k, r = rnd, now = 0, due = [], earned = [] }) {
   const run = { th, id: th.id, lv, mins, dur: mins * 60000, t: 0, last: now, paused: false, r, k, due, earned,
     score: 0, right: 0, wrong: 0, skips: 0, paid: 0, q: null, qAt: 0, input: '', lock: null, log: [], over: false,
-    met: [], missed: [], precision: challengesAt(th, lv).includes('precision') };
+    met: [], missed: [], precision: challengesAt(th, lv).includes('precision'),
+    // one-digit themes (owner, 10 Oct 2026): a random key is right one time in ten, so here an answer
+    // is judged on Enter, and a wrong one freezes the clock-face for two seconds — guessing cannot
+    // reach a target. Everywhere else a right answer is taken as it is typed (rule 3).
+    enterOnly: !longAnswers(th) };
+  if (run.enterOnly) run.precision = true;
   next(run);
   return run;
 }
@@ -234,8 +239,9 @@ export function press(run, key, now) {
   if (key === '✓') { if (run.input === '') return ev; return [...ev, judge(run, false)]; }
   if ((/^\d$/.test(key) || keysFor(q).includes(key)) && run.input.length < MAX_IN) {
     run.input += key;
-    // a right answer is taken the moment it is typed; a wrong one waits for Enter (rule 3)
-    if (correct(q, run.input)) return [...ev, judge(run, true)];
+    // a right answer is taken the moment it is typed; a wrong one waits for Enter (rule 3) —
+    // except in a one-digit theme, where every answer waits for Enter (enterOnly, above)
+    if (!run.enterOnly && correct(q, run.input)) return [...ev, judge(run, true)];
     return [...ev, { type: 'input' }];
   }
   return ev;
@@ -424,7 +430,7 @@ function draw() {
   el.innerHTML = `
     <div class="play-bar">
       <button class="play-x" data-t="close" aria-label="Back — stop the run (Escape)">${icon('back', 20)}<span>Back</span></button>
-      <div class="play-t"><b>${esc(th.name)}</b><span>Level ${run.lv} · ${run.mins} min · target ${target}</span></div>
+      <div class="play-t"><b>${esc(th.name)}</b><span>Level ${run.lv} · ${run.mins} min · target ${target}${run.enterOnly ? ' · answer with ✓ or Enter' : ''}</span></div>
     </div>
     <div class="play-body tmr-body">
       <div class="tmr-top">
