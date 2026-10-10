@@ -451,6 +451,7 @@ function learnTab(t) {
       <div class="row gap">${shown < steps.length ? btn(shown ? 'Next step' : 'Watch it work', 'watch', '', 'primary') + (shown ? '' : btn('Show every step', 'watchAll')) : `<p class="done-line">${q.text.length > 22 || q.choices ? `So the answer is <b class="mono">${esc(q.ans)}</b>.` : `So <b class="mono">${esc(q.text.replace(/\s*=\s*\?\s*$/, ''))} = ${esc(q.ans)}</b>.`} ${next}</p>`}</div>
     </div>
     <div class="card why"><p class="kicker">Why it works</p>
+      ${t.explain ? t.explain(q, shown >= steps.length ? 'full' : 'ask') : ''}
       ${t.why.map((p) => `<p>${esc(p)}</p>`).join('')}
       ${figure ? `<div class="fig-wrap">${figure}</div>` : ''}
       <details><summary>The algebra, for the curious</summary><p class="alg mono">${esc(t.alg)}</p></details>
@@ -573,7 +574,9 @@ function feedback(q, fb, run = {}) {
   let work = q.explain ? `<p class="explain">${esc(q.explain)}</p>` : '';
   if (q.trick) {
     const t = byId[q.trick];
-    work = `<div class="fb-work"><p class="kicker">The trick, on this one — ${esc(t.title)}</p><ol class="steps">${t.work(q).map((s) => `<li class="shown"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${esc(s.v)}</b></li>`).join('')}</ol></div>`;
+    // the explainer comes AFTER the answer is shown (rule 3), folded away so Next stays where it was
+    const move = t.explain ? t.explain(q, 'full') : '';
+    work = `<div class="fb-work"><p class="kicker">The trick, on this one — ${esc(t.title)}</p><ol class="steps">${t.work(q).map((s) => `<li class="shown"><span class="st-t">${esc(s.t)}</span><b class="st-v mono">${esc(s.v)}</b></li>`).join('')}</ol>${move ? `<details class="g3-more"><summary>${icon('play', 18)} See why, in pictures</summary>${move}</details>` : ''}</div>`;
   } else if (q.why && !q.explain) work = `<p class="why-chip">${esc(q.why)}</p>`;
   return `<p class="fb bad">${fb.given === '' ? 'Out of time.' : 'Not this time.'} It is <b class="mono">${esc(q.ans)}</b>.</p>${work}`;
 }

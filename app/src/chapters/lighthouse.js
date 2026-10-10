@@ -18,6 +18,7 @@
 
 import { int, pick, shuffle, seeded } from '../rand.js';
 import { svg, text, pie, fracBar } from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'lighthouse', name: 'The Lighthouse', short: 'Lighthouse', band: '11-14',
@@ -292,6 +293,8 @@ export const TRICKS = [
       const known = find === 'a' ? b : a, want = find === 'a' ? a : b;
       return [{ t: `${c}²`, v: c * c, x: `${c}*${c}` }, { t: `${known}²`, v: known * known, x: `${known}*${known}` }, { t: `${c * c} − ${known * known}`, v: want * want, x: `${c}**2-${known}**2` }, { t: `Which number squared makes ${want * want}?`, v: want }];
     },
+    geo({ a, b, c, find }) { return { kind: 'pythag', a, b, c, find }; },
+    explain,
     draw({ a, b, c, find }) { return squares(a, b, find === 'a' ? '?' : `${a}²`, find === 'b' ? '?' : `${b}²`, find === 'c' ? '?' : `${c}²`); },
   },
   {
