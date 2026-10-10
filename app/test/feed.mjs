@@ -260,6 +260,8 @@ export function resolve(c) {
 
 const bad = (c) => resolve(c) || playOk(c) || (routeOk(c.route) ? '' : `route ${c.route}`) || (specific(c) ? `route ${c.route}: ${specific(c)}` : '') || moreOk(c);
 for (const c of ITEMS) { const e = bad(c); ok(!e, `${c.id} (${c.src}): ${e}`); }
+// a card's button fits one line on a 390px phone: the family's card clips, never wraps, a long label (owner, 10 Oct 2026)
+{ const long = ITEMS.filter((c) => c.cta && c.cta.length > 30); ok(!long.length, `every button label is 30 characters or fewer (${long.length}: ${long.slice(0, 3).map((c) => c.cta).join(' | ')})`); }
 // distinct: no two cards share src + kind + text
 const sig = (c) => [c.src, c.kind, c.title, c.body, c.play && c.play.q].join('|');
 ok(new Set(ITEMS.map(sig)).size === ITEMS.length && new Set(ITEMS.map((c) => c.kind + '|' + c.title + '|' + c.body + '|' + (c.play ? c.play.q : ''))).size === ITEMS.length, 'no two cards say the same thing');

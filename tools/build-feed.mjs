@@ -286,7 +286,7 @@ export function cut() {
   for (const e of DICT.ENTRIES) {
     const stops = e.stops.filter((s) => byId[s]), level = place(stops), slug = DICT.norm(e.word).replace(/\s+/g, '-');
     const bands = level == null ? BAND_IDS : bandsFrom(levelBand(level, stops)), topics = stops.length ? stops.flatMap(topicsOf) : ['tool:dictionary'];
-    put({ id: `word-${slug}`, kind: 'word', src: `dictionary:${e.word}#def`, title: e.word, body: `${e.def} For example: ${e.ex}`, ...taughtIn(stops), route: `#/lib/dictionary|${e.word}`, cta: `${e.word} in the Dictionary`,
+    put({ id: `word-${slug}`, kind: 'word', src: `dictionary:${e.word}#def`, title: e.word, body: `${e.def} For example: ${e.ex}`, ...taughtIn(stops), route: `#/lib/dictionary|${e.word}`, cta: 'Look it up in the Dictionary',
       source: e.sources ? e.sources.join(' ') : undefined, bands, topics }, level);
     // which word is this example of? the wrong options come from OTHER topics, so only one can be right
     const others = DICT.ENTRIES.filter((x) => x.topic !== e.topic && !x.see.includes(e.word) && !e.see.includes(x.word));
@@ -298,7 +298,7 @@ export function cut() {
         play: { q: `Which word is this an example of? “${e.ex}”`, opts, after: `${e.word}: ${e.def}` } }, level);
   }
   for (const c of FORM.CARDS) {
-    const stops = c.stops.filter((s) => byId[s]), level = place(stops), bands = bandsFrom(c.band), topics = stops.flatMap(topicsOf), route = `#/lib/formulas|${c.id}`, cta = `${c.title} in the Formula Book`;
+    const stops = c.stops.filter((s) => byId[s]), level = place(stops), bands = bandsFrom(c.band), topics = stops.flatMap(topicsOf), route = `#/lib/formulas|${c.id}`, cta = 'Open it in the Formula Book';
     const ex = c.example, card = { id: `formula-${c.id}`, kind: 'formula', src: `formula:${c.id}`, title: c.title, body: `${c.formula}. ${c.caption}`, ...taughtIn(stops), route, cta, bands, topics };
     const w = wrongs({ ans: ex.ans, expr: ex.expr }, [], 2, `formula:${c.id}`);
     if (w && !leaks(`${c.title}: ${ex.q} ${card.body}`, ex.ans)) card.play = { q: `${c.title}: ${ex.q}`, opts: [String(ex.ans), ...w], after: ex.lines.join(' · ') };
@@ -321,7 +321,7 @@ export function cut() {
     const at = () => (tool === 'vedic' ? place(stops) : null);
     const base = { src: `journey:${tool}/${st.id}`, key: `stone:${tool}:${i}`, badge: st.needsReview ? { id: 'review', label: 'Being checked' } : undefined,
       source: `${st.needsReview ? 'Sources, being checked by a second reader: ' : 'Sources: '}${st.sources.join(' ')}`,
-      route: `#/lib/${tool}|${st.id}`, cta: `Stone ${i + 1}: ${st.title}`, where: `${tool === 'vedic' ? 'The Vedic' : 'The Chinese'} Maths Journey · stone ${i + 1} of ${J.length}`,
+      route: `#/lib/${tool}|${st.id}`, cta: `Open stone ${i + 1}`, where: `${tool === 'vedic' ? 'The Vedic' : 'The Chinese'} Maths Journey · stone ${i + 1} of ${J.length}`,
       bands: stops.length ? bandsFrom(bandOfStops(stops)) : BAND_IDS, topics: [`tool:${tool}`, ...stops.flatMap(topicsOf)], stone: { tool, i, prev: i ? J[i - 1].id : null } };
     const title = `${st.title}${st.sutra ? ` — ${st.sutra.sa}` : ''}`;
     st.cards.forEach((p, j) => put({ ...base, id: `stone-${tool}-${st.id}${j ? '-' + j : ''}`, kind: j ? 'stone-step' : 'stone', src: `${base.src}#${j}`, title: j ? `${st.title} (${j + 1} of ${st.cards.length})` : title, body: p }, at()));
@@ -353,7 +353,7 @@ export function cut() {
     const w = pick(ans, cands, 2, `fact:${F.key(f)}`), opts = w ? [String(ans), ...w] : [];
     if (opts.length < 3 || leaks(F.text(f), ans)) continue;
     agnostic.push({ id: `fact-${F.OP_WORD[f.op]}-${f.a}-${f.b}`, kind: 'fact', key: `fact:${F.key(f)}`, src: `fact:${F.key(f)}`, bands: factBands(f), topics: ['facts', `op:${f.op}`],
-      title: F.OP_NAME[f.op], route: `#/facts/${f.op}|${F.key(f)}`, cta: `${F.text(f)} on the facts grid`, play: { q: `${F.text(f)} = ?`, opts, after: F.why(f) } });
+      title: F.OP_NAME[f.op], route: `#/facts/${f.op}|${F.key(f)}`, cta: 'Open the facts grid', play: { q: `${F.text(f)} = ?`, opts, after: F.why(f) } });
   }
   RANKS.forEach((r, i) => agnostic.push({ id: `rank-${r.n.toLowerCase()}`, kind: 'rank', src: `rank:${r.n}`, bands: BAND_IDS, topics: [`rank:${r.n}`],
     title: `The ${r.n} rank`, body: r.why, more: `Reached at ${r.xp} right answers — right answers are the only thing that moves a rank.`, route: '#/me', cta: 'My page', key: `rank:${i}` }));

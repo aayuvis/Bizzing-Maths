@@ -274,7 +274,7 @@ function missing() {
     const key = `missing:${F.key(f)}|${side}`, opts = factOpts(q, f, key); if (!opts) continue;
     // no key and no fact named on the card: the fact underneath IS the answer (7 × 8 for ? × 8 = 56)
     out.push({ id: `missing-${F.OP_WORD[f.op]}-${f.a}-${f.b}-${side}`, kind: 'missing', src: key, bands: FACT_BANDS(f), topics: ['drill', `op:${f.op}`],   // not 'facts': a medal or "twenty facts" signal names fact cards, and these record no fact
-      title: `${TT.CHALLENGES.missing.name} · ${F.OP_NAME[f.op]}`, where: `The facts grid · ${F.OP_NAME[f.op]}`, route: `#/facts/${f.op}|${F.key(f)}`, cta: `${F.OP_NAME[f.op]} on the facts grid`,
+      title: `${TT.CHALLENGES.missing.name} · ${F.OP_NAME[f.op]}`, where: `The facts grid · ${F.OP_NAME[f.op]}`, route: `#/facts/${f.op}|${F.key(f)}`, cta: 'Open the facts grid',
       play: { q: q.text, opts, after: F.why(f) } });
   }
   return out;
@@ -399,7 +399,7 @@ function formulaBeats(items) {
     f.story.beats.forEach((b, i) => {
       if (!b.add || b.add.v === undefined || Math.abs(evalSum(b.add.t) - b.add.v) > 1e-9) return;
       const c = { id: `formula-moment-${f.id}-${i}`, kind: 'formula-moment', src: `formula:${f.id}#beat${i}`, badge: { id: 'story', label: 'A story' }, title: `${f.story.title} — on the notepad`,
-        body: `${b.who ? NAME[b.who] + ': ' : ''}${b.say} ${b.add.t} = ${b.add.v}`, more: `The formula: ${f.formula}`, where: base.where, route: base.route, cta: 'Open the card in the Formula Book', bands: base.bands, topics: base.topics };
+        body: `${b.who ? NAME[b.who] + ': ' : ''}${b.say} ${b.add.t} = ${b.add.v}`, more: `The formula: ${f.formula}`, where: base.where, route: base.route, cta: 'Open it in the Formula Book', bands: base.bands, topics: base.topics };
       if (base.level != null) c.level = base.level;
       out.push(c);
     });
