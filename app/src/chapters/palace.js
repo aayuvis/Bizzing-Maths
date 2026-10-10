@@ -8,6 +8,7 @@
 
 import { int, pick, shuffle } from '../rand.js';
 import * as kit from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'palace', name: 'The Square Palace', short: 'Palace', band: '8-10',
@@ -351,6 +352,8 @@ export const TRICKS = [
         { t: `∛${fmt(x)}`, v: root },
       ];
     },
+    geo({ kind, n }) { return kind === 'cube' ? { kind: 'cubes', l: n, w: n, h: n, cube: true } : null; },
+    explain,
     draw({ kind, n, x }) {
       if (kind === 'cube') return kit.cuboid(n, n, n, '', Math.max(8, Math.round(110 / n)));
       return x <= 1000 ? kit.numberLine(0, 1000, 200, { [x]: `${x}` }) : digitStrip([x % 10]);

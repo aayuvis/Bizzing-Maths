@@ -16,6 +16,7 @@ import { RIVALS } from '../contest.js';
 import { SCENES, evalSum } from '../stories.js';
 import { int, pick, rnd, seeded } from '../rand.js';
 import { META } from './shelf.js';
+import { html as moving } from '../geo3d.js';
 
 export const TOOL = META.formulas;   // name, blurb and art live on the shelf (shelf.js), which loads without the tool
 
@@ -275,7 +276,7 @@ const TRIPLES = [[3, 4, 5, 5], [5, 12, 13, 3], [8, 15, 17, 2], [7, 24, 25, 1], [
 export const CARDS = [
   /* ------------------------------------------------ Area & perimeter */
   { id: 'perimeter-rectangle', title: 'Perimeter of a rectangle', formula: 'P = 2 × (l + w)', topic: 'Area & perimeter', band: '8-10', stops: ['perimeter'],
-    picture: PIC.perimRect, caption: 'One long side and one short side take you exactly half-way round.',
+    picture: PIC.perimRect, geo: (l, w) => ({ kind: 'walk', shape: 'rect', W: l, H: w }), caption: 'One long side and one short side take you exactly half-way round.',
     why: ['Walk once round a rectangle and you go along a long side, a short side, a long side and a short side. The two long sides are equal, and so are the two short ones.',
       'So one long side and one short side take you exactly half-way round. Add them, then double: P = 2 × (l + w). It is the same as l + w + l + w — just quicker.'],
     f: (l, w) => 2 * (l + w), example: { q: 'A rectangle 7 cm long and 4 cm wide.', args: [7, 4], lines: ['l + w = 7 + 4 = 11', 'P = 2 × 11 = 22 cm'], ans: 22, expr: '7+4+7+4' },
@@ -288,7 +289,7 @@ export const CARDS = [
       { who: 'koi', say: 'Twenty-eight metres of fence. Half the way round, then double.', add: { t: '2 × (9 + 5)', v: 28 } },
     ] } },
   { id: 'area-rectangle', title: 'Area of a rectangle', formula: 'A = l × w', topic: 'Area & perimeter', band: '8-10', stops: ['area-rectangles'],
-    picture: PIC.areaRect, caption: 'Each row holds l squares, and there are w rows.',
+    picture: PIC.areaRect, geo: (l, w) => ({ kind: 'rows', W: l, H: w }), caption: 'Each row holds l squares, and there are w rows.',
     why: ['Cover the rectangle in centimetre squares. Each row along the length holds l squares, and there are w rows the same.',
       'Equal rows are exactly what multiplication counts, so the area is l × w square units — no counting one by one. That is why area is measured in cm²: it is a count of squares.'],
     f: (l, w) => l * w, example: { q: 'A rectangle 8 cm by 5 cm.', args: [8, 5], lines: ['A = 8 × 5', '= 40 cm²'], ans: 40, expr: '8+8+8+8+8' },
@@ -301,7 +302,7 @@ export const CARDS = [
       { who: 'astro', say: 'Twenty-four tiles. Length times width, every time.' },
     ] } },
   { id: 'area-square', title: 'Area of a square', formula: 'A = s × s = s²', topic: 'Area & perimeter', band: '8-10', stops: ['area-rectangles', 'square-dots'],
-    picture: PIC.areaSquare, caption: 's rows of s squares: s², “s squared”.',
+    picture: PIC.areaSquare, geo: (n) => ({ kind: 'rows', W: n, H: n }), caption: 's rows of s squares: s², “s squared”.',
     why: ['A square is a rectangle whose length and width happen to be the same, so the rectangle rule l × w becomes s × s.',
       'That is why s × s is called “s squared”: it is how many unit squares tile a square with side s. 7² = 49 means a 7 by 7 square holds 49 little squares.'],
     f: (s) => s * s, example: { q: 'A square with 9 cm sides.', args: [9], lines: ['A = 9 × 9', '= 81 cm²'], ans: 81, expr: '9*10-9' },
@@ -314,7 +315,7 @@ export const CARDS = [
       { who: 'astro', say: 'Sixty-four patches. Eight squared.', add: { t: '8 × 8', v: 64 } },
     ] } },
   { id: 'area-triangle', title: 'Area of a triangle', formula: 'A = ½ × b × h', topic: 'Area & perimeter', band: '8-10', stops: ['area-triangles'],
-    picture: PIC.areaTri, caption: 'The triangle takes exactly half of each part of its rectangle.',
+    picture: PIC.areaTri, geo: (b, h) => ({ kind: 'halve', P: [[0, h], [b, h], [Math.round(b * 0.4), 0]], j: 1, b, h, hx: Math.round(b * 0.4), bx: b / 2 }), caption: 'The triangle takes exactly half of each part of its rectangle.',
     why: ['Draw a rectangle round the triangle with the same base b and the same height h. The triangle’s top corner touches the top edge.',
       'Drop a line straight down from that corner. It cuts the rectangle into two smaller rectangles, and the triangle takes exactly half of each one. Half of each part is half of the whole: A = ½ × b × h.'],
     f: (b, h) => (b * h) / 2, example: { q: 'A triangle with base 10 cm and height 6 cm.', args: [10, 6], lines: ['b × h = 10 × 6 = 60', 'A = 60 ÷ 2 = 30 cm²'], ans: 30, expr: '10/2*6' },
@@ -327,7 +328,7 @@ export const CARDS = [
       { who: 'melody', say: 'Six hundred square centimetres of cloth.', add: { t: '40 × 30 ÷ 2', v: 600 } },
     ] } },
   { id: 'area-parallelogram', title: 'Area of a parallelogram', formula: 'A = b × h', topic: 'Area & perimeter', band: '8-10', stops: ['area-triangles'],
-    picture: PIC.parallelogram, caption: 'Slide the end triangle across and it becomes a rectangle.',
+    picture: PIC.parallelogram, geo: (b, h) => ({ kind: 'shear', b, h, o: Math.min(h * 0.6, b * 0.45) }), caption: 'Slide the end triangle across and it becomes a rectangle.',
     why: ['Slice a triangle off one slanted end of the parallelogram and slide it across to the other end. It fits exactly, because the two slanted sides are parallel and the same length.',
       'Now you have a rectangle with the same base and the same straight-up height. Nothing was added and nothing was lost, so A = b × h. The slanted side’s length is never used — only the height.'],
     f: (b, h) => b * h, example: { q: 'A parallelogram with base 9 cm and height 4 cm.', args: [9, 4], lines: ['A = 9 × 4', '= 36 cm²'], ans: 36, expr: '(9-1)*4+4' },
@@ -340,7 +341,7 @@ export const CARDS = [
       { who: 'astro', say: 'Twenty-one square metres. Base times height; the slant never counts.' },
     ] } },
   { id: 'area-trapezium', title: 'Area of a trapezium', formula: 'A = ½ × (a + b) × h', topic: 'Area & perimeter', band: '11-14', stops: ['area-triangles', 'compound-area'],
-    picture: PIC.trapezium, caption: 'Two trapeziums, one turned over, make a parallelogram with base a + b.',
+    picture: PIC.trapezium, geo: (a, b, h) => ({ kind: 'halve', shape: 'trapezium', P: [[0, h], [b, h], [(b - a) / 2 + a, 0], [(b - a) / 2, 0]], j: 1, a: b, c: a, h, topx: (b - a) / 2 + a / 2, bx: b / 2 }), caption: 'Two trapeziums, one turned over, make a parallelogram with base a + b.',
     why: ['Take two copies of the trapezium and turn one upside down. Push them together and they make a parallelogram.',
       'Its base is a + b — the short side of one next to the long side of the other — and its height is h, so the pair covers (a + b) × h. One trapezium is half of the pair: A = ½ × (a + b) × h.'],
     f: (a, b, h) => ((a + b) * h) / 2, example: { q: 'Parallel sides 5 cm and 9 cm, height 4 cm.', args: [5, 9, 4], lines: ['a + b = 5 + 9 = 14', '14 × 4 = 56', 'A = 56 ÷ 2 = 28 cm²'], ans: 28, expr: '5*4+(9-5)*4/2' },
@@ -356,7 +357,7 @@ export const CARDS = [
 
   /* ------------------------------------------------ Circles */
   { id: 'circumference', title: 'Circumference of a circle', formula: 'C = π × d = 2 × π × r', topic: 'Circles', band: '11-14', stops: ['round-the-circle'],
-    picture: PIC.circumference, caption: 'Unroll any circle: it is just over three diameters long.',
+    picture: PIC.circumference, geo: (d) => ({ kind: 'roll', ask: 'circ-d', v: d }), caption: 'Unroll any circle: it is just over three diameters long.',
     why: ['Every circle, big or small, is the same shape — only its size changes. So the distance round it is always the same number of times the distance across.',
       'That number is π, a little more than 3: about 3.14. Wrap a string round a tin and it goes just over three times its width. So C = π × d — or 2 × π × r, because the diameter is two radii.'],
     f: (d) => round2(3.14 * d), example: { q: 'A circle 10 cm across (use π = 3.14).', args: [10], lines: ['C = 3.14 × 10', '= 31.4 cm'], ans: 31.4, expr: '10*314/100' },
@@ -369,7 +370,7 @@ export const CARDS = [
       { who: 'pixel', say: 'So one turn rolls nearly two metres!', add: { t: '180 + 8.4', v: 188.4 } },
     ] } },
   { id: 'area-circle', title: 'Area of a circle', formula: 'A = π × r²', topic: 'Circles', band: '11-14', stops: ['round-the-circle'],
-    picture: PIC.areaCircle, caption: 'Slices laid top-to-tail make a near-rectangle, r tall and π × r long.',
+    picture: PIC.areaCircle, geo: (r) => ({ kind: 'sectors', r }), caption: 'Slices laid top-to-tail make a near-rectangle, r tall and π × r long.',
     why: ['Cut a circle into many thin slices, like a pizza, and lay them in a row, pointing up and down in turn. They make a shape that is nearly a rectangle — and the thinner the slices, the straighter it gets.',
       'Its height is the radius r. Its length is half the way round the circle, π × r. So the area is π × r × r, written π r².'],
     f: (r) => round2(3.14 * r * r), example: { q: 'A circle with radius 5 cm (use π = 3.14).', args: [5], lines: ['r² = 5 × 5 = 25', 'A = 3.14 × 25 = 78.5 cm²'], ans: 78.5, expr: '314*25/100' },
@@ -385,7 +386,7 @@ export const CARDS = [
 
   /* ------------------------------------------------ Volume & surface area */
   { id: 'volume-cuboid', title: 'Volume of a cuboid', formula: 'V = l × w × h', topic: 'Volume & surface area', band: '8-10', stops: ['volume-cuboid'],
-    picture: PIC.volCuboid, caption: 'One layer is l × w cubes; there are h layers.',
+    picture: PIC.volCuboid, geo: (l, w, h) => ({ kind: 'cubes', l, w, h }), caption: 'One layer is l × w cubes; there are h layers.',
     why: ['Fill the bottom of the box with centimetre cubes: that is l × w cubes, one layer.',
       'Stack h layers like that and the box is full. So the volume is l × w × h cubic units — the floor’s area times the height.'],
     f: (l, w, h) => l * w * h, example: { q: 'A box 5 cm by 4 cm by 3 cm.', args: [5, 4, 3], lines: ['one layer: 5 × 4 = 20', 'V = 20 × 3 = 60 cm³'], ans: 60, expr: '5*4+5*4+5*4' },
@@ -398,7 +399,7 @@ export const CARDS = [
       { who: 'panda', say: 'Sixty cubes. The floor, times the height.', add: { t: '5 × 4 × 3', v: 60 } },
     ] } },
   { id: 'surface-area-cuboid', title: 'Surface area of a cuboid', formula: 'S = 2 × (lw + lh + wh)', topic: 'Volume & surface area', band: '11-14', stops: ['volume-cuboid'],
-    picture: PIC.surfCuboid, caption: 'Unfold the box: three pairs of matching faces.',
+    picture: PIC.surfCuboid, geo: (l, w, h) => ({ kind: 'net', l, w, h }), caption: 'Unfold the box: three pairs of matching faces.',
     why: ['A box has six faces, and they come in three matching pairs: top and bottom, front and back, left and right.',
       'The pairs have areas l × w, l × h and w × h. Add one of each and double: S = 2 × (lw + lh + wh). Unfold the box into its net and you can see all six at once.'],
     f: (l, w, h) => 2 * (l * w + l * h + w * h), example: { q: 'A box 5 cm by 3 cm by 2 cm.', args: [5, 3, 2], lines: ['5 × 3 + 5 × 2 + 3 × 2 = 15 + 10 + 6 = 31', 'S = 2 × 31 = 62 cm²'], ans: 62, expr: '5*3+5*3+5*2+5*2+3*2+3*2' },
@@ -412,7 +413,7 @@ export const CARDS = [
       { who: 'melody', say: 'Double it: 2,200 square centimetres, before any overlap.', add: { t: '1100 × 2', v: 2200 } },
     ] } },
   { id: 'volume-cube', title: 'Volume of a cube', formula: 'V = s × s × s = s³', topic: 'Volume & surface area', band: '8-10', stops: ['cube-and-root', 'volume-cuboid'],
-    picture: PIC.volCube, caption: 's × s in a layer, and s layers: s³, “s cubed”.',
+    picture: PIC.volCube, geo: (n) => ({ kind: 'cubes', l: n, w: n, h: n, cube: true }), caption: 's × s in a layer, and s layers: s³, “s cubed”.',
     why: ['A cube is a cuboid whose length, width and height are all the same, so l × w × h becomes s × s × s.',
       'That is why s³ is called “s cubed”: it counts the little cubes in a big cube of side s. A 3 by 3 by 3 cube holds 9 in each layer and 3 layers: 27.'],
     f: (s) => s * s * s, example: { q: 'A cube with 4 cm edges.', args: [4], lines: ['4 × 4 = 16 in a layer', 'V = 16 × 4 = 64 cm³'], ans: 64, expr: '4**3' },
@@ -425,7 +426,7 @@ export const CARDS = [
       { who: 'pixel', say: 'Sixty-four blocks. Four cubed!', add: { t: '4 × 4 × 4', v: 64 } },
     ] } },
   { id: 'volume-prism', title: 'Volume of a prism', formula: 'V = area of end × length', topic: 'Volume & surface area', band: '11-14', stops: ['volume-cuboid', 'area-triangles'],
-    picture: PIC.prism, caption: 'Every slice is the same as the end, so stack the end along the length.',
+    picture: PIC.prism, geo: (b, h, l) => ({ kind: 'prism', b, h, l }), caption: 'Every slice is the same as the end, so stack the end along the length.',
     why: ['A prism is the same shape all the way through, like a loaf of bread: every slice is a copy of the end.',
       'So the end’s area tells you how much fills one slice 1 unit thick, and the length tells you how many slices there are. V = area of the end × length. A cuboid is simply a prism with a rectangle for its end.'],
     f: (b, h, l) => ((b * h) / 2) * l, example: { q: 'A prism whose end is a triangle, base 6 cm and height 4 cm, 10 cm long.', args: [6, 4, 10], lines: ['end: 6 × 4 ÷ 2 = 12 cm²', 'V = 12 × 10 = 120 cm³'], ans: 120, expr: '6*4*10/2' },
@@ -438,7 +439,7 @@ export const CARDS = [
       { who: 'scopey', say: 'Four and a half cubic metres. I worked it out twice — plenty of room.' },
     ] } },
   { id: 'volume-cylinder', title: 'Volume of a cylinder', formula: 'V = π × r² × h', topic: 'Volume & surface area', band: '11-14', stops: ['round-the-circle', 'volume-cuboid'],
-    picture: PIC.cylinder, caption: 'A circle, stacked up to height h.',
+    picture: PIC.cylinder, geo: (r, h) => ({ kind: 'discs', r, h }), caption: 'A circle, stacked up to height h.',
     why: ['A cylinder is a prism with a circle at each end, so the prism rule still works: area of the end × length.',
       'The end is a circle with area π × r², so V = π × r² × h. A tin twice as tall holds twice as much; a tin twice as wide holds four times as much, because the radius is squared.'],
     f: (r, h) => round2(3.14 * r * r * h), example: { q: 'A tin with radius 5 cm and height 10 cm (use π = 3.14).', args: [5, 10], lines: ['end: 3.14 × 5 × 5 = 78.5 cm²', 'V = 78.5 × 10 = 785 cm³'], ans: 785, expr: '3.14*25*10' },
@@ -635,7 +636,7 @@ export const CARDS = [
       { who: 'samurai', say: 'Seventy-six cups. That is 3n + 1, with n = 25.', add: { t: '3 × 25 + 1', v: 76 } },
     ] } },
   { id: 'pythagoras', title: 'Pythagoras’ theorem', formula: 'a² + b² = c²', topic: 'Algebra & number', band: '11-14', note: 'For 13–14', stops: ['pythagoras-side', 'kinds-of-triangle', 'root-of-square', 'square-up'],
-    picture: PIC.pythagoras, caption: 'The squares on the two short sides, 9 + 16, fill the square on the longest side, 25.',
+    picture: PIC.pythagoras, geo: (a, b) => ({ kind: 'pythag', a, b, c: Math.hypot(a, b), find: 'c', unit: 'cm' }), caption: 'The squares on the two short sides, 9 + 16, fill the square on the longest side, 25.',
     why: ['This card is for 13- and 14-year-olds. In a right-angled triangle, build a square on each side. The two squares on the shorter sides, a² and b², together have exactly the area of the square on the longest side, c².',
       'One way to see it: draw a big square of side a + b and put four copies of the triangle in its corners. Arranged one way, the space left is one tilted square, c². Arranged another way, it is two squares, a² and b². Same big square, same four triangles — so a² + b² = c². It carries the name of Pythagoras; a proof of it is Proposition 47 in Book I of Euclid’s Elements.'],
     sources: ['Euclid, Elements, Book I, Proposition 47; in T. L. Heath (trans.), The Thirteen Books of Euclid’s Elements (Cambridge University Press, 1908).'],
@@ -990,6 +991,7 @@ function cardView(c, ctx) {
         <figure class="t-formulas-pic">${c.picture()}<figcaption>${esc(c.caption)}</figcaption></figure>
         <div class="t-formulas-why"><p class="kicker">Why it is true</p>${c.why.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
       </div>
+      ${c.geo ? `<div class="t-formulas-move">${moving(c.geo(...c.example.args), { title: 'See it move', key: 'card:' + c.id })}</div>` : ''}
       <div class="t-formulas-ex">
         <p class="kicker">Worked example</p>
         <p class="t-formulas-exq">${esc(c.example.q)}</p>

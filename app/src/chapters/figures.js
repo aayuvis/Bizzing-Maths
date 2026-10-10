@@ -14,6 +14,7 @@
 
 import { int, pick, shuffle } from '../rand.js';
 import { svg, text } from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'figures', name: 'The Figure Fair', short: 'Figure Fair', band: '8-10', track: 'contest',
@@ -571,6 +572,8 @@ export const TRICKS = [
       if (q.kind === 'pieces') return [{ t: 'Add the step widths: as wide as the bottom', v: q.W, x: `[${q.ws}].reduce((s,v)=>s+v,0)` }, { t: 'Add the step heights: as tall as the left side', v: q.H, x: `[${q.hs}].reduce((s,v)=>s+v,0)` }, { t: 'Perimeter: 2 × (width + height)', v: q.ans }];
       return [{ t: 'All the across pieces: the bottom, plus the steps that slide up to match it', v: 2 * q.W, x: sideX(V, 0) }, { t: 'All the up-and-down pieces', v: 2 * q.H, x: sideX(V, 1) }, { t: 'Perimeter', v: q.ans }];
     },
+    geo(q) { return { kind: 'push', form: q.kind, W: q.W, H: q.H, V: this.corners(q), ws: q.ws || [], hs: q.hs || [], nw: q.nw || 0, d: q.d || 0, at: q.at || 0 }; },
+    explain,
     draw(q) {
       const V = this.corners(q), u = Math.min(30, Math.floor(Math.min(260 / q.W, 200 / q.H)));
       let labels;
@@ -645,6 +648,8 @@ export const TRICKS = [
       return [{ t: 'Whole squares shaded', v: q.whole, x: `${JSON.stringify(sq)}.length` }, { t: 'Half squares shaded', v: q.half, x: `${JSON.stringify(hf)}.length` },
         { t: 'Pair the halves: whole squares they make', v: q.half / 2, x: hf.map(shoeX).join('+') }, { t: 'Area altogether', v: q.ans }];
     },
+    geo(q) { return { kind: 'cutmove', form: q.kind, pieces: this.pieces(q), W: q.W, H: q.H, gw: q.gw || q.W, gh: q.gh || q.H }; },
+    explain,
     draw(q) {
       const gw = q.kind === 'tri' ? q.gw : q.W, gh = q.kind === 'tri' ? q.gh : q.H, u = Math.min(36, Math.floor(Math.min(270 / gw, 220 / gh))), o = 6;
       const X = (x) => o + x * u, Y = (y) => o + (gh - y) * u;
@@ -872,6 +877,8 @@ export const TRICKS = [
       if (k === 1) return [{ t: `Two faces ${a} by ${b}: 2 × ${A} × ${B}`, v: 2 * A * B, x: `2*(${a}-2)*(${b}-2)` }, { t: `Two faces ${b} by ${c}: 2 × ${B} × ${C}`, v: 2 * B * C, x: `2*(${b}-2)*(${c}-2)` }, { t: `Two faces ${a} by ${c}: 2 × ${A} × ${C}`, v: 2 * A * C, x: `2*(${a}-2)*(${c}-2)` }, { t: 'All the one-face cubes', v: q.ans }];
       return [{ t: `Peel a layer off: the inside block's bottom is ${A} by ${B}`, v: A * B, x: `(${a}-2)*(${b}-2)` }, { t: `Its height is ${c} − 2, so the inside block holds`, v: q.ans }];
     },
+    geo(q) { return { kind: 'paint', a: q.a, b: q.b, c: q.c, k: q.k }; },
+    explain,
     draw(q) { return ruledBlock(q.a, q.b, q.c); },
   },
 ];

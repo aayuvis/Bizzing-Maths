@@ -227,6 +227,7 @@ Inherited from Bizzing Bee, India and Finance, and it holds here:
 | `app/src/games.js` | Number Rush, Make the Target (with a solver), Number Line, Cube Builder; the shared keypad. Every game is paid through `payout()` (model.js `WAGE`): one place decides what play is worth. |
 | `app/src/cubes.js` | Cube Builder's puzzles: views measured from a stack, every fitting stack and the fewest cubes found by search. |
 | `app/src/figs.js` | The pictures of *why*: number-line jumps, area splits, the crosswise grid. |
+| `app/src/geo3d.js` · `geo3d-play.js` | The moving pictures of *why* for geometry stops (area, perimeter, volume in 3D, nets, solids, angles, circles): built from the stop's own numbers by its `geo(q)`, each measuring its answer from its geometry (`test/geo3d.mjs` holds it to `q.ans` and `work(q)`, and its ask mode to the question's own numbers). The player is lazy, stops at the end, and steps still under reduced motion (`test/geo3d-ui.mjs`). |
 | `app/src/views.js` · `main.js` | Every screen as `state → string`; routing, the runner, keys, `data-act`. |
 | `app/src/stories.js` | A story per stop, starring the Bee's rivals, with a checked notepad. |
 | `app/src/puzzles.js` | The Puzzle Room: cube nets (folding rig), sudoku (unique), patterns, balance scales. |

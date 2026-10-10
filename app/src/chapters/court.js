@@ -22,6 +22,7 @@
 
 import { int, pick, shuffle } from '../rand.js';
 import { svg, text } from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'court', name: 'The Counting Court', short: 'Court', band: '8-10',
@@ -495,6 +496,8 @@ export const TRICKS = [
       if (kind === 'trapezium') return [{ t: 'Turn the top half round beside the bottom: the two parallel sides end to end', v: a + c, x: `${a}+${c}` }, { t: 'It is now half as tall', v: h / 2, x: `${h}/2` }, { t: 'Area = length × height', v: ((a + c) * h) / 2 }];
       return [{ t: 'Double the area', v: 2 * A, x: `${A}+${A}` }, { t: `Divide by the height, ${h}: the two parallel sides together`, v: a + c, x: `2*${A}/${h}` }, { t: `Take away the side you know, ${a}`, v: c }];
     },
+    geo(q) { return q.kind === 'parallelogram' ? { kind: 'shear', b: q.b, h: q.h, o: Math.min(q.h * 0.6, q.b * 0.45), unit: 'm' } : { kind: 'outin', form: q.kind, a: q.a, b: q.b, c: q.c, h: q.h, A: q.A }; },
+    explain,
     draw(q) { return outInSvg(q); },
   },
 
@@ -829,6 +832,8 @@ export const TRICKS = [
       const val = (f) => APPROX.find((x) => x[0] === f)[1];
       return [{ t: `${q.A} as a decimal, to 4 places`, v: r4(val(q.A)), x: `Math.round((${q.A})*1e4)/1e4` }, { t: `${q.B} as a decimal, to 4 places`, v: r4(val(q.B)), x: `Math.round((${q.B})*1e4)/1e4` }, { t: 'π is 3.1416 to 4 places. Which is closer?', v: q.ans, choices: q.choices }];
     },
+    geo(q) { return q.kind === 'closer' ? null : { kind: 'liu', form: q.kind, r: q.r, n: q.n, s: q.s }; },
+    explain,
     draw(q) {
       if (q.kind === 'closer') return polySvg(96, 1, '');
       if (q.kind === 'estimate') return polySvg(q.n, q.r, '');

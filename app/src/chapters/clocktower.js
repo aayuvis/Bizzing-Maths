@@ -9,6 +9,7 @@
 
 import { int, pick, shuffle } from '../rand.js';
 import { clock, grid, cuboid, svg, text } from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'clocktower', name: 'The Clock Tower', short: 'Clock Tower', band: '6-7',
@@ -356,6 +357,8 @@ export const TRICKS = [
       if (kind === 'square') return [{ t: 'A square has four equal sides', v: 4, x: `[${W},${W},${W},${W}].length` }, { t: `4 × ${W}`, v: 4 * W }];
       return [{ t: `One length and one width: ${W} + ${H}`, v: W + H, x: `${W}+${H}` }, { t: 'Two of each: double it', v: 2 * (W + H) }];
     },
+    geo({ kind, W, H, w1, h1 }) { return { kind: 'walk', shape: kind, W, H, w1, h1 }; },
+    explain,
     draw({ kind, W, H, w1, h1 }) {
       if (kind === 'L') return shape(lPoints(W, H, w1, h1, 18), lLabels(W, H, w1, h1));
       const u = Math.min(18, Math.floor(220 / Math.max(W, H)));
@@ -400,6 +403,8 @@ export const TRICKS = [
       const shaded = (k) => `new Set([...SVG.matchAll(/<rect x="([\\d.]+)" y="([\\d.]+)"[^>]*class="dg-fill1"/g)].map((m)=>m[${k}])).size`;
       return [{ t: 'Squares in one row', v: W, x: lv === 1 ? shaded(1) : 'H.n(TEXT,1)' }, { t: 'Number of rows', v: H, x: lv === 1 ? shaded(2) : 'H.n(TEXT,2)' }, { t: `${W} × ${H}`, v: W * H }];
     },
+    geo({ lv, W, H, cols, rows, c0, r0 }) { return lv === 1 ? { kind: 'rows', W, H, find: 'count', cols, rows, c0, r0 } : { kind: 'rows', W, H, find: lv === 3 ? 'side' : 'area' }; },
+    explain,
     draw({ lv, W, H, cols, rows, c0, r0 }) {
       if (lv === 1) { const s = new Set(); for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) s.add(`${r0 + i},${c0 + j}`); return grid(cols, rows, s); }
       const u = Math.min(18, Math.floor(200 / Math.max(W, H)));
@@ -436,6 +441,8 @@ export const TRICKS = [
         { t: 'Add the two pieces', v: W * h1 + w1 * (H - h1) },
       ];
     },
+    geo({ W, H, w1, h1 }) { return { kind: 'lsplit', W, H, w1, h1 }; },
+    explain,
     draw({ W, H, w1, h1 }) { const u = Math.min(18, Math.floor(220 / Math.max(W, H))); return shape(lPoints(W, H, w1, h1, u), lLabels(W, H, w1, h1), 'dg-fill3'); },
   },
   {
@@ -479,6 +486,12 @@ export const TRICKS = [
       if (kind === 'para') return [{ t: 'Slide the end triangle across: a rectangle this wide', v: b, x: `${b + o}-${o}` }, { t: 'and this tall (straight up, not the slope)', v: h, x: 'H.n(TEXT,2)' }, { t: `${b} × ${h}`, v: b * h }];
       return [{ t: `The parallelogram (or rectangle) it is half of: ${b} × ${h}`, v: b * h, x: `${b}*${h}` }, { t: 'The triangle is half of that', v: (b * h) / 2 }];
     },
+    // the parallelogram's end slides across; a triangle and its copy, turned half a turn about the middle of its sloping side, make a parallelogram
+    geo({ kind, b, h, o, sl }) {
+      if (kind === 'para') return { kind: 'shear', b, h, o, sl };
+      return { kind: 'halve', P: kind === 'right' ? [[0, h], [b, h], [0, 0]] : [[0, h], [b, h], [o, 0]], j: 1, b, h, right: kind === 'right', hx: kind === 'right' ? null : o, bx: b / 2 };
+    },
+    explain,
     draw({ kind, b, h, o, sl }) {
       const u = Math.min(20, Math.floor(200 / Math.max(b + o, h))), under = h + 22 / u;
       if (kind === 'right') return measured([[0, h], [b, h], [0, 0]], u, [[b / 2, under, `${b} cm`], [-6 / u, h / 2, `${h} cm`, 'dg-accent', 'end']], null);
@@ -528,6 +541,8 @@ export const TRICKS = [
       ];
       return [{ t: `Cubes in the bottom layer: ${l} × ${w}`, v: l * w, x: `${l}*${w}` }, { t: 'Number of layers', v: h, x: 'H.n(TEXT,3)' }, { t: `${l * w} × ${h}`, v: l * w * h }];
     },
+    geo({ ask, l, w, h }) { return ask === 'sa' ? { kind: 'net', l, w, h } : { kind: 'cubes', l, w, h }; },
+    explain,
     draw({ l, w, h }) { return box(l, h, w); },
   },
 ];

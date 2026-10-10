@@ -834,6 +834,77 @@ svg.road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .dg-sym{font-size:22px;fill:var(--action)}.dg-sym.half{clip-path:inset(0 50% 0 0)}
 .qcard .dg{margin-bottom:14px}
 
+/* ================================================================ the geometry explainers (geo3d.js, geo3d-play.js) */
+.g3d{margin:0 0 14px;padding:10px 10px 8px;background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-md);max-width:560px}
+.g3d:focus-visible{outline:3px solid var(--focus,var(--action));outline-offset:2px}
+.g3-title{display:flex;align-items:center;gap:6px;margin:0 0 4px;font:700 13px var(--ui);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.g3-stage{touch-action:pan-y;user-select:none}
+.g3-stage.turnable{cursor:grab}
+.g3-svg{width:100%;height:auto;max-height:300px;display:block;overflow:visible}
+.g3-cap{margin:6px 2px 8px;min-height:2.6em;font:600 15px/1.35 var(--ui);color:var(--ink)}
+.g3-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g3-b{min-width:44px;min-height:44px;display:inline-grid;place-items:center;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;padding:0}
+.g3-b[data-g3b=play]{background:var(--action);color:var(--action-ink);border-color:var(--action)}
+.g3-b:disabled{opacity:.45;cursor:default}
+.g3-b[hidden]{display:none}
+.g3-pos{margin-left:auto;font-size:13px;color:var(--muted)}
+.g3-more{margin-top:10px}
+.g3-more>summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;color:var(--action)}
+/* the picture: words */
+.g3-t{font:600 14px var(--ui);fill:var(--ink)}
+.g3-ta{font:800 15px var(--ui);fill:var(--fix)}
+.g3-small{font:600 12px var(--mono);fill:var(--muted)}
+:is(.g3-t,.g3-ta,.g3-small){paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round}
+.g3-big{font:800 20px var(--mono);fill:var(--ink);paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round}
+/* the picture: flat shapes */
+.g3-cell0{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.g3-grid{stroke:var(--ink);stroke-opacity:.28;stroke-width:1}
+.g3-hot{fill:#FFC978;stroke:var(--ink);stroke-width:2}
+.g3-fade{fill:#FFC978;fill-opacity:.25;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:5 4}
+.g3-edge{fill:none;stroke:var(--ink);stroke-width:2.5}
+.g3-ghost,.g3-ghost2{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 4}
+.g3-ghost2{stroke:var(--action);stroke-dasharray:none}
+.g3-hatch{fill:var(--fix);fill-opacity:.14;stroke:var(--fix);stroke-width:1.5;stroke-dasharray:5 4}
+.g3-boxline{fill:none;stroke:var(--action);stroke-width:2.5;stroke-dasharray:7 4}
+.g3-trace{stroke:var(--action);stroke-width:5;stroke-linecap:round;fill:none}
+.g3-line{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+.g3-move{stroke:var(--fix);stroke-width:5;stroke-linecap:round}
+.g3-hotline{stroke:var(--fix);stroke-width:5;stroke-linecap:round}
+.g3-cut{stroke:var(--ink);stroke-width:2;stroke-dasharray:6 5}
+.g3-dim{stroke:var(--fix);stroke-width:2}
+.g3-dot{fill:var(--fix);stroke:var(--surface);stroke-width:2}
+.g3-ground{stroke:var(--ink);stroke-width:2}
+.g3-spoke{stroke:var(--ink);stroke-width:2}
+.g3-rod{fill:var(--action);stroke:var(--ink);stroke-width:1}
+.g3-bit{fill:var(--fix);stroke:var(--ink);stroke-width:1}
+.g3-arc{fill:none;stroke:var(--fix);stroke-width:3}
+.g3-none{display:none}
+.g3-w1{fill:#9DB6F4;stroke:var(--ink);stroke-width:1.5}.g3-w2{fill:#FFC978;stroke:var(--ink);stroke-width:1.5}.g3-w3{fill:#9ED9B3;stroke:var(--ink);stroke-width:1.5}
+/* the picture: solids (top, side and front faces of one colour, so a cube reads as a cube) */
+.g3-f{stroke:#1B2238;stroke-width:.8;stroke-linejoin:round}
+.g3-cc-t,.g3-ct{fill:#D6E2FC}.g3-cc-s,.g3-cs{fill:#9DB6F4}.g3-cc-f{fill:#B7CAF7}
+.g3-ch-t,.g3-ht{fill:#FFE3A3}.g3-ch-s{fill:#F2B64E}.g3-ch-f{fill:#F8CB78}
+.g3-cp-t{fill:#F6B7AE}.g3-cp-s{fill:#DD6E62}.g3-cp-f{fill:#E98F84}
+.g3-cd-t,.g3-cd-s,.g3-cd-f{fill:var(--surface2);fill-opacity:.4;stroke-opacity:.3}
+.g3-pn{fill:#D6E2FC}.g3-pf{fill:#FFC978}.g3-pt{fill:#9ED9B3}.g3-pe{fill:#C9B6F4}
+.g3-sf{fill:#D6E2FC;fill-opacity:.85;stroke:none}.g3-sh{fill:#FFC978;fill-opacity:.9;stroke:none}.g3-back{fill-opacity:.25}
+.g3-e{stroke:#1B2238;stroke-width:2}.g3-eb{stroke:#1B2238;stroke-opacity:.45;stroke-width:1.2;stroke-dasharray:4 4}.g3-eh{stroke:var(--fix);stroke-width:5;stroke-linecap:round}
+.g3-vh{fill:var(--fix);stroke:var(--surface);stroke-width:2}
+.g3-wire{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 4}
+.g3-slice{fill:none;stroke:#1B2238;stroke-opacity:.5;stroke-width:1;stroke-dasharray:3 3}
+:root[data-mode=dark] .g3-hot,:root[data-mode=dark] .g3-w2{fill:#A8701A}
+:root[data-mode=dark] .g3-fade{fill:#7A5410}
+:root[data-mode=dark] .g3-w1{fill:#2B3F7A}:root[data-mode=dark] .g3-w3{fill:#1F4A33}
+:root[data-mode=dark] .g3-f{stroke:#0B0F1E}
+/* the faded cubes stay readable on a dark page: a lighter slate and a visible edge (owner's review, 10 Oct 2026) */
+:root[data-mode=dark] :is(.g3-cd-t,.g3-cd-s,.g3-cd-f){fill:#6B7BA8;fill-opacity:.5;stroke:#AEB9DA;stroke-opacity:.55}
+:root[data-mode=dark] :is(.g3-cc-t,.g3-ct,.g3-pn){fill:#3E5596}:root[data-mode=dark] :is(.g3-cc-s,.g3-cs){fill:#24366B}:root[data-mode=dark] .g3-cc-f{fill:#304684}
+:root[data-mode=dark] :is(.g3-ch-t,.g3-ht){fill:#8A6418}:root[data-mode=dark] .g3-ch-s{fill:#5A4010}:root[data-mode=dark] .g3-ch-f{fill:#71511A}
+:root[data-mode=dark] .g3-cp-t{fill:#93453D}:root[data-mode=dark] .g3-cp-s{fill:#5E2620}:root[data-mode=dark] .g3-cp-f{fill:#7A342C}
+:root[data-mode=dark] .g3-pf{fill:#7A5410}:root[data-mode=dark] .g3-pt{fill:#1F5A3B}:root[data-mode=dark] .g3-pe{fill:#4A3A7A}
+:root[data-mode=dark] .g3-sf{fill:#3E5596}:root[data-mode=dark] .g3-sh{fill:#8A6418}
+:root[data-mode=dark] :is(.g3-e,.g3-eb,.g3-slice){stroke:#E6EAF7}
+
 /* ================================================================ the library */
 .lib-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media (max-width:1000px){.lib-grid{grid-template-columns:repeat(3,1fr)}}

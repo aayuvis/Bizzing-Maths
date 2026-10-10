@@ -8,6 +8,7 @@
 
 import { int, pick, shuffle } from '../rand.js';
 import { poly, coords, svg, text } from './kit.js';
+import { explain } from '../geo3d.js';
 
 export const WORLD = {
   id: 'shapecity', name: 'Shape City', short: 'Shape City', band: '6-7',
@@ -518,6 +519,8 @@ export const TRICKS = [
       if (ask === 'edges') return [{ t: 'Edges round the base', v: m, x: mx }, { t: 'Edges up to the tip', v: m, x: mx }, { t: 'Edges altogether', v: C.E }];
       return [{ t: 'Corners of the base', v: m, x: mx }, { t: 'Add the tip', v: C.V }];
     },
+    geo({ name, kind, n, ask }) { const S = name ? SOLIDS[name] : { kind, n }; return { kind: 'solid', form: S.kind, n: S.n, ask, name, cube: name === 'cube', long: name === 'cuboid' }; },
+    explain,
     draw({ name, kind, n }) {
       const S = name ? SOLIDS[name] : { kind, n, w: 70, h: 100 };
       return solid(S.kind, S.n, S.w, S.h);
@@ -669,6 +672,8 @@ export const TRICKS = [
         { t: `${total} − ${sum}`, v: total - sum },
       ];
     },
+    geo({ full, known, pos }) { return { kind: 'turn', full, known, pos }; },
+    explain,
     draw({ full, known, pos }) {
       const total = full ? 360 : 180, parts = known.map((d) => ({ d, l: `${d}°` }));
       parts.splice(pos, 0, { d: total - known.reduce((a, b) => a + b, 0), l: '?' });
@@ -722,6 +727,11 @@ export const TRICKS = [
         { t: `${total} − ${sum}`, v: total - sum },
       ];
     },
+    geo({ kind, angles, hide, apex }) {
+      if (kind === 'iso') { const b = (180 - apex) / 2; return { kind: 'tear', shape: 'iso', pts: triFromAngles(b, b, apex), apex }; }
+      return { kind: 'tear', shape: kind === 'quad' ? 'quad' : 'tri', pts: kind === 'quad' ? quadFromAngles(angles) : triFromAngles(...angles), angles, hide };
+    },
+    explain,
     draw({ kind, angles, hide, apex }) {
       if (kind === 'iso') { const b = (180 - apex) / 2; return figure(triFromAngles(b, b, apex), [], ['?', '?', `${apex}°`]); }
       const labels = angles.map((a, i) => (i === hide ? '?' : `${a}°`));
@@ -773,6 +783,8 @@ export const TRICKS = [
       s.push({ t: `3 × ${d}`, v: 3 * d, x: `${dx}+${dx}+${dx}` }, { t: `0.14 × ${d}`, v: Math.round(14 * d) / 100, x: `14*${dx}/100` }, { t: 'Add them', v: Math.round(314 * d) / 100 });
       return s;
     },
+    geo({ ask, v }) { return { kind: 'roll', ask, v }; },
+    explain,
     draw({ ask, v }) {
       const c = 96, R = 78; let s = `<circle cx="${c}" cy="${c}" r="${R}" class="dg-fill3"/><circle cx="${c}" cy="${c}" r="4" class="dg-dot"/>`;
       const across = ask === 'rad' || ask === 'circ-d';
