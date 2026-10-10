@@ -52,6 +52,8 @@ async function fold(G, p, where, sel = '.pad .pk') {
   await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   // the screen's own entrance (a fade, a slide) is not the screen: wait for it, never the clock
   await until(p, () => document.getAnimations().every((a) => a.playState !== 'running' || (a.effect && a.effect.getTiming().iterations === Infinity) || (a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('.timer'))), null, 5000);
+  // a passing toast (2.4 s, ui.js) from the screen before is not the screen either: let it go
+  await until(p, () => !document.querySelector('.toast'));
   const f = await G(FOLD, sel);
   ok(f.n > 0, `T7 ${where}: the keys are on screen (${f.n})`);
   ok(!f.tab, `T7 ${where}: the phone tab bar steps aside`);
