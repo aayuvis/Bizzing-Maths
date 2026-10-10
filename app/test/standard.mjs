@@ -429,7 +429,9 @@ for (const [vp, tag] of [[{ width: 1280, height: 800 }, 'desk'], [{ width: 390, 
   await p.addInitScript((hh) => { if (!localStorage.getItem('bzm_household')) localStorage.setItem('bzm_household', JSON.stringify(hh)); }, seeded());
   await p.goto(BASE); await p.waitForSelector('.home2');
   await p.evaluate(() => window.__bzm.fire('startFacts', '×')); await p.clock.runFor(300);
-  await p.keyboard.press('9'); await p.keyboard.press('9'); await p.keyboard.press('9'); await p.keyboard.press('Enter'); await p.clock.runFor(300);
+  // a wrong answer that cannot be right: the answer plus one (999 IS right when the fact is 9 × 11, 3 × 3…)
+  const wrong = await p.evaluate(() => String(Number(window.__bzm.R.run.items[window.__bzm.R.run.i].ans) + 1));
+  for (const ch of wrong) await p.keyboard.press(ch); await p.keyboard.press('Enter'); await p.clock.runFor(300);
   const d0 = await p.evaluate(() => Object.values(window.__bzm.R.h.kids[0].mistakes));
   ok(d0.length === 1 && d0[0].due > Date.now(), `a miss goes into the deck, not due today (got ${d0.length})`);
   await p.evaluate(() => window.__bzm.go('home')); await p.clock.runFor(200);
